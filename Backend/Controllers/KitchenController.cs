@@ -31,6 +31,8 @@ public class KitchenController : ControllerBase
             .Where(o =>
                 o.IsActive &&
                 !o.IsDeleted &&
+                o.Status != "Cancelled" && o.Status != "cancelled" &&
+                (o.FulfillmentStatus == null || (o.FulfillmentStatus != "Cancelled" && o.FulfillmentStatus != "cancelled")) &&
                 (o.Status == "Active" ||
                  o.Status == "active" ||
                  o.Status == "Billed" ||
@@ -70,7 +72,8 @@ public class KitchenController : ControllerBase
 
         foreach (var order in orders)
         {
-            var batches = order.Items
+            var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
+            var batches = kitchenItems
                 .Where(i =>
                     i.IsActive &&
                     !i.IsDeleted &&
@@ -208,6 +211,7 @@ public class KitchenController : ControllerBase
             item.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, item.OrderId);
 
             if (item.Order != null)
             {
@@ -292,7 +296,17 @@ public class KitchenController : ControllerBase
             item.UpdatedAt = DateTime.UtcNow;
         }
 
+        var kotTickets = await _context.KitchenOrderTickets
+            .Where(k => k.OrderId == order.Id && k.IsActive && !k.IsDeleted && k.Status == "Queued")
+            .ToListAsync();
+        foreach (var kt in kotTickets)
+        {
+            kt.Status = "Cooking";
+            kt.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
+        await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
 
         await _hubContext.Clients
             .Group("floor")
@@ -366,7 +380,18 @@ public class KitchenController : ControllerBase
             item.UpdatedAt = DateTime.UtcNow;
         }
 
+        var kotTickets = await _context.KitchenOrderTickets
+            .Where(k => k.OrderId == order.Id && k.IsActive && !k.IsDeleted && k.Status != "Served" && k.Status != "Cancelled")
+            .ToListAsync();
+        foreach (var kt in kotTickets)
+        {
+            kt.Status = "Ready";
+            kt.CompletedAt = DateTime.UtcNow;
+            kt.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _context.SaveChangesAsync();
+        await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
 
         await _hubContext.Clients
             .Group("floor")

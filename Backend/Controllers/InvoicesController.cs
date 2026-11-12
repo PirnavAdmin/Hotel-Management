@@ -1,3 +1,4 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,12 +19,21 @@ public class InvoicesController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly SpService _spService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<InvoicesController> _logger;
 
-    public InvoicesController(AppDbContext context, SpService spService, ILogger<InvoicesController> logger)
+    public InvoicesController(
+        AppDbContext context,
+        SpService spService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InvoicesController> logger)
     {
         _context = context;
         _spService = spService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 
@@ -753,6 +763,30 @@ public class InvoicesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not enrich metadata for invoice {InvoiceId}", invoice.InvoiceId);
+        }
+    }
+    /// <summary>
+    /// Exports Customer Billing Invoices as CSV or XLSX.
+    /// Supports ?fromDate=...&toDate=...&status=...&department=...&format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportInvoices(
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        [FromQuery] string? status,
+        [FromQuery] string? department,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateInvoicesExportAsync(fromDate, toDate, status, department);
+            return _exportService.ExportResult(doc, format, doc.BaseFileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting customer billing invoices");
+            return StatusCode(500, new { success = false, message = "Failed to export invoices.", error = ex.Message });
         }
     }
 }

@@ -1,3 +1,4 @@
+using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -7,7 +8,6 @@ using System.Threading.Tasks;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
-using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -20,12 +20,21 @@ public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
     private readonly InventoryService _inventoryService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<InventoryController> _logger;
 
-    public InventoryController(SpService spService, InventoryService inventoryService, ILogger<InventoryController> logger)
+    public InventoryController(
+        SpService spService,
+        InventoryService inventoryService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InventoryController> logger)
     {
         _spService = spService;
         _inventoryService = inventoryService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 
@@ -34,7 +43,6 @@ public class InventoryController : ControllerBase
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
-    [HttpGet("ingredients")]
     public async Task<IActionResult> GetIngredients([FromQuery] string? category, [FromQuery] string? search)
     {
         try
@@ -573,6 +581,31 @@ public class InventoryController : ControllerBase
             IsActive = GetBoolSafe(reader, true, "is_active", "active"),
             UpdatedAt = GetDateTimeSafe(reader, DateTime.UtcNow, "updated_at")
         };
+    }
+    /// <summary>
+    /// Exports Dine Inventory (or All / Bar when ?department=All|Bar is passed) as CSV or XLSX.
+    /// Supports ?category=...&amp;status=in-stock|low-stock|out-of-stock&amp;search=...&amp;lowStockOnly=true&amp;department=Dine|Bar|All&amp;format=csv|xlsx.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportInventory(
+        [FromQuery] string? category,
+        [FromQuery] string? status,
+        [FromQuery] string? search = null,
+        [FromQuery] bool? lowStockOnly = null,
+        [FromQuery] string? department = null,
+        [FromQuery] string? format = "csv")
+    {
+        try
+        {
+            var doc = await _reportingExportService.GenerateDineInventoryExportAsync(category, status, search, lowStockOnly, department);
+            return _exportService.ExportResult(doc, format, doc.BaseFileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting dine inventory");
+            return StatusCode(500, new { success = false, message = "Failed to export dine inventory.", error = ex.Message });
+        }
     }
 }
 

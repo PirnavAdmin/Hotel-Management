@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../../common/SearchableSelect";
 import React, { useState, useMemo } from "react";
 import {
   FileSpreadsheet,
@@ -246,7 +247,7 @@ export function TrialBalanceView({
 
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 600 }}>FY:</span>
-            <select
+            <SearchableSelect
               value={financialYear}
               onChange={(e) => setFinancialYear(e.target.value)}
               style={{
@@ -263,7 +264,7 @@ export function TrialBalanceView({
               <option value="2026-2027">2026-2027</option>
               <option value="2025-2026">2025-2026</option>
               <option value="2024-2025">2024-2025</option>
-            </select>
+            </SearchableSelect>
           </div>
         </div>
       </div>
@@ -350,7 +351,7 @@ export function TrialBalanceView({
             <label style={{ display: "block", fontSize: "0.7rem", color: "var(--text-muted)", marginBottom: "3px", fontWeight: 600 }}>
               Group Filter
             </label>
-            <select
+            <SearchableSelect
               value={groupFilter}
               onChange={(e) => setGroupFilter(e.target.value)}
               style={{
@@ -370,7 +371,7 @@ export function TrialBalanceView({
               <option value="Equity">Equity</option>
               <option value="Income">Income</option>
               <option value="Expenses">Expenses</option>
-            </select>
+            </SearchableSelect>
           </div>
         </div>
 

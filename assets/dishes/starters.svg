@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg_st" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="plate_st" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3f3f46"/>
+      <stop offset="50%" stop-color="#27272a"/>
+      <stop offset="100%" stop-color="#18181b"/>
+    </linearGradient>
+    <linearGradient id="crispy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="50%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg_st)"/>
+  <!-- Cast iron sizzling plate -->
+  <ellipse cx="200" cy="180" rx="145" ry="55" fill="#000000" opacity="0.6"/>
+  <ellipse cx="200" cy="170" rx="140" ry="50" fill="url(#plate_st)" stroke="#52525b" stroke-width="3"/>
+  <ellipse cx="200" cy="168" rx="125" ry="42" fill="#18181b"/>
+  <!-- Crispy Chicken 65 / Paneer Tikka chunks -->
+  <rect x="130" y="140" width="32" height="26" rx="8" fill="url(#crispy)" transform="rotate(-12 130 140)"/>
+  <rect x="175" y="132" width="36" height="28" rx="8" fill="url(#crispy)" transform="rotate(8 175 132)"/>
+  <rect x="225" y="138" width="34" height="26" rx="8" fill="url(#crispy)" transform="rotate(-6 225 138)"/>
+  <rect x="150" y="160" width="35" height="26" rx="8" fill="#b91c1c" transform="rotate(15 150 160)"/>
+  <rect x="195" y="158" width="38" height="28" rx="8" fill="url(#crispy)" transform="rotate(-10 195 158)"/>
+  <rect x="235" y="155" width="32" height="25" rx="8" fill="#b91c1c" transform="rotate(20 235 155)"/>
+  <!-- Curry leaves and green chili garnish -->
+  <path d="M 125 135 Q 135 125 145 130" stroke="#16a34a" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M 170 125 Q 180 115 190 120" stroke="#22c55e" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M 220 128 Q 230 120 240 125" stroke="#16a34a" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Fresh lemon wedge -->
+  <path d="M 255 170 A 20 20 0 0 1 275 190 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+  <!-- Onion rings -->
+  <ellipse cx="140" cy="175" rx="14" ry="7" fill="none" stroke="#f1f5f9" stroke-width="3" opacity="0.9"/>
+  <ellipse cx="145" cy="173" rx="10" ry="5" fill="none" stroke="#f472b6" stroke-width="2" opacity="0.8"/>
+  <!-- Sizzle steam -->
+  <path d="M 175 110 Q 165 90 175 70" stroke="#ffffff" stroke-width="4" fill="none" opacity="0.3" stroke-linecap="round"/>
+  <path d="M 215 105 Q 225 85 215 65" stroke="#ffffff" stroke-width="5" fill="none" opacity="0.3" stroke-linecap="round"/>
+</svg>

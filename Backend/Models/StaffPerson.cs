@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -49,6 +51,7 @@ public class StaffPerson
     [Column("deleted_at")]
     public DateTime? DeletedAt { get; set; }
 
-    // Relationship
+    // Relationships
+    public ICollection<SalaryPayment> SalaryPayments { get; set; } = new List<SalaryPayment>();
     public ICollection<RestaurantTable> AssignedTables { get; set; } = new List<RestaurantTable>();
 }

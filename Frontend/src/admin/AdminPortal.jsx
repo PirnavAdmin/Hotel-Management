@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useEffect, useRef } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
 import {
@@ -17,6 +18,7 @@ import {
   Check,
   CheckCircle2,
   ChefHat,
+  Wine,
   Search,
   AlertCircle,
   Armchair,
@@ -52,12 +54,25 @@ import { SelectSeatsModal } from "../common/SelectSeatsModal";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
+import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
+import { AdminTakeaway } from "./AdminTakeaway";
 import { AdminInventory } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
+import { CustomersManagement } from "./modules/CustomersManagement";
+import { ReservationsManagement } from "./modules/ReservationsManagement";
+import { DeliveryManagement } from "./modules/DeliveryManagement";
+import { AttendanceManagement } from "./modules/AttendanceManagement";
+import { PromotionsManagement } from "./modules/PromotionsManagement";
+import { SuppliersManagement } from "./modules/SuppliersManagement";
+import { RolesManagement } from "./modules/RolesManagement";
+import {
+  apiGetRestaurantSettings,
+  apiUpdateRestaurantSettings,
+} from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
@@ -92,10 +107,8 @@ export function isDisallowedItemName(raw) {
     "tandoor", "tandoori", "tandoori & kebabs", "tandoor-kebabs", "kebabs",
     "fast-food", "fast food", "burgers, pizza & fast food", "pizza & fast food", "burgers",
     "breads", "naan & roti", "roti & naan", "roti",
-    "beverages", "beverages & coffee", "coffee & beverages", "coffee",
     "desserts", "desserts & sweets", "sweets & desserts", "sweets",
-    "cocktails", "mocktails", "beers", "wines", "spirits", "liquor", "bar",
-    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "thali", "snacks"
+    "chinese", "soups", "salads", "soups & salads", "south indian", "north indian", "snacks"
   ];
   if (standardAllowed.includes(s)) return false;
 
@@ -109,9 +122,37 @@ export function isDisallowedItemName(raw) {
     "chicken", "mutton", "prawn", "fish", "paneer", "egg", "beef", "pork",
     "shawarma", "bagara", "lassi", "lemonade", "buttermilk", "chaas",
     "corn salt", "salt & pepper", "fried rice", "noodles", "chilli", "manchurian",
-    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry"
+    "dum biryani", "veg biryani", "biryani", "masala", "tikka", "kebab", "kabab", "fry", "dry",
+    "thali", "veg thali", "watermelon", "juice", "beverage", "coffee", "tea"
   ];
   return dishKeywords.some((kw) => s.includes(kw));
+}
+
+/**
+ * Strict validator for Dine menu categories.
+ * Filters out bar categories, all beverages/drinks, and dish names.
+ */
+export function isDisallowedDineCategory(raw) {
+  if (!raw || typeof raw !== "string") return false;
+  const s = raw.trim().toLowerCase();
+  if (!s) return false;
+
+  // 1. Bar and alcohol categories
+  if (isBarCategory(s)) return true;
+
+  // 2. Drinks and beverage categories (Beverages, Juices, Watermelon Juice, Tea & Coffee, Shakes, etc.)
+  if (isDrinkCategory(s) || isBeverageCategory(s)) return true;
+  if (/^(beverage|beverages|drink|drinks|juice|juices|tea|coffee|shake|shakes|smoothie|smoothies)/i.test(s)) return true;
+  if (/\b(juice|juices|beverage|beverages|coffee|tea|mocktail|cocktail|beer|wine|vodka|gin|rum|brandy|whiskey|whisky|bourbon|scotch|tequila|liqueur|shake|smoothie|soda)\b/i.test(s)) return true;
+
+  // 3. Specific dish names or combo platters that leaked into categories
+  if (s === "veg thali" || s === "thali" || s.includes("thali") || s.includes("platter") || s.includes("combo")) return true;
+  if (s === "watermelon juice" || s.includes("watermelon")) return true;
+
+  // 4. Other dish keywords
+  if (isDisallowedItemName(s)) return true;
+
+  return false;
 }
 
 export function inferIngredientCategory(rawName = "") {
@@ -409,7 +450,6 @@ export async function autoGenerateInventoryFromRecipe(recipe = []) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true",
           },
           body: JSON.stringify({ [STORAGE_KEY]: updatedInventory }),
         }).catch(() => {});
@@ -863,9 +903,19 @@ export function AdminPortal({
       .then((data) =>
         applySettings(
           data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.data?.[RESTAURANT_SETTINGS_KEY],
+            data?.data?.[RESTAURANT_SETTINGS_KEY] ||
+            data?.restaurantSettings ||
+            data?.data?.restaurantSettings,
         ),
       )
+      .catch(() => {});
+
+    // Also fetch directly from dedicated restaurant-settings API
+    apiGetRestaurantSettings()
+      .then((res) => {
+        const liveSettings = res?.data || res?.settings;
+        if (liveSettings) applySettings(liveSettings);
+      })
       .catch(() => {});
 
     const events = openOptionalEventStream();
@@ -888,11 +938,18 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
+    // 1. Save directly to dedicated REST endpoint
+    try {
+      await apiUpdateRestaurantSettings(settings);
+    } catch (restErr) {
+      console.warn("Direct restaurant-settings API update warning:", restErr);
+    }
+
+    // 2. Broadcast via /api/sync
     const response = await fetch(`${API_SYNC_BASE}/api/sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
     });
@@ -944,7 +1001,7 @@ export function AdminPortal({
       if (!Array.isArray(parsed)) return [];
       const cleaned = parsed.filter((cat) => {
         const str = String(typeof cat === "string" ? cat : cat?.name || cat?.label || cat?.value || "").trim();
-        return str && !isDisallowedItemName(str);
+        return str && !isDisallowedDineCategory(str);
       });
       localStorage.setItem(STORAGE_KEY_CUSTOM_CATEGORIES, JSON.stringify(cleaned));
       return cleaned;
@@ -982,7 +1039,7 @@ export function AdminPortal({
 
   // Persistent save helpers
   const saveCustomCategory = async (newCat) => {
-    if (!newCat || !newCat.trim()) return;
+    if (!newCat || !newCat.trim() || isDisallowedDineCategory(newCat)) return;
     const trimmed = newCat.trim();
     const knownNames = [
       ...customCategories.map((category) =>
@@ -1094,14 +1151,14 @@ export function AdminPortal({
         .filter(Boolean)
         .filter((name) => {
           const s = String(name).toLowerCase().trim();
-          return !dishNames.has(s) && !isDisallowedItemName(s);
+          return !dishNames.has(s) && !isDisallowedDineCategory(s);
         });
 
       setCustomCategories((previous) => {
         const merged = previous.filter(
           (p) => {
             const s = String(typeof p === "string" ? p : p?.name || "").toLowerCase().trim();
-            return !dishNames.has(s) && !isDisallowedItemName(s);
+            return !dishNames.has(s) && !isDisallowedDineCategory(s);
           }
         );
         names.forEach((name) => {
@@ -1139,34 +1196,104 @@ export function AdminPortal({
         .filter(Boolean),
     );
 
-    // Standard high-level categories
+    // Standard high-level dining categories ordered strictly from Soups to Desserts
     const standardCategories = [
-      { value: "starters", label: "Starters & Appetizers" },
-      { value: "biryani", label: "Biryanis & Rice Special" },
-      { value: "mains", label: "Main Course & Curries" },
-      { value: "tandoor-kebabs", label: "Tandoori & Kebabs" },
-      { value: "fast-food", label: "Burgers, Pizza & Fast Food" },
-      { value: "breads", label: "Naan & Roti" },
-      { value: "desserts", label: "Desserts & Sweets" },
+      {
+        value: "soups",
+        label: "Soups",
+        order: 10,
+        aliases: ["soups", "soup", "hot soup", "soups & salads", "soups & broths", "salads & soups"],
+      },
+      {
+        value: "starters",
+        label: "Starters",
+        order: 20,
+        aliases: ["starters", "starter", "starters & appetizers", "appetizers", "appetizer", "finger food"],
+      },
+      {
+        value: "tandoor-kebabs",
+        label: "Tandoori",
+        order: 30,
+        aliases: ["tandoor-kebabs", "tandoori & kebabs", "tandoori", "kebabs", "kebab", "tikka"],
+      },
+      {
+        value: "mains",
+        label: "Main Course",
+        order: 40,
+        aliases: ["mains", "main course", "main course & curries", "curries", "curry", "gravies", "gravy"],
+      },
+      {
+        value: "breads",
+        label: "Breads",
+        order: 50,
+        aliases: ["breads", "naan & roti", "roti", "naan", "tandoori roti", "indian breads", "bread", "rotis"],
+      },
+      {
+        value: "biryani",
+        label: "Biryani",
+        order: 60,
+        aliases: [
+          "biryani",
+          "biryanis",
+          "biryanis & rice special",
+          "biryani & rice special",
+          "biryani special",
+          "rice items",
+          "rice special",
+          "rice",
+          "fried rice",
+          "pulao",
+        ],
+      },
+      {
+        value: "burgers",
+        label: "Burgers",
+        order: 70,
+        aliases: ["burger", "burgers"],
+      },
+      {
+        value: "pizza",
+        label: "Pizza",
+        order: 71,
+        aliases: ["pizza", "pizzas"],
+      },
+      {
+        value: "fast-food",
+        label: "Fast Food",
+        order: 72,
+        aliases: ["fast-food", "fast food", "fastfood", "burgers, pizza & fast food", "pizza & fast food"],
+      },
+      {
+        value: "desserts",
+        label: "Desserts",
+        order: 990, // Desserts always at the very end
+        aliases: ["desserts", "desserts & sweets", "dessert", "sweets", "ice cream", "sweet", "mithai"],
+      },
     ];
 
     standardCategories.forEach((cat) => {
-      map.set(cat.value.toLowerCase(), cat);
+      map.set(cat.value.toLowerCase(), { value: cat.value, label: cat.label, order: cat.order });
     });
 
-    const getCleanCategoryLabel = (catVal) => {
-      const s = String(catVal || "").trim().toLowerCase();
-      if (s === "cocktail") return "Cocktails";
-      if (s === "curries" || s === "curry") return "Main Course & Curries";
-      const found = standardCategories.find(
-        (c) => c.value.toLowerCase() === s || c.label.toLowerCase() === s
+    const findStandard = (rawStr) => {
+      const lower = String(rawStr || "").trim().toLowerCase();
+      return standardCategories.find(
+        (c) =>
+          c.value.toLowerCase() === lower ||
+          c.label.toLowerCase() === lower ||
+          c.aliases.some((a) => a.toLowerCase() === lower)
       );
-      if (found) return found.label;
-      const str = String(catVal).replace(/[-_]/g, " ");
+    };
+
+    const getCleanCategoryLabel = (catVal) => {
+      const s = String(catVal || "").trim();
+      const std = findStandard(s);
+      if (std) return std.label;
+      const str = s.replace(/[-_]/g, " ");
       return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
-    // Add valid custom categories (strictly excluding any dish items)
+    // Add valid custom food categories (strictly excluding bar/drinks and dish items)
     (customCategories || []).forEach((cat) => {
       const name =
         typeof cat === "string"
@@ -1174,35 +1301,46 @@ export function AdminPortal({
           : cat.categoryName || cat.category || cat.name || cat.label || cat.value;
       if (!name || typeof name !== "string") return;
       const trimmed = name.trim();
-      let lower = trimmed.toLowerCase();
-      if (lower === "cocktail") lower = "cocktails";
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (!trimmed || isDisallowedDineCategory(trimmed) || dishNames.has(trimmed.toLowerCase())) {
+        return;
+      }
+
+      // If matches any standard category (e.g. "Biryanis & Rice Special", "Tandoori Roti", "Rice items"), skip to avoid duplicates
+      if (findStandard(trimmed)) return;
+
+      const canonicalKey = trimmed.toLowerCase().replace(/[-_]/g, " ");
+      if (!map.has(canonicalKey)) {
+        map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed), order: 80 });
       }
     });
 
-    // Add any genuine custom categories from menuItems
+    // Add any genuine custom categories from menuItems (strictly excluding bar/drinks and dish items)
     (menuItems || []).forEach((item) => {
       if (isDrinkItem(item)) return;
       const cat = item.category || item.categoryName;
       if (!cat || typeof cat !== "string") return;
       const trimmed = cat.trim();
-      if (isBeverageCategory(trimmed)) return;
+      if (!trimmed || isDisallowedDineCategory(trimmed)) return;
+
       const lower = trimmed.toLowerCase();
-      if (!dishNames.has(lower) && !isDisallowedItemName(trimmed)) {
-        const canonicalKey = lower === "curries" ? "mains" : lower;
-        if (!map.has(canonicalKey)) {
-          map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed) });
-        }
+      if (dishNames.has(lower)) return;
+
+      if (findStandard(trimmed)) return;
+
+      const canonicalKey = lower.replace(/[-_]/g, " ");
+      if (!map.has(canonicalKey)) {
+        map.set(canonicalKey, { value: trimmed, label: getCleanCategoryLabel(trimmed), order: 80 });
       }
     });
 
-    return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
+    // Sort strictly in dining meal course order: from Soups to Desserts
+    return Array.from(map.values())
+      .sort((a, b) => {
+        const orderDiff = (a.order ?? 80) - (b.order ?? 80);
+        if (orderDiff !== 0) return orderDiff;
+        return a.label.localeCompare(b.label);
+      })
+      .map(({ value, label }) => ({ value, label }));
   }, [customCategories, menuItems]);
 
   const allSectionOptions = React.useMemo(() => {
@@ -1720,7 +1858,22 @@ export function AdminPortal({
           .includes(query),
       ) &&
       (!menuFilters.category ||
-        (String(item.category ?? "").toLowerCase() === menuFilters.category.toLowerCase() || String(item.category ?? "").toLowerCase().replace(/[-_]/g, "") === menuFilters.category.toLowerCase().replace(/[-_]/g, ""))) &&
+        (() => {
+          const sel = menuFilters.category.toLowerCase().trim();
+          const itemCat = String(item.category ?? "").toLowerCase().trim();
+          if (itemCat === sel || itemCat.replace(/[-_]/g, "") === sel.replace(/[-_]/g, "")) return true;
+          if (sel === "soups" && itemCat.includes("soup")) return true;
+          if (sel === "starters" && (itemCat.includes("starter") || itemCat.includes("appetiz"))) return true;
+          if (sel === "tandoor-kebabs" && (itemCat.includes("tandoor") || itemCat.includes("kebab") || itemCat.includes("tikka"))) return true;
+          if (sel === "mains" && (itemCat.includes("main") || itemCat.includes("curri") || itemCat.includes("curry") || itemCat.includes("gravy"))) return true;
+          if (sel === "breads" && (itemCat.includes("bread") || itemCat.includes("roti") || itemCat.includes("naan"))) return true;
+          if (sel === "biryani" && (itemCat.includes("biryani") || itemCat.includes("rice") || itemCat.includes("pulao"))) return true;
+          if (sel === "burgers" && (itemCat === "burger" || itemCat === "burgers")) return true;
+          if (sel === "pizza" && (itemCat === "pizza" || itemCat === "pizzas")) return true;
+          if (sel === "fast-food" && (itemCat.includes("fast") || itemCat === "burgers, pizza & fast food" || itemCat === "pizza & fast food")) return true;
+          if (sel === "desserts" && (itemCat.includes("dessert") || itemCat.includes("sweet") || itemCat.includes("ice cream"))) return true;
+          return false;
+        })()) &&
       (!menuFilters.dietary ||
         Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
       (!menuFilters.availability ||
@@ -2119,7 +2272,7 @@ export function AdminPortal({
                       ].map(({ key, label, options }) => (
                         <label className="menu-filter-field" key={key}>
                           <span>{label}</span>
-                          <select
+                          <SearchableSelect
                             value={menuFilters[key]}
                             onChange={(event) =>
                               updateMenuFilter(key, event.target.value)
@@ -2131,7 +2284,7 @@ export function AdminPortal({
                                 {option.label}
                               </option>
                             ))}
-                          </select>
+                          </SearchableSelect>
                         </label>
                       ))}
                       <button
@@ -2145,6 +2298,7 @@ export function AdminPortal({
 
                     {/* Items Table List */}
                     <div
+                      className="menu-items-list"
                       style={{
                         borderRadius: "10px",
                         border: "1px solid var(--border-card)",
@@ -2152,6 +2306,7 @@ export function AdminPortal({
                       }}
                     >
                       <table
+                        className="menu-items-table"
                         style={{
                           width: "100%",
                           borderCollapse: "collapse",
@@ -2235,6 +2390,7 @@ export function AdminPortal({
                               return (
                                 <tr
                                   key={item.id}
+                                  className="menu-admin-item-row"
                                   style={{
                                     borderBottom: "1px solid var(--border-subtle)",
                                     transition:
@@ -2395,6 +2551,7 @@ export function AdminPortal({
                                     </div>
                                   </td>
                                   <td
+                                    data-label="Category"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       textTransform: "capitalize",
@@ -2404,9 +2561,13 @@ export function AdminPortal({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {item.category.replace("-", " ")}
+                                    {allCategoryOptions.find(
+                                      (option) =>
+                                        option.value.toLowerCase() ===
+                                        String(item.category || "").toLowerCase(),
+                                    )?.label || item.category.replace(/[-_]/g, " ")}
                                   </td>
-                                  <td style={{ padding: "0.6rem 0.85rem" }}>
+                                  <td data-label="Dietary" style={{ padding: "0.6rem 0.85rem" }}>
                                     {item.isVeg ? (
                                       <span
                                         style={{
@@ -2444,6 +2605,7 @@ export function AdminPortal({
                                     )}
                                   </td>
                                   <td
+                                    data-label="Price"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       fontWeight: 800,
@@ -2455,6 +2617,7 @@ export function AdminPortal({
                                     ₹{Number(item.price).toFixed(2)}
                                   </td>
                                   <td
+                                    data-label="Actions"
                                     style={{
                                       padding: "0.6rem 0.85rem",
                                       textAlign: "center",
@@ -2815,6 +2978,17 @@ export function AdminPortal({
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* ================= TAB: TAKEAWAY ORDERS ================= */}
+                {activeTab === "takeaway" && (
+                  <AdminTakeaway
+                    menuItems={menuItems}
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                    restaurantLogo={restaurantLogo}
+                    currentSession={currentSession}
+                  />
                 )}
 
                 {/* ================= TAB 2: TABLES & CHAIRS (PERSONS CAPACITY) ================= */}
@@ -3735,7 +3909,7 @@ export function AdminPortal({
                             {/* Col 2: Role Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-role">
                               <span>Role</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-role"
                                 value={staffFilters.role}
                                 onChange={(e) => updateStaffFilter("role", e.target.value)}
@@ -3763,13 +3937,13 @@ export function AdminPortal({
                                     {role}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 4: Shift Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-shift">
                               <span>Shift</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-shift"
                                 value={staffFilters.shift}
                                 onChange={(e) => updateStaffFilter("shift", e.target.value)}
@@ -3797,13 +3971,13 @@ export function AdminPortal({
                                     {shift}
                                   </option>
                                 ))}
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 5: Assigned Tables Filter */}
                             <label className="menu-filter-field" htmlFor="staff-filter-assigned">
                               <span>Table Assignment</span>
-                              <select
+                              <SearchableSelect
                                 id="staff-filter-assigned"
                                 value={staffFilters.assigned}
                                 onChange={(e) => updateStaffFilter("assigned", e.target.value)}
@@ -3832,7 +4006,7 @@ export function AdminPortal({
                                 <option value="unassigned" style={{ background: "var(--input-bg)", color: "var(--text-main)" }}>
                                   No Tables
                                 </option>
-                              </select>
+                              </SearchableSelect>
                             </label>
 
                             {/* Col 6: Reset / Count */}
@@ -5366,153 +5540,270 @@ export function AdminPortal({
                                   </button>
                                 </div>
 
-                                {/* Items List Body */}
+                                {/* Items List Body: Separated Kitchen & Bar Sections */}
                                 <div
                                   style={{
                                     padding: "1rem 1.15rem",
                                     display: "flex",
                                     flexDirection: "column",
-                                    gap: "0.6rem",
+                                    gap: "1.1rem",
                                     overflowY: "auto",
                                     flex: 1,
-                                    maxHeight: "55vh",
+                                    maxHeight: "60vh",
                                   }}
                                 >
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "space-between",
-                                      fontSize: "0.75rem",
-                                      fontWeight: 800,
-                                      color: "var(--text-dim)",
-                                      textTransform: "uppercase",
-                                      letterSpacing: "0.05em",
-                                      marginBottom: "0.2rem",
-                                    }}
-                                  >
-                                    <span>Ordered Dishes ({activeKotModalTable.items?.filter((i) => !isDrinkItem(i))?.length || 0})</span>
-                                    <span>Status</span>
-                                  </div>
+                                  {(() => {
+                                    const allItems = activeKotModalTable.items || [];
+                                    const foodItems = allItems.filter((i) => !isDrinkItem(i));
+                                    const drinkItems = allItems.filter((i) => isDrinkItem(i));
 
-                                  {activeKotModalTable.items && activeKotModalTable.items.filter((i) => !isDrinkItem(i)).length > 0 ? (
-                                    activeKotModalTable.items.filter((i) => !isDrinkItem(i)).map((item, idx) => {
-                                      const isReady =
-                                        item.kotStatus === "ready" ||
-                                        item.kotStatus === "served" ||
-                                        item.kotStatus === "completed";
-                                      const isCooking = item.kotStatus === "cooking";
-
-                                      return (
-                                        <div
-                                          key={idx}
-                                          style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            alignItems: "center",
-                                            padding: "0.6rem 0.8rem",
-                                            borderRadius: "8px",
-                                            background: "var(--bg-primary, #0b1120)",
-                                            border: isReady
-                                              ? "1px solid rgba(16, 185, 129, 0.4)"
-                                              : isCooking
-                                                ? "1px solid rgba(234, 88, 12, 0.4)"
-                                                : "1px solid var(--border-subtle)",
-                                            gap: "0.75rem",
-                                          }}
-                                        >
-                                          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
-                                            <span
+                                    return (
+                                      <>
+                                        {/* SECTION 1: KITCHEN ORDER TICKET (KOT) */}
+                                        {foodItems.length > 0 && (
+                                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                            <div
                                               style={{
-                                                background: "rgba(245, 158, 11, 0.16)",
-                                                border: "1px solid rgba(245, 158, 11, 0.4)",
-                                                color: "var(--accent-amber-light, #f59e0b)",
-                                                padding: "3px 8px",
-                                                borderRadius: "6px",
-                                                fontWeight: 800,
-                                                fontSize: "0.82rem",
-                                                flexShrink: 0,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "0.4rem 0.65rem",
+                                                background: "rgba(245, 158, 11, 0.1)",
+                                                border: "1px solid rgba(245, 158, 11, 0.25)",
+                                                borderRadius: "7px",
                                               }}
                                             >
-                                              {item.quantity || 1}x
-                                            </span>
-                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                              <div
-                                                style={{
-                                                  fontSize: "0.92rem",
-                                                  fontWeight: 700,
-                                                  color: "var(--text-main)",
-                                                  textTransform: "capitalize",
-                                                  whiteSpace: "nowrap",
-                                                  overflow: "hidden",
-                                                  textOverflow: "ellipsis",
-                                                }}
-                                                title={item.name}
-                                              >
-                                                {item.name}
+                                              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                                <ChefHat size={15} color="#f59e0b" />
+                                                <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "#f59e0b", letterSpacing: "0.02em" }}>
+                                                  🍳 KITCHEN KOT ({activeKotModalTable.kitchenKotNumber || (activeKotModalTable.kotId ? `KOT-${activeKotModalTable.kotId}` : "KOT")})
+                                                </span>
                                               </div>
-                                              {item.notes && (
+                                              <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", fontWeight: 700 }}>
+                                                {foodItems.length} Food Dishes
+                                              </span>
+                                            </div>
+
+                                            {foodItems.map((item, idx) => {
+                                              const isReady = item.kotStatus === "ready" || item.kotStatus === "served" || item.kotStatus === "completed";
+                                              const isCooking = item.kotStatus === "cooking";
+
+                                              return (
                                                 <div
+                                                  key={`food-${idx}`}
                                                   style={{
-                                                    fontSize: "0.72rem",
-                                                    color: "var(--danger, #ef4444)",
-                                                    fontWeight: 600,
-                                                    marginTop: "2px",
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    padding: "0.55rem 0.75rem",
+                                                    borderRadius: "8px",
+                                                    background: "var(--bg-primary, #0b1120)",
+                                                    border: isReady
+                                                      ? "1px solid rgba(16, 185, 129, 0.4)"
+                                                      : isCooking
+                                                        ? "1px solid rgba(234, 88, 12, 0.4)"
+                                                        : "1px solid var(--border-subtle)",
+                                                    gap: "0.75rem",
                                                   }}
                                                 >
-                                                  Note: {item.notes}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
+                                                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
+                                                    <span
+                                                      style={{
+                                                        background: "rgba(245, 158, 11, 0.16)",
+                                                        border: "1px solid rgba(245, 158, 11, 0.4)",
+                                                        color: "var(--accent-amber-light, #f59e0b)",
+                                                        padding: "2px 7px",
+                                                        borderRadius: "5px",
+                                                        fontWeight: 800,
+                                                        fontSize: "0.8rem",
+                                                        flexShrink: 0,
+                                                      }}
+                                                    >
+                                                      {item.quantity || 1}x
+                                                    </span>
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                      <div
+                                                        style={{
+                                                          fontSize: "0.9rem",
+                                                          fontWeight: 700,
+                                                          color: "var(--text-main)",
+                                                          textTransform: "capitalize",
+                                                          whiteSpace: "nowrap",
+                                                          overflow: "hidden",
+                                                          textOverflow: "ellipsis",
+                                                        }}
+                                                        title={item.name}
+                                                      >
+                                                        {item.name}
+                                                      </div>
+                                                      {item.notes && (
+                                                        <div style={{ fontSize: "0.7rem", color: "var(--danger, #ef4444)", fontWeight: 600, marginTop: "2px" }}>
+                                                          Note: {item.notes}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
 
-                                          {/* Status Toggle Button / Pill */}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              if (onUpdateItemKotStatus) {
-                                                const nextStatus = isReady ? "cooking" : "ready";
-                                                onUpdateItemKotStatus(activeKotModalTable.id, item.id, nextStatus);
-                                              }
-                                            }}
-                                            title="Click to toggle status"
-                                            style={{
-                                              fontSize: "0.7rem",
-                                              fontWeight: 800,
-                                              letterSpacing: "0.04em",
-                                              textTransform: "uppercase",
-                                              padding: "4px 10px",
-                                              borderRadius: "6px",
-                                              flexShrink: 0,
-                                              whiteSpace: "nowrap",
-                                              cursor: onUpdateItemKotStatus ? "pointer" : "default",
-                                              background: isReady
-                                                ? "rgba(16, 185, 129, 0.18)"
-                                                : isCooking
-                                                  ? "rgba(234, 88, 12, 0.18)"
-                                                  : "rgba(245, 158, 11, 0.18)",
-                                              border: isReady
-                                                ? "1px solid rgba(16, 185, 129, 0.4)"
-                                                : isCooking
-                                                  ? "1px solid rgba(234, 88, 12, 0.4)"
-                                                  : "1px solid rgba(245, 158, 11, 0.4)",
-                                              color: isReady ? "#10b981" : isCooking ? "#ea580c" : "#f59e0b",
-                                              transition: "all 0.15s ease",
-                                            }}
-                                          >
-                                            {isReady ? "✓ READY" : isCooking ? "🔥 COOKING" : "📥 RECEIVED"}
-                                          </button>
-                                        </div>
-                                      );
-                                    })
-                                  ) : (
-                                    <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", textAlign: "center", margin: "2rem auto" }}>
-                                      No items currently ordered for this table.
-                                    </p>
-                                  )}
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      if (onUpdateItemKotStatus) {
+                                                        const nextStatus = isReady ? "cooking" : "ready";
+                                                        onUpdateItemKotStatus(activeKotModalTable.id, nextStatus, item.id);
+                                                      }
+                                                    }}
+                                                    title="Click to toggle food cooking status"
+                                                    style={{
+                                                      fontSize: "0.68rem",
+                                                      fontWeight: 800,
+                                                      letterSpacing: "0.04em",
+                                                      textTransform: "uppercase",
+                                                      padding: "4px 9px",
+                                                      borderRadius: "6px",
+                                                      flexShrink: 0,
+                                                      cursor: onUpdateItemKotStatus ? "pointer" : "default",
+                                                      background: isReady ? "rgba(16, 185, 129, 0.18)" : isCooking ? "rgba(234, 88, 12, 0.18)" : "rgba(245, 158, 11, 0.18)",
+                                                      border: isReady ? "1px solid rgba(16, 185, 129, 0.4)" : isCooking ? "1px solid rgba(234, 88, 12, 0.4)" : "1px solid rgba(245, 158, 11, 0.4)",
+                                                      color: isReady ? "#10b981" : isCooking ? "#ea580c" : "#f59e0b",
+                                                      transition: "all 0.15s ease",
+                                                    }}
+                                                  >
+                                                    {isReady ? "✓ READY" : isCooking ? "🔥 COOKING" : "📥 RECEIVED"}
+                                                  </button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+
+                                        {/* SECTION 2: BAR ORDER TICKET (BOT) */}
+                                        {drinkItems.length > 0 && (
+                                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "0.4rem 0.65rem",
+                                                background: "rgba(56, 189, 248, 0.1)",
+                                                border: "1px solid rgba(56, 189, 248, 0.25)",
+                                                borderRadius: "7px",
+                                              }}
+                                            >
+                                              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                                <Wine size={15} color="#38bdf8" />
+                                                <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "#38bdf8", letterSpacing: "0.02em" }}>
+                                                  🍸 BAR BOT ({activeKotModalTable.barBotNumber || (activeKotModalTable.botId ? `BOT-${activeKotModalTable.botId}` : "BOT")})
+                                                </span>
+                                              </div>
+                                              <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", fontWeight: 700 }}>
+                                                {drinkItems.length} Drinks
+                                              </span>
+                                            </div>
+
+                                            {drinkItems.map((item, idx) => {
+                                              const isReady = item.kotStatus === "ready" || item.kotStatus === "served" || item.kotStatus === "completed";
+                                              const isMixing = item.kotStatus === "cooking" || item.kotStatus === "mixing";
+
+                                              return (
+                                                <div
+                                                  key={`drink-${idx}`}
+                                                  style={{
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    padding: "0.55rem 0.75rem",
+                                                    borderRadius: "8px",
+                                                    background: "var(--bg-primary, #0b1120)",
+                                                    border: isReady
+                                                      ? "1px solid rgba(16, 185, 129, 0.4)"
+                                                      : isMixing
+                                                        ? "1px solid rgba(56, 189, 248, 0.4)"
+                                                        : "1px solid var(--border-subtle)",
+                                                    gap: "0.75rem",
+                                                  }}
+                                                >
+                                                  <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
+                                                    <span
+                                                      style={{
+                                                        background: "rgba(56, 189, 248, 0.16)",
+                                                        border: "1px solid rgba(56, 189, 248, 0.4)",
+                                                        color: "#38bdf8",
+                                                        padding: "2px 7px",
+                                                        borderRadius: "5px",
+                                                        fontWeight: 800,
+                                                        fontSize: "0.8rem",
+                                                        flexShrink: 0,
+                                                      }}
+                                                    >
+                                                      {item.quantity || 1}x
+                                                    </span>
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                      <div
+                                                        style={{
+                                                          fontSize: "0.9rem",
+                                                          fontWeight: 700,
+                                                          color: "var(--text-main)",
+                                                          textTransform: "capitalize",
+                                                          whiteSpace: "nowrap",
+                                                          overflow: "hidden",
+                                                          textOverflow: "ellipsis",
+                                                        }}
+                                                        title={item.name}
+                                                      >
+                                                        {item.name}
+                                                      </div>
+                                                      {item.notes && (
+                                                        <div style={{ fontSize: "0.7rem", color: "var(--danger, #ef4444)", fontWeight: 600, marginTop: "2px" }}>
+                                                          Note: {item.notes}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </div>
+
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      if (onUpdateItemKotStatus) {
+                                                        const nextStatus = isReady ? "cooking" : "ready";
+                                                        onUpdateItemKotStatus(activeKotModalTable.id, nextStatus, item.id);
+                                                      }
+                                                    }}
+                                                    title="Click to toggle drink mixing status"
+                                                    style={{
+                                                      fontSize: "0.68rem",
+                                                      fontWeight: 800,
+                                                      letterSpacing: "0.04em",
+                                                      textTransform: "uppercase",
+                                                      padding: "4px 9px",
+                                                      borderRadius: "6px",
+                                                      flexShrink: 0,
+                                                      cursor: onUpdateItemKotStatus ? "pointer" : "default",
+                                                      background: isReady ? "rgba(16, 185, 129, 0.18)" : isMixing ? "rgba(56, 189, 248, 0.18)" : "rgba(100, 116, 139, 0.18)",
+                                                      border: isReady ? "1px solid rgba(16, 185, 129, 0.4)" : isMixing ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid rgba(100, 116, 139, 0.4)",
+                                                      color: isReady ? "#10b981" : isMixing ? "#38bdf8" : "#94a3b8",
+                                                      transition: "all 0.15s ease",
+                                                    }}
+                                                  >
+                                                    {isReady ? "✓ READY" : isMixing ? "🍸 MIXING" : "📥 QUEUED"}
+                                                  </button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+
+                                        {foodItems.length === 0 && drinkItems.length === 0 && (
+                                          <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", textAlign: "center", margin: "2rem auto" }}>
+                                            No items currently ordered for this table.
+                                          </p>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
 
-                                {/* Modal Footer */}
+                                {/* Modal Footer with Department-Specific Actions */}
                                 <div
                                   style={{
                                     padding: "0.85rem 1.15rem",
@@ -5522,6 +5813,7 @@ export function AdminPortal({
                                     gap: "0.6rem",
                                     alignItems: "center",
                                     justifyContent: "space-between",
+                                    flexWrap: "wrap",
                                   }}
                                 >
                                   <button
@@ -5541,36 +5833,69 @@ export function AdminPortal({
                                     Close
                                   </button>
 
-                                  {activeKotModalTable.items && activeKotModalTable.items.length > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (onCompleteTableKot) {
-                                          onCompleteTableKot(activeKotModalTable.id);
-                                        }
-                                        setSelectedKotModalTable(null);
-                                      }}
-                                      style={{
-                                        flex: 1,
-                                        padding: "0.55rem 1rem",
-                                        borderRadius: "7px",
-                                        background: "linear-gradient(135deg, #10b981, #059669)",
-                                        border: "none",
-                                        color: "#ffffff",
-                                        fontWeight: 800,
-                                        fontSize: "0.84rem",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: "0.4rem",
-                                        boxShadow: "0 3px 10px rgba(16, 185, 129, 0.3)",
-                                      }}
-                                    >
-                                      <CheckCircle2 size={16} />
-                                      <span>Mark Preparation Completed</span>
-                                    </button>
-                                  )}
+                                  <div style={{ display: "flex", gap: "0.5rem", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                    {activeKotModalTable.items && activeKotModalTable.items.some((i) => !isDrinkItem(i)) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onCompleteTableKot) {
+                                            onCompleteTableKot(activeKotModalTable.id);
+                                          }
+                                        }}
+                                        style={{
+                                          padding: "0.55rem 0.9rem",
+                                          borderRadius: "7px",
+                                          background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          fontWeight: 800,
+                                          fontSize: "0.8rem",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "0.35rem",
+                                          boxShadow: "0 3px 10px rgba(245, 158, 11, 0.25)",
+                                        }}
+                                        title="Mark only kitchen food items as ready"
+                                      >
+                                        <ChefHat size={14} />
+                                        <span>Mark Food Ready</span>
+                                      </button>
+                                    )}
+
+                                    {activeKotModalTable.items && activeKotModalTable.items.some((i) => isDrinkItem(i)) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (onUpdateItemKotStatus) {
+                                            (activeKotModalTable.items || [])
+                                              .filter((i) => isDrinkItem(i))
+                                              .forEach((drink) => {
+                                                onUpdateItemKotStatus(activeKotModalTable.id, "ready", drink.id);
+                                              });
+                                          }
+                                        }}
+                                        style={{
+                                          padding: "0.55rem 0.9rem",
+                                          borderRadius: "7px",
+                                          background: "linear-gradient(135deg, #0284c7, #0369a1)",
+                                          border: "none",
+                                          color: "#ffffff",
+                                          fontWeight: 800,
+                                          fontSize: "0.8rem",
+                                          cursor: "pointer",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: "0.35rem",
+                                          boxShadow: "0 3px 10px rgba(2, 132, 199, 0.25)",
+                                        }}
+                                        title="Mark only bar drink items as ready"
+                                      >
+                                        <Wine size={14} />
+                                        <span>Mark Drinks Ready</span>
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -5608,7 +5933,8 @@ export function AdminPortal({
                   activeTab === "daily-balances" ||
                   activeTab === "coa" ||
                   activeTab === "general-ledger" ||
-                  activeTab === "journal-entries") && (
+                  activeTab === "journal-entries" ||
+                  activeTab === "audit") && (
                   <AdminReports
                     pastOrders={pastOrders}
                     menuItems={menuItems}
@@ -5618,7 +5944,9 @@ export function AdminPortal({
                     salaryPayments={salaryPayments}
                     inventoryPurchases={inventoryPurchases}
                     initialTab={
-                      activeTab === "daily-balances"
+                      activeTab === "audit"
+                        ? "audit-documents"
+                        : activeTab === "daily-balances"
                         ? "daily-register"
                         : activeTab === "coa"
                         ? "coa"
@@ -5629,6 +5957,41 @@ export function AdminPortal({
                         : "sales"
                     }
                   />
+                )}
+
+                {/* ================= TAB: DELIVERY ================= */}
+                {activeTab === "delivery" && (
+                  <DeliveryManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: RESERVATIONS ================= */}
+                {activeTab === "reservations" && (
+                  <ReservationsManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: SUPPLIERS ================= */}
+                {activeTab === "suppliers" && (
+                  <SuppliersManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: CUSTOMERS ================= */}
+                {activeTab === "customers" && (
+                  <CustomersManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: ATTENDANCE ================= */}
+                {activeTab === "attendance" && (
+                  <AttendanceManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: PROMOTIONS ================= */}
+                {activeTab === "promotions" && (
+                  <PromotionsManagement isLight={isLight} showToast={showToast} />
+                )}
+
+                {/* ================= TAB: ROLES & RBAC ================= */}
+                {activeTab === "roles" && (
+                  <RolesManagement isLight={isLight} showToast={showToast} />
                 )}
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}

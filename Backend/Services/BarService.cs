@@ -1413,7 +1413,8 @@ public class BarService
             return new List<BarKotTicketDto>();
         }
 
-        const string itemsSql = @"
+        var ticketOrderIdsSql = string.Join(",", tickets.Select(t => t.OrderId).Distinct());
+        var itemsSql = $@"
             SELECT 
                 oi.order_item_id,
                 oi.order_id,
@@ -1601,19 +1602,62 @@ public class BarService
             _ => "queued"
         };
 
+        
         const string itemsSql = @"
             UPDATE order_items oi
             LEFT JOIN menu_items mi ON oi.menu_item_id = mi.menu_item_id
-            SET oi.item_status = @p_item_status 
-            WHERE oi.bot_id = @p_kot_id AND oi.is_active = 1 AND oi.is_deleted = 0;
+            SET oi.item_status = @p_item_status
+            WHERE oi.bot_id = @p_kot_id
+              AND oi.is_active = 1
+              AND oi.is_deleted = 0;
         ";
-        await _spService.ExecuteSqlNonQueryAsync(itemsSql, new Dictionary<string, object?>
-        {
-            { "@p_item_status", itemStatus },
-            { "@p_kot_id", kotId }
-        });
 
-        return await GetBarKotTicketByIdAsync(kotId);
+        await _spService.ExecuteSqlNonQueryAsync(
+            itemsSql,
+            new Dictionary<string, object?>
+            {
+                { "@p_item_status", itemStatus },
+                { "@p_kot_id", kotId }
+            });
+
+        await _spService.ExecuteSqlNonQueryAsync(
+            "UPDATE bar_bot_items SET item_status = @p_item_status WHERE bot_id = @p_kot_id;",
+            new Dictionary<string, object?>
+            {
+                { "@p_item_status", itemStatus },
+                { "@p_kot_id", kotId }
+            });
+
+        try
+        {
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE order_items SET item_status = @p_item_status WHERE (bot_id = @p_kot_id OR (order_id = (SELECT order_id FROM bar_order_tickets WHERE bot_id = @p_kot_id LIMIT 1) AND bot_id = @p_kot_id)) AND is_deleted = 0;",
+                new Dictionary<string, object?>
+                {
+                    { "@p_item_status", itemStatus },
+                    { "@p_kot_id", kotId }
+                });
+        }
+        catch { }
+
+        try
+        {
+            var botOrderId = await _spService.ExecuteSqlScalarAsync<long?>(
+                "SELECT order_id FROM bar_order_tickets WHERE bot_id = @id LIMIT 1;",
+                new Dictionary<string, object?> { { "@id", kotId } });
+            if (botOrderId.HasValue && botOrderId.Value > 0)
+            {
+                await TakeawayStatusSyncHelper.SyncTakeawayFromItemsSqlAsync(_spService, botOrderId.Value);
+            }
+        }
+        catch { }
+
+        var ticket = await GetBarKotTicketByIdAsync(kotId);
+        if (ticket == null)
+        {
+            return new BarKotTicketDto { KotId = kotId, Status = cleanStatus };
+        }
+        return ticket;
     }
 
     public async Task<BarKotTicketDto?> MarkAllBarKotReadyAsync(long kotId)
@@ -1752,7 +1796,12 @@ public class BarService
             };
         }, new Dictionary<string, object?> { { "@p_item_id", orderItemId } });
 
-        return list.FirstOrDefault();
+        var firstItem = list.FirstOrDefault();
+        if (firstItem != null && firstItem.OrderId > 0)
+        {
+            await TakeawayStatusSyncHelper.SyncTakeawayFromItemsSqlAsync(_spService, firstItem.OrderId);
+        }
+        return firstItem;
     }
 
     public async Task<BarKotItemDto?> AdvanceBarKotItemStatusAsync(long orderItemId)
@@ -2679,10 +2728,11 @@ public class BarService
     public async Task<BarInvoicesSummaryDto> GetBarInvoicesSummaryAsync()
     {
         var invoices = await GetBarInvoicesAsync();
-        var totalRev = Math.Round(invoices.Sum(i => i.GrandTotal), 2);
-        var cashInvoices = invoices.Where(i => i.PaymentMode.Equals("cash", StringComparison.OrdinalIgnoreCase)).ToList();
-        var upiInvoices = invoices.Where(i => i.PaymentMode.Equals("upi", StringComparison.OrdinalIgnoreCase)).ToList();
-        var cardInvoices = invoices.Where(i => i.PaymentMode.Equals("card", StringComparison.OrdinalIgnoreCase)).ToList();
+        var activeInvoices = invoices.Where(i => !i.Status.Equals("VOID", StringComparison.OrdinalIgnoreCase) && !i.Status.Equals("REFUNDED", StringComparison.OrdinalIgnoreCase) && !i.Status.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase)).ToList();
+        var totalRev = Math.Round(activeInvoices.Sum(i => i.GrandTotal), 2);
+        var cashInvoices = activeInvoices.Where(i => i.PaymentMode.Equals("cash", StringComparison.OrdinalIgnoreCase)).ToList();
+        var upiInvoices = activeInvoices.Where(i => i.PaymentMode.Equals("upi", StringComparison.OrdinalIgnoreCase)).ToList();
+        var cardInvoices = activeInvoices.Where(i => i.PaymentMode.Equals("card", StringComparison.OrdinalIgnoreCase)).ToList();
 
         return new BarInvoicesSummaryDto
         {

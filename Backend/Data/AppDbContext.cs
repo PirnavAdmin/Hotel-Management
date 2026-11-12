@@ -49,7 +49,15 @@ public class AppDbContext : DbContext
 
     public DbSet<Customer> Customers { get; set; }
 
+    public DbSet<CustomerOtpToken> CustomerOtpTokens { get; set; }
+
+    public DbSet<CustomerRefreshToken> CustomerRefreshTokens { get; set; }
+
     public DbSet<Reservation> Reservations { get; set; }
+
+    public DbSet<ReservationPayment> ReservationPayments { get; set; }
+
+    public DbSet<ReservationOtpToken> ReservationOtpTokens { get; set; }
 
     public DbSet<Ingredient> Ingredients { get; set; }
 
@@ -70,6 +78,13 @@ public class AppDbContext : DbContext
     public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
     public DbSet<RestaurantSetting> RestaurantSettings { get; set; }
     public DbSet<Setting> Settings { get; set; }
+
+
+    // Accounting & Audit
+    public DbSet<ChartOfAccount> ChartOfAccounts { get; set; }
+    public DbSet<JournalVoucher> JournalVouchers { get; set; }
+    public DbSet<JournalVoucherLine> JournalVoucherLines { get; set; }
+    public DbSet<DailyCashBankRegister> DailyCashBankRegisters { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -380,6 +395,20 @@ public class AppDbContext : DbContext
             entity.Property(o => o.UpdatedAt).HasColumnName("updated_at");
             entity.Property(o => o.CreatedBy).HasColumnName("created_by");
             entity.Property(o => o.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(o => o.CustomerId).HasColumnName("customer_id");
+            entity.Property(o => o.CustomerName).HasColumnName("customer_name").HasMaxLength(120);
+            entity.Property(o => o.CustomerPhone).HasColumnName("customer_phone").HasMaxLength(20);
+            entity.Property(o => o.CustomerEmail).HasColumnName("customer_email").HasMaxLength(120);
+            entity.Property(o => o.PackagingCharge).HasColumnName("packaging_charge").HasPrecision(18, 2);
+            entity.Property(o => o.FulfillmentStatus).HasColumnName("fulfillment_status").HasMaxLength(30);
+            entity.Property(o => o.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
+            entity.Property(o => o.PaymentMethod).HasColumnName("payment_method").HasMaxLength(30);
+            entity.Property(o => o.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
+            entity.Property(o => o.ServiceCharge).HasColumnName("service_charge").HasPrecision(18, 2);
+            entity.Property(o => o.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(255);
+            entity.Property(o => o.CancelledAt).HasColumnName("cancelled_at");
+            entity.Property(o => o.CancelledBy).HasColumnName("cancelled_by");
+            entity.Property(o => o.CancelledByName).HasColumnName("cancelled_by_name").HasMaxLength(120);
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
@@ -464,6 +493,12 @@ public class AppDbContext : DbContext
             entity.Property(p => p.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
             entity.Property(p => p.TxnReference).HasColumnName("txn_reference").HasMaxLength(100);
             entity.Property(p => p.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
+            entity.Property(p => p.GatewayProvider).HasColumnName("gateway_provider").HasMaxLength(40);
+            entity.Property(p => p.GatewayOrderId).HasColumnName("gateway_order_id").HasMaxLength(100);
+            entity.Property(p => p.GatewayPaymentId).HasColumnName("gateway_payment_id").HasMaxLength(100);
+            entity.Property(p => p.GatewaySignature).HasColumnName("gateway_signature").HasMaxLength(255);
+            entity.Property(p => p.FailureReason).HasColumnName("failure_reason").HasMaxLength(255);
+            entity.Property(p => p.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
             entity.Property(p => p.PaidAt).HasColumnName("paid_at");
         });
 
@@ -491,6 +526,301 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(k => k.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================================
+        // SALARY PAYMENTS
+        // ============================================================
+
+        modelBuilder.Entity<SalaryPayment>(entity =>
+        {
+            entity.ToTable("salary_payments");
+            entity.HasKey(e => e.PaymentId);
+            entity.Property(e => e.PaymentId).HasColumnName("payment_id");
+            entity.Property(e => e.StaffId).HasColumnName("staff_id");
+            entity.Property(e => e.StaffName).HasColumnName("staff_name").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.RoleTitle).HasColumnName("role_title").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Department).HasColumnName("department").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Amount).HasColumnName("amount").HasPrecision(18, 2);
+            entity.Property(e => e.PaymentDate).HasColumnName("payment_date");
+            entity.Property(e => e.PaymentMonth).HasColumnName("payment_month").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
+            entity.Property(e => e.Remarks).HasColumnName("remarks").HasMaxLength(255);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasOne(e => e.StaffPerson)
+                  .WithMany(s => s.SalaryPayments)
+                  .HasForeignKey(e => e.StaffId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ============================================================
+        // INVENTORY PURCHASES
+        // ============================================================
+
+        // ============================================================
+        // ACCOUNTING & AUDIT (COA, JOURNAL VOUCHERS, DAILY REGISTER)
+        // ============================================================
+
+        modelBuilder.Entity<ChartOfAccount>(entity =>
+        {
+            entity.ToTable("chart_of_accounts");
+            entity.HasKey(e => e.AccountId);
+            entity.Property(e => e.AccountId).HasColumnName("account_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(20).IsRequired();
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.Property(e => e.AccountName).HasColumnName("account_name").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.AccountGroup).HasColumnName("account_group").HasMaxLength(40).IsRequired();
+            entity.Property(e => e.AccountType).HasColumnName("account_type").HasMaxLength(80).IsRequired();
+            entity.Property(e => e.NormalBalance).HasColumnName("normal_balance").HasMaxLength(15).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+            entity.Property(e => e.IsSystemAccount).HasColumnName("is_system_account");
+            entity.Property(e => e.IsActive).HasColumnName("is_active");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<JournalVoucher>(entity =>
+        {
+            entity.ToTable("journal_vouchers");
+            entity.HasKey(e => e.VoucherId);
+            entity.Property(e => e.VoucherId).HasColumnName("voucher_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.VoucherNumber).HasColumnName("voucher_number").HasMaxLength(40).IsRequired();
+            entity.HasIndex(e => e.VoucherNumber).IsUnique();
+            entity.Property(e => e.VoucherDate).HasColumnName("voucher_date");
+            entity.Property(e => e.VoucherType).HasColumnName("voucher_type").HasMaxLength(40).IsRequired();
+            entity.Property(e => e.Narration).HasColumnName("narration").HasMaxLength(500).IsRequired();
+            entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by").HasMaxLength(100);
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.VoidReason).HasColumnName("void_reason").HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+
+            entity.HasMany(v => v.Lines)
+                  .WithOne(l => l.Voucher)
+                  .HasForeignKey(l => l.VoucherId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JournalVoucherLine>(entity =>
+        {
+            entity.ToTable("journal_voucher_lines");
+            entity.HasKey(e => e.LineId);
+            entity.Property(e => e.LineId).HasColumnName("line_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.VoucherId).HasColumnName("voucher_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.AccountCode).HasColumnName("account_code").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.AccountName).HasColumnName("account_name").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(255);
+            entity.Property(e => e.DebitAmount).HasColumnName("debit_amount").HasPrecision(18, 2);
+            entity.Property(e => e.CreditAmount).HasColumnName("credit_amount").HasPrecision(18, 2);
+
+            entity.HasOne(l => l.Account)
+                  .WithMany(a => a.JournalLines)
+                  .HasForeignKey(l => l.AccountId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DailyCashBankRegister>(entity =>
+        {
+            entity.ToTable("daily_cash_bank_registers");
+            entity.HasKey(e => e.RegisterId);
+            entity.Property(e => e.RegisterId).HasColumnName("register_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.BusinessDate).HasColumnName("business_date");
+            entity.HasIndex(e => e.BusinessDate).IsUnique();
+            entity.Property(e => e.OpeningCashFloat).HasColumnName("opening_cash_float").HasPrecision(18, 2);
+            entity.Property(e => e.OpeningBankBalance).HasColumnName("opening_bank_balance").HasPrecision(18, 2);
+            entity.Property(e => e.TotalOpeningBalance).HasColumnName("total_opening_balance").HasPrecision(18, 2);
+            entity.Property(e => e.PhysicalCashCount).HasColumnName("physical_cash_count").HasPrecision(18, 2);
+            entity.Property(e => e.DenominationsJson).HasColumnName("denominations_json").HasMaxLength(1000);
+            entity.Property(e => e.CashVariance).HasColumnName("cash_variance").HasPrecision(18, 2);
+            entity.Property(e => e.ShiftStatus).HasColumnName("shift_status").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.ShiftOpenedAt).HasColumnName("shift_opened_at");
+            entity.Property(e => e.ShiftClosedAt).HasColumnName("shift_closed_at");
+            entity.Property(e => e.OpenedBy).HasColumnName("opened_by").HasMaxLength(100);
+            entity.Property(e => e.ClosedBy).HasColumnName("closed_by").HasMaxLength(100);
+            entity.Property(e => e.Notes).HasColumnName("notes").HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<InventoryPurchase>(entity =>
+        {
+            entity.ToTable("inventory_purchases");
+            entity.HasKey(e => e.PurchaseId);
+            entity.Property(e => e.PurchaseId).HasColumnName("purchase_id");
+            entity.Property(e => e.IngredientId).HasColumnName("ingredient_id");
+            entity.Property(e => e.ItemName).HasColumnName("item_name").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Department).HasColumnName("department").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Supplier).HasColumnName("supplier").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.Quantity).HasColumnName("quantity").HasPrecision(18, 2);
+            entity.Property(e => e.UnitCost).HasColumnName("unit_cost").HasPrecision(18, 2);
+            entity.Property(e => e.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
+            entity.Property(e => e.Note).HasColumnName("note").HasMaxLength(255);
+            entity.Property(e => e.PurchaseDate).HasColumnName("purchase_date");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<Reservation>(entity =>
+        {
+            entity.ToTable("reservations");
+            entity.HasKey(e => e.ReservationId);
+            entity.Property(e => e.ReservationId).HasColumnName("reservation_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ReservationNumber).HasColumnName("reservation_number").HasMaxLength(30);
+            entity.Property(e => e.BranchId).HasColumnName("branch_id").HasDefaultValue(1);
+            entity.Property(e => e.OutletId).HasColumnName("outlet_id");
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id");
+            entity.Property(e => e.CustomerName).HasColumnName("customer_name").HasMaxLength(100);
+            entity.Property(e => e.Phone).HasColumnName("phone").HasMaxLength(20);
+            entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(120);
+            entity.Property(e => e.TableId).HasColumnName("table_id");
+            entity.Property(e => e.GuestsCount).HasColumnName("guests_count").HasDefaultValue(2);
+            entity.Property(e => e.SeatingPreference).HasColumnName("seating_preference").HasMaxLength(50);
+            entity.Property(e => e.ReservationDate).HasColumnName("reservation_date");
+            entity.Property(e => e.ReservationTime).HasColumnName("reservation_time");
+            entity.Property(e => e.SlotDurationMinutes).HasColumnName("slot_duration_minutes").HasDefaultValue(120);
+            entity.Property(e => e.ReservationAmount).HasColumnName("reservation_amount").HasPrecision(18, 2);
+            entity.Property(e => e.AdvanceAmount).HasColumnName("advance_amount").HasPrecision(18, 2);
+            entity.Property(e => e.PaidAmount).HasColumnName("paid_amount").HasPrecision(18, 2);
+            entity.Property(e => e.RemainingAmount).HasColumnName("remaining_amount").HasPrecision(18, 2);
+            entity.Property(e => e.PaymentStatus).HasColumnName("payment_status").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(40).IsRequired();
+            entity.Property(e => e.Notes).HasColumnName("notes").HasMaxLength(500);
+            entity.Property(e => e.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
+            entity.Property(e => e.CancellationReason).HasColumnName("cancellation_reason").HasMaxLength(255);
+            entity.Property(e => e.CancelledAt).HasColumnName("cancelled_at");
+            entity.Property(e => e.CancelledBy).HasColumnName("cancelled_by").HasMaxLength(100);
+            entity.Property(e => e.RefundAmount).HasColumnName("refund_amount").HasPrecision(18, 2);
+            entity.Property(e => e.RefundStatus).HasColumnName("refund_status").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.RefundReference).HasColumnName("refund_reference").HasMaxLength(100);
+            entity.Property(e => e.ConfirmedAt).HasColumnName("confirmed_at");
+            entity.Property(e => e.ModifiedAt).HasColumnName("modified_at");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<ReservationPayment>(entity =>
+        {
+            entity.ToTable("reservation_payments");
+            entity.HasKey(e => e.PaymentId);
+            entity.Property(e => e.PaymentId).HasColumnName("payment_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.ReservationId).HasColumnName("reservation_id").IsRequired();
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id");
+            entity.Property(e => e.PaymentType).HasColumnName("payment_type").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Amount).HasColumnName("amount").HasPrecision(18, 2);
+            entity.Property(e => e.PaymentMethod).HasColumnName("payment_method").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.PaymentStatus).HasColumnName("payment_status").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.GatewayProvider).HasColumnName("gateway_provider").HasMaxLength(40);
+            entity.Property(e => e.GatewayOrderId).HasColumnName("gateway_order_id").HasMaxLength(100);
+            entity.Property(e => e.GatewayPaymentId).HasColumnName("gateway_payment_id").HasMaxLength(100);
+            entity.Property(e => e.GatewaySignature).HasColumnName("gateway_signature").HasMaxLength(255);
+            entity.Property(e => e.TransactionReference).HasColumnName("transaction_reference").HasMaxLength(100);
+            entity.Property(e => e.RefundReference).HasColumnName("refund_reference").HasMaxLength(100);
+            entity.Property(e => e.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
+            entity.Property(e => e.FailureReason).HasColumnName("failure_reason").HasMaxLength(255);
+            entity.Property(e => e.PaidAt).HasColumnName("paid_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<ReservationOtpToken>(entity =>
+        {
+            entity.ToTable("reservation_otp_tokens");
+            entity.HasKey(e => e.OtpId);
+            entity.Property(e => e.OtpId).HasColumnName("otp_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.Phone).HasColumnName("phone").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.OtpHash).HasColumnName("otp_hash").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.VerifiedAt).HasColumnName("verified_at");
+            entity.Property(e => e.Attempts).HasColumnName("attempts");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+        });
+
+        // ============================================================
+        // CUSTOMER AUTHENTICATION (CUSTOMERS, OTP TOKENS, REFRESH TOKENS)
+        // ============================================================
+
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.ToTable("customers");
+            entity.HasKey(c => c.CustomerId);
+            entity.Property(c => c.CustomerId).HasColumnName("customer_id").ValueGeneratedOnAdd();
+            entity.Property(c => c.FullName).HasColumnName("full_name").HasMaxLength(120).IsRequired();
+            entity.Property(c => c.Phone).HasColumnName("phone").HasMaxLength(20).IsRequired();
+            entity.Property(c => c.Email).HasColumnName("email").HasMaxLength(120);
+            entity.Property(c => c.PasswordHash).HasColumnName("password_hash").HasMaxLength(255);
+            entity.Property(c => c.Role).HasColumnName("role").HasMaxLength(30).HasDefaultValue("Customer");
+            entity.Property(c => c.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+            entity.Property(c => c.IsVerified).HasColumnName("is_verified").HasDefaultValue(false);
+            entity.Property(c => c.VerifiedAt).HasColumnName("verified_at");
+            entity.Property(c => c.LastLogin).HasColumnName("last_login");
+            entity.Property(c => c.RegisteredBranchId).HasColumnName("registered_branch_id");
+            entity.Property(c => c.LoyaltyPoints).HasColumnName("loyalty_points").HasDefaultValue(0);
+            entity.Property(c => c.FailedLoginAttempts).HasColumnName("failed_login_attempts").HasDefaultValue(0);
+            entity.Property(c => c.LockoutUntil).HasColumnName("lockout_until");
+            entity.Property(c => c.TokenVersion).HasColumnName("token_version").HasDefaultValue(1);
+            entity.Property(c => c.DeletedAt).HasColumnName("deleted_at");
+            entity.Property(c => c.BranchId).HasColumnName("branch_id");
+            entity.Property(c => c.OutletId).HasColumnName("outlet_id");
+            entity.Property(c => c.CreatedAt).HasColumnName("created_at");
+            entity.Property(c => c.UpdatedAt).HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<CustomerOtpToken>(entity =>
+        {
+            entity.ToTable("customer_otp_tokens");
+            entity.HasKey(e => e.OtpId);
+            entity.Property(e => e.OtpId).HasColumnName("otp_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id").IsRequired();
+            entity.Property(e => e.Purpose).HasColumnName("purpose").HasMaxLength(40).IsRequired();
+            entity.Property(e => e.Channel).HasColumnName("channel").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.TargetIdentifier).HasColumnName("target_identifier").HasMaxLength(150).IsRequired();
+            entity.Property(e => e.OtpHash).HasColumnName("otp_hash").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ResetTokenHash).HasColumnName("reset_token_hash").HasMaxLength(128);
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.VerifiedAt).HasColumnName("verified_at");
+            entity.Property(e => e.UsedAt).HasColumnName("used_at");
+            entity.Property(e => e.InvalidatedAt).HasColumnName("invalidated_at");
+            entity.Property(e => e.Attempts).HasColumnName("attempts").HasDefaultValue(0);
+            entity.Property(e => e.MaxAttempts).HasColumnName("max_attempts").HasDefaultValue(5);
+            entity.Property(e => e.IpAddress).HasColumnName("ip_address").HasMaxLength(64);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            entity.HasOne(e => e.Customer)
+                  .WithMany()
+                  .HasForeignKey(e => e.CustomerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CustomerRefreshToken>(entity =>
+        {
+            entity.ToTable("customer_refresh_tokens");
+            entity.HasKey(e => e.RefreshTokenId);
+            entity.Property(e => e.RefreshTokenId).HasColumnName("refresh_token_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id").IsRequired();
+            entity.Property(e => e.TokenHash).HasColumnName("token_hash").HasMaxLength(128).IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.Property(e => e.FamilyId).HasColumnName("family_id").HasMaxLength(64).IsRequired();
+            entity.Property(e => e.RememberMe).HasColumnName("remember_me").HasDefaultValue(false);
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at");
+            entity.Property(e => e.RevokedReason).HasColumnName("revoked_reason").HasMaxLength(100);
+            entity.Property(e => e.ReplacedByTokenHash).HasColumnName("replaced_by_token_hash").HasMaxLength(128);
+            entity.Property(e => e.CreatedByIp).HasColumnName("created_by_ip").HasMaxLength(64);
+            entity.Property(e => e.RevokedByIp).HasColumnName("revoked_by_ip").HasMaxLength(64);
+            entity.Property(e => e.UserAgent).HasColumnName("user_agent").HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            entity.HasOne(e => e.Customer)
+                  .WithMany()
+                  .HasForeignKey(e => e.CustomerId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

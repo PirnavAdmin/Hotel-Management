@@ -45,9 +45,18 @@ public class DeliveryController : ControllerBase
             return BadRequest(new { success = false, message = "Customer Name and Delivery Address are required." });
         }
 
+        long resolvedOrderId = request.OrderId;
+        if (resolvedOrderId <= 0)
+        {
+            var ordNum = $"ORD-DEL-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
+            resolvedOrderId = await _spService.ExecuteSqlScalarAsync<long>(
+                "INSERT INTO restaurant_orders (order_number, outlet_id, order_type, guests_count, order_status, is_active, is_deleted, created_at) VALUES (@num, 1, 'Delivery', 1, 'Active', 1, 0, NOW()); SELECT LAST_INSERT_ID();",
+                new Dictionary<string, object?> { { "num", ordNum } });
+        }
+
         var parameters = new Dictionary<string, object?>
         {
-            { "p_order_id", request.OrderId },
+            { "p_order_id", resolvedOrderId },
             { "p_customer_name", request.CustomerName.Trim() },
             { "p_phone", request.Phone.Trim() },
             { "p_delivery_address", request.DeliveryAddress.Trim() }
@@ -58,7 +67,7 @@ public class DeliveryController : ControllerBase
         var delivery = new DeliveryOrder
         {
             DeliveryId = deliveryId,
-            OrderId = request.OrderId,
+            OrderId = resolvedOrderId,
             CustomerName = request.CustomerName.Trim(),
             Phone = request.Phone.Trim(),
             DeliveryAddress = request.DeliveryAddress.Trim(),

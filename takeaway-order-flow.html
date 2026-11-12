@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bhanu Bistro – Takeaway Order Flow UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark-900: #0d0604;
+      --bg-dark-800: #170b07;
+      --bg-dark-700: #23120b;
+      --bg-dark-600: #33190f;
+      --card-white: #ffffff;
+      --card-cream: #fbf9f5;
+      --text-dark: #1f1610;
+      --text-muted: #6e6259;
+      --text-light: #f5ede6;
+      --orange-500: #e65100;
+      --orange-600: #d84315;
+      --orange-400: #f57c00;
+      --gold-500: #d97706;
+      --gold-400: #f59e0b;
+      --gold-300: #fbbf24;
+      --green-600: #16a34a;
+      --green-100: #dcfce7;
+      --red-600: #dc2626;
+      --red-100: #fee2e2;
+      --border-warm: #e8ded6;
+      --shadow-screen: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(245, 158, 11, 0.22);
+      --font-serif: 'Cinzel', serif, Georgia;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark-900);
+      background-image: 
+        radial-gradient(ellipse at 50% 12%, rgba(95, 42, 19, 0.55) 0%, rgba(20, 10, 6, 0.95) 60%, #0a0403 100%),
+        url('./assets/dining-table.jpg');
+      background-size: cover, cover;
+      background-position: center top;
+      background-attachment: fixed;
+      font-family: var(--font-sans);
+      color: var(--text-light);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 24px 20px 80px;
+    }
+
+    /* Ambient Lighting Overlay */
+    .ambient-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 30%, rgba(230, 81, 0, 0.08) 0%, transparent 70%);
+      z-index: 0;
+    }
+
+    .main-wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1720px;
+      margin: 0 auto;
+    }
+
+    /* Top Master Header */
+    .master-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: rgba(23, 11, 7, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      backdrop-filter: blur(14px);
+      border-radius: 18px;
+      margin-bottom: 34px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-crest {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706, #b45309);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fbbf24;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
+    }
+
+    .brand-crest svg {
+      width: 28px;
+      height: 28px;
+      fill: #ffffff;
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      letter-spacing: 0.5px;
+      color: #fff;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--gold-400);
+      font-weight: 600;
+    }
+
+    .flow-title-center {
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .flow-title-center h2 {
+      font-family: var(--font-serif);
+      font-size: 27px;
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+    }
+
+    .flow-title-center .subtitle-tag {
+      font-size: 19px;
+      color: var(--gold-400);
+      font-weight: 600;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--orange-500);
+      border-color: var(--orange-500);
+      transform: translateY(-1px);
+    }
+
+    /* Filter & Quick Jump Nav Bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .filter-pill {
+      background: rgba(28, 14, 9, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      padding: 8px 18px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #dfd3ca;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-pill.active, .filter-pill:hover {
+      background: var(--orange-500);
+      color: #fff;
+      border-color: var(--orange-400);
+      box-shadow: 0 4px 14px rgba(230, 81, 0, 0.4);
+    }
+
+    /* Section Subheaders */
+    .flow-section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 36px 0 20px;
+      padding-left: 8px;
+    }
+
+    .flow-section-header h3 {
+      font-family: var(--font-serif);
+      font-size: 19px;
+      color: var(--gold-400);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .flow-section-header .line {
+      flex-grow: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.05));
+    }
+
+    /* 3-Column Sequential Flow Row */
+    .flow-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 38px;
+      position: relative;
+    }
+
+    /* Connector Arrow */
+    .connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .arrow-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      transition: transform 0.2s;
+    }
+
+    .arrow-circle svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2.6;
+    }
+
+    .arrow-circle:hover {
+      transform: scale(1.1);
+    }
+
+    .row-connector-down {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 180px;
+      margin: -24px 0 22px;
+    }
+
+    .down-arrow-pill {
+      background: rgba(28, 14, 9, 0.85);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold-400);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .down-arrow-pill .down-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--orange-500);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Screen Unit (Frame + Step Badge) */
+    .screen-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+    }
+
+    /* Screen Frame (Mock Window) */
+    .screen-frame {
+      width: 100%;
+      height: 320px;
+      background: #140905;
+      background-image: 
+        radial-gradient(circle at 50% 30%, rgba(55, 24, 13, 0.65) 0%, rgba(18, 9, 5, 0.96) 80%),
+        url('./assets/dining-table.jpg');
+      background-size: cover;
+      background-position: center;
+      border-radius: 18px;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      box-shadow: var(--shadow-screen);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+      cursor: pointer;
+    }
+
+    .screen-frame:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 45px rgba(0,0,0,0.8), 0 0 0 2px var(--orange-500);
+      border-color: var(--orange-400);
+    }
+
+    /* Screen Top App Bar */
+    .screen-app-bar {
+      height: 38px;
+      background: rgba(18, 9, 6, 0.94);
+      border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      flex-shrink: 0;
+      backdrop-filter: blur(6px);
+      z-index: 5;
+    }
+
+    .screen-app-logo {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .mini-crest {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mini-crest svg {
+      width: 12px;
+      height: 12px;
+      fill: #fff;
+    }
+
+    .mini-logo-text {
+      font-family: var(--font-serif);
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.3px;
+    }
+
+    .screen-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      list-style: none;
+    }
+
+    .screen-nav-links li {
+      font-size: 10px;
+      font-weight: 600;
+      color: #c9bbae;
+      letter-spacing: 0.3px;
+    }
+
+    .screen-nav-links li.active {
+      color: var(--orange-400);
+      position: relative;
+    }
+
+    .screen-user-pill {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #f1e7df;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Screen Body Area */
+    .screen-body {
+      flex-grow: 1;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Content Cards (White / Cream) */
+    .content-card {
+      background: var(--card-white);
+      color: var(--text-dark);
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+      width: 100%;
+      height: 100%;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #f0e6dc;
+      position: relative;
+    }
+
+    /* Card Titles & Headers */
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #f2ece6;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .card-icon-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: #fff4ec;
+      border: 1px solid #fed7aa;
+      color: var(--orange-500);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1f1610;
+      line-height: 1.2;
+    }
+
+    .card-subtitle {
+      font-size: 9.5px;
+      color: #786c62;
+    }
+
+    /* Veg & Non-Veg Badges */
+    .veg-dot, .non-veg-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      border: 1.5px solid;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .veg-dot {
+      border-color: #16a34a;
+    }
+    .veg-dot::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #16a34a;
+    }
+
+    .non-veg-dot {
+      border-color: #dc2626;
+    }
+    .non-veg-dot::after {
+      content: '';
+      width: 0;
+      height: 0;
+      border-left: 3.5px solid transparent;
+      border-right: 3.5px solid transparent;
+      border-bottom: 6px solid #dc2626;
+    }
+
+    /* Primary & Secondary Buttons */
+    .btn-orange {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(234, 88, 12, 0.35);
+      transition: background 0.15s;
+    }
+
+    .btn-orange:hover {
+      background: linear-gradient(135deg, #ea580c, #c2410c);
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: #3e3229;
+      border: 1px solid #dcd1c7;
+      border-radius: 8px;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .btn-outline-orange {
+      background: #fff;
+      color: var(--orange-500);
+      border: 1px solid var(--orange-500);
+      border-radius: 8px;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 5px 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Form Fields & Small Inputs */
+    .form-group-sm {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-bottom: 6px;
+    }
+
+    .form-label-sm {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #55483f;
+      letter-spacing: 0.3px;
+    }
+
+    .input-sm {
+      background: #faf7f2;
+      border: 1px solid #e2d7cc;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 10.5px;
+      color: #2b1f17;
+      width: 100%;
+      outline: none;
+    }
+
+    .input-sm:focus {
+      border-color: var(--orange-500);
+      background: #fff;
+    }
+
+    /* Quantity Switcher */
+    .qty-ctrl {
+      display: inline-flex;
+      align-items: center;
+      background: #fff5ee;
+      border: 1px solid #fed7aa;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .qty-btn {
+      width: 20px;
+      height: 20px;
+      background: none;
+      border: none;
+      color: var(--orange-500);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qty-val {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 0 6px;
+      color: #1f1610;
+    }
+
+    /* Step Label Pill Below Each Screen */
+    .step-pill {
+      background: #ffffff;
+      color: #1f1610;
+      padding: 7px 18px 7px 10px;
+      border-radius: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      max-width: 95%;
+      transition: transform 0.2s;
+    }
+
+    .step-pill:hover {
+      transform: translateY(-2px);
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(234, 88, 12, 0.45);
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1f1610;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .step-desc {
+      font-weight: 500;
+      color: #5d5046;
+    }
+
+    /* Mini Category Pills */
+    .cat-pill-row {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
+      scrollbar-width: none;
+    }
+    .cat-pill-row::-webkit-scrollbar { display: none; }
+
+    .mini-cat-pill {
+      font-size: 8.5px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 12px;
+      background: #f4eee7;
+      color: #55483f;
+      white-space: nowrap;
+    }
+
+    .mini-cat-pill.active {
+      background: var(--orange-500);
+      color: #fff;
+    }
+
+    /* Menu Item Card Micro */
+    .menu-micro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .menu-micro-item {
+      background: #faf7f2;
+      border: 1px solid #ece2d8;
+      border-radius: 8px;
+      padding: 6px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .micro-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #e2d7cc;
+    }
+
+    .micro-info {
+      flex-grow: 1;
+      min-width: 0;
+    }
+
+    .micro-name {
+      font-size: 10px;
+      font-weight: 700;
+      color: #221711;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .micro-price {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--orange-600);
+    }
+
+    /* Status Steppers & Progress */
+    .progress-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin: 10px 4px 14px;
+    }
+
+    .progress-line-bg {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      right: 14px;
+      height: 3px;
+      background: #e5ded5;
+      z-index: 1;
+    }
+
+    .progress-line-fill {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      height: 3px;
+      background: var(--orange-500);
+      z-index: 2;
+    }
+
+    .step-node {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .node-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #d4c8bd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #7b6d61;
+    }
+
+    .step-node.completed .node-circle {
+      background: var(--green-600);
+      border-color: var(--green-600);
+      color: #fff;
+    }
+
+    .step-node.active .node-circle {
+      background: var(--orange-500);
+      border-color: var(--orange-500);
+      color: #fff;
+      box-shadow: 0 0 0 4px #fed7aa;
+    }
+
+    .node-label {
+      font-size: 8px;
+      font-weight: 700;
+      color: #4b3e34;
+      text-align: center;
+      max-width: 60px;
+      line-height: 1.1;
+    }
+
+    /* Order details mini summary table */
+    .details-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      padding: 3px 0;
+      border-bottom: 1px dashed #eedfcb;
+      color: #3b2f25;
+    }
+
+    .details-row:last-child {
+      border-bottom: none;
+    }
+
+    .details-row.total-bold {
+      border-top: 1px solid #d4c4b2;
+      border-bottom: none;
+      padding-top: 5px;
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #170d07;
+    }
+
+    /* Alert Banner */
+    .alert-banner-danger {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 6px 0;
+    }
+
+    .alert-banner-warning {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 6px 0;
+    }
+
+    /* Interactive Lightbox Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 4, 2, 0.88);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-viewport {
+      background: #170b07;
+      border: 2px solid var(--orange-500);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+      position: relative;
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    .modal-close-btn:hover {
+      background: var(--orange-500);
+    }
+
+    /* Responsive Grid */
+    @media (max-width: 1200px) {
+      .flow-row {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .connector {
+        transform: rotate(90deg);
+        margin: 6px auto;
+      }
+      .row-connector-down {
+        display: none;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: #120906 !important;
+        color: #fff !important;
+        padding: 0;
+      }
+      .master-header, .filter-bar, .modal-backdrop {
+        display: none !important;
+      }
+      .screen-frame {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-overlay"></div>
+
+  <div class="main-wrapper">
+    <!-- Master Top Header Bar -->
+    <header class="master-header">
+      <div class="brand-group">
+        <div class="brand-crest">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L15 8H9L12 2Z M4 9H20L18 20C18 21.1 17.1 22 16 22H8C6.9 22 6 21.1 6 20L4 9Z M10 13V18 M14 13V18" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Bhanu Bistro</h1>
+          <p>Fine Dining & Takeaway</p>
+        </div>
+      </div>
+
+      <div class="flow-title-center">
+        <h2>
+          Bhanu Bistro – Takeaway Order Flow
+          <span class="subtitle-tag">(Self Pickup & Pre-Order)</span>
+        </h2>
+      </div>
+
+      <div class="header-controls">
+        <button class="ctrl-btn" onclick="window.print()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+          Print / PDF
+        </button>
+        <button class="ctrl-btn" onclick="scrollToTop()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
+          Top
+        </button>
+      </div>
+    </header>
+
+    <!-- Quick Jump Filter Pills -->
+    <nav class="filter-bar">
+      <button class="filter-pill active" onclick="filterFlow('all')">All 12 Screens Flow</button>
+      <button class="filter-pill" onclick="filterFlow('ordering')">1. Order Placement (Steps 1–3)</button>
+      <button class="filter-pill" onclick="filterFlow('checkout')">2. Customer & Payment (Steps 4–6)</button>
+      <button class="filter-pill" onclick="filterFlow('tracking')">3. Confirm & Track (Steps 7–9)</button>
+      <button class="filter-pill" onclick="filterFlow('branches')">4. Cancellation & Reorder (Steps 10–12)</button>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- ROW 1: ORDER PLACEMENT (Steps 1, 2, 3) -->
+    <!-- ========================================== -->
+    <div class="flow-section-header" data-section="ordering">
+      <h3>Phase 1: Item Selection & Customization</h3>
+      <div class="line"></div>
+    </div>
+
+    <div class="flow-row" data-section="ordering">
+      <!-- SCREEN 1: Browse Menu – Select Food Items -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(1)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Home</li>
+              <li class="active">Menu</li>
+              <li>About</li>
+              <li>Contact</li>
+            </ul>
+            <div class="screen-user-pill">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              Hi, Priya
+            </div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <!-- Search & Category Header -->
+              <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                <div style="position: relative; flex-grow: 1;">
+                  <input type="text" class="input-sm" value="Biryani, Starters..." style="padding-left: 22px; font-size: 9.5px; height: 26px;">
+                  <svg style="position: absolute; left: 6px; top: 7px; color: #8c7f74;" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
+                <button class="btn-outline" style="padding: 2px 8px; font-size: 9px;">Filter ⚙️</button>
+              </div>
+
+              <!-- Categories -->
+              <div class="cat-pill-row">
+                <span class="mini-cat-pill">All</span>
+                <span class="mini-cat-pill active">Biryani</span>
+                <span class="mini-cat-pill">Starters</span>
+                <span class="mini-cat-pill">Chinese</span>
+                <span class="mini-cat-pill">Curries</span>
+                <span class="mini-cat-pill">Breads</span>
+                <span class="mini-cat-pill">Beverages</span>
+                <span class="mini-cat-pill">Desserts</span>
+              </div>
+
+              <!-- Menu Items Grid -->
+              <div class="menu-micro-grid">
+                <!-- Item 1 -->
+                <div class="menu-micro-item" style="border: 1px solid #fed7aa; background: #fffcf7;">
+                  <img src="./assets/biryani/chicken-dum-biryani.jpg" onerror="this.src='./assets/chicken-dum-biryani.jpg'" class="micro-img" alt="Chicken Biryani">
+                  <div class="micro-info">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="non-veg-dot"></span>
+                      <span class="micro-name">Royal Dum Biryani</span>
+                    </div>
+                    <div style="font-size: 8px; color: #73675e; margin: 1px 0;">Saffron Basmati & Spices</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <span class="micro-price">₹340</span>
+                      <div class="qty-ctrl">
+                        <button class="qty-btn">-</button>
+                        <span class="qty-val">1</span>
+                        <button class="qty-btn">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div class="menu-micro-item">
+                  <img src="./assets/curries/paneer-butter-masala.jpg" onerror="this.src='./assets/crispy-corn.jpg'" class="micro-img" alt="Paneer Butter Masala">
+                  <div class="micro-info">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="veg-dot"></span>
+                      <span class="micro-name">Paneer Butter Masala</span>
+                    </div>
+                    <div style="font-size: 8px; color: #73675e; margin: 1px 0;">Rich Silky Tomato Gravy</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <span class="micro-price">₹260</span>
+                      <button class="btn-orange" style="padding: 2px 7px; font-size: 8.5px;">+ Add</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="menu-micro-item">
+                  <img src="./assets/starters/crispy-corn.jpg" onerror="this.src='./assets/crispy-corn.jpg'" class="micro-img" alt="Crispy Corn">
+                  <div class="micro-info">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="veg-dot"></span>
+                      <span class="micro-name">Crispy Chilli Corn</span>
+                    </div>
+                    <div style="font-size: 8px; color: #73675e; margin: 1px 0;">Wok Tossed Golden Corn</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <span class="micro-price">₹210</span>
+                      <button class="btn-orange" style="padding: 2px 7px; font-size: 8.5px;">+ Add</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 4 -->
+                <div class="menu-micro-item">
+                  <img src="./assets/breads/garlic-naan.jpg" onerror="this.src='./assets/dining-table.jpg'" class="micro-img" alt="Garlic Naan">
+                  <div class="micro-info">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span class="veg-dot"></span>
+                      <span class="micro-name">Butter Garlic Naan</span>
+                    </div>
+                    <div style="font-size: 8px; color: #73675e; margin: 1px 0;">Clay Oven Baked</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <span class="micro-price">₹60</span>
+                      <div class="qty-ctrl">
+                        <button class="qty-btn">-</button>
+                        <span class="qty-val">2</span>
+                        <button class="qty-btn">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom Float Bar -->
+              <div style="background: #1f1610; color: #fff; padding: 6px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-top: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="background: var(--orange-500); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800;">3</span>
+                  <span style="font-size: 9.5px; font-weight: 600;">Items Added • ₹720</span>
+                </div>
+                <span style="font-size: 9.5px; font-weight: 700; color: var(--gold-400); display: flex; align-items: center; gap: 3px;">
+                  View Cart <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 18 6-6-6-6"/></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">1</span>
+          <span class="step-text">Browse Menu <span class="step-desc">– Select food items & categories</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 1 -> 2 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 2: Customize Your Order -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(2)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Home</li>
+              <li class="active">Menu</li>
+              <li>About</li>
+            </ul>
+            <div class="screen-user-pill">Customize</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <div class="card-header-row">
+                <div class="card-title-group">
+                  <span class="non-veg-dot"></span>
+                  <div>
+                    <div class="card-title">Customize Dum Biryani</div>
+                    <div class="card-subtitle">Choose spice, add-ons & instructions</div>
+                  </div>
+                </div>
+                <span style="font-size: 11px; font-weight: 800; color: var(--orange-600);">₹340</span>
+              </div>
+
+              <!-- Customization Options -->
+              <div style="flex-grow: 1; overflow-y: auto; padding-right: 2px;">
+                <!-- Spice Level -->
+                <div style="margin-bottom: 6px;">
+                  <span style="font-size: 9px; font-weight: 700; color: #55483f; text-transform: uppercase;">Spice Level:</span>
+                  <div style="display: flex; gap: 4px; margin-top: 3px;">
+                    <span style="font-size: 8.5px; padding: 2px 6px; border-radius: 4px; background: #f0ebe4; color: #55483f;">Mild 🟢</span>
+                    <span style="font-size: 8.5px; padding: 2px 6px; border-radius: 4px; background: #fed7aa; color: var(--orange-600); font-weight: 700; border: 1px solid var(--orange-400);">Medium 🟡</span>
+                    <span style="font-size: 8.5px; padding: 2px 6px; border-radius: 4px; background: #f0ebe4; color: #55483f;">Spicy 🌶️</span>
+                  </div>
+                </div>
+
+                <!-- Add-ons -->
+                <div style="margin-bottom: 6px;">
+                  <span style="font-size: 9px; font-weight: 700; color: #55483f; text-transform: uppercase;">Add-ons & Accompaniments:</span>
+                  <div style="display: flex; flex-direction: column; gap: 3px; margin-top: 3px;">
+                    <label style="display: flex; justify-content: space-between; font-size: 9px; background: #fffcf7; border: 1px solid #ffedd5; padding: 3px 6px; border-radius: 4px;">
+                      <span>☑️ Extra Mirchi Ka Salan Gravy</span>
+                      <strong style="color: var(--orange-600);">+₹40</strong>
+                    </label>
+                    <label style="display: flex; justify-content: space-between; font-size: 9px; background: #fffcf7; border: 1px solid #ffedd5; padding: 3px 6px; border-radius: 4px;">
+                      <span>☑️ Extra Boondi Raita</span>
+                      <strong style="color: var(--orange-600);">+₹35</strong>
+                    </label>
+                    <label style="display: flex; justify-content: space-between; font-size: 9px; background: #fbf9f6; border: 1px solid #e7ded5; padding: 3px 6px; border-radius: 4px;">
+                      <span>◻️ Extra Boiled Egg (1 pc)</span>
+                      <span>+₹25</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Special Instructions -->
+                <div class="form-group-sm">
+                  <span class="form-label-sm">Special Instructions:</span>
+                  <input type="text" class="input-sm" value="Less oil, please pack extra onions & lemon" style="font-size: 9px; padding: 3px 6px;">
+                </div>
+              </div>
+
+              <!-- Footer CTA -->
+              <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #f2ece6;">
+                <div class="qty-ctrl">
+                  <button class="qty-btn">-</button>
+                  <span class="qty-val">1</span>
+                  <button class="qty-btn">+</button>
+                </div>
+                <button class="btn-orange" style="font-size: 10px; padding: 5px 12px;">
+                  Add to Cart • ₹415 →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">2</span>
+          <span class="step-text">Customize Your Order <span class="step-desc">– Spice level, add-ons & instructions</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 2 -> 3 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 3: Cart Summary – Review Your Order -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(3)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Menu</li>
+              <li class="active">Cart (3)</li>
+              <li>Checkout</li>
+            </ul>
+            <div class="screen-user-pill">₹815.00</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <div class="card-header-row">
+                <div class="card-title-group">
+                  <div class="card-icon-badge">🛒</div>
+                  <div>
+                    <div class="card-title">Cart Summary</div>
+                    <div class="card-subtitle">3 items selected for Takeaway</div>
+                  </div>
+                </div>
+                <span style="font-size: 9.5px; color: var(--green-600); font-weight: 700; background: var(--green-100); padding: 2px 6px; border-radius: 4px;">🥡 Self Pickup</span>
+              </div>
+
+              <!-- Cart List -->
+              <div style="flex-grow: 1; overflow-y: auto;">
+                <div class="details-row">
+                  <div>
+                    <div style="font-weight: 700; font-size: 9.5px; display: flex; align-items: center; gap: 4px;"><span class="non-veg-dot"></span> Royal Dum Biryani (Custom)</div>
+                    <div style="font-size: 8px; color: #7c6f65;">+ Extra Salan, Raita</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 9px; color: #786b61;">1 x ₹415</span>
+                    <strong style="font-size: 9.5px;">₹415</strong>
+                  </div>
+                </div>
+
+                <div class="details-row">
+                  <div>
+                    <div style="font-weight: 700; font-size: 9.5px; display: flex; align-items: center; gap: 4px;"><span class="veg-dot"></span> Paneer Butter Masala</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 9px; color: #786b61;">1 x ₹260</span>
+                    <strong style="font-size: 9.5px;">₹260</strong>
+                  </div>
+                </div>
+
+                <div class="details-row">
+                  <div>
+                    <div style="font-weight: 700; font-size: 9.5px; display: flex; align-items: center; gap: 4px;"><span class="veg-dot"></span> Butter Garlic Naan</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 9px; color: #786b61;">2 x ₹60</span>
+                    <strong style="font-size: 9.5px;">₹120</strong>
+                  </div>
+                </div>
+
+                <!-- Coupon tag -->
+                <div style="background: #f0fdf4; border: 1px dashed #86efac; border-radius: 6px; padding: 3px 6px; margin: 4px 0; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 8.5px; color: #166534; font-weight: 600;">🏷️ Coupon WELCOME50 Applied</span>
+                  <span style="font-size: 8.5px; color: #166534; font-weight: 800;">-₹50.00</span>
+                </div>
+
+                <!-- Bill breakdown -->
+                <div style="background: #faf6f0; border-radius: 6px; padding: 4px 6px; margin-top: 2px;">
+                  <div class="details-row" style="font-size: 8.5px;"><span>Item Total:</span><span>₹795.00</span></div>
+                  <div class="details-row" style="font-size: 8.5px;"><span>Packaging Charges:</span><span>₹30.00</span></div>
+                  <div class="details-row" style="font-size: 8.5px;"><span>Taxes (GST 5%):</span><span>₹39.75</span></div>
+                  <div class="details-row total-bold" style="font-size: 10px;">
+                    <span>Grand Total:</span>
+                    <span style="color: var(--orange-600);">₹814.75 (~₹815)</span>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn-orange" style="margin-top: 6px; width: 100%; font-size: 10.5px; padding: 6px 0;">
+                Continue to Checkout →
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">3</span>
+          <span class="step-text">Cart Summary <span class="step-desc">– Review items, apply coupons & packaging</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row Connector Downwards -->
+    <div class="row-connector-down" data-section="ordering">
+      <div class="down-arrow-pill">
+        <span>Proceed to Pickup Details</span>
+        <div class="down-icon">↓</div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ROW 2: CHECKOUT & VERIFICATION (Steps 4, 5, 6) -->
+    <!-- ========================================== -->
+    <div class="flow-section-header" data-section="checkout">
+      <h3>Phase 2: Customer Takeaway Info & Secure Payment</h3>
+      <div class="line"></div>
+    </div>
+
+    <div class="flow-row" data-section="checkout">
+      <!-- SCREEN 4: Customer Details – Enter Takeaway Information -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(4)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Cart</li>
+              <li class="active">Details</li>
+              <li>Payment</li>
+            </ul>
+            <div class="screen-user-pill">Step 2 of 3</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <div class="card-header-row">
+                <div class="card-title-group">
+                  <div class="card-icon-badge">👤</div>
+                  <div>
+                    <div class="card-title">Takeaway Pickup Details</div>
+                    <div class="card-subtitle">Enter customer details & schedule</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pickup type pills -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+                <div style="background: #fff7ed; border: 1.5px solid var(--orange-500); border-radius: 6px; padding: 4px 6px;">
+                  <div style="font-size: 8.5px; font-weight: 800; color: var(--orange-600);">⚡ Self Pickup</div>
+                  <div style="font-size: 7.5px; color: #7c6d61;">Ready in 25-30 mins</div>
+                </div>
+                <div style="background: #faf6f2; border: 1px solid #e5dbd0; border-radius: 6px; padding: 4px 6px;">
+                  <div style="font-size: 8.5px; font-weight: 700; color: #55483f;">🕒 Scheduled Pre-Order</div>
+                  <div style="font-size: 7.5px; color: #7c6d61;">Select date & time</div>
+                </div>
+              </div>
+
+              <!-- Inputs Form -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <div class="form-group-sm">
+                  <span class="form-label-sm">Full Name *</span>
+                  <input type="text" class="input-sm" value="Priya Sharma">
+                </div>
+                <div class="form-group-sm">
+                  <span class="form-label-sm">Mobile Number *</span>
+                  <input type="text" class="input-sm" value="+91 98765 43210">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <div class="form-group-sm">
+                  <span class="form-label-sm">Pickup Date</span>
+                  <input type="text" class="input-sm" value="Today, 10 Nov 2026">
+                </div>
+                <div class="form-group-sm">
+                  <span class="form-label-sm">Pickup Time</span>
+                  <input type="text" class="input-sm" value="08:15 PM (In 25m)">
+                </div>
+              </div>
+
+              <div class="form-group-sm" style="margin-bottom: 4px;">
+                <span class="form-label-sm">Packaging Notes (Optional)</span>
+                <input type="text" class="input-sm" value="Please keep biryani containers upright" style="font-size: 9px;">
+              </div>
+
+              <div style="display: flex; gap: 6px; margin-top: auto;">
+                <button class="btn-outline" style="flex: 1; font-size: 9.5px;">← Back to Cart</button>
+                <button class="btn-orange" style="flex: 1.5; font-size: 9.5px;">Proceed to Payment →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">4</span>
+          <span class="step-text">Customer Details <span class="step-desc">– Enter takeaway information & pickup time</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 4 -> 5 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 5: Select Payment Method -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(5)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Details</li>
+              <li class="active">Payment</li>
+              <li>Confirm</li>
+            </ul>
+            <div class="screen-user-pill">🔒 256-Bit SSL</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <div class="card-header-row">
+                <div class="card-title-group">
+                  <div class="card-icon-badge">💳</div>
+                  <div>
+                    <div class="card-title">Select Payment Method</div>
+                    <div class="card-subtitle">Payable Total: <strong>₹815.00</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment Methods List -->
+              <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1;">
+                <!-- Option 1: UPI -->
+                <div style="background: #fff7ed; border: 1.5px solid var(--orange-500); border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--orange-600); font-size: 11px;">🟢</span>
+                    <div>
+                      <div style="font-size: 9.5px; font-weight: 700;">UPI (Instant & Zero Fees)</div>
+                      <div style="font-size: 7.5px; color: #7c6d61;">Google Pay, PhonePe, Paytm (priya@oksbi)</div>
+                    </div>
+                  </div>
+                  <span style="font-size: 8px; background: #ea580c; color: #fff; padding: 1px 5px; border-radius: 3px; font-weight: 700;">SELECTED</span>
+                </div>
+
+                <!-- Option 2: Card -->
+                <div style="background: #faf6f2; border: 1px solid #e5dbd0; border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: #9c8e82; font-size: 11px;">⚪</span>
+                    <div>
+                      <div style="font-size: 9.5px; font-weight: 600;">Credit / Debit Card</div>
+                      <div style="font-size: 7.5px; color: #7c6d61;">Visa, MasterCard, RuPay</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Option 3: Net Banking -->
+                <div style="background: #faf6f2; border: 1px solid #e5dbd0; border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: #9c8e82; font-size: 11px;">⚪</span>
+                    <div>
+                      <div style="font-size: 9.5px; font-weight: 600;">Net Banking</div>
+                      <div style="font-size: 7.5px; color: #7c6d61;">All Major Indian Banks</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Option 4: Cash at Pickup -->
+                <div style="background: #faf6f2; border: 1px solid #e5dbd0; border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: #9c8e82; font-size: 11px;">⚪</span>
+                    <div>
+                      <div style="font-size: 9.5px; font-weight: 600;">Pay at Counter (Cash/Card)</div>
+                      <div style="font-size: 7.5px; color: #7c6d61;">Pay when you collect your order</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Security note -->
+              <div style="font-size: 8px; color: #7c6f66; text-align: center; margin: 4px 0;">
+                🔒 100% Secure Payment • Instant Order Confirmation
+              </div>
+
+              <button class="btn-orange" style="width: 100%; font-size: 10.5px; padding: 6px 0;">
+                Pay ₹815.00 & Place Order →
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">5</span>
+          <span class="step-text">Select Payment Method <span class="step-desc">– Choose UPI, Card or Cash on Pickup</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 5 -> 6 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 6: Order Processing – Confirming Order -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(6)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Processing</li>
+            </ul>
+            <div class="screen-user-pill">Do Not Refresh</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card" style="text-align: center; justify-content: center; align-items: center; padding: 18px 20px;">
+              <!-- Pulsing processing icon -->
+              <div style="width: 46px; height: 46px; border-radius: 50%; background: #fff7ed; border: 2px solid var(--orange-500); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M21 3v9h-9"/></svg>
+              </div>
+
+              <div style="font-size: 14px; font-weight: 800; color: #1f1610; margin-bottom: 2px;">
+                Confirming Your Takeaway Order...
+              </div>
+              <div style="font-size: 9.5px; color: #7c6f66; margin-bottom: 14px;">
+                Please do not close or refresh this window.
+              </div>
+
+              <!-- 3-step timeline -->
+              <div class="progress-stepper" style="width: 100%;">
+                <div class="progress-line-bg"></div>
+                <div class="progress-line-fill" style="width: 80%;"></div>
+
+                <div class="step-node completed">
+                  <div class="node-circle">✓</div>
+                  <div class="node-label">Order Initiated</div>
+                </div>
+                <div class="step-node completed">
+                  <div class="node-circle">✓</div>
+                  <div class="node-label">Payment Verified</div>
+                </div>
+                <div class="step-node active">
+                  <div class="node-circle">⏳</div>
+                  <div class="node-label">Kitchen Confirm</div>
+                </div>
+              </div>
+
+              <div style="background: #fbf8f5; border: 1px solid #ebdcd0; border-radius: 6px; padding: 4px 10px; font-size: 8.5px; color: #625348; width: 100%; margin-top: 6px;">
+                Connecting to Bhanu Bistro KOT system... Estimated ~8 seconds
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">6</span>
+          <span class="step-text">Order Processing <span class="step-desc">– Confirming order with kitchen</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row Connector Downwards -->
+    <div class="row-connector-down" data-section="checkout">
+      <div class="down-arrow-pill">
+        <span>Order Confirmed & Live Tracking</span>
+        <div class="down-icon">↓</div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ROW 3: CONFIRMATION & TRACKING (Steps 7, 8, 9) -->
+    <!-- ========================================== -->
+    <div class="flow-section-header" data-section="tracking">
+      <h3>Phase 3: Order Confirmation, Live Tracking & Order History</h3>
+      <div class="line"></div>
+    </div>
+
+    <div class="flow-row" data-section="tracking">
+      <!-- SCREEN 7: Order Confirmed – Successful Takeaway Booking -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(7)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Home</li>
+              <li>Menu</li>
+              <li class="active">Confirmation</li>
+            </ul>
+            <div class="screen-user-pill" style="color: #16a34a; border-color: #86efac; background: #f0fdf4;">✓ Confirmed</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card" style="text-align: center;">
+              <!-- Green check circle -->
+              <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #16a34a; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800;">
+                  ✓
+                </div>
+                <div style="text-align: left;">
+                  <div style="font-size: 13px; font-weight: 800; color: #166534; line-height: 1.1;">Takeaway Booking Confirmed!</div>
+                  <div style="font-size: 8.5px; color: #6e6258;">Your fresh food order has been sent to our kitchen</div>
+                </div>
+              </div>
+
+              <!-- Details card -->
+              <div style="background: #faf6f0; border: 1px solid #e7ded4; border-radius: 8px; padding: 6px 10px; margin: 4px 0; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; border-bottom: 1px dashed #ded3c8; padding-bottom: 3px;">
+                  <span style="font-size: 9px; font-weight: 700; color: #55483f;">Order ID:</span>
+                  <span style="font-size: 11px; font-weight: 800; color: var(--orange-600); background: #fed7aa; padding: 1px 6px; border-radius: 4px;">TKO-1023</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 8.5px;">
+                  <div><strong>Customer:</strong> Priya Sharma</div>
+                  <div><strong>Phone:</strong> +91 98765 43210</div>
+                  <div><strong>Pickup:</strong> 08:15 PM (Today)</div>
+                  <div><strong>Amount Paid:</strong> ₹815.00 (UPI)</div>
+                </div>
+                <div style="font-size: 8px; color: #665b52; margin-top: 3px; border-top: 1px dashed #ded3c8; padding-top: 2px;">
+                  📦 Items: 1x Chicken Biryani, 1x Paneer Butter Masala, 2x Garlic Naan
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div style="display: flex; gap: 6px; margin-top: auto;">
+                <button class="btn-outline" style="flex: 1; font-size: 9px; padding: 5px;">📄 Receipt</button>
+                <button class="btn-orange" style="flex: 1.5; font-size: 9.5px; padding: 5px;">📍 Track Order →</button>
+                <button class="btn-outline" style="flex: 1; font-size: 9px; padding: 5px;">🏠 Home</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">7</span>
+          <span class="step-text">Order Confirmed <span class="step-desc">– Successful takeaway booking & receipt</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 7 -> 8 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 8: Track Takeaway Order -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(8)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Home</li>
+              <li class="active">Tracking</li>
+              <li>Orders</li>
+            </ul>
+            <div class="screen-user-pill">#TKO-1023</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <!-- Live ETA Header -->
+              <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 4px 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 13px;">🔥</span>
+                  <div>
+                    <div style="font-size: 10px; font-weight: 800; color: var(--orange-600);">Food Preparation Started</div>
+                    <div style="font-size: 8px; color: #7c6d61;">Chef Rajesh is preparing your biryani</div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 10px; font-weight: 800; color: #1f1610;">18 Mins</div>
+                  <div style="font-size: 7.5px; color: #7c6d61;">Ready by 08:15 PM</div>
+                </div>
+              </div>
+
+              <!-- 5-Step Order Tracking Timeline -->
+              <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 8.5px;">
+                  <span style="color: #16a34a; font-weight: 800;">✓</span>
+                  <span style="font-weight: 700;">Order Received</span>
+                  <span style="margin-left: auto; color: #887b70; font-size: 7.5px;">07:50 PM</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 8.5px;">
+                  <span style="color: #16a34a; font-weight: 800;">✓</span>
+                  <span style="font-weight: 700;">Accepted by Restaurant</span>
+                  <span style="margin-left: auto; color: #887b70; font-size: 7.5px;">07:51 PM</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 8.5px; background: #fffcf7; padding: 2px 4px; border-radius: 4px; border-left: 2px solid var(--orange-500);">
+                  <span style="color: var(--orange-500); font-weight: 800;">🍳</span>
+                  <span style="font-weight: 800; color: var(--orange-600);">Food Preparation In Progress</span>
+                  <span style="margin-left: auto; color: var(--orange-600); font-weight: 700; font-size: 7.5px;">Current</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 8.5px; opacity: 0.6;">
+                  <span>⚪</span>
+                  <span>Food Ready for Pickup</span>
+                  <span style="margin-left: auto; font-size: 7.5px;">08:15 PM</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 8.5px; opacity: 0.6;">
+                  <span>⚪</span>
+                  <span>Order Picked Up</span>
+                  <span style="margin-left: auto; font-size: 7.5px;">--</span>
+                </div>
+              </div>
+
+              <!-- Pickup Desk assistance -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid #f0e6dc; font-size: 8px; color: #695b50;">
+                <span>📍 Bhanu Bistro Counter, Road No. 12</span>
+                <span style="color: var(--orange-600); font-weight: 700;">📞 Call: +91 40 2345 6789</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">8</span>
+          <span class="step-text">Track Takeaway Order <span class="step-desc">– Live kitchen preparation timeline</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 8 -> 9 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 9: My Takeaway Orders – View Order History -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(9)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Home</li>
+              <li class="active">My Orders</li>
+              <li>Profile</li>
+            </ul>
+            <div class="screen-user-pill">Hi, Priya</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <!-- Tabs -->
+              <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                <span style="background: var(--orange-500); color: #fff; font-size: 9px; font-weight: 700; padding: 2px 10px; border-radius: 12px;">Active Orders (1)</span>
+                <span style="background: #f0ebe4; color: #55483f; font-size: 9px; font-weight: 600; padding: 2px 10px; border-radius: 12px;">Past Orders (2)</span>
+              </div>
+
+              <!-- Active Order Card -->
+              <div style="background: #fffcf7; border: 1.5px solid #fed7aa; border-radius: 8px; padding: 6px; margin-bottom: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                  <span style="font-size: 9.5px; font-weight: 800; color: #1f1610;">#TKO-1023</span>
+                  <span style="font-size: 8px; font-weight: 700; background: #ffedd5; color: var(--orange-600); padding: 1px 6px; border-radius: 4px;">🍳 Preparing (08:15 PM)</span>
+                </div>
+                <div style="font-size: 8.5px; color: #574b41; margin-bottom: 4px;">
+                  3 Items: Royal Biryani, Paneer Butter Masala, 2x Naan • <strong>₹815</strong>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn-orange" style="padding: 2px 8px; font-size: 8.5px;">Track Order</button>
+                  <button class="btn-outline" style="padding: 2px 8px; font-size: 8.5px;">View Bill</button>
+                  <button class="btn-outline" style="padding: 2px 8px; font-size: 8.5px; color: #dc2626; border-color: #fca5a5;">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Past Order Card -->
+              <div style="background: #faf7f2; border: 1px solid #ebdcd0; border-radius: 8px; padding: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                  <span style="font-size: 9.5px; font-weight: 700; color: #1f1610;">#TKO-0982 (06 Nov)</span>
+                  <span style="font-size: 8px; font-weight: 700; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px;">✓ Picked Up</span>
+                </div>
+                <div style="font-size: 8px; color: #574b41; margin-bottom: 3px;">
+                  2x Dum Biryani, 1x Chicken 65, 2x Thums Up • <strong>₹940</strong>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn-outline-orange" style="padding: 2px 8px; font-size: 8.5px;">🔁 Reorder</button>
+                  <button class="btn-outline" style="padding: 2px 8px; font-size: 8.5px;">Invoice</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">9</span>
+          <span class="step-text">My Takeaway Orders <span class="step-desc">– View active & past order history</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row Connector Downwards (Branching) -->
+    <div class="row-connector-down" data-section="branches">
+      <div class="down-arrow-pill">
+        <span>Branching Actions from My Orders</span>
+        <div class="down-icon">↓</div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- ROW 4: POST-ORDER BRANCHES (Steps 10, 11, 12) -->
+    <!-- ========================================== -->
+    <div class="flow-section-header" data-section="branches">
+      <h3>Phase 4: Cancellation & Fast Reorder Flows</h3>
+      <div class="line"></div>
+    </div>
+
+    <div class="flow-row" data-section="branches">
+      <!-- SCREEN 10: Cancel Takeaway Order -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(10)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>My Orders</li>
+              <li class="active">Cancel</li>
+            </ul>
+            <div class="screen-user-pill" style="color: #dc2626;">Order #TKO-1023</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <!-- Warning Title -->
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800;">
+                  ⚠️
+                </div>
+                <div>
+                  <div style="font-size: 12.5px; font-weight: 800; color: #991b1b;">Cancel Takeaway Order?</div>
+                  <div style="font-size: 8.5px; color: #6b5d52;">Order #TKO-1023 • Amount: ₹815.00</div>
+                </div>
+              </div>
+
+              <!-- Reason Dropdown -->
+              <div class="form-group-sm" style="margin-bottom: 6px;">
+                <span class="form-label-sm">Select Reason for Cancellation *</span>
+                <select class="input-sm" style="font-size: 9.5px; padding: 4px;">
+                  <option selected>Ordered wrong food items by mistake</option>
+                  <option>Change of plans / Unable to visit bistro</option>
+                  <option>Preparation time taking too long</option>
+                  <option>Placed duplicate order</option>
+                </select>
+              </div>
+
+              <!-- Policy alert box -->
+              <div class="alert-banner-danger" style="margin-bottom: 8px;">
+                <span style="font-size: 12px;">ℹ️</span>
+                <div style="font-size: 8px; color: #991b1b; line-height: 1.2;">
+                  <strong>Cancellation Policy:</strong> Since preparation started under 5 mins ago, <strong>100% full refund of ₹815.00</strong> will be credited back to your UPI account.
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div style="display: flex; gap: 6px; margin-top: auto;">
+                <button class="btn-outline" style="flex: 1; font-size: 9.5px;">Keep Order</button>
+                <button class="btn-danger" style="flex: 1.4; font-size: 9.5px; justify-content: center;">Confirm Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">10</span>
+          <span class="step-text">Cancel Takeaway Order <span class="step-desc">– Cancellation reason & refund info</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 10 -> 11 -->
+      <div class="connector">
+        <div class="arrow-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 11: Cancellation Confirmed -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(11)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Orders</li>
+              <li class="active">Cancelled</li>
+            </ul>
+            <div class="screen-user-pill" style="color: #dc2626;">Cancelled</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card" style="text-align: center;">
+              <!-- Red cross badge -->
+              <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #dc2626; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800;">
+                  ✕
+                </div>
+                <div style="text-align: left;">
+                  <div style="font-size: 13px; font-weight: 800; color: #991b1b; line-height: 1.1;">Order Cancelled</div>
+                  <div style="font-size: 8.5px; color: #6e6258;">Takeaway #TKO-1023 has been cancelled</div>
+                </div>
+              </div>
+
+              <!-- Refund card -->
+              <div style="background: #faf6f0; border: 1px solid #ebdcd0; border-radius: 8px; padding: 6px 10px; margin: 6px 0; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; border-bottom: 1px dashed #ded3c8; padding-bottom: 2px;">
+                  <span style="font-size: 9px; font-weight: 700; color: #55483f;">Refund Status:</span>
+                  <span style="font-size: 9px; font-weight: 800; background: #dcfce7; color: #166534; padding: 1px 6px; border-radius: 4px;">🟢 100% Initiated</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 8.5px;">
+                  <div><strong>Refund Amount:</strong> ₹815.00</div>
+                  <div><strong>Mode:</strong> UPI (priya@oksbi)</div>
+                  <div><strong>Date:</strong> 10 Nov 2026, 07:55 PM</div>
+                  <div><strong>ARN Ref:</strong> 431092841</div>
+                </div>
+                <div style="font-size: 7.5px; color: #6b5f54; margin-top: 4px; border-top: 1px dashed #ded3c8; padding-top: 2px;">
+                  Amount will reflect in your bank account within 24-48 business hours.
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div style="display: flex; gap: 6px; margin-top: auto;">
+                <button class="btn-orange" style="width: 100%; font-size: 10px; padding: 5px 0;">
+                  Back to My Orders →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">11</span>
+          <span class="step-text">Cancellation Confirmed <span class="step-desc">– Order cancelled & refund details</span></span>
+        </div>
+      </div>
+
+      <!-- Connector 11 -> 12 -->
+      <div class="connector">
+        <div class="arrow-circle" style="background: linear-gradient(135deg, #d97706, #b45309);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- SCREEN 12: Reorder – Repeat Previous Order -->
+      <div class="screen-unit">
+        <div class="screen-frame" onclick="openScreenModal(12)">
+          <div class="screen-app-bar">
+            <div class="screen-app-logo">
+              <div class="mini-crest"><svg viewBox="0 0 24 24"><path d="M12 2L15 8H9zM4 9h16l-2 11H6z"/></svg></div>
+              <span class="mini-logo-text">Bhanu Bistro</span>
+            </div>
+            <ul class="screen-nav-links">
+              <li>Past Orders</li>
+              <li class="active">Reorder</li>
+            </ul>
+            <div class="screen-user-pill">Quick Reorder</div>
+          </div>
+          <div class="screen-body">
+            <div class="content-card">
+              <div class="card-header-row">
+                <div class="card-title-group">
+                  <div class="card-icon-badge">🔁</div>
+                  <div>
+                    <div class="card-title">Repeat Previous Order</div>
+                    <div class="card-subtitle">From Order #TKO-0982 (06 Nov 2026)</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Reorder Items with adjusters -->
+              <div style="flex-grow: 1; overflow-y: auto;">
+                <div class="details-row">
+                  <div>
+                    <div style="font-weight: 700; font-size: 9.5px; display: flex; align-items: center; gap: 4px;"><span class="non-veg-dot"></span> Royal Dum Biryani</div>
+                    <div style="font-size: 8px; color: #7c6f65;">₹340 each</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div class="qty-ctrl">
+                      <button class="qty-btn">-</button>
+                      <span class="qty-val">2</span>
+                      <button class="qty-btn">+</button>
+                    </div>
+                    <strong style="font-size: 9.5px;">₹680</strong>
+                  </div>
+                </div>
+
+                <div class="details-row">
+                  <div>
+                    <div style="font-weight: 700; font-size: 9.5px; display: flex; align-items: center; gap: 4px;"><span class="non-veg-dot"></span> Chicken 65 Crispy</div>
+                    <div style="font-size: 8px; color: #7c6f65;">₹280 each</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div class="qty-ctrl">
+                      <button class="qty-btn">-</button>
+                      <span class="qty-val">1</span>
+                      <button class="qty-btn">+</button>
+                    </div>
+                    <strong style="font-size: 9.5px;">₹280</strong>
+                  </div>
+                </div>
+
+                <div class="details-row">
+                  <div>
+                    <div style="font-weight: 700; font-size: 9.5px; display: flex; align-items: center; gap: 4px;"><span class="veg-dot"></span> Thums Up Can (330ml)</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div class="qty-ctrl">
+                      <button class="qty-btn">-</button>
+                      <span class="qty-val">2</span>
+                      <button class="qty-btn">+</button>
+                    </div>
+                    <strong style="font-size: 9.5px;">₹80</strong>
+                  </div>
+                </div>
+
+                <!-- Recalculated total -->
+                <div style="background: #faf6f0; border-radius: 6px; padding: 4px 6px; margin-top: 4px;">
+                  <div class="details-row" style="font-size: 8px;"><span>Subtotal:</span><span>₹1,040.00</span></div>
+                  <div class="details-row" style="font-size: 8px;"><span>Packaging & Taxes:</span><span>₹82.00</span></div>
+                  <div class="details-row total-bold" style="font-size: 10px;">
+                    <span>Total Payable:</span>
+                    <span style="color: var(--orange-600);">₹1,122.00</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div style="display: flex; gap: 6px; margin-top: 6px;">
+                <button class="btn-outline" style="flex: 1; font-size: 9px;">Customize</button>
+                <button class="btn-orange" style="flex: 2; font-size: 9.5px; padding: 5px 0;">
+                  Add & Proceed to Checkout →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step-pill">
+          <span class="step-num">12</span>
+          <span class="step-text">Reorder <span class="step-desc">– Repeat previous order with quick checkout</span></span>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- /main-wrapper -->
+
+  <!-- Interactive Lightbox Modal for Detail Zoom -->
+  <div class="modal-backdrop" id="screenModal" onclick="closeScreenModal(event)">
+    <div class="modal-viewport" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closeScreenModal(null)">✕</button>
+      <div id="modalContent" style="padding: 24px;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Screen Details Data for Modal View
+    const screensData = {
+      1: {
+        title: "1. Browse Menu – Select Food Items",
+        phase: "Phase 1: Item Selection",
+        description: "Explore diverse food categories (Biryani, Starters, Chinese, Curries, Breads, Beverages, Desserts). View detailed item cards with authentic food photography, veg/non-veg dietary indicators, chef ratings, quantity steppers, and active cart dock.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f4ede6; padding-bottom: 12px; margin-bottom: 16px;">
+              <div>
+                <h3 style="font-family: var(--font-serif); font-size: 18px; color: #170b07;">Bhanu Bistro Menu Catalog</h3>
+                <p style="font-size: 12px; color: #7c6f65;">Fast takeaway ordering with instant kitchen preparation</p>
+              </div>
+              <span style="background: #e65100; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 12px;">3 Items in Cart • ₹720</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+              <div style="border: 1px solid #fed7aa; border-radius: 10px; padding: 12px; display: flex; gap: 12px;">
+                <img src="./assets/biryani/chicken-dum-biryani.jpg" style="width: 70px; height: 70px; border-radius: 8px; object-fit: cover;">
+                <div>
+                  <div style="font-weight: 700; font-size: 14px;">Royal Hyderabadi Dum Biryani</div>
+                  <div style="font-size: 11px; color: #7c6f65; margin: 2px 0 6px;">Authentic dum cooked with saffron & aromatic basmati.</div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #e65100; font-size: 14px;">₹340</strong>
+                    <span style="font-size: 11px; color: #16a34a; font-weight: 700;">★ 4.9 (420+ reviews)</span>
+                  </div>
+                </div>
+              </div>
+              <div style="border: 1px solid #e5ded5; border-radius: 10px; padding: 12px; display: flex; gap: 12px;">
+                <img src="./assets/curries/paneer-butter-masala.jpg" style="width: 70px; height: 70px; border-radius: 8px; object-fit: cover;">
+                <div>
+                  <div style="font-weight: 700; font-size: 14px;">Paneer Butter Masala</div>
+                  <div style="font-size: 11px; color: #7c6f65; margin: 2px 0 6px;">Cottage cheese simmered in buttery makhani gravy.</div>
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #e65100; font-size: 14px;">₹260</strong>
+                    <span style="font-size: 11px; color: #16a34a; font-weight: 700;">★ 4.8 (310+ reviews)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      2: {
+        title: "2. Customize Your Order",
+        phase: "Phase 1: Item Customization",
+        description: "Fine-tune your dish with bespoke culinary preferences. Select spice levels (Mild, Medium, Spicy, Extra Hot), portion sizes, accompaniments (Extra Mirchi Ka Salan, Boondi Raita, Boiled Egg, Roasted Papad) and chef special packaging notes.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Order Customization Details</h3>
+            <p style="font-size: 12px; color: #7c6f65; margin-bottom: 16px;">Dish: Royal Hyderabadi Dum Biryani (Base ₹340.00)</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div style="background: #faf6f0; padding: 12px; border-radius: 8px;">
+                <strong>Selected Spice:</strong> Medium Spice (Signature Blend)<br>
+                <strong>Portion:</strong> Regular (Serves 1-2)<br>
+                <strong>Packaging:</strong> Premium microwave-safe container
+              </div>
+              <div style="background: #faf6f0; padding: 12px; border-radius: 8px;">
+                <strong>Add-ons Chosen:</strong><br>
+                • Extra Mirchi Ka Salan Gravy (+₹40)<br>
+                • Fresh Boondi Raita (+₹35)<br>
+                <strong>Special Instructions:</strong> "Less oil, pack extra onions & lemon"
+              </div>
+            </div>
+          </div>
+        `
+      },
+      3: {
+        title: "3. Cart Summary – Review Your Order",
+        phase: "Phase 1: Order Review",
+        description: "Review all selected takeaway items with quantity adjustment counters and delete options. See item totals, restaurant packaging charges, GST (5%), discount promo codes (e.g. WELCOME50 saving ₹50), and final payable amount.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Takeaway Cart Breakdown</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr style="border-bottom: 1px solid #eee; text-align: left;"><th style="padding: 8px;">Item</th><th>Qty</th><th>Price</th></tr>
+              <tr><td style="padding: 8px;">Royal Chicken Dum Biryani (Custom)</td><td>1</td><td>₹415.00</td></tr>
+              <tr><td style="padding: 8px;">Paneer Butter Masala</td><td>1</td><td>₹260.00</td></tr>
+              <tr><td style="padding: 8px;">Butter Garlic Naan</td><td>2</td><td>₹120.00</td></tr>
+              <tr style="border-top: 2px solid #ddd; font-weight: bold;"><td style="padding: 8px;">Payable Total (incl. GST & Packaging)</td><td></td><td style="color: #e65100;">₹814.75</td></tr>
+            </table>
+          </div>
+        `
+      },
+      4: {
+        title: "4. Customer Details – Enter Takeaway Information",
+        phase: "Phase 2: Pickup Scheduling",
+        description: "Select Self-Pickup or Scheduled Pre-Order. Specify customer full name, verified mobile number, email, desired pickup date and exact time slot with special packaging requests.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Pickup Information Summary</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 13px;">
+              <div><strong>Name:</strong> Priya Sharma</div>
+              <div><strong>Phone:</strong> +91 98765 43210 (Verified OTP ✓)</div>
+              <div><strong>Pickup Type:</strong> Quick Self Pickup (Ready in 25 mins)</div>
+              <div><strong>Preferred Slot:</strong> Today, 10 Nov 2026 at 08:15 PM</div>
+            </div>
+          </div>
+        `
+      },
+      5: {
+        title: "5. Select Payment Method",
+        phase: "Phase 2: Payment Execution",
+        description: "Choose between instant UPI (Google Pay, PhonePe, Paytm, BHIM), Credit/Debit Card (Visa, MasterCard, RuPay), Net Banking across top banks, or Pay at Counter on Pickup.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Payment Gateway Overview</h3>
+            <p style="font-size: 12px; color: #7c6f65; margin-bottom: 12px;">Total Payable: <strong>₹815.00</strong> • 256-Bit SSL Encrypted</p>
+            <div style="background: #fff7ed; border: 1.5px solid #ea580c; padding: 12px; border-radius: 8px;">
+              <strong>Active Selection:</strong> UPI Instant Transfer (Google Pay / PhonePe)<br>
+              <strong>VPA:</strong> priya@oksbi • Zero convenience fees
+            </div>
+          </div>
+        `
+      },
+      6: {
+        title: "6. Order Processing – Confirming Order",
+        phase: "Phase 2: POS & Kitchen Sync",
+        description: "Live progress animation communicating with Bhanu Bistro POS and Kitchen Display System (KDS). Displays 3-step validation: Order Initiated -> Payment Verified -> Kitchen Confirmed.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px; text-align: center;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; color: #e65100;">Order Verification in Real-Time</h3>
+            <p style="font-size: 12px; color: #7c6f65; margin: 8px 0 16px;">Synchronizing takeaway ticket directly to Kitchen Order Ticket (KOT) queue.</p>
+            <div style="background: #faf6f0; padding: 12px; border-radius: 8px; font-size: 13px;">
+              ✓ Payment verified via UPI Ref: TXN-9842104<br>
+              ✓ Ticket routed to KOT Station #1 (Main Kitchen)<br>
+              ⏳ Awaiting Head Chef confirmation
+            </div>
+          </div>
+        `
+      },
+      7: {
+        title: "7. Order Confirmed – Successful Takeaway Booking",
+        phase: "Phase 3: Booking Success",
+        description: "Green success badge confirming successful order booking with unique Order ID (TKO-1023), customer information, breakdown of dishes, estimated ready time (08:15 PM), and quick action buttons to Download Receipt, Track Order, or Return Home.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+              <span style="background: #16a34a; color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">✓</span>
+              <div>
+                <h3 style="font-family: var(--font-serif); font-size: 18px; color: #166534;">Order #TKO-1023 Confirmed</h3>
+                <p style="font-size: 12px; color: #7c6f65;">Estimated Pickup: Today at 08:15 PM (In 25 Mins)</p>
+              </div>
+            </div>
+            <p style="font-size: 13px; color: #44372e;">Customer Priya Sharma • Paid ₹815.00 via UPI</p>
+          </div>
+        `
+      },
+      8: {
+        title: "8. Track Takeaway Order",
+        phase: "Phase 3: Real-Time Tracking",
+        description: "Real-time 5-stage tracking timeline: Order Received -> Accepted by Restaurant -> Food Preparation Started -> Food Ready for Pickup -> Order Picked Up. Displays live countdown timer and direct contact to takeaway counter.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Live Kitchen Tracking</h3>
+            <p style="font-size: 12px; color: #e65100; font-weight: bold; margin-bottom: 12px;">🔥 Food Preparation Started • Ready in ~18 minutes</p>
+            <div style="background: #faf6f0; padding: 12px; border-radius: 8px; font-size: 13px;">
+              • 07:50 PM: Order Received<br>
+              • 07:51 PM: Order Confirmed & KOT Printed<br>
+              • 07:54 PM: Chef Rajesh started cooking<br>
+              • 08:15 PM (Expected): Packaging at Takeaway Counter
+            </div>
+          </div>
+        `
+      },
+      9: {
+        title: "9. My Takeaway Orders – View Order History",
+        phase: "Phase 3: Order Management",
+        description: "Tabbed order history overview showing Active/Upcoming orders and Past orders with order number, timestamp, dishes summary, payment status, and quick links to Track, View Receipt, Reorder, or Cancel.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 12px;">Customer Orders Dashboard</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+              <div style="border: 1px solid #fed7aa; padding: 12px; border-radius: 8px; background: #fffcf7;">
+                <strong>Active: #TKO-1023</strong> (Today, 07:50 PM)<br>
+                Status: 🍳 Cooking (Ready 08:15 PM)<br>
+                Total: ₹815.00 • [Track] [Cancel]
+              </div>
+              <div style="border: 1px solid #e5ded5; padding: 12px; border-radius: 8px; background: #faf6f2;">
+                <strong>Past: #TKO-0982</strong> (06 Nov 2026)<br>
+                Status: ✓ Picked Up / Completed<br>
+                Total: ₹940.00 • [🔁 Reorder] [Invoice]
+              </div>
+            </div>
+          </div>
+        `
+      },
+      10: {
+        title: "10. Cancel Takeaway Order",
+        phase: "Phase 4: Cancellation Flow",
+        description: "Prompt cancellation confirmation dialog with reason selection dropdown, order summary, and clear refund policy notice (100% full refund if cancelled before cooking milestone).",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; color: #dc2626; margin-bottom: 8px;">Order Cancellation Request</h3>
+            <p style="font-size: 12px; color: #7c6f65; margin-bottom: 12px;">Order #TKO-1023 • Amount Paid: ₹815.00</p>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; font-size: 13px; color: #991b1b;">
+              ⚠️ <strong>Refund Eligibility:</strong> Since this order was cancelled within the allowed 5-minute preparation grace period, 100% of ₹815.00 is refunded immediately to your original UPI payment method.
+            </div>
+          </div>
+        `
+      },
+      11: {
+        title: "11. Cancellation Confirmed",
+        phase: "Phase 4: Cancellation Confirmed",
+        description: "Official cancellation receipt showing cancellation timestamp, full refund amount (₹815.00), refund destination UPI ID, bank ARN reference number, and expected turnaround time (24-48 hours).",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; color: #dc2626; margin-bottom: 8px;">Cancellation & Refund Receipt</h3>
+            <div style="background: #faf6f0; padding: 14px; border-radius: 8px; font-size: 13px;">
+              <strong>Cancellation ID:</strong> CAN-8902<br>
+              <strong>Refund Status:</strong> 🟢 Initiated (100% Full Refund)<br>
+              <strong>Refund Amount:</strong> ₹815.00<br>
+              <strong>Refund Mode:</strong> UPI (priya@oksbi) • ARN: 431092841
+            </div>
+          </div>
+        `
+      },
+      12: {
+        title: "12. Reorder – Repeat Previous Order",
+        phase: "Phase 4: Fast Reorder Flow",
+        description: "One-click repeat of previous favourite meals. Modify item quantities, view live price and tax recalculation, and jump straight to checkout without browsing from scratch.",
+        preview: `
+          <div style="background: #fff; color: #170b07; border-radius: 12px; padding: 20px;">
+            <h3 style="font-family: var(--font-serif); font-size: 18px; margin-bottom: 8px;">Reorder Configuration</h3>
+            <p style="font-size: 12px; color: #7c6f65; margin-bottom: 12px;">Based on previous order #TKO-0982 from 06 Nov 2026</p>
+            <div style="background: #faf6f0; padding: 12px; border-radius: 8px; font-size: 13px;">
+              • 2x Royal Hyderabadi Dum Biryani = ₹680.00<br>
+              • 1x Chicken 65 Crispy Starter = ₹280.00<br>
+              • 2x Thums Up Can (330ml) = ₹80.00<br>
+              <strong>Recalculated Grand Total: ₹1,122.00 (incl. taxes)</strong>
+            </div>
+          </div>
+        `
+      }
+    };
+
+    function openScreenModal(stepNum) {
+      const data = screensData[stepNum];
+      if (!data) return;
+      const modal = document.getElementById('screenModal');
+      const content = document.getElementById('modalContent');
+      content.innerHTML = `
+        <div style="margin-bottom: 14px;">
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold-400); font-weight: 700;">${data.phase}</span>
+          <h2 style="font-family: var(--font-serif); font-size: 22px; color: #fff; margin: 4px 0 8px;">${data.title}</h2>
+          <p style="font-size: 13.5px; color: #d6c8be; line-height: 1.5;">${data.description}</p>
+        </div>
+        ${data.preview}
+        <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
+          <button class="btn-orange" onclick="closeScreenModal(null)">Close Preview</button>
+        </div>
+      `;
+      modal.classList.add('open');
+    }
+
+    function closeScreenModal(event) {
+      if (!event || event.target.id === 'screenModal') {
+        document.getElementById('screenModal').classList.remove('open');
+      }
+    }
+
+    function filterFlow(section) {
+      document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const headers = document.querySelectorAll('.flow-section-header, .flow-row, .row-connector-down');
+      headers.forEach(el => {
+        if (section === 'all' || el.getAttribute('data-section') === section) {
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

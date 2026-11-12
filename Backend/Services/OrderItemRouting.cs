@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HMS.Data;
+using HMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace HMS.Services;
@@ -77,6 +78,88 @@ public static class OrderItemRouting
         }
 
         return false;
+    }
+
+    public static bool IsBarItem(bool isBarItem, string? drinkType, string? category, string? itemName = null)
+    {
+        return IsBarItem(itemName, category, drinkType, isBarItem);
+    }
+
+    public static async Task<(List<OrderItem> kitchenItems, List<OrderItem> barItems)> ClassifyOrderItemsAsync(
+        AppDbContext context,
+        IEnumerable<OrderItem> items)
+    {
+        var itemList = items.ToList();
+        if (itemList.Count == 0)
+        {
+            return (new List<OrderItem>(), new List<OrderItem>());
+        }
+
+        var menuItemIds = itemList.Where(i => i.MenuItemId > 0).Select(i => i.MenuItemId).Distinct().ToList();
+        var menuItemsById = await context.MenuItems
+            .AsNoTracking()
+            .Where(m => menuItemIds.Contains(m.MenuItemId))
+            .ToDictionaryAsync(m => m.MenuItemId);
+
+        var namesToQuery = itemList
+            .Where(i => i.MenuItemId <= 0 || !menuItemsById.ContainsKey(i.MenuItemId))
+            .Select(i => i.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct()
+            .ToList();
+
+        Dictionary<string, MenuItem> menuItemsByName = new(StringComparer.OrdinalIgnoreCase);
+        if (namesToQuery.Count > 0)
+        {
+            var foundByName = await context.MenuItems
+                .AsNoTracking()
+                .Where(m => namesToQuery.Contains(m.DishName))
+                .ToListAsync();
+            foreach (var m in foundByName)
+            {
+                if (!menuItemsByName.ContainsKey(m.DishName))
+                {
+                    menuItemsByName[m.DishName] = m;
+                }
+            }
+        }
+
+        var kitchenItems = new List<OrderItem>();
+        var barItems = new List<OrderItem>();
+
+        foreach (var item in itemList)
+        {
+            if (IsBarItem(false, null, null, item.Name))
+            {
+                barItems.Add(item);
+                continue;
+            }
+
+            MenuItem? menu = null;
+            if (item.MenuItemId > 0 && menuItemsById.TryGetValue(item.MenuItemId, out var foundMenu))
+            {
+                menu = foundMenu;
+            }
+            else if (!string.IsNullOrWhiteSpace(item.Name) && menuItemsByName.TryGetValue(item.Name, out var foundByName))
+            {
+                menu = foundByName;
+            }
+
+            bool isBar = (item.BotId.HasValue && item.BotId.Value > 0) || (menu != null
+                ? IsBarItem(menu.IsBarItem, menu.DrinkType, menu.Category, item.Name)
+                : IsBarItem(false, null, null, item.Name));
+
+            if (isBar)
+            {
+                barItems.Add(item);
+            }
+            else
+            {
+                kitchenItems.Add(item);
+            }
+        }
+
+        return (kitchenItems, barItems);
     }
 
     public static async Task<HashSet<long>> GetBarMenuItemIdsAsync(

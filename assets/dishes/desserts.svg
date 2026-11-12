@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg_des" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#21151d"/>
+      <stop offset="100%" stop-color="#0a0508"/>
+    </linearGradient>
+    <linearGradient id="jamun" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c2d12"/>
+      <stop offset="50%" stop-color="#451a03"/>
+      <stop offset="100%" stop-color="#270e02"/>
+    </linearGradient>
+    <radialGradient id="silver_leaf" cx="40%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="80%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg_des)"/>
+  <ellipse cx="200" cy="245" rx="135" ry="22" fill="#000000" opacity="0.6"/>
+  <!-- Dessert Bowl / Cup -->
+  <path d="M 110 160 Q 105 235 200 235 Q 295 235 290 160 Z" fill="#3b0764"/>
+  <ellipse cx="200" cy="160" rx="90" ry="24" fill="#581c87" stroke="#7e22ce" stroke-width="2"/>
+  <!-- Saffron Rabdi Cream Base -->
+  <ellipse cx="200" cy="162" rx="84" ry="20" fill="#fef08a"/>
+  <!-- Gulab Jamun Spheres -->
+  <circle cx="165" cy="155" r="24" fill="url(#jamun)"/>
+  <circle cx="215" cy="150" r="26" fill="url(#jamun)"/>
+  <circle cx="190" cy="170" r="22" fill="url(#jamun)"/>
+  <!-- Silver Vark (Edible Silver Leaf) -->
+  <polygon points="160,145 172,142 168,154 156,150" fill="url(#silver_leaf)"/>
+  <polygon points="212,138 226,135 220,148 208,144" fill="url(#silver_leaf)"/>
+  <!-- Pistachio & Almond Slivers -->
+  <ellipse cx="185" cy="152" rx="6" ry="2.5" fill="#15803d" transform="rotate(35 185 152)"/>
+  <ellipse cx="230" cy="162" rx="6" ry="2.5" fill="#16a34a" transform="rotate(-20 230 162)"/>
+  <ellipse cx="150" cy="168" rx="7" ry="3" fill="#fef08a" transform="rotate(45 150 168)"/>
+  <!-- Rose Petals -->
+  <path d="M 240 145 C 248 138 255 145 250 155 C 242 155 238 148 240 145 Z" fill="#e11d48"/>
+  <path d="M 145 142 C 152 135 158 142 154 150 C 146 150 143 145 145 142 Z" fill="#e11d48"/>
+</svg>

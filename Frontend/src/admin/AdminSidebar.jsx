@@ -3,6 +3,7 @@ import {
   ChefHat,
   LayoutDashboard,
   Utensils,
+  ShoppingBag,
   Armchair,
   Users,
   Package,
@@ -16,6 +17,12 @@ import {
   GlassWater,
   Sparkles,
   ReceiptText,
+  Truck,
+  Calendar,
+  Tag,
+  Key,
+  Clock,
+  UserCheck,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -37,6 +44,7 @@ export function AdminSidebar({
   onClose,
   onLogout,
   menuCount = 0,
+  takeawayCount = 0,
   tablesCount = 0,
   staffCount = 0,
   activeKOTCount = 0,
@@ -75,6 +83,12 @@ export function AdminSidebar({
           badge: staffCount,
         },
         {
+          id: "takeaway",
+          label: "Takeaway Orders",
+          icon: ShoppingBag,
+          badge: takeawayCount > 0 ? takeawayCount : null,
+        },
+        {
           id: "kot",
           label: "Kitchen KOT",
           icon: ChefHat,
@@ -97,15 +111,55 @@ export function AdminSidebar({
           icon: ReceiptText,
         },
         {
+          id: "delivery",
+          label: "Delivery Orders",
+          icon: Truck,
+        },
+        {
+          id: "reservations",
+          label: "Reservations",
+          icon: Calendar,
+        },
+        {
+          id: "suppliers",
+          label: "Suppliers & PO",
+          icon: Package,
+        },
+        {
           id: "reports",
           label: "Reports",
           icon: BarChart3,
+        },
+        {
+          id: "audit",
+          label: "Audit Documents",
+          icon: FileText,
         },
       ],
     },
     {
       title: "MANAGEMENT",
       items: [
+        {
+          id: "customers",
+          label: "Customers",
+          icon: Users,
+        },
+        {
+          id: "attendance",
+          label: "Attendance",
+          icon: UserCheck,
+        },
+        {
+          id: "promotions",
+          label: "Promotions",
+          icon: Tag,
+        },
+        {
+          id: "roles",
+          label: "Roles & RBAC",
+          icon: Key,
+        },
         {
           id: "logins",
           label: "Login Management",

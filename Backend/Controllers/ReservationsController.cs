@@ -1,29 +1,244 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
 
+[AttributeUsage(AttributeTargets.Method)]
+internal sealed class BufferRequestBodyAttribute : Attribute, IAsyncResourceFilter
+{
+    public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
+    {
+        context.HttpContext.Request.EnableBuffering();
+        await next();
+    }
+}
+
 [ApiController]
 [Route("api/v1/reservations")]
+[Tags("Reservations")]
 public class ReservationsController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly ReservationService _reservationService;
+    private readonly ILogger<ReservationsController> _logger;
 
-    public ReservationsController(SpService spService)
+    public ReservationsController(
+        SpService spService,
+        ReservationService reservationService,
+        ILogger<ReservationsController> logger)
     {
         _spService = spService;
+        _reservationService = reservationService;
+        _logger = logger;
     }
 
-    // GET /api/v1/reservations?branchId=1&date=2026-10-12&status=confirmed
+    private ReservationCallerContext GetCaller()
+    {
+        string? ipAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString();
+        return ReservationService.ExtractCallerContext(User, ipAddress);
+    }
+
+    private IActionResult MapReservationException(Exception ex)
+    {
+        return ex switch
+        {
+            ReservationUnauthorizedException => Unauthorized(new { success = false, message = ex.Message }),
+            ReservationForbiddenException => StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message }),
+            ReservationNotFoundException => NotFound(new { success = false, message = ex.Message }),
+            ReservationConflictException => Conflict(new { success = false, message = ex.Message }),
+            DuplicatePaymentException => Conflict(new { success = false, message = ex.Message }),
+            PaymentVerificationException => UnprocessableEntity(new { success = false, paymentStatus = "FAILED", message = ex.Message }),
+            ArgumentException or InvalidOperationException => BadRequest(new { success = false, message = ex.Message }),
+            _ => StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = "An unexpected error occurred.", error = ex.Message })
+        };
+    }
+
+    #region Availability & Table Lookup (Customer Website)
+
+    /// <summary>
+    /// Checks real-time table availability for the requested date, time slot, guest count, and seating preference.
+    /// Does not rely on live POS floor occupation for future dates and returns alternative slot suggestions if full.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("availability")]
+    public async Task<IActionResult> CheckAvailability(
+        [FromQuery] string? date,
+        [FromQuery] string? time,
+        [FromQuery] int guests = 2,
+        [FromQuery] string? preference = null,
+        [FromQuery] string? section = null,
+        [FromQuery] long branchId = 1)
+    {
+        try
+        {
+            string? resolvedPref = !string.IsNullOrWhiteSpace(preference) ? preference : section;
+            var result = await _reservationService.CheckAvailabilityAsync(date, time, guests, resolvedPref, branchId);
+            return Ok(new
+            {
+                success = true,
+                message = result.Message,
+                data = result
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns section-filtered dining tables annotated with slot availability, pricing estimate, and required advance payment.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("available-tables")]
+    public async Task<IActionResult> GetAvailableTables(
+        [FromQuery] string? date,
+        [FromQuery] string? time,
+        [FromQuery] int guests = 2,
+        [FromQuery] string? preference = null,
+        [FromQuery] string? section = null,
+        [FromQuery] long branchId = 1)
+    {
+        try
+        {
+            string? resolvedPref = !string.IsNullOrWhiteSpace(preference) ? preference : section;
+            var result = await _reservationService.GetAvailableTablesAsync(date, time, guests, resolvedPref, branchId);
+            return Ok(new
+            {
+                success = true,
+                message = result.Message,
+                count = result.AvailableTablesCount,
+                data = result
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Retrieves dining table specifications and optional slot availability/pricing for a specific table.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("tables/{tableId:long}")]
+    public async Task<IActionResult> GetTableDetails(
+        long tableId,
+        [FromQuery] string? date = null,
+        [FromQuery] string? time = null,
+        [FromQuery] int? guests = null)
+    {
+        try
+        {
+            var detail = await _reservationService.GetTableDetailAsync(tableId, date, time, guests);
+            return Ok(new
+            {
+                success = true,
+                message = "Table details retrieved successfully.",
+                data = detail
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    #endregion
+
+    #region Guest OTP & Authenticated My Reservations
+
+    /// <summary>
+    /// Sends a 6-digit OTP (stored hashed in MySQL) to verify guest mobile ownership before accessing reservation history or changes.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("otp/send")]
+    public async Task<IActionResult> SendOtp([FromBody] SendReservationOtpRequestDto request)
+    {
+        try
+        {
+            var result = await _reservationService.SendGuestOtpAsync(request);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Verifies the guest OTP and issues a scoped JWT bearer token for reservation history, modifications, and cancellations.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpPost("otp/verify")]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyReservationOtpRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var result = await _reservationService.VerifyGuestOtpAsync(request);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns upcoming and past/cancelled reservations for the authenticated customer, verified guest phone, or staff query.
+    /// </summary>
+    [Authorize]
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMyReservations(
+        [FromQuery] string? phone = null,
+        [FromQuery] string? tab = "all",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var caller = GetCaller();
+            var result = await _reservationService.GetMyReservationsAsync(phone, tab, page, pageSize, caller);
+            return Ok(new
+            {
+                success = true,
+                message = "Reservations retrieved successfully.",
+                data = result
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    #endregion
+
+    #region Create, Read Detail, Modify & Cancel Reservations
+
+    /// <summary>
+    /// Retrieves reservations for Admin POS management with optional branch, date, and status filters.
+    /// </summary>
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetReservations([FromQuery] long? branchId, [FromQuery] string? date, [FromQuery] string? status)
@@ -66,149 +281,221 @@ public class ReservationsController : ControllerBase
         });
     }
 
-    // POST /api/v1/reservations
+    /// <summary>
+    /// Creates a table reservation with Serializable row-lock overlap protection, server-side advance calculation,
+    /// idempotency support, and checkout token issuance (starts as PENDING_PAYMENT when advance payment is required).
+    /// </summary>
     [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> CreateReservation([FromBody] CreateReservationDto request)
     {
-        if (string.IsNullOrWhiteSpace(request.CustomerName) && string.IsNullOrWhiteSpace(request.Phone))
+        if (!ModelState.IsValid)
         {
-            return BadRequest(new { success = false, message = "Customer Name and Phone are required." });
+            return BadRequest(ModelState);
         }
 
-        if (request.TableId <= 0)
+        try
         {
-            return BadRequest(new { success = false, message = "A valid TableId is required." });
-        }
-
-        // Auto-lookup or create customer record
-        if (!request.CustomerId.HasValue || request.CustomerId.Value <= 0)
-        {
-            var phone = request.Phone.Trim();
-            if (!string.IsNullOrWhiteSpace(phone))
-            {
-                var existingCust = await _spService.ExecuteSqlQueryAsync(
-                    "SELECT customer_id FROM customers WHERE phone = @phone LIMIT 1",
-                    r => Convert.ToInt64(r["customer_id"]),
-                    new Dictionary<string, object?> { { "phone", phone } });
-
-                if (existingCust.Count > 0)
-                {
-                    request.CustomerId = existingCust[0];
-                }
-                else
-                {
-                    await _spService.ExecuteSqlNonQueryAsync(
-                        "INSERT INTO customers (full_name, phone, registered_branch_id, is_active, created_at, updated_at) VALUES (@name, @phone, @branch_id, 1, NOW(), NOW())",
-                        new Dictionary<string, object?>
-                        {
-                            { "name", !string.IsNullOrWhiteSpace(request.CustomerName) ? request.CustomerName.Trim() : "Guest" },
-                            { "phone", phone },
-                            { "branch_id", request.BranchId ?? 1 }
-                        });
-
-                    var newCust = await _spService.ExecuteSqlQueryAsync(
-                        "SELECT customer_id FROM customers WHERE phone = @phone ORDER BY customer_id DESC LIMIT 1",
-                        r => Convert.ToInt64(r["customer_id"]),
-                        new Dictionary<string, object?> { { "phone", phone } });
-
-                    if (newCust.Count > 0)
-                    {
-                        request.CustomerId = newCust[0];
-                    }
-                }
-            }
-        }
-
-        DateTime resDate = request.ReservationDate ?? (request.ReservationDateTime?.Date ?? DateTime.UtcNow.Date);
-        TimeSpan resTime;
-        if (!string.IsNullOrWhiteSpace(request.ReservationTime) && TimeSpan.TryParse(request.ReservationTime, out var parsedTime))
-        {
-            resTime = parsedTime;
-        }
-        else if (request.ReservationDateTime.HasValue)
-        {
-            resTime = request.ReservationDateTime.Value.TimeOfDay;
-        }
-        else
-        {
-            resTime = DateTime.UtcNow.TimeOfDay.Add(TimeSpan.FromHours(2));
-        }
-
-        var parameters = new Dictionary<string, object?>
-        {
-            { "p_action", "BOOK_TABLE" },
-            { "p_reservation_id", null },
-            { "p_customer_id", request.CustomerId },
-            { "p_table_id", request.TableId },
-            { "p_branch_id", request.BranchId ?? 1 },
-            { "p_reservation_date", resDate.ToString("yyyy-MM-dd") },
-            { "p_reservation_time", resTime.ToString(@"hh\:mm\:ss") },
-            { "p_guests_count", request.GuestsCount > 0 ? request.GuestsCount : 2 },
-            { "p_status", "booked" },
-            { "p_notes", request.Notes }
-        };
-
-        var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);
-        var result = results.Count > 0 ? results[0] : null;
-
-        if (result != null && result.StatusCode == 409)
-        {
-            return StatusCode(StatusCodes.Status409Conflict, new
-            {
-                success = false,
-                message = result.Message
-            });
-        }
-
-        if (result != null && (result.StatusCode == 201 || result.StatusCode == 200) && result.DataId.HasValue)
-        {
-            long newId = result.DataId.Value;
-            var all = await _spService.ExecuteQueryAsync(
-                "sp_manage_reservations",
-                MapReservationResponse,
-                new Dictionary<string, object?>
-                {
-                    { "p_action", "GET_ALL" },
-                    { "p_reservation_id", null },
-                    { "p_customer_id", null },
-                    { "p_table_id", null },
-                    { "p_branch_id", request.BranchId ?? 1 },
-                    { "p_reservation_date", null },
-                    { "p_reservation_time", null },
-                    { "p_guests_count", null },
-                    { "p_status", null },
-                    { "p_notes", null }
-                });
-
-            var created = all.FirstOrDefault(r => r.ReservationId == newId);
-
-            return StatusCode(StatusCodes.Status201Created, new
+            var caller = GetCaller();
+            var (reservation, alreadyProcessed) = await _reservationService.CreateReservationAsync(request, caller);
+            return StatusCode(alreadyProcessed ? StatusCodes.Status200OK : StatusCodes.Status201Created, new
             {
                 success = true,
-                message = result.Message,
-                data = created ?? (object)new
-                {
-                    reservationId = newId,
-                    customerId = request.CustomerId,
-                    customerName = request.CustomerName,
-                    customerPhone = request.Phone,
-                    tableId = request.TableId,
-                    reservationDate = resDate.ToString("yyyy-MM-dd"),
-                    reservationTime = resTime.ToString(@"hh\:mm\:ss"),
-                    guestsCount = request.GuestsCount,
-                    status = "booked",
-                    notes = request.Notes
-                }
+                alreadyProcessed,
+                message = alreadyProcessed
+                    ? "Reservation retrieved for existing idempotency key."
+                    : (reservation.Status == "PENDING_PAYMENT"
+                        ? "Table hold created. Complete advance payment to confirm your reservation."
+                        : "Table reservation booked successfully."),
+                guestToken = reservation.GuestToken,
+                data = reservation
             });
         }
-
-        return StatusCode(result?.StatusCode ?? StatusCodes.Status500InternalServerError, new
+        catch (Exception ex)
         {
-            success = false,
-            message = result?.Message ?? "Failed to book table."
-        });
+            return MapReservationException(ex);
+        }
     }
+
+    /// <summary>
+    /// Retrieves full details and payment history for a single reservation by numeric ID or RES-code (authenticated owner or staff).
+    /// </summary>
+    [Authorize]
+    [HttpGet("{reservationId}")]
+    public async Task<IActionResult> GetReservationById(string reservationId)
+    {
+        try
+        {
+            var caller = GetCaller();
+            var detail = await _reservationService.GetReservationByIdAsync(reservationId, caller);
+            return Ok(new
+            {
+                success = true,
+                message = "Reservation details retrieved successfully.",
+                data = detail
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Modifies reservation date, time, guest count, table, seating preference, or special requests
+    /// with overlap re-validation and server-side advance payment delta calculation.
+    /// </summary>
+    [Authorize]
+    [HttpPut("{reservationId}")]
+    public async Task<IActionResult> ModifyReservation(string reservationId, [FromBody] ModifyReservationDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var caller = GetCaller();
+            var result = await _reservationService.ModifyReservationAsync(reservationId, request, caller);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Cancels an active reservation, applies configurable cutoff-hour refund rules, records refund transactions,
+    /// conditionally releases reserved physical table status, and writes an audit log.
+    /// </summary>
+    [Authorize]
+    [HttpPost("{reservationId}/cancel")]
+    public async Task<IActionResult> CancelReservation(
+        string reservationId,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] CancelReservationDto? request)
+    {
+        try
+        {
+            var caller = GetCaller();
+            var result = await _reservationService.CancelReservationAsync(reservationId, request, caller);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    #endregion
+
+    #region Advance Payment, Payment Status & Gateway Webhook
+
+    /// <summary>
+    /// Processes or verifies advance payment (SUCCESS, PENDING, or FAILED) for a reservation with idempotency,
+    /// duplicate payment protection, and HMAC-SHA256 gateway verification. Transitions booking to CONFIRMED only on verified success.
+    /// </summary>
+    [Authorize]
+    [HttpPost("{reservationId}/payment")]
+    public async Task<IActionResult> ProcessAdvancePayment(string reservationId, [FromBody] ReservationPaymentRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var caller = GetCaller();
+            var result = await _reservationService.ProcessPaymentAsync(reservationId, request, caller);
+
+            if (result.AlreadyProcessed)
+            {
+                return Ok(result);
+            }
+
+            if (result.Pending)
+            {
+                return StatusCode(StatusCodes.Status202Accepted, result);
+            }
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the current payment summary, refund summary, and payment transaction log for a reservation.
+    /// </summary>
+    [Authorize]
+    [HttpGet("{reservationId}/payment-status")]
+    public async Task<IActionResult> GetPaymentStatus(string reservationId)
+    {
+        try
+        {
+            var caller = GetCaller();
+            var status = await _reservationService.GetPaymentStatusAsync(reservationId, caller);
+            return Ok(new
+            {
+                success = true,
+                message = "Reservation payment status retrieved successfully.",
+                data = status
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Receives signed asynchronous payment gateway webhooks to verify and finalize reservation advance payments.
+    /// </summary>
+    [AllowAnonymous]
+    [BufferRequestBody]
+    [HttpPost("payment/webhook")]
+    public async Task<IActionResult> PaymentWebhook([FromBody] ReservationWebhookRequestDto request)
+    {
+        try
+        {
+            string rawBody = string.Empty;
+            if (Request.Body.CanSeek)
+            {
+                Request.Body.Position = 0;
+                using var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true);
+                rawBody = await reader.ReadToEndAsync();
+                Request.Body.Position = 0;
+            }
+
+            string? headerSignature = Request.Headers["X-Razorpay-Signature"].FirstOrDefault()
+                                      ?? Request.Headers["X-Webhook-Signature"].FirstOrDefault();
+            string? ipAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString();
+
+            var result = await _reservationService.ProcessWebhookAsync(rawBody, request, headerSignature, ipAddress);
+            if (!result.Success && !result.Pending)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return MapReservationException(ex);
+        }
+    }
+
+    #endregion
+
+    #region Legacy Admin POS Compatibility Endpoints
 
     // PUT /api/v1/reservations/{id:long}/status
     [AllowAnonymous]
@@ -220,28 +507,43 @@ public class ReservationsController : ControllerBase
             return BadRequest(new { success = false, message = "Status is required." });
         }
 
-        var parameters = new Dictionary<string, object?>
+        string normalized = request.Status.Trim();
+        if (normalized.Length <= 20)
         {
-            { "p_action", "UPDATE_STATUS" },
-            { "p_reservation_id", id },
-            { "p_customer_id", null },
-            { "p_table_id", null },
-            { "p_branch_id", null },
-            { "p_reservation_date", null },
-            { "p_reservation_time", null },
-            { "p_guests_count", null },
-            { "p_status", request.Status.Trim().ToLower() },
-            { "p_notes", null }
-        };
+            var parameters = new Dictionary<string, object?>
+            {
+                { "p_action", "UPDATE_STATUS" },
+                { "p_reservation_id", id },
+                { "p_customer_id", null },
+                { "p_table_id", null },
+                { "p_branch_id", null },
+                { "p_reservation_date", null },
+                { "p_reservation_time", null },
+                { "p_guests_count", null },
+                { "p_status", normalized.ToLowerInvariant() },
+                { "p_notes", null }
+            };
 
-        var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);
-        var result = results.Count > 0 ? results[0] : null;
+            var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);
+            var result = results.Count > 0 ? results[0] : null;
+
+            return Ok(new
+            {
+                success = true,
+                message = result?.Message ?? "Reservation status updated successfully.",
+                data = new { reservationId = id, status = normalized.ToLowerInvariant() }
+            });
+        }
+
+        await _spService.ExecuteSqlNonQueryAsync(
+            "UPDATE reservations SET status = @stat, updated_at = UTC_TIMESTAMP() WHERE reservation_id = @rid;",
+            new Dictionary<string, object?> { { "@stat", normalized }, { "@rid", id } });
 
         return Ok(new
         {
             success = true,
-            message = result?.Message ?? "Reservation status updated successfully.",
-            data = new { reservationId = id, status = request.Status.Trim().ToLower() }
+            message = "Reservation status updated successfully.",
+            data = new { reservationId = id, status = normalized }
         });
     }
 
@@ -286,6 +588,10 @@ public class ReservationsController : ControllerBase
         });
     }
 
+    #endregion
+
+    #region SP Reader Mapping Helpers
+
     private static ReservationResponseDto MapReservationResponse(DbDataReader reader)
     {
         var notesOrd = HasColumn(reader, "notes") ? reader.GetOrdinal("notes") : -1;
@@ -297,6 +603,16 @@ public class ReservationsController : ControllerBase
         var resDateOrd = HasColumn(reader, "reservation_date") ? reader.GetOrdinal("reservation_date") : -1;
         var resTimeOrd = HasColumn(reader, "reservation_time") ? reader.GetOrdinal("reservation_time") : -1;
         var updatedAtOrd = HasColumn(reader, "updated_at") ? reader.GetOrdinal("updated_at") : -1;
+
+        var resNumberOrd = HasColumn(reader, "reservation_number") ? reader.GetOrdinal("reservation_number") : -1;
+        var payStatusOrd = HasColumn(reader, "payment_status") ? reader.GetOrdinal("payment_status") : -1;
+        var advOrd = HasColumn(reader, "advance_amount") ? reader.GetOrdinal("advance_amount") : -1;
+        var paidOrd = HasColumn(reader, "paid_amount") ? reader.GetOrdinal("paid_amount") : -1;
+        var remOrd = HasColumn(reader, "remaining_amount") ? reader.GetOrdinal("remaining_amount") : -1;
+        var resAmtOrd = HasColumn(reader, "reservation_amount") ? reader.GetOrdinal("reservation_amount") : -1;
+        var prefOrd = HasColumn(reader, "seating_preference") ? reader.GetOrdinal("seating_preference") : -1;
+
+        long reservationId = Convert.ToInt64(reader["reservation_id"]);
 
         var customerName = custNameOrd >= 0 && !reader.IsDBNull(custNameOrd)
             ? reader.GetString(custNameOrd)
@@ -315,17 +631,35 @@ public class ReservationsController : ControllerBase
         }
 
         string resTime = string.Empty;
+        string formattedTime = string.Empty;
         if (resTimeOrd >= 0 && !reader.IsDBNull(resTimeOrd))
         {
             var val = reader.GetValue(resTimeOrd);
-            if (val is TimeSpan ts) resTime = ts.ToString(@"hh\:mm\:ss");
-            else if (val is DateTime dt) resTime = dt.ToString("HH:mm:ss");
-            else resTime = val.ToString() ?? string.Empty;
+            if (val is TimeSpan ts)
+            {
+                resTime = ts.ToString(@"hh\:mm\:ss");
+                formattedTime = DateTime.Today.Add(ts).ToString("hh:mm tt");
+            }
+            else if (val is DateTime dt)
+            {
+                resTime = dt.ToString("HH:mm:ss");
+                formattedTime = dt.ToString("hh:mm tt");
+            }
+            else
+            {
+                resTime = val.ToString() ?? string.Empty;
+                formattedTime = resTime;
+            }
         }
+
+        string resNumber = resNumberOrd >= 0 && !reader.IsDBNull(resNumberOrd)
+            ? reader.GetString(resNumberOrd)
+            : $"RES-{1000 + reservationId}";
 
         return new ReservationResponseDto
         {
-            ReservationId = Convert.ToInt64(reader["reservation_id"]),
+            ReservationId = reservationId,
+            ReservationNumber = resNumber,
             BranchId = HasColumn(reader, "branch_id") && !reader.IsDBNull(reader.GetOrdinal("branch_id")) ? Convert.ToInt64(reader["branch_id"]) : 1,
             CustomerId = HasColumn(reader, "customer_id") && !reader.IsDBNull(reader.GetOrdinal("customer_id")) ? Convert.ToInt64(reader["customer_id"]) : null,
             CustomerName = customerName,
@@ -333,9 +667,16 @@ public class ReservationsController : ControllerBase
             TableId = HasColumn(reader, "table_id") && !reader.IsDBNull(reader.GetOrdinal("table_id")) ? Convert.ToInt64(reader["table_id"]) : null,
             TableNumber = tableNumOrd >= 0 && !reader.IsDBNull(tableNumOrd) ? reader.GetString(tableNumOrd) : null,
             Location = locationOrd >= 0 && !reader.IsDBNull(locationOrd) ? reader.GetString(locationOrd) : null,
+            SeatingPreference = prefOrd >= 0 && !reader.IsDBNull(prefOrd) ? reader.GetString(prefOrd) : null,
             ReservationDate = resDate,
             ReservationTime = resTime,
+            FormattedTime = formattedTime,
             GuestsCount = Convert.ToInt32(reader["guests_count"]),
+            ReservationAmount = resAmtOrd >= 0 && !reader.IsDBNull(resAmtOrd) ? Convert.ToDecimal(reader.GetValue(resAmtOrd)) : 0m,
+            AdvanceAmount = advOrd >= 0 && !reader.IsDBNull(advOrd) ? Convert.ToDecimal(reader.GetValue(advOrd)) : 0m,
+            PaidAmount = paidOrd >= 0 && !reader.IsDBNull(paidOrd) ? Convert.ToDecimal(reader.GetValue(paidOrd)) : 0m,
+            RemainingAmount = remOrd >= 0 && !reader.IsDBNull(remOrd) ? Convert.ToDecimal(reader.GetValue(remOrd)) : 0m,
+            PaymentStatus = payStatusOrd >= 0 && !reader.IsDBNull(payStatusOrd) ? reader.GetString(payStatusOrd) : "UNPAID",
             Status = reader["status"]?.ToString() ?? "booked",
             Notes = notesOrd >= 0 && !reader.IsDBNull(notesOrd) ? reader.GetString(notesOrd) : null,
             CreatedAt = reader["created_at"] is DateTime cdt ? cdt : DateTime.UtcNow,
@@ -363,6 +704,8 @@ public class ReservationsController : ControllerBase
         }
         return false;
     }
+
+    #endregion
 }
 
 // Aliases for backward compatibility

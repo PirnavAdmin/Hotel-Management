@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   X, Receipt, Search, Eye, Calendar, CalendarDays, CalendarRange,
@@ -691,7 +692,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
               </button>
 
               {/* Quick Date Select Dropdown */}
-              <select
+              <SearchableSelect
                 value={selectedDate}
                 onChange={e => {
                   setSelectedDate(e.target.value);
@@ -716,7 +717,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
                     </option>
                   );
                 })}
-              </select>
+              </SearchableSelect>
 
               {/* Native HTML DatePicker */}
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -823,7 +824,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
               </button>
 
               {/* Month Select Dropdown */}
-              <select
+              <SearchableSelect
                 value={selectedMonth}
                 onChange={e => {
                   setSelectedMonth(e.target.value);
@@ -848,7 +849,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
                     </option>
                   );
                 })}
-              </select>
+              </SearchableSelect>
 
               {/* Native HTML Month Picker */}
               <input

@@ -1716,6 +1716,8 @@ import {
   ChevronDown,
   Filter,
   LogOut,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
@@ -1727,9 +1729,10 @@ import {
 import { ItemDetailModal } from "./ItemDetailModal";
 import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
-import { SkeletonMenuCard } from "../common/Skeletons";
+import { SkeletonMenuCard, SkeletonText, SkeletonAvatar, SkeletonButton } from "../common/Skeletons";
 import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 import MenuItemVisual from "../common/MenuItemVisual";
+import "../common/MenuCatalogLayout.css";
 
 const CATEGORY_ICONS = {
   Utensils: Utensils,
@@ -1817,6 +1820,22 @@ export function TableDetailView({
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
   const [tempNote, setTempNote] = useState("");
   const [selectedMenuItemModal, setSelectedMenuItemModal] = useState(null);
+  const [menuViewMode, setMenuViewMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem("gourmet_pos_menu_view_mode");
+      if (stored === "grid") {
+        localStorage.removeItem("gourmet_pos_menu_view_mode");
+      }
+    } catch {}
+    return "rows";
+  });
+
+  const handleSetMenuViewMode = (mode) => {
+    setMenuViewMode(mode);
+    try {
+      localStorage.setItem("gourmet_pos_menu_view_mode", mode);
+    } catch {}
+  };
 
   // Filter states
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
@@ -1983,6 +2002,68 @@ export function TableDetailView({
       }}
     >
       <style>{`
+        .pos-menu-table-container {
+          flex: 1;
+          width: 100%;
+          box-sizing: border-box;
+          min-width: 0;
+          min-height: 0;
+          overflow-y: auto;
+          overflow-x: auto;
+          padding: 0.65rem;
+          background: var(--bg-primary);
+        }
+
+        .pos-menu-table {
+          width: 100%;
+          border-collapse: collapse;
+          text-align: left;
+          font-size: 0.84rem;
+          background: var(--bg-secondary);
+        }
+
+        .pos-menu-table thead tr {
+          background: var(--bg-tertiary);
+          border-bottom: 1px solid var(--border-subtle);
+          color: var(--text-muted);
+          font-size: 0.76rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .pos-menu-table th {
+          padding: 0.65rem 0.85rem;
+          white-space: nowrap;
+        }
+
+        .pos-menu-table td {
+          padding: 0.65rem 0.85rem;
+          border-bottom: 1px solid var(--border-subtle);
+          vertical-align: middle;
+        }
+
+        .pos-menu-row {
+          transition: background 150ms ease;
+        }
+
+        .pos-menu-row:hover {
+          background: rgba(245, 158, 11, 0.06);
+        }
+
+        .pos-menu-row.has-qty {
+          background: rgba(245, 158, 11, 0.08);
+        }
+
+        .pos-menu-row.is-unavailable {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .pos-menu-row.is-unavailable:hover {
+          background: transparent !important;
+        }
+
         .pos-menu-grid {
           flex: 1;
           width: 100%;
@@ -2000,14 +2081,9 @@ export function TableDetailView({
         }
 
         .pos-menu-card {
-          box-sizing: border-box;
-          min-width: 0;
           background: var(--bg-secondary);
           border-radius: 8px;
           border: 1px solid var(--border-subtle);
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
           box-shadow: var(--shadow-sm);
           transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
         }
@@ -2041,34 +2117,11 @@ export function TableDetailView({
         }
 
         .pos-menu-card-image {
-          position: relative;
-          height: 70px;
-          min-height: 70px;
-          overflow: hidden;
           background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
-        }
-
-        .pos-menu-card-image img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          transition: transform 220ms ease;
         }
 
         .pos-menu-card:hover .pos-menu-card-image img {
           transform: scale(1.045);
-        }
-
-        .pos-menu-card-content {
-          box-sizing: border-box;
-          padding: 0.4rem 0.45rem 0.45rem;
-          min-height: 112px;
-          min-width: 0;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
         }
 
         .pos-menu-card-title-row {
@@ -2080,39 +2133,16 @@ export function TableDetailView({
         }
 
         .pos-menu-card-title {
-          min-width: 0;
-          overflow-wrap: anywhere;
           margin: 0;
           font-size: 0.76rem;
           font-weight: 800;
           color: var(--text-main);
           line-height: 1.18;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
 
         .pos-menu-card-description {
           font-size: 0.62rem;
           color: var(--text-muted);
-          margin-top: 0.18rem;
-          line-height: 1.28;
-          display: -webkit-box;
-          -webkit-line-clamp: 1;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .pos-menu-card-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.35rem;
-          min-width: 0;
-          margin-top: 0.38rem;
-          padding-top: 0.35rem;
-          border-top: 1px solid var(--border-subtle);
         }
 
         .pos-menu-card-price {
@@ -2227,22 +2257,6 @@ export function TableDetailView({
         }
 
         @media (max-width: 760px) {
-          .pos-menu-grid {
-            padding: 0.5rem;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.45rem;
-          }
-
-          .pos-menu-card-image {
-            height: 82px;
-            min-height: 82px;
-          }
-
-          .pos-menu-card-content {
-            min-height: 100px;
-            padding: 0.45rem;
-          }
-
           .pos-menu-card-title {
             font-size: 0.72rem;
           }
@@ -2253,15 +2267,6 @@ export function TableDetailView({
         }
 
         @media (max-width: 420px) {
-          .pos-menu-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .pos-menu-card-image {
-            height: 76px;
-            min-height: 76px;
-          }
-
           .pos-menu-card-price {
             font-size: 0.82rem;
           }
@@ -2270,10 +2275,6 @@ export function TableDetailView({
             padding: 0.25rem 0.42rem;
             font-size: 0.62rem;
           }
-        }
-
-        @media (max-width: 340px) {
-          .pos-menu-grid { grid-template-columns: minmax(0, 1fr); }
         }
 
         @keyframes cartPulse {
@@ -2973,6 +2974,7 @@ export function TableDetailView({
         >
           {/* Menu Search Bar */}
           <div
+            className="menu-catalog-controls"
             style={{
               padding: "0.85rem 1.25rem",
               borderBottom: "1px solid var(--border-subtle)",
@@ -3046,7 +3048,7 @@ export function TableDetailView({
               <Search
                 size={16}
                 color="var(--text-dim)"
-                style={{ position: "absolute", left: "12px", top: "11px" }}
+                style={{ position: "absolute", left: "12px", top: "12px" }}
               />
               <input
                 type="text"
@@ -3055,11 +3057,13 @@ export function TableDetailView({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: "100%",
+                  height: "40px",
+                  boxSizing: "border-box",
                   background: "var(--bg-primary)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-md)",
                   color: "var(--text-main)",
-                  padding: "0.55rem 1rem 0.55rem 2.25rem",
+                  padding: "0.35rem 1rem 0.35rem 2.25rem",
                   fontSize: "0.85rem",
                 }}
               />
@@ -3069,7 +3073,7 @@ export function TableDetailView({
                   style={{
                     position: "absolute",
                     right: "10px",
-                    top: "8px",
+                    top: "12px",
                     background: "transparent",
                     color: "var(--text-muted)",
                     border: "none",
@@ -3144,302 +3148,744 @@ export function TableDetailView({
                 );
               })}
             </div>
-          </div>
 
-          {/* Menu Items Grid - 4 dishes per row */}
-          <div className="pos-menu-grid">
-            {activeMenuLoading ? (
-              Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
-            ) : filteredMenuItems.length === 0 ? (
-              <div
+            {/* View Mode Switcher: Rows (default) vs Cards */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "var(--radius-sm)",
+                padding: "2px",
+                marginLeft: "auto",
+                gap: "2px",
+              }}
+              role="group"
+              aria-label="Menu view mode"
+            >
+              <button
+                type="button"
+                title="Rows View (Row-wise List)"
+                onClick={() => handleSetMenuViewMode("rows")}
                 style={{
-                  gridColumn: "1 / -1",
-                  textAlign: "center",
-                  padding: "4rem 1rem",
-                  color: "var(--text-dim)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  border: "none",
+                  background: menuViewMode === "rows" ? "var(--accent-amber)" : "transparent",
+                  color: menuViewMode === "rows" ? "#000000" : "var(--text-muted)",
+                  fontSize: "0.74rem",
+                  fontWeight: menuViewMode === "rows" ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
                 }}
               >
-                <Flame
-                  size={42}
-                  color="var(--accent-amber)"
-                  style={{ margin: "0 auto 0.75rem auto" }}
-                />
-                <h4
-                  style={{
-                    color: "var(--text-main)",
-                    fontSize: "1.1rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  {emptyStateContent.title}
-                </h4>
-                <button
-                  className="primary-action-button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedCategory("all");
-                    setDietaryFilter("all");
-                  }}
-                  style={{
-                    marginTop: "1rem",
-                    padding: "0.5rem 1rem",
-                    background: "var(--accent-amber)",
-                    color: "#000000",
-                    borderRadius: "var(--radius-sm)",
-                    fontWeight: 700,
-                    fontSize: "0.82rem",
-                  }}
-                >
-                  {orderMode === "bar" ? "Show All Drinks" : "Show All Dishes"}
-                </button>
-              </div>
-            ) : (
-              filteredMenuItems.map((item) => {
-                const isAvailable = item.isAvailable !== false;
-                const currentQty = getItemQuantityInCart(item.id);
+                <List size={14} />
+                <span>Rows</span>
+              </button>
+              <button
+                type="button"
+                title="Cards View (Grid)"
+                onClick={() => handleSetMenuViewMode("grid")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  border: "none",
+                  background: menuViewMode === "grid" ? "var(--accent-amber)" : "transparent",
+                  color: menuViewMode === "grid" ? "#000000" : "var(--text-muted)",
+                  fontSize: "0.74rem",
+                  fontWeight: menuViewMode === "grid" ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <LayoutGrid size={14} />
+                <span>Cards</span>
+              </button>
+            </div>
+          </div>
 
-                return (
-                  <div
-                    key={item.id}
-                    className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
-                    onClick={() => {
-                      if (!isAvailable) return;
-                      handleOpenItemModal(item);
-                    }}
+          {/* Menu Items Display: Rows Mode (Row-wise table matching Image 2) or Grid Mode (Cards) */}
+          {menuViewMode === "rows" ? (
+            <div className="pos-menu-table-container">
+              {activeMenuLoading ? (
+                <div style={{ borderRadius: "10px", border: "1px solid var(--border-card)", overflow: "hidden", background: "var(--bg-secondary)" }}>
+                  <table className="pos-menu-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "42%" }}>Dish Name</th>
+                        <th style={{ width: "16%" }}>Category</th>
+                        <th style={{ width: "14%" }}>Dietary</th>
+                        <th style={{ width: "14%" }}>Price (₹)</th>
+                        <th style={{ width: "14%", textAlign: "right" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 6 }, (_, index) => (
+                        <tr key={index}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                              <SkeletonAvatar size={48} />
+                              <div style={{ flex: 1 }}>
+                                <SkeletonText width="50%" height="0.95rem" />
+                                <div style={{ marginTop: "4px" }}><SkeletonText width="80%" height="0.72rem" /></div>
+                              </div>
+                            </div>
+                          </td>
+                          <td><SkeletonText width="60%" /></td>
+                          <td><SkeletonText width="55px" height="20px" /></td>
+                          <td><SkeletonText width="65px" height="1rem" /></td>
+                          <td style={{ textAlign: "right" }}><SkeletonButton width={70} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : filteredMenuItems.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "4rem 1rem",
+                    color: "var(--text-dim)",
+                  }}
+                >
+                  <Flame
+                    size={42}
+                    color="var(--accent-amber)"
+                    style={{ margin: "0 auto 0.75rem auto" }}
+                  />
+                  <h4
                     style={{
-                      cursor: isAvailable ? "pointer" : "not-allowed",
-                      opacity: isAvailable ? 1 : 0.6,
-                      filter: isAvailable ? "none" : "grayscale(25%)",
-                      position: "relative",
-                      transition: "all 0.2s ease",
+                      color: "var(--text-main)",
+                      fontSize: "1.1rem",
+                      fontWeight: 700,
                     }}
                   >
-                    {/* Item Image with culinary tags */}
-                    <div className="pos-menu-card-image" style={{ position: "relative" }}>
-                      {orderMode === "bar" ? <MenuItemVisual item={item} className="pos-menu-card-image-img" style={{ position: "absolute", inset: 0, zIndex: 1, filter: isAvailable ? "none" : "grayscale(35%)" }} /> : (
-                        <img
-                          src={getMenuItemImage(item)}
-                          alt={item.name}
-                          loading="lazy"
-                          className="pos-menu-card-image-img"
-                          onError={(e) => handleDishImageError(e, item)}
-                          style={{
-                            filter: isAvailable ? "none" : "grayscale(35%)",
-                          }}
-                        />
-                      )}
+                    {emptyStateContent.title}
+                  </h4>
+                  <button
+                    className="primary-action-button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedCategory("all");
+                      setDietaryFilter("all");
+                    }}
+                    style={{
+                      marginTop: "1rem",
+                      padding: "0.5rem 1rem",
+                      background: "var(--accent-amber)",
+                      color: "#000000",
+                      borderRadius: "var(--radius-sm)",
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                    }}
+                  >
+                    {orderMode === "bar" ? "Show All Drinks" : "Show All Dishes"}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ borderRadius: "10px", border: "1px solid var(--border-card)", overflow: "hidden", background: "var(--bg-secondary)" }}>
+                  <table className="pos-menu-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "42%" }}>Dish Name</th>
+                        <th style={{ width: "16%" }}>Category</th>
+                        <th style={{ width: "14%" }}>Dietary</th>
+                        <th style={{ width: "14%" }}>Price (₹)</th>
+                        <th style={{ width: "14%", textAlign: "right" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMenuItems.map((item) => {
+                        const isAvailable = item.isAvailable !== false;
+                        const currentQty = getItemQuantityInCart(item.id);
+                        const isVeg = item.dietaryType?.toUpperCase() === "VEG" || item.isVeg;
 
-                      {/* Fallback Icon when image loading */}
-                      {orderMode !== "bar" && <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          zIndex: 0,
-                          opacity: 0.25,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          pointerEvents: "none",
-                        }}
-                      >
-                        <Utensils size={36} color="var(--accent-amber)" />
-                      </div>}
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`pos-menu-row ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
+                            onClick={() => {
+                              if (!isAvailable) return;
+                              handleOpenItemModal(item);
+                            }}
+                            style={{
+                              cursor: isAvailable ? "pointer" : "not-allowed",
+                              opacity: isAvailable ? 1 : 0.6,
+                              background: currentQty > 0 ? "rgba(245, 158, 11, 0.06)" : undefined,
+                            }}
+                          >
+                            {/* Dish Name */}
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                <div
+                                  style={{
+                                    position: "relative",
+                                    width: "48px",
+                                    height: "48px",
+                                    minWidth: "48px",
+                                    borderRadius: "8px",
+                                    overflow: "hidden",
+                                    background: "var(--bg-tertiary)",
+                                    border: "1px solid var(--border-subtle)",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {orderMode === "bar" ? (
+                                    <MenuItemVisual
+                                      item={item}
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        filter: isAvailable ? "none" : "grayscale(35%)",
+                                      }}
+                                    />
+                                  ) : (
+                                    <img
+                                      src={getMenuItemImage(item)}
+                                      alt={item.name}
+                                      loading="lazy"
+                                      onError={(e) => handleDishImageError(e, item)}
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        filter: isAvailable ? "none" : "grayscale(35%)",
+                                      }}
+                                    />
+                                  )}
+                                </div>
 
-                      {/* Unavailable Overlay Badge */}
-                      {!isAvailable && (
-                        <div
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                    <span
+                                      style={{
+                                        fontWeight: 700,
+                                        fontSize: "0.88rem",
+                                        color: isAvailable ? "var(--text-main)" : "var(--text-dim)",
+                                      }}
+                                    >
+                                      {item.name}
+                                    </span>
+                                    {Boolean(item.isChefSpecial || item.isChefsSpecial) && (
+                                      <Star size={13} fill="#f59e0b" color="#f59e0b" title="Chef's Special" />
+                                    )}
+                                    {item.prepTime && (
+                                      <span
+                                        style={{
+                                          display: "inline-flex",
+                                          alignItems: "center",
+                                          gap: "2px",
+                                          fontSize: "0.68rem",
+                                          color: "var(--text-muted)",
+                                          background: "var(--bg-tertiary)",
+                                          padding: "1px 5px",
+                                          borderRadius: "4px",
+                                        }}
+                                      >
+                                        <Clock size={10} />
+                                        {item.prepTime}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.description && (
+                                    <div
+                                      style={{
+                                        fontSize: "0.74rem",
+                                        color: "var(--text-muted)",
+                                        marginTop: "2px",
+                                        lineHeight: 1.35,
+                                        display: "-webkit-box",
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: "vertical",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                      }}
+                                    >
+                                      • {item.description}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Category */}
+                            <td
+                              style={{
+                                color: "var(--text-main)",
+                                fontWeight: 600,
+                                fontSize: "0.82rem",
+                              }}
+                            >
+                              {item.category || "-"}
+                            </td>
+
+                            {/* Dietary */}
+                            <td>
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                  letterSpacing: "0.03em",
+                                  background: isVeg
+                                    ? "rgba(16, 185, 129, 0.1)"
+                                    : "rgba(239, 68, 68, 0.1)",
+                                  color: isVeg ? "#10b981" : "#ef4444",
+                                  border: `1px solid ${isVeg ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                                }}
+                              >
+                                {isVeg ? "VEG" : "NON-VEG"}
+                              </span>
+                            </td>
+
+                            {/* Price */}
+                            <td
+                              style={{
+                                fontWeight: 800,
+                                fontSize: "0.92rem",
+                                color: isAvailable ? "var(--accent-amber)" : "var(--text-dim)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {formatCurrency(item.price)}
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                              {!isAvailable ? (
+                                <span
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    color: "var(--danger)",
+                                    background: "rgba(239, 68, 68, 0.12)",
+                                    border: "1px solid rgba(239, 68, 68, 0.35)",
+                                    borderRadius: "6px",
+                                    padding: "4px 9px",
+                                    cursor: "not-allowed",
+                                  }}
+                                  title="This item is currently unavailable"
+                                >
+                                  Unavailable
+                                </span>
+                              ) : currentQty === 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddItem(item);
+                                  }}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem",
+                                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                    color: "#ffffff",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    padding: "0.35rem 0.85rem",
+                                    fontSize: "0.78rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    boxShadow: "0 2px 6px rgba(245, 158, 11, 0.3)",
+                                    transition: "transform 0.12s ease",
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.04)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                                  title="Add to table"
+                                >
+                                  <Plus size={13} strokeWidth={2.5} />
+                                  <span>Add</span>
+                                </button>
+                              ) : (
+                                <div
+                                  className="pos-menu-qty"
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.25rem",
+                                    background: "var(--bg-tertiary)",
+                                    border: "1px solid var(--accent-amber)",
+                                    borderRadius: "6px",
+                                    padding: "2px",
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      sounds.playRemoveItem();
+                                      onUpdateItemQuantity(table.id, item.id, currentQty - 1);
+                                    }}
+                                    style={{
+                                      background: "var(--surface-tint)",
+                                      color: "var(--text-main)",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      width: "24px",
+                                      height: "24px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      cursor: "pointer",
+                                    }}
+                                    title="Decrease"
+                                  >
+                                    <Minus size={12} />
+                                  </button>
+                                  <span
+                                    className="font-mono"
+                                    style={{
+                                      fontSize: "0.82rem",
+                                      fontWeight: 800,
+                                      color: "var(--accent-amber)",
+                                      minWidth: "20px",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    {currentQty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      sounds.playAddItem();
+                                      onUpdateItemQuantity(table.id, item.id, currentQty + 1);
+                                    }}
+                                    style={{
+                                      background: "var(--accent-amber)",
+                                      color: "#000000",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      width: "24px",
+                                      height: "24px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      cursor: "pointer",
+                                    }}
+                                    title="Increase"
+                                  >
+                                    <Plus size={12} strokeWidth={2.5} />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Menu Items Grid - 4 dishes per row (Card View) */
+            <div className="pos-menu-grid">
+              {activeMenuLoading ? (
+                Array.from({ length: 8 }, (_, index) => <SkeletonMenuCard key={index} />)
+              ) : filteredMenuItems.length === 0 ? (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    textAlign: "center",
+                    padding: "4rem 1rem",
+                    color: "var(--text-dim)",
+                  }}
+                >
+                  <Flame
+                    size={42}
+                    color="var(--accent-amber)"
+                    style={{ margin: "0 auto 0.75rem auto" }}
+                  />
+                  <h4
+                    style={{
+                      color: "var(--text-main)",
+                      fontSize: "1.1rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {emptyStateContent.title}
+                  </h4>
+                  <button
+                    className="primary-action-button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedCategory("all");
+                      setDietaryFilter("all");
+                    }}
+                    style={{
+                      marginTop: "1rem",
+                      padding: "0.5rem 1rem",
+                      background: "var(--accent-amber)",
+                      color: "#000000",
+                      borderRadius: "var(--radius-sm)",
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                    }}
+                  >
+                    {orderMode === "bar" ? "Show All Drinks" : "Show All Dishes"}
+                  </button>
+                </div>
+              ) : (
+                filteredMenuItems.map((item) => {
+                  const isAvailable = item.isAvailable !== false;
+                  const currentQty = getItemQuantityInCart(item.id);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
+                      onClick={() => {
+                        if (!isAvailable) return;
+                        handleOpenItemModal(item);
+                      }}
+                      style={{
+                        cursor: isAvailable ? "pointer" : "not-allowed",
+                        opacity: isAvailable ? 1 : 0.6,
+                        filter: isAvailable ? "none" : "grayscale(25%)",
+                        position: "relative",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      {/* Item Image with culinary tags */}
+                      <div className="pos-menu-card-image" style={{ position: "relative" }}>
+                        {orderMode === "bar" ? <MenuItemVisual item={item} className="pos-menu-card-image-img" style={{ position: "absolute", inset: 0, zIndex: 1, filter: isAvailable ? "none" : "grayscale(35%)" }} /> : (
+                          <img
+                            src={getMenuItemImage(item)}
+                            alt={item.name}
+                            loading="lazy"
+                            className="pos-menu-card-image-img"
+                            onError={(e) => handleDishImageError(e, item)}
+                            style={{
+                              filter: isAvailable ? "none" : "grayscale(35%)",
+                            }}
+                          />
+                        )}
+
+                        {/* Fallback Icon when image loading */}
+                        {orderMode !== "bar" && <div
                           style={{
                             position: "absolute",
                             inset: 0,
-                            background: "var(--bg-glass)",
-                            backdropFilter: "blur(1.5px)",
+                            zIndex: 0,
+                            opacity: 0.25,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            zIndex: 2,
                             pointerEvents: "none",
                           }}
                         >
+                          <Utensils size={36} color="var(--accent-amber)" />
+                        </div>}
+
+                        {/* Unavailable Overlay Badge */}
+                        {!isAvailable && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              background: "var(--bg-glass)",
+                              backdropFilter: "blur(1.5px)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              zIndex: 2,
+                              pointerEvents: "none",
+                            }}
+                          >
+                            <span
+                              style={{
+                                background: "rgba(220, 38, 38, 0.95)",
+                                color: "#ffffff",
+                                fontSize: "0.72rem",
+                                fontWeight: 800,
+                                padding: "3px 9px",
+                                borderRadius: "6px",
+                                letterSpacing: "0.06em",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Unavailable
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Veg / Non-Veg Indicator badge */}
+                        <div className="pos-menu-badge">
                           <span
                             style={{
-                              background: "rgba(220, 38, 38, 0.95)",
-                              color: "#ffffff",
-                              fontSize: "0.72rem",
-                              fontWeight: 800,
-                              padding: "3px 9px",
-                              borderRadius: "6px",
-                              letterSpacing: "0.06em",
-                              boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-                              textTransform: "uppercase",
+                              width: "7px",
+                              height: "7px",
+                              borderRadius: "50%",
+                              background: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#10b981" : "#ef4444",
+                              display: "inline-block",
                             }}
-                          >
-                            Unavailable
-                          </span>
+                          />
+                          <span>{(item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "VEG" : "NON-VEG"}</span>
                         </div>
-                      )}
 
-                      {/* Veg / Non-Veg Indicator badge */}
-                      <div className="pos-menu-badge">
-                        <span
-                          style={{
-                            width: "7px",
-                            height: "7px",
-                            borderRadius: "50%",
-                            background: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#10b981" : "#ef4444",
-                            display: "inline-block",
-                          }}
-                        />
-                        <span>{(item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "VEG" : "NON-VEG"}</span>
+                        {/* Chef Special Badge */}
+                        {Boolean(item.isChefSpecial || item.isChefsSpecial) && (
+                          <div className="pos-menu-chef" title="Chef's Pick">
+                            <Sparkles size={11} />
+                          </div>
+                        )}
+
+                        {/* Prep time badge */}
+                        <div className="pos-menu-time">
+                          <Clock size={10} />
+                          <span>{item.prepTime}</span>
+                        </div>
                       </div>
 
-                      {/* Chef Special Badge */}
-                      {Boolean(item.isChefSpecial || item.isChefsSpecial) && (
-                        <div className="pos-menu-chef" title="Chef's Pick">
-                          <Sparkles size={11} />
-                        </div>
-                      )}
-
-                      {/* Prep time badge */}
-                      <div className="pos-menu-time">
-                        <Clock size={10} />
-                        <span>{item.prepTime}</span>
-                      </div>
-                    </div>
-
-                    {/* Item Content with Title, Description, and Actions */}
-                    <div className="pos-menu-card-content">
-                      <div>
-                        <div className="pos-menu-card-title-row">
-                          <h4
-                            className="pos-menu-card-title"
-                            style={{
-                              color: isAvailable ? "var(--text-main)" : "var(--text-dim)",
-                            }}
-                          >
-                            {item.name}
-                          </h4>
-                          {item.spiceLevel > 0 && (
-                            <div
+                      {/* Item Content with Title, Description, and Actions */}
+                      <div className="pos-menu-card-content">
+                        <div>
+                          <div className="pos-menu-card-title-row">
+                            <h4
+                              className="pos-menu-card-title"
                               style={{
-                                display: "flex",
-                                color: "var(--danger)",
-                                flexShrink: 0,
-                                opacity: isAvailable ? 1 : 0.4,
+                                color: isAvailable ? "var(--text-main)" : "var(--text-dim)",
                               }}
-                              title={`Spicy Level: ${item.spiceLevel}`}
                             >
-                              {[...Array(item.spiceLevel)].map((_, i) => (
-                                <Flame key={i} size={11} fill="#ef4444" />
-                              ))}
+                              {item.name}
+                            </h4>
+                            {item.spiceLevel > 0 && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  color: "var(--danger)",
+                                  flexShrink: 0,
+                                  opacity: isAvailable ? 1 : 0.4,
+                                }}
+                                title={`Spicy Level: ${item.spiceLevel}`}
+                              >
+                                {[...Array(item.spiceLevel)].map((_, i) => (
+                                  <Flame key={i} size={11} fill="#ef4444" />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <p
+                            className="pos-menu-card-description"
+                            style={{
+                              color: isAvailable ? "var(--text-muted)" : "var(--text-dim)",
+                            }}
+                          >
+                            {item.description}
+                          </p>
+                        </div>
+
+                        {/* Price in Rupees and Add / Quantity Control */}
+                        <div className="pos-menu-card-footer">
+                          <span
+                            className="font-mono pos-menu-card-price"
+                            style={{
+                              color: isAvailable ? "var(--accent-amber)" : "var(--text-dim)",
+                            }}
+                          >
+                            {formatCurrency(item.price)}
+                          </span>
+
+                          {/* Interactive Add or Qty Controller */}
+                          {!isAvailable ? (
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                color: "var(--danger)",
+                                background: "rgba(239, 68, 68, 0.12)",
+                                border: "1px solid rgba(239, 68, 68, 0.35)",
+                                borderRadius: "6px",
+                                padding: "4px 9px",
+                                cursor: "not-allowed",
+                              }}
+                              title="This item is currently unavailable"
+                            >
+                              Unavailable
+                            </span>
+                          ) : currentQty === 0 ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddItem(item);
+                              }}
+                              className="pos-menu-add"
+                              title="Add to Cart"
+                            >
+                              <Plus size={13} />
+                              <span>Add</span>
+                            </button>
+                          ) : (
+                            <div
+                              className="pos-menu-qty"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  sounds.playRemoveItem();
+                                  onUpdateItemQuantity(
+                                    table.id,
+                                    item.id,
+                                    currentQty - 1,
+                                  );
+                                }}
+                                style={{
+                                  background: "var(--surface-tint)",
+                                  color: "var(--text-main)",
+                                  border: "none",
+                                }}
+                              >
+                                <Minus size={12} />
+                              </button>
+
+                              <span className="font-mono pos-menu-qty-count">
+                                {currentQty}
+                              </span>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  sounds.playAddItem();
+                                  onUpdateItemQuantity(
+                                    table.id,
+                                    item.id,
+                                    currentQty + 1,
+                                  );
+                                }}
+                                style={{
+                                  background: "var(--accent-amber)",
+                                  color: "#000000",
+                                  border: "none",
+                                }}
+                              >
+                                <Plus size={12} />
+                              </button>
                             </div>
                           )}
                         </div>
-
-                        <p
-                          className="pos-menu-card-description"
-                          style={{
-                            color: isAvailable ? "var(--text-muted)" : "var(--text-dim)",
-                          }}
-                        >
-                          {item.description}
-                        </p>
-                      </div>
-
-                      {/* Price in Rupees and Add / Quantity Control */}
-                      <div className="pos-menu-card-footer">
-                        <span
-                          className="font-mono pos-menu-card-price"
-                          style={{
-                            color: isAvailable ? "var(--accent-amber)" : "var(--text-dim)",
-                          }}
-                        >
-                          {formatCurrency(item.price)}
-                        </span>
-
-                        {/* Interactive Add or Qty Controller */}
-                        {!isAvailable ? (
-                          <span
-                            style={{
-                              fontSize: "0.72rem",
-                              fontWeight: 700,
-                              color: "var(--danger)",
-                              background: "rgba(239, 68, 68, 0.12)",
-                              border: "1px solid rgba(239, 68, 68, 0.35)",
-                              borderRadius: "6px",
-                              padding: "4px 9px",
-                              cursor: "not-allowed",
-                            }}
-                            title="This item is currently unavailable"
-                          >
-                            Unavailable
-                          </span>
-                        ) : currentQty === 0 ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddItem(item);
-                            }}
-                            className="pos-menu-add"
-                            title="Add to Cart"
-                          >
-                            <Plus size={13} />
-                            <span>Add</span>
-                          </button>
-                        ) : (
-                          <div
-                            className="pos-menu-qty"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                sounds.playRemoveItem();
-                                onUpdateItemQuantity(
-                                  table.id,
-                                  item.id,
-                                  currentQty - 1,
-                                );
-                              }}
-                              style={{
-                                background: "var(--surface-tint)",
-                                color: "var(--text-main)",
-                                border: "none",
-                              }}
-                            >
-                              <Minus size={12} />
-                            </button>
-
-                            <span className="font-mono pos-menu-qty-count">
-                              {currentQty}
-                            </span>
-
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                sounds.playAddItem();
-                                onUpdateItemQuantity(
-                                  table.id,
-                                  item.id,
-                                  currentQty + 1,
-                                );
-                              }}
-                              style={{
-                                background: "var(--accent-amber)",
-                                color: "#000000",
-                                border: "none",
-                              }}
-                            >
-                              <Plus size={12} />
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Side: Order Slip (Only shown when items exist) */}

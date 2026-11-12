@@ -30,13 +30,7 @@ public class ReportsController : ControllerBase
         _barService = barService;
         _salaryService = salaryService;
         _logger = logger;
-    }
-
-    [HttpGet]
-    [HttpGet("dashboard")]
-    [HttpGet("dashboard-summary")]
-    [HttpGet("sales-summary")]
-    [HttpGet("summary")]
+    }[HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboardReport()
     {
         try
@@ -433,7 +427,6 @@ public async Task<IActionResult> GetInventoryReport()
             return StatusCode(500, new { success = false, message = ex.Message });
         }
     }
-
     [HttpGet("sales")]
     public async Task<IActionResult> GetRevenueReport()
     {

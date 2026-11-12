@@ -1,6 +1,9 @@
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using HMS.Data;
 using HMS.Middleware;
+using HMS.Models;
 using HMS.Services;
 using System.Net;
 using System.Net.Sockets;
@@ -10,8 +13,17 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-// Ensure default listening on port 5018
-builder.WebHost.UseUrls("http://localhost:5018", "http://0.0.0.0:5018");
+
+// Respect URLs configured via launchSettings.json, ASPNETCORE_URLS (e.g. Docker), or --urls;
+// default to port 5018 when running without explicit URL configuration.
+var configuredUrls =
+    builder.Configuration[WebHostDefaults.ServerUrlsKey] ??
+    Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+if (string.IsNullOrWhiteSpace(configuredUrls))
+{
+    builder.WebHost.UseUrls("http://localhost:5018", "http://0.0.0.0:5018");
+}
 
 // ============================================================
 // DATABASE
@@ -133,6 +145,125 @@ builder.Services
                 ClockSkew =
                     TimeSpan.Zero
             };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var scope = context.Principal?.FindFirstValue("tokenScope");
+                if (!string.Equals(scope, CustomerAuthService.CustomerAuthScope, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                string? rawCid = context.Principal?.FindFirstValue("customerId");
+                string? rawVer = context.Principal?.FindFirstValue("tokenVersion");
+                string? sessionId = context.Principal?.FindFirstValue("sessionId");
+
+                if (!long.TryParse(rawCid, out long customerId) || customerId <= 0 ||
+                    !int.TryParse(rawVer, out int claimTokenVersion) ||
+                    string.IsNullOrWhiteSpace(sessionId))
+                {
+                    context.HttpContext.Items["CustomerRevokedMessage"] = "Invalid customer session token.";
+                    context.Fail("Invalid customer session token.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var cust = await db.Customers
+                    .AsNoTracking()
+                    .Where(c => c.CustomerId == customerId)
+                    .Select(c => new
+                    {
+                        c.CustomerId,
+                        c.IsActive,
+                        c.IsVerified,
+                        c.TokenVersion,
+                        c.DeletedAt
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (cust == null || cust.DeletedAt != null || cust.TokenVersion != claimTokenVersion)
+                {
+                    context.HttpContext.Items["CustomerRevokedMessage"] = "Session has been invalidated or password was reset. Please sign in again.";
+                    context.Fail("Customer token invalidated.");
+                    return;
+                }
+
+                DateTime utcNow = DateTime.UtcNow;
+                bool hasActiveSession = await db.CustomerRefreshTokens
+                    .AsNoTracking()
+                    .AnyAsync(rt => rt.CustomerId == customerId &&
+                                    rt.FamilyId == sessionId &&
+                                    rt.RevokedAt == null &&
+                                    rt.ExpiresAt > utcNow);
+
+                if (!hasActiveSession)
+                {
+                    context.HttpContext.Items["CustomerRevokedMessage"] = "Session has been logged out or expired. Please sign in again.";
+                    context.Fail("Customer session revoked.");
+                    return;
+                }
+
+                if (!cust.IsActive)
+                {
+                    context.HttpContext.Items["CustomerForbiddenMessage"] = "Your customer account is currently inactive.";
+                    context.Fail("Customer account inactive.");
+                    return;
+                }
+
+                if (!cust.IsVerified)
+                {
+                    context.HttpContext.Items["CustomerForbiddenMessage"] = "Your customer account is not verified.";
+                    context.Fail("Customer account unverified.");
+                    return;
+                }
+            },
+
+            OnChallenge = async context =>
+            {
+                if (context.Handled) return;
+                context.HandleResponse();
+
+                if (context.HttpContext.Items.TryGetValue("CustomerForbiddenMessage", out var forbiddenObj) &&
+                    forbiddenObj is string forbiddenMsg)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    context.Response.ContentType = "application/json";
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        success = false,
+                        message = forbiddenMsg
+                    }));
+                    return;
+                }
+
+                string msg = context.HttpContext.Items.TryGetValue("CustomerRevokedMessage", out var revObj) &&
+                             revObj is string revokedMsg
+                    ? revokedMsg
+                    : "Authentication required. Missing, invalid, expired, or revoked access token.";
+
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = msg
+                }));
+            },
+
+            OnForbidden = async context =>
+            {
+                if (context.Response.HasStarted) return;
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = "You do not have permission to access this resource."
+                }));
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -148,25 +279,8 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .SetIsOriginAllowed(origin =>
-                {
-                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
-                        uri.Scheme != "http" || uri.Port is not (5173 or 5174))
-                    {
-                        return false;
-                    }
+                .SetIsOriginAllowed(origin => true)
 
-                    if (uri.IsLoopback) return true;
-                    if (!IPAddress.TryParse(uri.Host, out var address) || address.AddressFamily != AddressFamily.InterNetwork)
-                    {
-                        return false;
-                    }
-
-                    var bytes = address.GetAddressBytes();
-                    return bytes[0] == 10 ||
-                           (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-                           (bytes[0] == 192 && bytes[1] == 168);
-                })
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials()
@@ -181,6 +295,11 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddScoped<SpService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<AuthRateLimiter>();
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection(SmtpSettings.SectionName));
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
+builder.Services.AddScoped<CustomerAuthService>();
 builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<StaffService>();
 builder.Services.AddScoped<TableService>();
@@ -188,8 +307,16 @@ builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<BarService>();
+builder.Services.AddScoped<TakeawayService>();
+builder.Services.AddScoped<ReservationService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SalaryService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<ExportService>();
+builder.Services.AddScoped<ReportingExportService>();
+builder.Services.AddScoped<AccountingService>();
+builder.Services.AddSingleton<ISseBroadcaster, SseBroadcaster>();
+builder.Services.AddSingleton<ITableLockService, TableLockService>();
 builder.Services.AddSignalR();
 
 // ============================================================
@@ -311,7 +438,6 @@ if (!Directory.Exists(uploadsDir))
 app.UseCors("FrontendPolicy");
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseMiddleware<LegacyApiRewriteMiddleware>();
 
 // Centralized HTTP Request / Response Logging Middleware
 app.Use(async (context, next) =>
@@ -356,6 +482,7 @@ app.Use(async (context, next) =>
 
 
 
+app.UseMiddleware<LegacyApiRewriteMiddleware>();
 app.UseRouting();
 
 app.UseStaticFiles();
@@ -363,6 +490,8 @@ app.UseStaticFiles();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseMiddleware<CustomerAdminIsolationMiddleware>();
 
 app.MapControllers();
 app.MapHub<HMS.Hubs.PosHub>("/hubs/pos");

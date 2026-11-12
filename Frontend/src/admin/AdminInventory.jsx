@@ -1,3 +1,4 @@
+import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Package,
@@ -26,6 +27,7 @@ import {
   apiCreateInventoryItem,
   apiUpdateInventoryItem,
 } from "../api/inventoryApi";
+import { apiGetSuppliers, apiCreateSupplier } from "../api/supplierApi";
 
 const INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
 const MENU_RECIPE_UNITS = ["KG", "g", "L", "ml", "Pcs", "Cans"];
@@ -602,7 +604,22 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
       } catch {}
       return updated;
     });
+
+    // Also persist new supplier to backend
+    apiCreateSupplier({ name: trimmed, supplierName: trimmed, phone: "", address: "" }).catch(() => {});
   };
+
+  useEffect(() => {
+    apiGetSuppliers().then((res) => {
+      const list = res?.data || res?.suppliers;
+      if (Array.isArray(list) && list.length > 0) {
+        const names = list.map((s) => s.name || s.supplierName || s.fullName).filter(Boolean);
+        if (names.length > 0) {
+          setCustomInvSuppliers((prev) => Array.from(new Set([...prev, ...names])));
+        }
+      }
+    }).catch(() => {});
+  }, []);
 
   const saveCustomSubcategory = (newSub) => {
     if (!newSub || !newSub.trim()) return;
@@ -826,7 +843,6 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({ [INVENTORY_STORAGE_KEY]: normalized }),
       }).catch(() => {});
@@ -1672,7 +1688,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 },
               ].map(({ label, value, onChange, options }) => (
                 <div key={label} style={{ position: "relative", minWidth: 0 }}>
-                  <select
+                  <SearchableSelect
                     aria-label={label}
                     value={value}
                     onChange={(e) => {
@@ -1683,7 +1699,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                       width: "100%",
                       minWidth: 0,
                       height: "40px",
-                      padding: "0 2.25rem 0 0.75rem",
+                      padding: "0 0.75rem",
                       color: "var(--text-main)",
                       background: "var(--bg-tertiary)",
                       border: "1px solid var(--border-card)",
@@ -1703,20 +1719,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                         {option.label}
                       </option>
                     ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
-                    strokeWidth={2.2}
-                    aria-hidden="true"
-                    style={{
-                      position: "absolute",
-                      top: "50%",
-                      right: "0.75rem",
-                      transform: "translateY(-50%)",
-                      color: "var(--text-muted)",
-                      pointerEvents: "none",
-                    }}
-                  />
+                  </SearchableSelect>
+                  
                 </div>
               ))}
             </div>

@@ -13,8 +13,11 @@ import {
   SettlementModal,
   TransferTableModal,
   PastOrdersModal,
+  TakeawayOrderFlowView,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary } from "./common";
+import { CustomerLandingPage } from "./common/CustomerLandingPage";
+import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
 import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
@@ -27,6 +30,9 @@ import {
   apiDeleteTable,
   apiVacateTable,
   apiUpdateTableStatus,
+  apiLockTable,
+  apiUnlockTable,
+  apiGetTableLocks,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -257,7 +263,6 @@ let inFlightNetworkStateRequest = null;
 const requestSharedNetworkState = () => {
   if (!inFlightNetworkStateRequest) {
     inFlightNetworkStateRequest = fetch(`${API_SYNC_BASE}/api/state`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
     })
       .then((response) => response.ok ? response.json() : null)
       .catch(() => null)
@@ -763,9 +768,8 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
-  const isUserRoute = !isKotRoute && !isAdminRoute;
 
-  // ── Live Backend Integration Hook (Ngrok API) ──────────────────
+  // ── Live Backend Integration Hook ──────────────────────────────
   useEffect(() => {
     // 1. Load live tables from backend API, preserving initial data and deletions
     const loadLiveTables = async () => {
@@ -1007,6 +1011,10 @@ export function App() {
   const [posSession, setPosSession] = useState(null);
   const [kotSession, setKotSession] = useState(null);
   const [adminSession, setAdminSession] = useState(null);
+  const customerRoutes = ["/", "/profile", "/my-orders", "/my-reservations", "/menu", "/reserve", "/takeaway"];
+  const isLandingRoute =
+    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) && !posSession;
+  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
@@ -1103,6 +1111,12 @@ export function App() {
     saveRouteSession(SESSION_KEY_ADMIN, s);
   };
 
+  const handleHotelLogin = () => {
+    setAdminSession(null);
+    saveRouteSession(SESSION_KEY_ADMIN, null);
+    navigate("/admin");
+  };
+
   const handleGlobalLogin = (s, targetRole) => {
     const roleToUse = targetRole || s?.role || "pos";
     setSession(s);
@@ -1119,6 +1133,22 @@ export function App() {
   };
 
   const handlePosLogout = () => {
+    if (selectedTableId) {
+      releaseTableLock(selectedTableId);
+    }
+    const myId = String(posSession?.id || posSession?.userId || posSession?.username || "");
+    if (myId && tableLocks) {
+      const updated = { ...tableLocks };
+      let changed = false;
+      Object.entries(updated).forEach(([k, lock]) => {
+        if (lock && String(lock.userId) === myId) {
+          delete updated[k];
+          changed = true;
+          apiUnlockTable(k, myId).catch(() => {});
+        }
+      });
+      if (changed) saveLocks(updated);
+    }
     setPosSession(null);
     saveRouteSession(SESSION_KEY_POS, null);
     logoutUser();
@@ -1214,7 +1244,6 @@ export function App() {
       const syncBody = JSON.stringify(payload);
       const headers = {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       };
 
       // Persist through the shared API first. In Vite development, relay the
@@ -1607,6 +1636,27 @@ export function App() {
             if (alert.type === "cooking_completed") sounds.playBell();
             else sounds.playAddItem();
           }
+
+          // Live multi-waiter table concurrency locks from SSE
+          const incomingLocks = payload[STORAGE_KEY_TABLE_LOCKS] || payload.tableLocks || (parsedMsg.type === "SYNC_TABLE_LOCKS" ? payload : null);
+          if (incomingLocks && typeof incomingLocks === "object" && !Array.isArray(incomingLocks)) {
+            setTableLocks(incomingLocks);
+            try {
+              localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(incomingLocks));
+              window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: incomingLocks }));
+            } catch {}
+          }
+
+          // Live KOT Chef notifications to all 3 modules
+          if (parsedMsg.type === "KOT_STATUS_UPDATED" || parsedMsg.type === "KOT_PREPARED" || parsedMsg.type === "KOT_ITEM_UPDATED") {
+            const kotData = payload;
+            const status = String(kotData?.status || "").toLowerCase();
+            const tblId = kotData?.tableId || kotData?.tableNumber || "";
+            if (status === "ready" || status === "prepared" || parsedMsg.type === "KOT_PREPARED") {
+              sounds.playBell();
+              showToast(`🔔 Table ${tblId}: Food is READY to be served!`);
+            }
+          }
         } catch {}
       };
 
@@ -1834,105 +1884,29 @@ export function App() {
     };
   }, []);
 
-  // ── Table Concurrency Locking System ──────────────────────────────
-  // Prevents multiple waiters from concurrently modifying the same table order.
-  const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
-
-  const [tableLocks, setTableLocks] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_TABLE_LOCKS);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
+  const [takeawayOrder, setTakeawayOrder] = useState({
+    id: "takeaway",
+    backendTableId: null,
+    name: "Takeaway",
+    tableName: "Takeaway",
+    section: "Takeaway",
+    isTakeaway: true,
+    items: [],
+    status: "vacant",
+    server: "Cashier",
+    guests: 1,
+    capacity: 1,
   });
 
-  useEffect(() => {
-    const handleStorage = (e) => {
-      if (e.key === STORAGE_KEY_TABLE_LOCKS && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed && typeof parsed === "object") setTableLocks(parsed);
-        } catch {}
-      }
-    };
-    const handleLockEvent = (e) => {
-      if (e.detail && typeof e.detail === "object") {
-        setTableLocks(e.detail);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("avsr-table-locks-updated", handleLockEvent);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("avsr-table-locks-updated", handleLockEvent);
-    };
-  }, []);
-
-  const saveLocks = (newLocks) => {
-    setTableLocks(newLocks);
-    try {
-      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(newLocks));
-      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: newLocks }));
-      broadcastSync("SYNC_TABLE_LOCKS", newLocks);
-    } catch {}
-  };
-
-  const acquireTableLock = (tableId, session) => {
-    const tableKey = String(tableId);
-    const existing = tableLocks[tableKey];
-    const myId = String(session?.id || session?.userId || session?.username || "pos_user");
-    const myName = String(session?.name || session?.fullName || session?.username || "Waiter");
-    const isStaffAdmin = String(session?.role || "").toLowerCase() === "admin";
-
-    // Timeout: 5 minutes of inactivity releases lock
-    const LOCK_TIMEOUT_MS = 5 * 60 * 1000;
-    if (existing && String(existing.userId) !== myId && (Date.now() - (existing.timestamp || 0)) < LOCK_TIMEOUT_MS) {
-      if (!isStaffAdmin) {
-        return {
-          success: false,
-          lockedBy: existing,
-        };
-      }
-    }
-
-    const updated = {
-      ...tableLocks,
-      [tableKey]: {
-        tableId: tableKey,
-        userId: myId,
-        username: session?.username || myName,
-        serverName: myName,
-        timestamp: Date.now(),
-      },
-    };
-    saveLocks(updated);
-    return { success: true };
-  };
-
-  const releaseTableLock = (tableId) => {
-    if (!tableId) return;
-    const tableKey = String(tableId);
-    if (!tableLocks[tableKey]) return;
-    const updated = { ...tableLocks };
-    delete updated[tableKey];
-    saveLocks(updated);
-  };
-
-  const currentTable = tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null;
+  const isTakeawayActive = String(selectedTableId) === "takeaway";
+  const currentTable = isTakeawayActive
+    ? takeawayOrder
+    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
 
   // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = (id) => {
-    const lockResult = acquireTableLock(id, posSession);
-    const targetTable = tables.find((t) => String(t.id) === String(id));
-    const tblName = targetTable?.name || `Table ${id}`;
-
-    if (!lockResult.success) {
-      showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
-      return;
-    }
-
-    setSelectedTableId(id);
+    const tableId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
+    setSelectedTableId(tableId);
     setActiveView("order");
     sounds.playAddItem();
   };
@@ -1946,6 +1920,26 @@ export function App() {
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        let newItems;
+        if (existingIndex > -1) {
+          newItems = currentItems.map((item, idx) =>
+            idx === existingIndex
+              ? { ...item, quantity: item.quantity + (menuItem.quantity || 1) }
+              : item
+          );
+        } else {
+          newItems = [...currentItems, { ...menuItem, quantity: menuItem.quantity || 1, kotSent: false }];
+        }
+        return { ...prev, items: newItems, status: "occupied" };
+      });
+      sounds.playAddItem();
+      showToast(`Added ${menuItem.name} to Takeaway Order`);
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -2044,6 +2038,21 @@ export function App() {
 
   // Update Item Quantity
   const handleUpdateItemQuantity = (tableId, itemId, newQty) => {
+    if (String(tableId) === "takeaway") {
+      setTakeawayOrder((prev) => {
+        const currentItems = Array.isArray(prev.items) ? prev.items : [];
+        let newItems;
+        if (newQty <= 0) {
+          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        } else {
+          newItems = currentItems.map((i) =>
+            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i
+          );
+        }
+        return { ...prev, items: newItems, status: newItems.length > 0 ? "occupied" : "vacant" };
+      });
+      return;
+    }
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
@@ -2349,10 +2358,15 @@ export function App() {
       } catch {}
 
       const submittedIds = new Set(unsentItems.map((item) => String(item.id ?? item.menuItemId ?? item.name)));
+      const resKitchenKot = result?.data?.kitchenKot ?? result?.kitchenKot;
+      const resBarKot = result?.data?.barKot ?? result?.barKot;
+
       const targetUpdatedTable = {
         ...persistedTable,
         backendOrderId,
         activeOrderId: backendOrderId,
+        kitchenKotNumber: resKitchenKot?.kotNumber || persistedTable.kitchenKotNumber,
+        barBotNumber: resBarKot?.botNumber || persistedTable.barBotNumber,
         kotSent: true,
         status: persistedTable.status === "vacant" ? "occupied" : persistedTable.status,
         orderTime: persistedTable.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -2406,10 +2420,10 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
-          if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
           if (itemId) {
-            return String(i.menuItemId ?? i.id) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
+            return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
           }
+          if (i.isBarItem || i.isBarDrink) return i;
           // Table-level status change
           if (status === "cooking") {
             // If starting cooking for the table, DO NOT revert already prepared/served/completed dishes back to cooking!
@@ -3712,6 +3726,19 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {isLandingRoute && (
+          <CustomerLandingPage
+            restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
+            restaurantLogo={restaurantSettings.logo || ""}
+            menuItems={menuItems}
+            menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+            tables={tables}
+            onHotelLogin={handleHotelLogin}
+            kitchenNotifications={kitchenNotifications}
+            onClearNotifications={handleClearNotifications}
+          />
+        )}
+
         {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - KITCHEN & BAR BOT WORKSPACE */}
         {isKotRoute &&
           (kotSession &&
@@ -3837,7 +3864,8 @@ export function App() {
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
         {isAdminRoute &&
-          (adminSession && adminSession.role === "admin" ? (
+          (adminSession &&
+          (adminSession.role === "admin" || adminSession.role === "manager") ? (
             <AdminPortal
               isFullPage={true}
               onClose={() => navigate("/")}
@@ -3873,7 +3901,14 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
             />
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="admin" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
+            <LoginPage
+              currentTheme={theme}
+              onChangeTheme={setTheme}
+              role="admin"
+              onLoginSuccess={handleGlobalLogin}
+              restaurantName={restaurantSettings.restaurantName}
+              restaurantLogo={restaurantSettings.logo}
+            />
           ))}
 
         {/* 3. DEDICATED USER POS VIEW (ROUTE: / or /user) */}
@@ -3928,6 +3963,15 @@ export function App() {
                     setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
                     setIsSettlementOpen(true);
                   }}
+                />
+              )}
+              {activeView === "takeaway-flow" && (
+                <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
+              )}
+              {activeView === "reservation" && (
+                <TableReservationFlow
+                  onBackToPos={() => setActiveView("tables")}
+                  onHotelLogin={handleHotelLogin}
                 />
               )}
               {activeView === "order" && (
