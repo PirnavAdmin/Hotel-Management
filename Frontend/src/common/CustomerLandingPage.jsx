@@ -64,6 +64,7 @@ import {
   setReservationCustomerToken,
 } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
+import { apiCustomerLogout, getCustomerRefreshToken, setCustomerRefreshToken } from "../api/customerAuthApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
@@ -80,6 +81,7 @@ const CUSTOMER_SESSION_KEY = "bhanu_bistro_customer_v1";
 
 const getInitialCustomer = () => {
   try {
+    if (!getReservationCustomerToken()) return null;
     const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
@@ -400,18 +402,6 @@ export const CURATED_TAKEAWAY_ITEMS = [
   },
 ];
 
-<<<<<<< HEAD
-const getAvailableTables = (tables, guests) => {
-  const filtered = (Array.isArray(tables) ? tables : []).filter((table) => {
-    const status = String(table.status || "").toLowerCase();
-    const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
-    return ["vacant", "available"].includes(status) && cap >= guests;
-  });
-  return filtered;
-};
-
-=======
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -666,8 +656,11 @@ export function CustomerLandingPage({
   // Auth Success Callback
   const handleLoginSuccess = (user, destination) => {
     setCustomerUser(user);
+    if (user?.token) setReservationCustomerToken(user.token);
+    if (user?.refreshToken) setCustomerRefreshToken(user.refreshToken, user.rememberMe);
     try {
-      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+      const { token, refreshToken, ...profile } = user || {};
+      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(profile));
     } catch (e) {}
     if (user?.name) setCustomerName(user.name);
     if (user?.phone) setCustomerPhone(user.phone);
@@ -681,6 +674,12 @@ export function CustomerLandingPage({
 
   // Logout Handler
   const handleLogout = () => {
+    const accessToken = getReservationCustomerToken();
+    const refreshToken = customerUser?.refreshToken || getCustomerRefreshToken();
+    if (accessToken || refreshToken) apiCustomerLogout(refreshToken, false, accessToken);
+    setCustomerRefreshToken("");
+    setReservationCustomerToken("");
+    setReservationCheckoutToken("");
     setCustomerUser(null);
     try {
       localStorage.removeItem(CUSTOMER_SESSION_KEY);
@@ -2471,17 +2470,6 @@ export function CustomerLandingPage({
         {/* TABLE RESERVATION SCREEN                                  */}
         {/* ========================================================= */}
         {activeScreen === "reservation" && (
-<<<<<<< HEAD
-          <div className="customer-reservation-flow-wrapper" style={{ width: "100%", minHeight: "100vh", background: "#0a0403" }}>
-            <TableReservationFlow
-              onBackToPos={() => navigateScreen("home")}
-              backLabel="Back to Home"
-              initialStep={reservationInitialStep}
-              customerUser={customerUser}
-              onLogout={handleLogout}
-            />
-          </div>
-=======
           <section className="customer-reservation-page">
             <div className="customer-reservation-layout">
               <div className="customer-reservation-copy">
@@ -2788,7 +2776,6 @@ export function CustomerLandingPage({
               </div>
             </div>
           </section>
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
         )}
       </main>
 

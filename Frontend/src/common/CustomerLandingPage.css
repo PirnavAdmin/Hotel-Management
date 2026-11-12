@@ -3165,7 +3165,6 @@
   color: #ffffff;
 }
 
-<<<<<<< HEAD
 .customer-profile-menu-item.is-logout {
   color: #ef4444;
 }
@@ -3212,7 +3211,7 @@
   }
 }
 
-=======
+
 .customer-reservation-availability,
 .customer-reservation-followup,
 .customer-reservation-account,
@@ -3298,4 +3297,3 @@
   .customer-reservation-account header { align-items: flex-start; }
   .customer-reservation-account header div { justify-content: flex-start; }
 }
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145

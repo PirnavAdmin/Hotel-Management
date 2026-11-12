@@ -1,4 +1,5 @@
-import { apiClient } from "./apiConfig";
+import { apiClient, RESERVATION_API_BASE_URL } from "./apiConfig";
+import { apiCustomerRefreshToken, getCustomerRefreshToken, setCustomerRefreshToken } from "./customerAuthApi";
 
 const BASE = "/api/v1/reservations";
 const CHECKOUT_TOKEN_KEY = "bhanu_reservation_checkout_token";
@@ -22,11 +23,42 @@ export const clearReservationTokens = () => {
   setReservationCustomerToken("");
 };
 
-const guestRequest = (endpoint, options = {}, token = "") => apiClient(endpoint, {
-  ...options,
-  remoteOnly: true,
-  ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-});
+let customerRefreshInFlight = null;
+const guestRequest = async (endpoint, options = {}, token = "") => {
+  const requestToken = token || getReservationCustomerToken();
+  const request = () => apiClient(endpoint, {
+    ...options,
+    baseUrl: RESERVATION_API_BASE_URL,
+    skipDefaultAuth: true,
+    remoteOnly: true,
+    ...(requestToken ? { headers: { Authorization: `Bearer ${requestToken}` } } : {}),
+  });
+  const result = await request();
+  if (result.status !== 401 || !getCustomerRefreshToken()) return result;
+  if (!customerRefreshInFlight) {
+    customerRefreshInFlight = apiCustomerRefreshToken().then((refreshResult) => {
+      const payload = refreshResult.data?.data || refreshResult.data;
+      const accessToken = payload?.accessToken || payload?.token || payload?.jwt;
+      if (refreshResult.success && accessToken) {
+        setReservationCustomerToken(accessToken);
+        setCustomerRefreshToken(payload?.refreshToken || "");
+        return accessToken;
+      }
+      setReservationCustomerToken("");
+      setCustomerRefreshToken("");
+      return "";
+    }).finally(() => { customerRefreshInFlight = null; });
+  }
+  const refreshedToken = await customerRefreshInFlight;
+  if (!refreshedToken) return result;
+  return apiClient(endpoint, {
+    ...options,
+    baseUrl: RESERVATION_API_BASE_URL,
+    skipDefaultAuth: true,
+    remoteOnly: true,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${refreshedToken}` },
+  });
+};
 const queryString = (params = {}) => {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -51,7 +83,7 @@ export const apiSendReservationOtp = (phone) => post(`${BASE}/otp/send`, { phone
 export const apiVerifyReservationOtp = (phone, otp) => post(`${BASE}/otp/verify`, { phone, otp });
 export const apiGetMyReservations = (params = {}) =>
   guestRequest(`${BASE}/my${queryString(params)}`, {}, getReservationCustomerToken());
-export const apiGetReservationDetails = (id, token = getReservationCheckoutToken() || getReservationCustomerToken()) =>
+export const apiGetReservationDetails = (id, token = getReservationCustomerToken()) =>
   guestRequest(`${BASE}/${encodeURIComponent(id)}`, {}, token);
 export const apiModifyReservation = (id, data) =>
   guestRequest(`${BASE}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }, getReservationCustomerToken());
@@ -60,7 +92,7 @@ export const apiCancelCustomerReservation = (id, data = {}) =>
 export const apiRecordReservationPayment = (id, data) =>
   post(`${BASE}/${encodeURIComponent(id)}/payment`, data, getReservationCheckoutToken());
 export const apiGetReservationPaymentStatus = (id) =>
-  guestRequest(`${BASE}/${encodeURIComponent(id)}/payment-status`, {}, getReservationCheckoutToken() || getReservationCustomerToken());
+  guestRequest(`${BASE}/${encodeURIComponent(id)}/payment-status`, {}, getReservationCustomerToken());
 
 // Local helpers remain for the legacy POS reservation wizard only.
 const STORAGE_KEY = "bhanu_bistro_reservations_v1";
@@ -115,32 +147,7 @@ export async function apiGetReservationById(id) {
   return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`));
 }
 export async function apiCreateReservation(reservationData) {
-<<<<<<< HEAD
-  const all = getStoredReservations();
-  const nextNum = 1000 + all.length + 1;
-  const newReservation = {
-    id: `RES-${nextNum}`,
-    reservationId: `RES-${nextNum}`,
-    ...reservationData,
-    advanceAmount: reservationData?.advanceAmount || 100,
-    status: "confirmed",
-    createdAt: new Date().toISOString(),
-  };
-  const updated = [newReservation, ...all];
-  saveStoredReservations(updated);
-
-  if (reservationData?.tableId) {
-    const tables = getStoredReservationTables();
-    const updatedTables = tables.map((t) =>
-      t.id === reservationData.tableId ? { ...t, status: "reserved" } : t
-    );
-    saveStoredReservationTables(updatedTables);
-  }
-
-  return { success: true, data: newReservation };
-=======
   return unwrap(await apiClient(BASE, { method: "POST", body: JSON.stringify(reservationData) }));
->>>>>>> 0316c8fc31dad4321b6a5df9a9fac276b4831145
 }
 export async function apiUpdateReservation(id, data) {
   return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }));
