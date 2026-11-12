@@ -114,7 +114,6 @@ export async function printSurface(elementId, options = {}) {
     #printable-report * {
       visibility: visible !important;
       opacity: 1 !important;
-      color: #000000 !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }

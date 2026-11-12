@@ -19,7 +19,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { ReceiptModal } from "../user/ReceiptModal";
+import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
 import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
@@ -268,6 +268,7 @@ export function AdminInvoices({
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
+      formatOrderNumber(order.invoiceNo || order.id || "").toLowerCase().includes(query) ||
       String(order.invoiceNo || "").toLowerCase().includes(query) ||
       String(order.id ?? "").toLowerCase().includes(query) ||
       String(order.tableName || "").toLowerCase().includes(query) ||
@@ -1223,7 +1224,7 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.85rem 1rem" }}>Invoice No</th>
+                <th style={{ padding: "0.85rem 1rem" }}>Order / Invoice No</th>
                 <th style={{ padding: "0.85rem 1rem" }}>Table & Waiter</th>
                 <th style={{ padding: "0.85rem 1rem" }}>Date & Time</th>
                 <th style={{ padding: "0.85rem 1rem" }}>Items Summary</th>
@@ -1270,7 +1271,7 @@ export function AdminInvoices({
                           fontSize: "0.88rem",
                         }}
                       >
-                        {order.invoiceNo || (order.id != null ? `Order #${order.id}` : "—")}
+                        {formatOrderNumber(order.invoiceNo || order.id || order.orderId)}
                       </span>
                     </td>
 
@@ -1653,7 +1654,7 @@ export function AdminInvoices({
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
                 <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                  {editingInvoice.invoiceNo || (editingInvoice.id != null ? `Order #${editingInvoice.id}` : "—")}
+                  {formatOrderNumber(editingInvoice.invoiceNo || editingInvoice.id)}
                 </div>
               </div>
               <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>

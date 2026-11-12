@@ -34,7 +34,7 @@ import {
   apiDispatchTakeawayOrder,
   apiCancelTakeawayOrder,
 } from "../api/orderApi";
-import { ReceiptModal } from "../user/ReceiptModal";
+import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
 
 const STORAGE_KEY_TAKEAWAY = "avsr_admin_takeaway_orders_v1";
 const TAKEAWAY_GST_RATE = 0.05;
@@ -494,7 +494,7 @@ export function AdminTakeaway({
 
     return {
       id: printReceiptOrder.id,
-      invoiceNo: printReceiptOrder.orderNumber || printReceiptOrder.id,
+      invoiceNo: formatOrderNumber(printReceiptOrder.orderNumber || printReceiptOrder.id),
       name: "Takeaway",
       tableName: "Takeaway",
       section: "Takeaway",
@@ -1679,7 +1679,7 @@ export function AdminTakeaway({
                         {rowNumber}
                       </td>
                       <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {order.orderNumber || order.id}
+                        {formatOrderNumber(order.orderNumber || order.id)}
                       </td>
                       <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.customer}

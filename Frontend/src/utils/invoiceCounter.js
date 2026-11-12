@@ -82,6 +82,19 @@ function getHighestSerialFromExistingOrders(targetDateStr) {
   return highest;
 }
 
+export function formatOrderNumber(rawId) {
+  if (!rawId) return 'ORD-1001';
+  const str = String(rawId).trim();
+  if (/^ord[-_]/i.test(str)) {
+    return `ORD-${str.replace(/^ord[-_]/i, '').toUpperCase()}`;
+  }
+  const digitsMatch = str.match(/\d+/g);
+  if (digitsMatch && digitsMatch.length > 0) {
+    return `ORD-${digitsMatch.join('')}`;
+  }
+  return `ORD-${str.replace(/^[^a-zA-Z0-9]+/, '').toUpperCase()}`;
+}
+
 /**
  * Generate next sequential invoice number for today (or specified date).
  * Resets daily to INV-001 on each new date!
