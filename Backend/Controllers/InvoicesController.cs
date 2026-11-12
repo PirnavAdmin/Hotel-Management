@@ -23,7 +23,12 @@ public class InvoicesController : ControllerBase
     private readonly ExportService _exportService;
     private readonly ILogger<InvoicesController> _logger;
 
-    public InvoicesController(AppDbContext context, SpService spService, ILogger<InvoicesController> logger)
+    public InvoicesController(
+        AppDbContext context,
+        SpService spService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InvoicesController> logger)
     {
         _context = context;
         _spService = spService;

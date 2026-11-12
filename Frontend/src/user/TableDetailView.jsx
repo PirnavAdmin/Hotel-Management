@@ -2071,11 +2071,11 @@ export function TableDetailView({
           min-width: 0;
           min-height: 0;
           overflow-y: auto;
-          padding: 0.65rem;
+          padding: 0.5rem;
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 126px), 1fr));
           grid-auto-rows: min-content;
-          gap: 0.5rem;
+          gap: 0.4rem;
           align-content: start;
           background: var(--bg-primary);
         }
@@ -3083,6 +3083,33 @@ export function TableDetailView({
                   <X size={15} />
                 </button>
               )}
+            </div>
+
+            {/* Category Select Filter */}
+            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                aria-label="Filter by category"
+                style={{
+                  height: "40px",
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)",
+                  color: "var(--text-main)",
+                  padding: "0.35rem 1.8rem 0.35rem 0.75rem",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              >
+                {[{ id: "all", name: orderMode === "bar" ? "All Drinks" : "All Categories" }, ...Array.from(new Map((activeMenuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category }])).values())].map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div

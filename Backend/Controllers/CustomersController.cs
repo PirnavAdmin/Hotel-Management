@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HMS.Controllers;
@@ -14,10 +17,187 @@ namespace HMS.Controllers;
 public class CustomersController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly CustomerAuthService _customerAuthService;
+    private readonly TakeawayService _takeawayService;
+    private readonly ReservationService _reservationService;
 
-    public CustomersController(SpService spService)
+    public CustomersController(
+        SpService spService,
+        CustomerAuthService customerAuthService,
+        TakeawayService takeawayService,
+        ReservationService reservationService)
     {
         _spService = spService;
+        _customerAuthService = customerAuthService;
+        _takeawayService = takeawayService;
+        _reservationService = reservationService;
+    }
+
+    // ============================================================
+    // AUTHENTICATED CUSTOMER SELF-SERVICE ENDPOINTS (/me)
+    // ============================================================
+
+    [Authorize(Roles = "Customer")]
+    [HttpGet("me")]
+    [Tags("Customer Portal")]
+    public async Task<IActionResult> GetMyProfile()
+    {
+        try
+        {
+            if (!CustomerAuthService.IsCustomerAuthPrincipal(User))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "Full customer portal authentication is required."
+                });
+            }
+
+            if (!long.TryParse(User.FindFirstValue("customerId"), out var customerId) || customerId <= 0)
+            {
+                return Unauthorized(new { success = false, message = "Invalid customer session claims." });
+            }
+
+            var profile = await _customerAuthService.GetProfileAsync(customerId);
+            return Ok(new
+            {
+                success = true,
+                message = "Customer profile retrieved successfully.",
+                data = profile
+            });
+        }
+        catch (CustomerForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message, requiresVerification = ex.RequiresVerification });
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Failed to retrieve customer profile: {ex.Message}" });
+        }
+    }
+
+    [Authorize(Roles = "Customer")]
+    [HttpGet("me/orders")]
+    [Tags("Customer Portal")]
+    public async Task<IActionResult> GetMyOrders(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? status = null)
+    {
+        try
+        {
+            if (!CustomerAuthService.IsCustomerAuthPrincipal(User))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "Full customer portal authentication is required."
+                });
+            }
+
+            if (!long.TryParse(User.FindFirstValue("customerId"), out var customerId) || customerId <= 0)
+            {
+                return Unauthorized(new { success = false, message = "Invalid customer session claims." });
+            }
+
+            var profile = await _customerAuthService.GetProfileAsync(customerId);
+            var orders = await _takeawayService.GetCustomerTakeawayOrdersAsync(
+                profile.CustomerId,
+                profile.MobileNumber,
+                page,
+                pageSize,
+                status);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Customer takeaway orders retrieved successfully.",
+                data = orders
+            });
+        }
+        catch (CustomerForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message, requiresVerification = ex.RequiresVerification });
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Failed to retrieve customer orders: {ex.Message}" });
+        }
+    }
+
+    [Authorize(Roles = "Customer")]
+    [HttpGet("me/reservations")]
+    [Tags("Customer Portal")]
+    public async Task<IActionResult> GetMyReservations(
+        [FromQuery] string? tab = "all",
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            if (!CustomerAuthService.IsCustomerAuthPrincipal(User))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "Full customer portal authentication is required."
+                });
+            }
+
+            if (!long.TryParse(User.FindFirstValue("customerId"), out var customerId) || customerId <= 0)
+            {
+                return Unauthorized(new { success = false, message = "Invalid customer session claims." });
+            }
+
+            var profile = await _customerAuthService.GetProfileAsync(customerId);
+            var caller = ReservationService.ExtractCallerContext(User, HttpContext?.Connection?.RemoteIpAddress?.ToString());
+            caller.CustomerId = profile.CustomerId;
+            caller.Phone ??= profile.MobileNumber;
+
+            var reservations = await _reservationService.GetMyReservationsAsync(null, tab, page, pageSize, caller);
+            return Ok(new
+            {
+                success = true,
+                message = "Customer reservations retrieved successfully.",
+                data = reservations
+            });
+        }
+        catch (CustomerForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message, requiresVerification = ex.RequiresVerification });
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (ReservationForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message });
+        }
+        catch (ReservationUnauthorizedException ex)
+        {
+            return Unauthorized(new { success = false, message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Failed to retrieve customer reservations: {ex.Message}" });
+        }
     }
 
     [AllowAnonymous]

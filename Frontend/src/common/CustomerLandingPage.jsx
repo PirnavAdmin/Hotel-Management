@@ -68,6 +68,8 @@ import { apiCustomerLogout, getCustomerRefreshToken, setCustomerRefreshToken } f
 import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
+import { CustomerOrdersPage } from "../customer/CustomerOrdersPage";
+import { CustomerProfilePage } from "../customer/CustomerProfilePage";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import {
   cleanNotificationText,
@@ -96,7 +98,7 @@ const formatPrice = (value) =>
 
 export const TAKEAWAY_CATEGORIES = [
   { id: "all", label: "All Items", icon: Utensils },
-  { id: "breads", label: "breads", icon: Wheat },
+  { id: "breads", label: "Breads", icon: Wheat },
   { id: "biryani", label: "Biryani", icon: Flame },
   { id: "curries", label: "Curries", icon: Soup },
   { id: "starters", label: "Starters", icon: Sparkles },
@@ -402,6 +404,14 @@ export const CURATED_TAKEAWAY_ITEMS = [
   },
 ];
 
+const getAvailableTables = (tables, guests) => {
+  const filtered = (Array.isArray(tables) ? tables : []).filter((table) => {
+    const status = String(table.status || "").toLowerCase();
+    const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
+    return ["vacant", "available"].includes(status) && cap >= guests;
+  });
+  return filtered;
+};
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -467,13 +477,21 @@ export function CustomerLandingPage({
 
   const [activeScreen, setActiveScreen] = useState(() => {
     const hash = window.location.hash;
+    const path = window.location.pathname;
     const user = getInitialCustomer();
     if (hash === "#auth") return "auth";
-    if (hash === "#menu") return user ? "menu" : "auth";
+    if (hash === "#menu" || path === "/menu") return user ? "menu" : "auth";
     if (hash === "#cart") return user ? "cart" : "auth";
     if (hash === "#checkout") return user ? "checkout" : "auth";
     if (hash === "#payment") return user ? "payment" : "auth";
-    if (hash === "#reserve") return user ? "reservation" : "auth";
+    if (hash === "#orders" || hash === "#my-orders" || path === "/my-orders") return user ? "orders" : "auth";
+    if (hash === "#profile" || path === "/profile") return user ? "profile" : "auth";
+    if (hash === "#reserve" || hash === "#my-reservations" || path === "/reserve" || path === "/my-reservations") {
+      if (hash === "#my-reservations" || path === "/my-reservations") {
+        setReservationInitialStep(6);
+      }
+      return user ? "reservation" : "auth";
+    }
     return "home";
   });
 
@@ -602,11 +620,36 @@ export function CustomerLandingPage({
           setIntendedDestination("payment");
           setActiveScreen("auth");
         }
+      } else if (hash === "#orders" || hash === "#my-orders") {
+        if (user) setActiveScreen("orders");
+        else {
+          setIntendedDestination("orders");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#profile") {
+        if (user) setActiveScreen("profile");
+        else {
+          setIntendedDestination("profile");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#my-reservations") {
+        setReservationInitialStep(6);
+        if (user) setActiveScreen("reservation");
+        else {
+          setIntendedDestination("reservation");
+          setActiveScreen("auth");
+        }
       } else if (hash === "#reserve") {
         if (user) setActiveScreen("reservation");
         else {
           setIntendedDestination("reservation");
           setActiveScreen("auth");
+        }
+      } else if (hash === "#admin" || hash === "#login") {
+        if (typeof onHotelLogin === "function") {
+          onHotelLogin();
+        } else {
+          window.location.href = "/admin";
         }
       } else if (hash === "#auth") {
         setActiveScreen("auth");
@@ -634,6 +677,10 @@ export function CustomerLandingPage({
         ? "#home"
         : screen === "auth"
         ? "#auth"
+        : targetScreen === "orders" || targetScreen === "my-orders"
+        ? "#my-orders"
+        : targetScreen === "profile"
+        ? "#profile"
         : `#${screen}`;
     window.history.pushState(null, "", hash);
     setActiveScreen(targetScreen);
@@ -1180,7 +1227,11 @@ export function CustomerLandingPage({
   return (
     <div className={`customer-site customer-screen-${activeScreen}`}>
       {/* ── Global Header ─────────────────────────────────── */}
-      {activeScreen !== "reservation" && activeScreen !== "auth" && (
+      {activeScreen !== "reservation" &&
+        activeScreen !== "auth" &&
+        activeScreen !== "orders" &&
+        activeScreen !== "my-orders" &&
+        activeScreen !== "profile" && (
         <header className={`customer-header ${activeScreen === "menu" ? "is-takeaway-header" : ""}`}>
           <a
             className="customer-brand"
@@ -1207,7 +1258,7 @@ export function CustomerLandingPage({
           {/* Center Pill: Takeaway Only (Matches Mockup) */}
           {activeScreen === "menu" && (
             <div className="takeaway-header-center-pill">
-              <ShoppingBag size={16} />
+              <ShoppingBag size={15} color="#f59e0b" />
               <span>Takeaway Only</span>
             </div>
           )}
@@ -1242,16 +1293,19 @@ export function CustomerLandingPage({
               </button>
             )}
 
-            {/* Customer Authentication & Profile Menu (Replaces Admin Login) */}
+            {/* Hotel / Admin Login Button */}
             {!customerUser ? (
               <button
                 className="customer-login-pill-btn"
                 type="button"
                 onClick={() => {
-                  setIntendedDestination("home");
-                  navigateScreen("auth");
+                  if (typeof onHotelLogin === "function") {
+                    onHotelLogin();
+                  } else {
+                    window.location.href = "/admin";
+                  }
                 }}
-                title="Customer Login"
+                title="Login"
               >
                 <UserRound size={16} />
                 <span>Login</span>
@@ -1289,15 +1343,12 @@ export function CustomerLandingPage({
                       className="customer-profile-menu-item"
                       onClick={() => {
                         setShowProfileDropdown(false);
-                        if (placedOrder) {
-                          navigateScreen("tracking");
-                        } else {
-                          requireAuth("menu");
-                        }
+                        navigateScreen("orders");
                       }}
                     >
-                      <ShoppingBag size={15} />
-                      <span>📋 My Orders</span>
+                      <ShoppingBag size={17} color="#d4c5b9" />
+                      <span style={{ fontSize: "15px" }}>📋</span>
+                      <span>My Orders</span>
                     </button>
 
                     <button
@@ -1309,8 +1360,9 @@ export function CustomerLandingPage({
                         navigateScreen("reservation");
                       }}
                     >
-                      <CalendarDays size={15} />
-                      <span>📅 My Reservations</span>
+                      <CalendarDays size={17} color="#d4c5b9" />
+                      <span style={{ fontSize: "15px" }}>📅</span>
+                      <span>My Reservations</span>
                     </button>
 
                     <button
@@ -1318,11 +1370,12 @@ export function CustomerLandingPage({
                       className="customer-profile-menu-item"
                       onClick={() => {
                         setShowProfileDropdown(false);
-                        setShowProfileModal(true);
+                        navigateScreen("profile");
                       }}
                     >
-                      <User size={15} />
-                      <span>👤 My Profile</span>
+                      <User size={17} color="#d4c5b9" />
+                      <span style={{ fontSize: "15px" }}>👤</span>
+                      <span>My Profile</span>
                     </button>
 
                     <div className="customer-profile-dropdown-divider" />
@@ -1377,7 +1430,7 @@ export function CustomerLandingPage({
               <article className="customer-action-card takeaway-action">
                 <div className="customer-action-copy">
                   <span className="customer-action-icon takeaway-icon">
-                    <ShoppingBag size={24} />
+                    <ShoppingBag size={20} />
                   </span>
                   <h2>Order Takeaway Online</h2>
                   <p>Browse our menu, place your order and pick it up at your convenience.</p>
@@ -1386,7 +1439,7 @@ export function CustomerLandingPage({
                     type="button"
                     onClick={() => requireAuth("menu")}
                   >
-                    Order Takeaway <ArrowRight size={18} />
+                    Order Takeaway <ArrowRight size={15} />
                   </button>
                 </div>
               </article>
@@ -1394,7 +1447,7 @@ export function CustomerLandingPage({
               <article className="customer-action-card reservation-action">
                 <div className="customer-action-copy">
                   <span className="customer-action-icon reservation-icon">
-                    <CalendarDays size={24} />
+                    <CalendarDays size={20} />
                   </span>
                   <h2>Reserve a Table</h2>
                   <p>Book your table in advance and enjoy a great dining experience.</p>
@@ -1403,7 +1456,7 @@ export function CustomerLandingPage({
                     type="button"
                     onClick={() => requireAuth("reservation")}
                   >
-                    Reserve Table <ArrowRight size={18} />
+                    Reserve Table <ArrowRight size={15} />
                   </button>
                 </div>
               </article>
@@ -1561,6 +1614,23 @@ export function CustomerLandingPage({
                     )}
                   </div>
 
+                  {/* Categories Filter Dropdown (Matches Template Controls) */}
+                  <div className="pos-category-select-wrapper">
+                    <Utensils size={14} className="pos-category-select-icon" />
+                    <select
+                      className="pos-category-select"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      aria-label="Filter by category"
+                    >
+                      {TAKEAWAY_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Dietary Filter Buttons: Veg, Non-Veg, Specials */}
                   <div className="pos-dietary-group">
                     <button
@@ -1588,6 +1658,25 @@ export function CustomerLandingPage({
                       <span>Specials</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Horizontal Quick Category Filter Strip */}
+                <div className="pos-takeaway-category-strip">
+                  {TAKEAWAY_CATEGORIES.map((cat) => {
+                    const IconComp = cat.icon || Utensils;
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`pos-category-strip-btn ${isSelected ? "is-active" : ""}`}
+                        onClick={() => setSelectedCategory(cat.id)}
+                      >
+                        <IconComp size={13} />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Compact POS Menu Grid */}
@@ -2470,312 +2559,96 @@ export function CustomerLandingPage({
         {/* TABLE RESERVATION SCREEN                                  */}
         {/* ========================================================= */}
         {activeScreen === "reservation" && (
-          <section className="customer-reservation-page">
-            <div className="customer-reservation-layout">
-              <div className="customer-reservation-copy">
-                <span className="customer-reservation-kicker">
-                  <CalendarDays size={24} /> Table Reservation
-                </span>
-                <h1>
-                  Reserve Your <span>Table</span>
-                </h1>
-                <p>
-                  Book a table in advance and enjoy a great dining experience at {restaurantName}.
-                </p>
-                <div className="customer-reservation-perks">
-                  <div>
-                    <CheckCircle2 />
-                    <strong>Confirmed<br />Reservation</strong>
-                  </div>
-                  <div>
-                    <span className="customer-guests-icon">♧</span>
-                    <strong>Perfect for<br />Families &amp; Groups</strong>
-                  </div>
-                  <div>
-                    <span className="customer-star-icon">☆</span>
-                    <strong>Great<br />Dining Experience</strong>
-                  </div>
-                </div>
-              </div>
+          <div className="customer-reservation-flow-wrapper" style={{ width: "100%", minHeight: "100vh", background: "#0a0403" }}>
+            <TableReservationFlow
+              onBackToPos={() => navigateScreen("home")}
+              backLabel="Back to Home"
+              initialStep={reservationInitialStep}
+              customerUser={customerUser}
+              onLogout={handleLogout}
+              onNavigate={(route) => {
+                if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                  setReservationInitialStep(6);
+                  navigateScreen("reservation");
+                } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                  navigateScreen("orders");
+                } else if (route === "/profile" || route === "profile") {
+                  navigateScreen("profile");
+                } else if (route === "/" || route === "home") {
+                  navigateScreen("home");
+                } else if (route === "/menu" || route === "menu") {
+                  navigateScreen("menu");
+                } else {
+                  navigateScreen(route.replace(/^\//, ""));
+                }
+              }}
+              onOpenProfile={() => navigateScreen("profile")}
+              onOpenOrders={() => navigateScreen("orders")}
+            />
+          </div>
+        )}
 
-              <div className="customer-reservation-card">
-                <h2>
-                  <CalendarDays size={26} /> Book a Table
-                </h2>
-                <div className="customer-reservation-account-entry">
-                  {reservationCustomerAuthed
-                    ? <button type="button" onClick={() => setReservationAccountOpen((open) => !open)}>{reservationAccountOpen ? "Hide my reservations" : "My reservations"}</button>
-                    : <button type="button" disabled={reservationOtpBusy} onClick={startReservationAccountOtp}>{reservationOtpBusy ? "Sending code…" : "Manage reservations with mobile OTP"}</button>}
-                </div>
-                <form onSubmit={handleReservationSubmit}>
-                  <div className="customer-reservation-fields">
-                    <label>
-                      Date <span>*</span>
-                      <span className="customer-date-time-control">
-                        <input
-                          ref={reservationDateRef}
-                          type="date"
-                          required
-                          min={todayDate()}
-                          value={reservationDate}
-                          onChange={(event) => setReservationDate(event.target.value)}
-                        />
-                        <button
-                          className="customer-picker-button"
-                          type="button"
-                          aria-label="Open reservation date picker"
-                          onClick={() => {
-                            if (typeof reservationDateRef.current?.showPicker === "function") reservationDateRef.current.showPicker();
-                            else reservationDateRef.current?.focus();
-                          }}
-                        >
-                          <CalendarDays size={18} />
-                        </button>
-                      </span>
-                    </label>
+        {/* ========================================================= */}
+        {/* DEDICATED MY ORDERS SCREEN                                */}
+        {/* ========================================================= */}
+        {(activeScreen === "orders" || activeScreen === "my-orders") && (
+          <CustomerOrdersPage
+            customerUser={customerUser}
+            placedOrder={placedOrder}
+            onNavigate={(route) => {
+              if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                setReservationInitialStep(6);
+                navigateScreen("reservation");
+              } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                navigateScreen("orders");
+              } else if (route === "/profile" || route === "profile") {
+                navigateScreen("profile");
+              } else if (route === "/" || route === "home") {
+                navigateScreen("home");
+              } else if (route === "/menu" || route === "menu") {
+                navigateScreen("menu");
+              } else {
+                navigateScreen(route.replace(/^\//, ""));
+              }
+            }}
+            onLogout={handleLogout}
+            restaurantName={restaurantName}
+            restaurantLogo={restaurantLogo}
+          />
+        )}
 
-                    <label>
-                      Time <span>*</span>
-                      <span className="customer-date-time-control">
-                        <input
-                          ref={reservationTimeRef}
-                          type="time"
-                          required
-                          value={reservationTime}
-                          onChange={(event) => setReservationTime(event.target.value)}
-                        />
-                        <button
-                          className="customer-picker-button"
-                          type="button"
-                          aria-label="Open reservation time picker"
-                          onClick={() => {
-                            if (typeof reservationTimeRef.current?.showPicker === "function") reservationTimeRef.current.showPicker();
-                            else reservationTimeRef.current?.focus();
-                          }}
-                        >
-                          <Clock3 size={18} />
-                        </button>
-                      </span>
-                    </label>
-                  </div>
-
-                  <div className="customer-reservation-fields">
-                    <label>
-                      Guests <span>*</span>
-                      <span className="customer-guest-control">
-                        <button
-                          type="button"
-                          aria-label="Decrease guest count"
-                          disabled={reservationGuests <= 1}
-                          onClick={() => setReservationGuests((g) => Math.max(1, g - 1))}
-                        >
-                          <Minus size={17} />
-                        </button>
-                        <output aria-live="polite" aria-label="Number of guests">
-                          <Users size={17} /> {reservationGuests} {reservationGuests === 1 ? "Guest" : "Guests"}
-                        </output>
-                        <button
-                          type="button"
-                          aria-label="Increase guest count"
-                          disabled={reservationGuests >= 8}
-                          onClick={() => setReservationGuests((g) => Math.min(8, g + 1))}
-                        >
-                          <Plus size={17} />
-                        </button>
-                      </span>
-                    </label>
-
-                    <label>
-                      Table Preference <span className="customer-optional-label-inline">(Optional)</span>
-                      <select
-                        value={reservationTablePreference}
-                        onChange={(event) => setReservationTablePreference(event.target.value)}
-                      >
-                        <option value="Any">Any table</option>
-                        <option value="Garden Area">Garden Area</option>
-                        <option value="Lounge">Lounge</option>
-                        <option value="Main Hall">Main Hall</option>
-                        <option value="Outdoor Patio">Outdoor Patio</option>
-                        <option value="Window Side">Window Side</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <section className="customer-reservation-availability" aria-live="polite">
-                    <div className="customer-reservation-availability-heading">
-                      <strong>Live table availability</strong>
-                      {reservationAvailabilityLoading && <span>Checking…</span>}
-                    </div>
-                    {reservationAvailabilityError && <p className="customer-reservation-message is-error">{reservationAvailabilityError}</p>}
-                    {reservationAvailability && <>
-                      <p className={reservationAvailability.isAvailable ? "is-success" : "is-error"}>
-                        {reservationAvailability.message || (reservationAvailability.isAvailable ? "Tables are available." : "No tables are available for this slot.")}
-                      </p>
-                      <p>Estimate {formatPrice(reservationAvailability.estimatedTotalAmount)} · Advance {formatPrice(reservationAvailability.advanceAmount)}{reservationAvailability.advancePaymentPercentage != null ? ` (${reservationAvailability.advancePaymentPercentage}%)` : ""}</p>
-                      <div className="customer-reservation-table-options">
-                        {reservationTables.map((table) => {
-                          const canSelect = table.isAvailableForSlot !== false && (!table.slotStatus || String(table.slotStatus).toLowerCase() === "available");
-                          return <button key={table.tableId} type="button" disabled={!canSelect || reservationAvailabilityLoading} aria-pressed={reservationTableId === String(table.tableId)} className={reservationTableId === String(table.tableId) ? "is-selected" : ""} onClick={() => inspectReservationTable(table)}>
-                            <strong>{table.tableName || table.tableNumber || `Table ${table.tableId}`}</strong>
-                            <span>{table.capacity} seats · {table.sectionArea || table.seatingCategory || "Dining"}</span>
-                            <span>{canSelect ? "Available" : table.conflictReason || "Unavailable"}</span>
-                            {table.estimatedTotalAmount != null && <span>{formatPrice(table.estimatedTotalAmount)} · Advance {formatPrice(table.advanceAmount)}</span>}
-                          </button>;
-                        })}
-                      </div>
-                      {reservationTableDetail && <p className="customer-reservation-table-detail">
-                        {reservationTableDetail.tableName || reservationTableDetail.tableNumber}: {reservationTableDetail.capacity} seats, {reservationTableDetail.sectionArea || reservationTableDetail.seatingCategory}.
-                        {reservationTableDetail.conflictReason ? ` ${reservationTableDetail.conflictReason}` : " Available for this time."}
-                        {Array.isArray(reservationTableDetail.reservedSlotWindowsOnDate) && reservationTableDetail.reservedSlotWindowsOnDate.length ? ` Existing bookings: ${reservationTableDetail.reservedSlotWindowsOnDate.join(", ")}.` : " No occupied reservation windows on this date."}
-                      </p>}
-                      {!reservationAvailability.isAvailable && Array.isArray(reservationAvailability.alternativeSlots) && reservationAvailability.alternativeSlots.length > 0 && <div className="customer-reservation-alternatives">
-                        <span>Suggested times:</span>
-                        {reservationAvailability.alternativeSlots.map((slot) => <button key={slot.normalizedTime || slot.time} type="button" onClick={() => setReservationTime(String(slot.normalizedTime || "").slice(0, 5) || reservationTime)}>{slot.time}</button>)}
-                      </div>}
-                    </>}
-                  </section>
-
-                  <div className="customer-reservation-fields customer-reservation-contact-fields">
-                    <label>
-                      Full Name <span>*</span>
-                      <span className="customer-input-control">
-                        <UserRound size={15} />
-                        <input
-                          required
-                          autoComplete="name"
-                          value={reservationName}
-                          onChange={(event) => setReservationName(event.target.value)}
-                          placeholder="Your name"
-                        />
-                      </span>
-                    </label>
-
-                    <label>
-                      Mobile Number <span>*</span>
-                      <span className="customer-input-control">
-                        <Phone size={15} />
-                        <input
-                          required
-                          autoComplete="tel"
-                          inputMode="tel"
-                          value={reservationPhone}
-                          onChange={(event) => {
-                            const p = event.target.value;
-                            setReservationPhone(p);
-                            setReservationPhoneError(
-                              !p.trim() || isValidIndianMobileNumber(p)
-                                ? ""
-                                : "Enter a valid 10-digit Indian mobile number.",
-                            );
-                          }}
-                          placeholder="e.g. +91 98765 43210"
-                        />
-                      </span>
-                      {reservationPhoneError && (
-                        <p className="customer-reservation-message is-error customer-phone-error">
-                          {reservationPhoneError}
-                        </p>
-                      )}
-                    </label>
-
-                    <label>
-                      Email <span className="customer-optional-label-inline">(Optional)</span>
-                      <span className="customer-input-control">
-                        <Mail size={15} />
-                        <input
-                          type="email"
-                          autoComplete="email"
-                          value={reservationEmail}
-                          onChange={(event) => setReservationEmail(event.target.value)}
-                          placeholder="you@example.com"
-                        />
-                      </span>
-                    </label>
-                  </div>
-
-                  <label>
-                    <span className="customer-optional-label">
-                      Special Requests <small>(Optional)</small>
-                    </span>
-                    <textarea
-                      rows={3}
-                      value={reservationNotes}
-                      onChange={(event) => setReservationNotes(event.target.value)}
-                      placeholder="Birthday celebration, anniversary, high chair, etc."
-                    />
-                  </label>
-
-                  {reservationMessage && (
-                    <p
-                      className={`customer-reservation-message ${
-                        reservationMessage.startsWith("Your reservation") ? "is-success" : "is-error"
-                      }`}
-                    >
-                      {reservationMessage}
-                    </p>
-                  )}
-
-                  <button
-                    className="customer-reservation-submit"
-                    type="submit"
-                    disabled={reservationSubmitting || reservationAvailabilityLoading || !reservationAvailability?.isAvailable || !reservationTableId}
-                  >
-                    <CalendarDays size={19} /> {reservationSubmitting ? "Reserving…" : "Reserve Table"}
-                  </button>
-                </form>
-                {(createdReservation || reservationOtpSent) && <div className="customer-reservation-followup">
-                  {createdReservation && <>
-                    <strong>Reference: {createdReservation.reservationNumber || `RES-${createdReservation.reservationId}`}</strong>
-                    <span>Reservation: {createdReservation.status || "PENDING_PAYMENT"} · Payment: {createdReservation.paymentStatus || "PENDING"}</span>
-                    <span>Total {formatPrice(createdReservation.reservationAmount ?? reservationAvailability?.estimatedTotalAmount)} · Advance due {formatPrice(createdReservation.advanceAmount ?? reservationAvailability?.advanceAmount)}</span>
-                  </>}
-                  {reservationOtpSent && <form className="customer-reservation-otp-form" onSubmit={handleVerifyReservationOtp}>
-                    <label htmlFor="reservation-otp">Verify your mobile number</label>
-                    <input id="reservation-otp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={reservationOtp} onChange={(event) => setReservationOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" />
-                    <button type="submit" disabled={reservationOtpBusy || reservationOtp.length !== 6}>{reservationOtpBusy ? "Verifying…" : "Verify code"}</button>
-                    {reservationOtpCooldown > 0 ? <span>Resend in {reservationOtpCooldown}s</span> : <button type="button" disabled={reservationOtpBusy} onClick={async () => {
-                      setReservationOtpBusy(true);
-                      const sent = await apiSendReservationOtp(reservationPhone.trim());
-                      setReservationOtpBusy(false);
-                      const payload = sent?.data?.data ?? sent?.data;
-                      setReservationOtpSent(Boolean(sent?.success));
-                      setReservationOtpCooldown(sent?.success ? 60 : 0);
-                      setReservationDevOtp(import.meta.env.DEV && payload?.devOtp ? String(payload.devOtp) : "");
-                      setReservationAccountMessage(sent?.success ? "A new verification code was sent." : sent?.error || "Could not resend the code.");
-                    }}>Resend code</button>}
-                    {reservationDevOtp && <span>Development code: {reservationDevOtp}</span>}
-                  </form>}
-                </div>}
-                {reservationAccountMessage && <p className="customer-reservation-message is-error">{reservationAccountMessage}</p>}
-                {reservationAccountOpen && <section className="customer-reservation-account">
-                  <header>
-                    <h3>Your reservations</h3>
-                    <div>
-                      <button type="button" aria-pressed={reservationTab === "upcoming"} onClick={() => loadCustomerReservations("upcoming")}>Upcoming</button>
-                      <button type="button" aria-pressed={reservationTab === "past"} onClick={() => loadCustomerReservations("past")}>Past / Cancelled</button>
-                    </div>
-                  </header>
-                  {myReservations.length === 0 ? <p>No reservations in this list yet.</p> : myReservations.map((reservation) => <article key={reservation.reservationId}>
-                    <strong>{reservation.reservationNumber}</strong>
-                    <span>{reservation.reservationDate} · {reservation.formattedTime || reservation.reservationTime} · {reservation.guestsCount} guests</span>
-                    <span>{reservation.tableName || reservation.tableNumber || "Table pending"} · {reservation.sectionArea || reservation.seatingCategory || ""}</span>
-                    <span>{formatPrice(reservation.reservationAmount)} · Paid {formatPrice(reservation.paidAmount)} · Remaining {formatPrice(reservation.remainingAmount)}</span>
-                    <span>{reservation.status} · {reservation.paymentStatus}</span>
-                    <button type="button" disabled={reservationActionBusy} onClick={() => openCustomerReservation(reservation)}>Details / payment history</button>
-                    {!/cancel|refund|complete|no.show/i.test(reservation.status || "") && <button type="button" disabled={reservationActionBusy} onClick={() => cancelCustomerReservation(reservation)}>Cancel reservation</button>}
-                  </article>)}
-                  {selectedReservationDetails && <div className="customer-reservation-details">
-                    <h4>{selectedReservationDetails.reservationNumber} details</h4>
-                    <p>{selectedReservationDetails.customerName} · {selectedReservationDetails.customerPhone} · {selectedReservationDetails.email || "No email"}</p>
-                    <p>{selectedReservationDetails.status} · {selectedReservationDetails.paymentStatus} · Refund {formatPrice(selectedReservationDetails.refundAmount)} ({selectedReservationDetails.refundStatus || "none"})</p>
-                    <p>Payment timeline: {(selectedReservationDetails.payments || reservationPaymentStatus?.payments || []).map((payment) => `${payment.paymentType}: ${formatPrice(payment.amount)} (${payment.paymentStatus})`).join(" · ") || "No payments recorded"}</p>
-                    <button type="button" disabled={reservationActionBusy} onClick={() => openCustomerReservation(selectedReservationDetails)}>Refresh payment status</button>
-                    <button type="button" disabled={reservationActionBusy} onClick={saveReservationChanges}>Save reservation changes</button>
-                  </div>}
-                </section>}
-              </div>
-            </div>
-          </section>
+        {/* ========================================================= */}
+        {/* DEDICATED MY PROFILE SCREEN                               */}
+        {/* ========================================================= */}
+        {activeScreen === "profile" && (
+          <CustomerProfilePage
+            customerUser={customerUser}
+            onUpdateUser={(updated) => {
+              setCustomerUser(updated);
+              try {
+                localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+              } catch (e) {}
+            }}
+            onNavigate={(route) => {
+              if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                setReservationInitialStep(6);
+                navigateScreen("reservation");
+              } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                navigateScreen("orders");
+              } else if (route === "/profile" || route === "profile") {
+                navigateScreen("profile");
+              } else if (route === "/" || route === "home") {
+                navigateScreen("home");
+              } else if (route === "/menu" || route === "menu") {
+                navigateScreen("menu");
+              } else {
+                navigateScreen(route.replace(/^\//, ""));
+              }
+            }}
+            onLogout={handleLogout}
+            restaurantName={restaurantName}
+            restaurantLogo={restaurantLogo}
+          />
         )}
       </main>
 

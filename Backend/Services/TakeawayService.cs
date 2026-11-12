@@ -457,130 +457,137 @@ public class TakeawayService
             ? request.InvoiceNumber.Trim()
             : $"INV-{dateStr}-{DateTime.UtcNow:HHmmssfff}";
 
-        // 5. Database Transaction Execution
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        // 5. Database Transaction Execution (wrapped in EF Core execution strategy for MySqlRetryingExecutionStrategy)
+        TakeawayOrderResponseDto response = null!;
+        object? orderCreatedBroadcast = null;
+
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            // A. Resolve or upsert Customer record
-            var (customerId, customerName, customerPhone, customerEmail) = await ResolveOrUpsertCustomerAsync(
-                request.CustomerId,
-                request.CustomerName,
-                request.CustomerPhone,
-                request.CustomerEmail);
-
-            // B. Create restaurant_orders record (no dining table assignment required)
-            var order = new Order
-            {
-                OrderNumber = orderNumber,
-                OutletId = 1,
-                OrderType = "Takeaway",
-                TableId = null,
-                TableName = "Takeaway",
-                Section = "Takeaway",
-                ServerName = !string.IsNullOrWhiteSpace(request.ServerName) ? request.ServerName.Trim() : "Takeaway Cashier",
-                Guests = 1,
-                Status = orderStatus,
-                FulfillmentStatus = fulfillmentStatus,
-                PaymentStatus = paymentStatus,
-                PaymentMethod = paymentMethod,
-                CustomerId = customerId,
-                CustomerName = customerName,
-                CustomerPhone = customerPhone,
-                CustomerEmail = customerEmail,
-                PackagingCharge = calculation.PackagingCharge,
-                IdempotencyKey = normalizedIdemKey,
-                SpecialInstructions = request.Notes ?? request.SpecialInstructions,
-                IsActive = true,
-                IsDeleted = false,
-                CreatedBy = createdByUserId,
-                UpdatedBy = createdByUserId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
-
-            // Sync to MySQL 'orders' table if present
+            _context.ChangeTracker.Clear();
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var syncOrderSql = @"
+                // A. Resolve or upsert Customer record
+                var (customerId, customerName, customerPhone, customerEmail) = await ResolveOrUpsertCustomerAsync(
+                    request.CustomerId,
+                    request.CustomerName,
+                    request.CustomerPhone,
+                    request.CustomerEmail);
+
+                // B. Create restaurant_orders record (no dining table assignment required)
+                var order = new Order
+                {
+                    OrderNumber = orderNumber,
+                    OutletId = 1,
+                    OrderType = "Takeaway",
+                    TableId = null,
+                    TableName = "Takeaway",
+                    Section = "Takeaway",
+                    ServerName = !string.IsNullOrWhiteSpace(request.ServerName) ? request.ServerName.Trim() : "Takeaway Cashier",
+                    Guests = 1,
+                    Status = orderStatus,
+                    FulfillmentStatus = fulfillmentStatus,
+                    PaymentStatus = paymentStatus,
+                    PaymentMethod = paymentMethod,
+                    CustomerId = customerId,
+                    CustomerName = customerName,
+                    CustomerPhone = customerPhone,
+                    CustomerEmail = customerEmail,
+                    PackagingCharge = calculation.PackagingCharge,
+                    IdempotencyKey = normalizedIdemKey,
+                    SpecialInstructions = request.Notes ?? request.SpecialInstructions,
+                    IsActive = true,
+                    IsDeleted = false,
+                    CreatedBy = createdByUserId,
+                    UpdatedBy = createdByUserId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
+
+                // Sync to MySQL 'orders' table if present
+                try
+                {
+                    var syncOrderSql = @"
                     INSERT INTO orders (order_id, order_number, branch_id, customer_id, order_type, status, subtotal, discount_amt, tax_amt, packaging_charge, total_amt, notes, order_time)
                     VALUES (@oid, @onum, 1, @cid, 'takeaway', @stat, @sub, @disc, @tax, @pkg, @tot, @notes, UTC_TIMESTAMP())
                     ON DUPLICATE KEY UPDATE status = VALUES(status), total_amt = VALUES(total_amt);
                 ";
-                await _spService.ExecuteSqlNonQueryAsync(syncOrderSql, new Dictionary<string, object?>
-                {
-                    { "@oid", order.Id },
-                    { "@onum", order.OrderNumber },
-                    { "@cid", customerId },
-                    { "@stat", isPaid ? "confirmed" : "pending" },
-                    { "@sub", calculation.Subtotal },
-                    { "@disc", calculation.DiscountAmount },
-                    { "@tax", calculation.TaxAmount },
-                    { "@pkg", calculation.PackagingCharge },
-                    { "@tot", calculation.TotalAmount },
-                    { "@notes", order.SpecialInstructions }
-                });
-            }
-            catch { }
+                    await _spService.ExecuteSqlNonQueryAsync(syncOrderSql, new Dictionary<string, object?>
+                    {
+                        { "@oid", order.Id },
+                        { "@onum", order.OrderNumber },
+                        { "@cid", customerId },
+                        { "@stat", isPaid ? "confirmed" : "pending" },
+                        { "@sub", calculation.Subtotal },
+                        { "@disc", calculation.DiscountAmount },
+                        { "@tax", calculation.TaxAmount },
+                        { "@pkg", calculation.PackagingCharge },
+                        { "@tot", calculation.TotalAmount },
+                        { "@notes", order.SpecialInstructions }
+                    });
+                }
+                catch { }
 
-            // C. Create OrderItems (always Queued initially so Kitchen KOT & Bar BOT prepare the order!)
-            var itemBreakdownPairs = new List<(OrderItem Entity, TakeawayCartItemBreakdown Breakdown)>();
-            foreach (var b in calculation.Items)
-            {
-                var oi = new OrderItem
+                // C. Create OrderItems (always Queued initially so Kitchen KOT & Bar BOT prepare the order!)
+                var itemBreakdownPairs = new List<(OrderItem Entity, TakeawayCartItemBreakdown Breakdown)>();
+                foreach (var b in calculation.Items)
+                {
+                    var oi = new OrderItem
+                    {
+                        OrderId = order.Id,
+                        MenuItemId = b.ItemId,
+                        Name = b.Name,
+                        Price = b.UnitPrice,
+                        Quantity = b.Quantity,
+                        TotalPrice = b.TotalPrice,
+                        Notes = b.Notes,
+                        KotStatus = "Queued",
+                        KotBatch = 1,
+                        IsActive = true,
+                        IsDeleted = false,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    order.Items.Add(oi);
+                    itemBreakdownPairs.Add((oi, b));
+                }
+                await _context.SaveChangesAsync();
+
+                foreach (var pair in itemBreakdownPairs)
+                {
+                    pair.Breakdown.OrderItemId = pair.Entity.Id;
+                    pair.Breakdown.KotStatus = pair.Entity.KotStatus;
+                }
+
+                // D. Dispatch Separate Kitchen KOT (Food) & Bar BOT (Drinks) Tickets
+                var (kitchenKot, barKot) = await DispatchKotAndBotAsync(order);
+
+                // E. Create Invoices record
+                var invoice = new Invoice
                 {
                     OrderId = order.Id,
-                    MenuItemId = b.ItemId,
-                    Name = b.Name,
-                    Price = b.UnitPrice,
-                    Quantity = b.Quantity,
-                    TotalPrice = b.TotalPrice,
-                    Notes = b.Notes,
-                    KotStatus = "Queued",
-                    KotBatch = 1,
-                    IsActive = true,
-                    IsDeleted = false,
-                    CreatedAt = DateTime.UtcNow
+                    InvoiceNumber = invoiceNumber,
+                    Subtotal = calculation.Subtotal,
+                    TaxableAmount = calculation.TaxableAmount,
+                    TaxAmount = calculation.TaxAmount,
+                    DiscountAmount = calculation.DiscountAmount,
+                    TotalAmount = calculation.TotalAmount,
+                    PaidAmount = isPaid ? calculation.TotalAmount : 0m,
+                    AmountPaid = isPaid ? calculation.TotalAmount : 0m,
+                    Status = isPaid ? "PAID" : "UNPAID",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
-                order.Items.Add(oi);
-                itemBreakdownPairs.Add((oi, b));
-            }
-            await _context.SaveChangesAsync();
+                _context.Invoices.Add(invoice);
+                await _context.SaveChangesAsync();
 
-            foreach (var pair in itemBreakdownPairs)
-            {
-                pair.Breakdown.OrderItemId = pair.Entity.Id;
-                pair.Breakdown.KotStatus = pair.Entity.KotStatus;
-            }
-
-            // D. Dispatch Separate Kitchen KOT (Food) & Bar BOT (Drinks) Tickets
-            var (kitchenKot, barKot) = await DispatchKotAndBotAsync(order);
-
-            // E. Create Invoices record
-            var invoice = new Invoice
-            {
-                OrderId = order.Id,
-                InvoiceNumber = invoiceNumber,
-                Subtotal = calculation.Subtotal,
-                TaxableAmount = calculation.TaxableAmount,
-                TaxAmount = calculation.TaxAmount,
-                DiscountAmount = calculation.DiscountAmount,
-                TotalAmount = calculation.TotalAmount,
-                PaidAmount = isPaid ? calculation.TotalAmount : 0m,
-                AmountPaid = isPaid ? calculation.TotalAmount : 0m,
-                Status = isPaid ? "PAID" : "UNPAID",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-            _context.Invoices.Add(invoice);
-            await _context.SaveChangesAsync();
-
-            // Direct SQL update to ensure MySQL columns (cgst_amount, sgst_amount, payment_status) are stored
-            try
-            {
-                var invoiceSql = @"
+                // Direct SQL update to ensure MySQL columns (cgst_amount, sgst_amount, payment_status) are stored
+                try
+                {
+                    var invoiceSql = @"
                     UPDATE invoices 
                     SET cgst_amount = @cgst,
                         sgst_amount = @sgst,
@@ -594,80 +601,78 @@ public class TakeawayService
                         round_off = @roundoff
                     WHERE invoice_id = @invid;
                 ";
-                await _spService.ExecuteSqlNonQueryAsync(invoiceSql, new Dictionary<string, object?>
+                    await _spService.ExecuteSqlNonQueryAsync(invoiceSql, new Dictionary<string, object?>
+                    {
+                        { "@cgst", calculation.CgstAmount },
+                        { "@sgst", calculation.SgstAmount },
+                        { "@pstat", isPaid ? "paid" : "pending" },
+                        { "@stat", isPaid ? "PAID" : "UNPAID" },
+                        { "@pamt", isPaid ? calculation.TotalAmount : 0m },
+                        { "@roundoff", calculation.RoundOff },
+                        { "@invid", invoice.InvoiceId }
+                    });
+                }
+                catch { }
+
+                // F. Record Payment Transaction in existing Payments module (invoice_payments)
+                string? txnRef = !string.IsNullOrWhiteSpace(request.TransactionReference)
+                    ? request.TransactionReference.Trim()
+                    : (!string.IsNullOrWhiteSpace(request.GatewayPaymentId)
+                        ? request.GatewayPaymentId.Trim()
+                        : (isPaid ? $"TXN-TAK-{order.Id}-{DateTime.UtcNow:HHmmss}" : null));
+
+                var paymentModeUpper = paymentMethod.ToUpperInvariant();
+                var paymentMethodEnum = NormalizePaymentMethodEnum(paymentMethod);
+                string dbPaymentStatus = isPaid ? "success" : (isExplicitFailed ? "failed" : "pending");
+                string? failureReason = isExplicitFailed
+                    ? (!string.IsNullOrWhiteSpace(request.FailureReason) ? request.FailureReason.Trim() : "Payment failed at payment gateway.")
+                    : null;
+
+                if (isPaid || isExplicitFailed || isExplicitPending || !string.IsNullOrWhiteSpace(request.GatewayProvider) || !string.IsNullOrWhiteSpace(request.GatewayOrderId))
                 {
-                    { "@cgst", calculation.CgstAmount },
-                    { "@sgst", calculation.SgstAmount },
-                    { "@pstat", isPaid ? "paid" : "pending" },
-                    { "@stat", isPaid ? "PAID" : "UNPAID" },
-                    { "@pamt", isPaid ? calculation.TotalAmount : 0m },
-                    { "@roundoff", calculation.RoundOff },
-                    { "@invid", invoice.InvoiceId }
-                });
-            }
-            catch { }
+                    var payment = new InvoicePayment
+                    {
+                        InvoiceId = invoice.InvoiceId,
+                        Amount = calculation.TotalAmount,
+                        AmountPaid = isPaid ? calculation.TotalAmount : 0m,
+                        PaymentMode = paymentModeUpper,
+                        PaymentMethod = paymentMethodEnum,
+                        TransactionReference = txnRef,
+                        TxnReference = txnRef,
+                        PaymentStatus = dbPaymentStatus,
+                        GatewayProvider = request.GatewayProvider?.Trim(),
+                        GatewayOrderId = request.GatewayOrderId?.Trim(),
+                        GatewayPaymentId = request.GatewayPaymentId?.Trim(),
+                        GatewaySignature = request.GatewaySignature?.Trim(),
+                        FailureReason = failureReason,
+                        IdempotencyKey = normalizedIdemKey,
+                        PaidAt = DateTime.UtcNow
+                    };
+                    _context.InvoicePayments.Add(payment);
+                    await _context.SaveChangesAsync();
+                }
 
-            // F. Record Payment Transaction in existing Payments module (invoice_payments)
-            string? txnRef = !string.IsNullOrWhiteSpace(request.TransactionReference)
-                ? request.TransactionReference.Trim()
-                : (!string.IsNullOrWhiteSpace(request.GatewayPaymentId)
-                    ? request.GatewayPaymentId.Trim()
-                    : (isPaid ? $"TXN-TAK-{order.Id}-{DateTime.UtcNow:HHmmss}" : null));
+                await RecordAuditLogAsync(
+                    createdByUserId,
+                    "ORDER_CREATED",
+                    "restaurant_orders",
+                    order.Id,
+                    null,
+                    new
+                    {
+                        orderNumber = order.OrderNumber,
+                        orderStatus = order.Status,
+                        fulfillmentStatus = order.FulfillmentStatus,
+                        paymentStatus = order.PaymentStatus,
+                        paymentMethod = order.PaymentMethod,
+                        totalAmount = calculation.TotalAmount,
+                        changedByName = createdByName ?? order.ServerName
+                    },
+                    ipAddress);
 
-            var paymentModeUpper = paymentMethod.ToUpperInvariant();
-            var paymentMethodEnum = NormalizePaymentMethodEnum(paymentMethod);
-            string dbPaymentStatus = isPaid ? "success" : (isExplicitFailed ? "failed" : "pending");
-            string? failureReason = isExplicitFailed
-                ? (!string.IsNullOrWhiteSpace(request.FailureReason) ? request.FailureReason.Trim() : "Payment failed at payment gateway.")
-                : null;
+                await transaction.CommitAsync();
 
-            if (isPaid || isExplicitFailed || isExplicitPending || !string.IsNullOrWhiteSpace(request.GatewayProvider) || !string.IsNullOrWhiteSpace(request.GatewayOrderId))
-            {
-                var payment = new InvoicePayment
-                {
-                    InvoiceId = invoice.InvoiceId,
-                    Amount = calculation.TotalAmount,
-                    AmountPaid = isPaid ? calculation.TotalAmount : 0m,
-                    PaymentMode = paymentModeUpper,
-                    PaymentMethod = paymentMethodEnum,
-                    TransactionReference = txnRef,
-                    TxnReference = txnRef,
-                    PaymentStatus = dbPaymentStatus,
-                    GatewayProvider = request.GatewayProvider?.Trim(),
-                    GatewayOrderId = request.GatewayOrderId?.Trim(),
-                    GatewayPaymentId = request.GatewayPaymentId?.Trim(),
-                    GatewaySignature = request.GatewaySignature?.Trim(),
-                    FailureReason = failureReason,
-                    IdempotencyKey = normalizedIdemKey,
-                    PaidAt = DateTime.UtcNow
-                };
-                _context.InvoicePayments.Add(payment);
-                await _context.SaveChangesAsync();
-            }
-
-            await RecordAuditLogAsync(
-                createdByUserId,
-                "ORDER_CREATED",
-                "restaurant_orders",
-                order.Id,
-                null,
-                new
-                {
-                    orderNumber = order.OrderNumber,
-                    orderStatus = order.Status,
-                    fulfillmentStatus = order.FulfillmentStatus,
-                    paymentStatus = order.PaymentStatus,
-                    paymentMethod = order.PaymentMethod,
-                    totalAmount = calculation.TotalAmount,
-                    changedByName = createdByName ?? order.ServerName
-                },
-                ipAddress);
-
-            await transaction.CommitAsync();
-
-            try
-            {
-                await _hubContext.Clients.Group("floor").SendAsync("TakeawayOrderCreated", new
+                orderCreatedBroadcast = new
                 {
                     orderId = order.Id,
                     orderNumber = order.OrderNumber,
@@ -676,70 +681,78 @@ public class TakeawayService
                     paymentMethod = order.PaymentMethod,
                     customerName = order.CustomerName,
                     totalAmount = calculation.TotalAmount
-                });
+                };
+
+                response = new TakeawayOrderResponseDto
+                {
+                    Success = true,
+                    AlreadyProcessed = false,
+                    Message = isPaid
+                        ? "Takeaway order and payment recorded successfully."
+                        : (isExplicitFailed
+                            ? "Takeaway order created with failed payment status. Retry payment to settle."
+                            : "Takeaway order created with pending payment status."),
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    InvoiceId = invoice.InvoiceId,
+                    InvoiceNumber = invoice.InvoiceNumber,
+                    OrderType = "TAKEAWAY",
+                    OrderStatus = order.Status,
+                    FulfillmentStatus = order.FulfillmentStatus ?? "New",
+                    PaymentStatus = paymentStatus,
+                    PaymentMethod = paymentMethod,
+                    TransactionReference = txnRef,
+                    GatewayProvider = request.GatewayProvider,
+                    GatewayPaymentId = request.GatewayPaymentId,
+                    FailureReason = failureReason,
+                    CustomerId = customerId,
+                    CustomerName = customerName,
+                    CustomerPhone = customerPhone,
+                    CustomerEmail = customerEmail,
+                    CreatedAt = order.CreatedAt,
+                    Financials = new TakeawayFinancialsDto
+                    {
+                        Subtotal = calculation.Subtotal,
+                        DiscountPercent = calculation.DiscountPercent,
+                        DiscountAmount = calculation.DiscountAmount,
+                        TaxableAmount = calculation.TaxableAmount,
+                        CgstAmount = calculation.CgstAmount,
+                        SgstAmount = calculation.SgstAmount,
+                        GstAmount = calculation.GstAmount,
+                        PackagingCharge = calculation.PackagingCharge,
+                        RoundOff = calculation.RoundOff,
+                        TotalAmount = calculation.TotalAmount,
+                        PaidAmount = isPaid ? calculation.TotalAmount : 0m
+                    },
+                    Items = calculation.Items,
+                    KitchenKot = kitchenKot,
+                    BarKot = barKot
+                };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to create takeaway order. Rolled back transaction.");
+                throw;
+            }
+        });
+
+        if (orderCreatedBroadcast != null)
+        {
+            try
+            {
+                await _hubContext.Clients.Group("floor").SendAsync("TakeawayOrderCreated", orderCreatedBroadcast);
             }
             catch { }
-
-            var response = new TakeawayOrderResponseDto
-            {
-                Success = true,
-                AlreadyProcessed = false,
-                Message = isPaid
-                    ? "Takeaway order and payment recorded successfully."
-                    : (isExplicitFailed
-                        ? "Takeaway order created with failed payment status. Retry payment to settle."
-                        : "Takeaway order created with pending payment status."),
-                OrderId = order.Id,
-                OrderNumber = order.OrderNumber,
-                InvoiceId = invoice.InvoiceId,
-                InvoiceNumber = invoice.InvoiceNumber,
-                OrderType = "TAKEAWAY",
-                OrderStatus = order.Status,
-                FulfillmentStatus = order.FulfillmentStatus ?? "New",
-                PaymentStatus = paymentStatus,
-                PaymentMethod = paymentMethod,
-                TransactionReference = txnRef,
-                GatewayProvider = request.GatewayProvider,
-                GatewayPaymentId = request.GatewayPaymentId,
-                FailureReason = failureReason,
-                CustomerId = customerId,
-                CustomerName = customerName,
-                CustomerPhone = customerPhone,
-                CustomerEmail = customerEmail,
-                CreatedAt = order.CreatedAt,
-                Financials = new TakeawayFinancialsDto
-                {
-                    Subtotal = calculation.Subtotal,
-                    DiscountPercent = calculation.DiscountPercent,
-                    DiscountAmount = calculation.DiscountAmount,
-                    TaxableAmount = calculation.TaxableAmount,
-                    CgstAmount = calculation.CgstAmount,
-                    SgstAmount = calculation.SgstAmount,
-                    GstAmount = calculation.GstAmount,
-                    PackagingCharge = calculation.PackagingCharge,
-                    RoundOff = calculation.RoundOff,
-                    TotalAmount = calculation.TotalAmount,
-                    PaidAmount = isPaid ? calculation.TotalAmount : 0m
-                },
-                Items = calculation.Items,
-                KitchenKot = kitchenKot,
-                BarKot = barKot
-            };
-
-            // Store in Idempotency cache
-            if (!string.IsNullOrWhiteSpace(normalizedIdemKey))
-            {
-                IdempotencyCache[normalizedIdemKey] = (DateTime.UtcNow.AddMinutes(15), response);
-            }
-
-            return response;
         }
-        catch (Exception ex)
+
+        // Store in Idempotency cache
+        if (!string.IsNullOrWhiteSpace(normalizedIdemKey))
         {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Failed to create takeaway order. Rolled back transaction.");
-            throw;
+            IdempotencyCache[normalizedIdemKey] = (DateTime.UtcNow.AddMinutes(15), response);
         }
+
+        return response;
     }
 
     public async Task<TakeawayOrderStatusResponseDto?> UpdateTakeawayOrderStatusAsync(
@@ -1686,31 +1699,55 @@ public class TakeawayService
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
-                customer = await _context.Customers.FirstOrDefaultAsync(c => c.CustomerId == customerId.Value);
+                customer = await _context.Customers.FirstOrDefaultAsync(c => c.CustomerId == customerId.Value && c.DeletedAt == null);
             }
 
             if (customer == null && !string.IsNullOrWhiteSpace(cleanPhone))
             {
-                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone == cleanPhone);
+                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone == cleanPhone && c.DeletedAt == null);
+                if (customer == null)
+                {
+                    string phoneKey = CustomerAuthService.NormalizePhoneKey(cleanPhone);
+                    if (!string.IsNullOrWhiteSpace(phoneKey))
+                    {
+                        var candidates = await _context.Customers
+                            .Where(c => c.DeletedAt == null)
+                            .Select(c => new { c.CustomerId, c.Phone, c.PasswordHash })
+                            .ToListAsync();
+                        var match = candidates
+                            .Where(c => CustomerAuthService.NormalizePhoneKey(c.Phone) == phoneKey)
+                            .OrderByDescending(c => !string.IsNullOrEmpty(c.PasswordHash))
+                            .ThenBy(c => c.CustomerId)
+                            .FirstOrDefault();
+                        if (match != null)
+                        {
+                            customer = await _context.Customers.FirstOrDefaultAsync(c => c.CustomerId == match.CustomerId);
+                        }
+                    }
+                }
             }
 
             if (customer != null)
             {
-                bool dirty = false;
-                if (!string.IsNullOrWhiteSpace(cleanName) && !string.Equals(customer.FullName, cleanName, StringComparison.Ordinal))
+                // Preserve registered customer portal identity (PasswordHash != null); only enrich legacy guest profiles
+                if (string.IsNullOrEmpty(customer.PasswordHash))
                 {
-                    customer.FullName = cleanName;
-                    dirty = true;
-                }
-                if (!string.IsNullOrWhiteSpace(cleanEmail) && !string.Equals(customer.Email, cleanEmail, StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Email = cleanEmail;
-                    dirty = true;
-                }
-                if (dirty)
-                {
-                    customer.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
+                    bool dirty = false;
+                    if (!string.IsNullOrWhiteSpace(cleanName) && !string.Equals(customer.FullName, cleanName, StringComparison.Ordinal))
+                    {
+                        customer.FullName = cleanName;
+                        dirty = true;
+                    }
+                    if (!string.IsNullOrWhiteSpace(cleanEmail) && !string.Equals(customer.Email, cleanEmail, StringComparison.OrdinalIgnoreCase))
+                    {
+                        customer.Email = cleanEmail;
+                        dirty = true;
+                    }
+                    if (dirty)
+                    {
+                        customer.UpdatedAt = DateTime.UtcNow;
+                        await _context.SaveChangesAsync();
+                    }
                 }
 
                 return (
@@ -2120,6 +2157,93 @@ public class TakeawayService
 
     #region 5. Takeaway Dashboard Orders List, Summary & Cancellation APIs
 
+    public async Task<TakeawayPaginatedList<TakeawayOrderListItemDto>> GetCustomerTakeawayOrdersAsync(
+        long customerId,
+        string? customerPhone,
+        int page = 1,
+        int pageSize = 20,
+        string? status = null)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        string targetPhoneKey = CustomerAuthService.NormalizePhoneKey(customerPhone);
+        string? suffix = targetPhoneKey.Length >= 4 ? targetPhoneKey[^4..] : (targetPhoneKey.Length > 0 ? targetPhoneKey : null);
+
+        var items = await LoadTakeawayOrderListItemsAsync(null, null, customerId, suffix);
+        IEnumerable<TakeawayOrderListItemDto> filtered = items.Where(d =>
+            d.CustomerId == customerId ||
+            (!d.CustomerId.HasValue &&
+             !string.IsNullOrEmpty(targetPhoneKey) &&
+             CustomerAuthService.NormalizePhoneKey(d.CustomerPhone) == targetPhoneKey));
+
+        if (!string.IsNullOrWhiteSpace(status) && !string.Equals(status, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            string statusTrim = status.Trim();
+            string? normalizedStatus = TryNormalizeStatusFilter(statusTrim);
+            filtered = filtered.Where(d =>
+                string.Equals(d.FulfillmentStatus, statusTrim, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(d.OrderStatus, statusTrim, StringComparison.OrdinalIgnoreCase) ||
+                (normalizedStatus != null && string.Equals(d.FulfillmentStatus, normalizedStatus, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        var matchedList = filtered.ToList();
+        return new TakeawayPaginatedList<TakeawayOrderListItemDto>
+        {
+            TotalCount = matchedList.Count,
+            Page = page,
+            PageSize = pageSize,
+            Data = matchedList.Skip((page - 1) * pageSize).Take(pageSize).ToList()
+        };
+    }
+
+    public async Task<(bool Exists, bool Allowed)> CanCustomerAccessOrderAsync(
+        long orderId,
+        long customerId,
+        string? customerPhone)
+    {
+        var order = await _context.Orders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
+
+        if (order == null)
+        {
+            return (false, false);
+        }
+
+        if (order.CustomerId.HasValue)
+        {
+            return (true, order.CustomerId.Value == customerId);
+        }
+
+        string callerPhoneKey = CustomerAuthService.NormalizePhoneKey(customerPhone);
+        string orderPhoneKey = CustomerAuthService.NormalizePhoneKey(order.CustomerPhone);
+        bool phoneMatches = !string.IsNullOrEmpty(callerPhoneKey) &&
+                            !string.IsNullOrEmpty(orderPhoneKey) &&
+                            string.Equals(callerPhoneKey, orderPhoneKey, StringComparison.Ordinal);
+        return (true, phoneMatches);
+    }
+
+    public async Task<(bool Exists, bool Allowed)> CanCustomerAccessInvoiceAsync(
+        long invoiceId,
+        long customerId,
+        string? customerPhone)
+    {
+        var invoice = await _context.Invoices
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId)
+            ?? await _context.Invoices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.OrderId == invoiceId);
+
+        if (invoice == null)
+        {
+            return (false, false);
+        }
+
+        return await CanCustomerAccessOrderAsync(invoice.OrderId, customerId, customerPhone);
+    }
+
     public async Task<TakeawayPaginatedList<TakeawayOrderListItemDto>> GetTakeawayOrdersAsync(
         int page = 1,
         int pageSize = 20,
@@ -2331,268 +2455,303 @@ public class TakeawayService
             throw new TakeawayOrderConflictException($"Takeaway order {order.OrderNumber} cannot be cancelled because it is already {currentFulfillment}.");
         }
 
+        long targetOrderId = order.Id;
+        string targetOrderNumber = order.OrderNumber;
+        string? targetOrderIdemKey = order.IdempotencyKey;
         string previousOrderStatus = order.Status;
         string? previousPaymentStatus = order.PaymentStatus;
         DateTime utcNow = DateTime.UtcNow;
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        object? cancelPayload = null;
+        string? finalInvoiceStatus = null;
+        string refundStatus = "None";
+        decimal refundedAmount = 0m;
+        var cancelledTickets = new List<string>();
+        string finalOrderStatus = "Cancelled";
+        string finalFulfillment = "Cancelled";
+        string finalPaymentStatus = "Cancelled";
+
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            var orderInvoices = await _context.Invoices
-                .Where(i => i.OrderId == order.Id)
-                .OrderByDescending(i => i.InvoiceId)
-                .ToListAsync();
-            var primaryInvoice = orderInvoices.FirstOrDefault();
-            var invoiceIds = orderInvoices.Select(i => i.InvoiceId).Distinct().ToList();
-
-            var invoicePayments = invoiceIds.Count > 0
-                ? await _context.InvoicePayments
-                    .Where(p => invoiceIds.Contains(p.InvoiceId))
-                    .ToListAsync()
-                : new List<InvoicePayment>();
-
-            decimal collectedFromPayments = invoicePayments
-                .Where(ReportingExportService.IsPaymentSuccessful)
-                .Sum(p => p.AmountPaid > 0 ? p.AmountPaid : p.Amount);
-
-            decimal invoiceCollected = primaryInvoice != null
-                ? Math.Max(primaryInvoice.PaidAmount, primaryInvoice.AmountPaid)
-                : 0m;
-
-            bool hasCollectedPayment =
-                collectedFromPayments > 0m ||
-                invoiceCollected > 0m ||
-                orderInvoices.Any(i =>
-                    string.Equals(i.Status, "PAID", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(i.Status, "PARTIAL", StringComparison.OrdinalIgnoreCase)) ||
-                string.Equals(order.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(order.Status, "Settled", StringComparison.OrdinalIgnoreCase);
-
-            bool hasFailedAttempt =
-                string.Equals(order.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase) ||
-                invoicePayments.Any(p => string.Equals(p.PaymentStatus, "failed", StringComparison.OrdinalIgnoreCase));
-
-            decimal refundedAmount = 0m;
-            string refundStatus = "None";
-            string targetInvoiceStatus = hasCollectedPayment ? "REFUNDED" : "VOID";
-            string targetInvoicePayStatus = hasCollectedPayment ? "refunded" : "void";
-
-            if (hasCollectedPayment)
+            _context.ChangeTracker.Clear();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                refundedAmount = collectedFromPayments > 0m
-                    ? collectedFromPayments
-                    : (invoiceCollected > 0m ? invoiceCollected : (primaryInvoice?.TotalAmount ?? 0m));
-                refundStatus = !string.IsNullOrWhiteSpace(request?.RefundMethod)
-                    ? $"Refunded ({request.RefundMethod.Trim()})"
-                    : "Refunded";
-                order.PaymentStatus = "Refunded";
+                var txOrder = await _context.Orders
+                    .Include(o => o.Items)
+                    .FirstAsync(o => o.Id == targetOrderId && !o.IsDeleted);
 
-                foreach (var p in invoicePayments)
+                var orderInvoices = await _context.Invoices
+                    .Where(i => i.OrderId == txOrder.Id)
+                    .OrderByDescending(i => i.InvoiceId)
+                    .ToListAsync();
+                var primaryInvoice = orderInvoices.FirstOrDefault();
+                var invoiceIds = orderInvoices.Select(i => i.InvoiceId).Distinct().ToList();
+
+                var invoicePayments = invoiceIds.Count > 0
+                    ? await _context.InvoicePayments
+                        .Where(p => invoiceIds.Contains(p.InvoiceId))
+                        .ToListAsync()
+                    : new List<InvoicePayment>();
+
+                decimal collectedFromPayments = invoicePayments
+                    .Where(ReportingExportService.IsPaymentSuccessful)
+                    .Sum(p => p.AmountPaid > 0 ? p.AmountPaid : p.Amount);
+
+                decimal invoiceCollected = primaryInvoice != null
+                    ? Math.Max(primaryInvoice.PaidAmount, primaryInvoice.AmountPaid)
+                    : 0m;
+
+                bool hasCollectedPayment =
+                    collectedFromPayments > 0m ||
+                    invoiceCollected > 0m ||
+                    orderInvoices.Any(i =>
+                        string.Equals(i.Status, "PAID", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(i.Status, "PARTIAL", StringComparison.OrdinalIgnoreCase)) ||
+                    string.Equals(txOrder.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(txOrder.Status, "Settled", StringComparison.OrdinalIgnoreCase);
+
+                bool hasFailedAttempt =
+                    string.Equals(txOrder.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase) ||
+                    invoicePayments.Any(p => string.Equals(p.PaymentStatus, "failed", StringComparison.OrdinalIgnoreCase));
+
+                refundedAmount = 0m;
+                refundStatus = "None";
+                string targetInvoiceStatus = hasCollectedPayment ? "REFUNDED" : "VOID";
+                string targetInvoicePayStatus = hasCollectedPayment ? "refunded" : "void";
+                finalInvoiceStatus = primaryInvoice != null ? targetInvoiceStatus : null;
+
+                if (hasCollectedPayment)
                 {
-                    if (ReportingExportService.IsPaymentSuccessful(p))
+                    refundedAmount = collectedFromPayments > 0m
+                        ? collectedFromPayments
+                        : (invoiceCollected > 0m ? invoiceCollected : (primaryInvoice?.TotalAmount ?? 0m));
+                    refundStatus = !string.IsNullOrWhiteSpace(request?.RefundMethod)
+                        ? $"Refunded ({request.RefundMethod.Trim()})"
+                        : "Refunded";
+                    txOrder.PaymentStatus = "Refunded";
+
+                    foreach (var p in invoicePayments)
                     {
-                        p.PaymentStatus = "refunded";
-                    }
-                    else if (string.Equals(p.PaymentStatus, "pending", StringComparison.OrdinalIgnoreCase))
-                    {
-                        p.PaymentStatus = "void";
+                        if (ReportingExportService.IsPaymentSuccessful(p))
+                        {
+                            p.PaymentStatus = "refunded";
+                        }
+                        else if (string.Equals(p.PaymentStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                        {
+                            p.PaymentStatus = "void";
+                        }
                     }
                 }
-            }
-            else
-            {
-                order.PaymentStatus = hasFailedAttempt ? "Failed" : "Cancelled";
-                foreach (var p in invoicePayments)
+                else
                 {
-                    if (string.Equals(p.PaymentStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                    txOrder.PaymentStatus = hasFailedAttempt ? "Failed" : "Cancelled";
+                    foreach (var p in invoicePayments)
                     {
-                        p.PaymentStatus = "void";
+                        if (string.Equals(p.PaymentStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                        {
+                            p.PaymentStatus = "void";
+                        }
                     }
                 }
-            }
 
-            foreach (var inv in orderInvoices)
-            {
-                inv.Status = targetInvoiceStatus;
-                inv.UpdatedAt = utcNow;
-            }
-
-            // Update parent restaurant_orders row (preserve history with IsDeleted = false)
-            order.Status = "Cancelled";
-            order.FulfillmentStatus = "Cancelled";
-            order.IsActive = false;
-            order.IsDeleted = false;
-            order.CancellationReason = cleanReason;
-            order.CancelledAt = utcNow;
-            order.CancelledBy = cancelledByUserId;
-            order.CancelledByName = cancelledByName;
-            order.UpdatedBy = cancelledByUserId;
-            order.UpdatedAt = utcNow;
-
-            if (!string.IsNullOrWhiteSpace(request?.Notes))
-            {
-                string cleanNotes = request.Notes.Trim();
-                order.SpecialInstructions = string.IsNullOrWhiteSpace(order.SpecialInstructions)
-                    ? $"Cancel Note: {cleanNotes}"
-                    : $"{order.SpecialInstructions} | Cancel Note: {cleanNotes}";
-            }
-
-            // Update order_items row states (preserve history with IsDeleted = false)
-            foreach (var item in order.Items.Where(i => !i.IsDeleted))
-            {
-                item.KotStatus = "Cancelled";
-                item.IsActive = false;
-                item.IsDeleted = false;
-                item.UpdatedBy = cancelledByUserId;
-                item.UpdatedAt = utcNow;
-            }
-
-            // Collect and cancel active Kitchen KOTs
-            var cancelledTickets = new List<string>();
-            var kots = await _context.KitchenOrderTickets
-                .Where(k => k.OrderId == order.Id && !k.IsDeleted)
-                .ToListAsync();
-            foreach (var kot in kots)
-            {
-                if (!string.IsNullOrWhiteSpace(kot.KotNumber) && !cancelledTickets.Contains(kot.KotNumber))
+                foreach (var inv in orderInvoices)
                 {
-                    cancelledTickets.Add(kot.KotNumber);
+                    inv.Status = targetInvoiceStatus;
+                    inv.UpdatedAt = utcNow;
                 }
-                kot.Status = "Cancelled";
-                kot.IsActive = false;
-                kot.IsDeleted = false;
-                kot.UpdatedAt = utcNow;
-            }
 
-            await _context.SaveChangesAsync();
+                // Update parent restaurant_orders row (preserve history with IsDeleted = false)
+                txOrder.Status = "Cancelled";
+                txOrder.FulfillmentStatus = "Cancelled";
+                txOrder.IsActive = false;
+                txOrder.IsDeleted = false;
+                txOrder.CancellationReason = cleanReason;
+                txOrder.CancelledAt = utcNow;
+                txOrder.CancelledBy = cancelledByUserId;
+                txOrder.CancelledByName = cancelledByName;
+                txOrder.UpdatedBy = cancelledByUserId;
+                txOrder.UpdatedAt = utcNow;
 
-            // Sync invoices SQL columns (payment_status enum)
-            foreach (var inv in orderInvoices)
-            {
+                finalOrderStatus = txOrder.Status;
+                finalFulfillment = txOrder.FulfillmentStatus ?? "Cancelled";
+                finalPaymentStatus = txOrder.PaymentStatus ?? "Cancelled";
+
+                if (!string.IsNullOrWhiteSpace(request?.Notes))
+                {
+                    string cleanNotes = request.Notes.Trim();
+                    txOrder.SpecialInstructions = string.IsNullOrWhiteSpace(txOrder.SpecialInstructions)
+                        ? $"Cancel Note: {cleanNotes}"
+                        : $"{txOrder.SpecialInstructions} | Cancel Note: {cleanNotes}";
+                }
+
+                // Update order_items row states (preserve history with IsDeleted = false)
+                foreach (var item in txOrder.Items.Where(i => !i.IsDeleted))
+                {
+                    item.KotStatus = "Cancelled";
+                    item.IsActive = false;
+                    item.IsDeleted = false;
+                    item.UpdatedBy = cancelledByUserId;
+                    item.UpdatedAt = utcNow;
+                }
+
+                // Collect and cancel active Kitchen KOTs
+                cancelledTickets = new List<string>();
+                var kots = await _context.KitchenOrderTickets
+                    .Where(k => k.OrderId == txOrder.Id && !k.IsDeleted)
+                    .ToListAsync();
+                foreach (var kot in kots)
+                {
+                    if (!string.IsNullOrWhiteSpace(kot.KotNumber) && !cancelledTickets.Contains(kot.KotNumber))
+                    {
+                        cancelledTickets.Add(kot.KotNumber);
+                    }
+                    kot.Status = "Cancelled";
+                    kot.IsActive = false;
+                    kot.IsDeleted = false;
+                    kot.UpdatedAt = utcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Sync invoices SQL columns (payment_status enum)
+                foreach (var inv in orderInvoices)
+                {
+                    try
+                    {
+                        await _spService.ExecuteSqlNonQueryAsync(
+                            "UPDATE invoices SET status = @st, payment_status = @pst, updated_at = UTC_TIMESTAMP() WHERE invoice_id = @iid;",
+                            new Dictionary<string, object?>
+                            {
+                                { "@st", targetInvoiceStatus },
+                                { "@pst", targetInvoicePayStatus },
+                                { "@iid", inv.InvoiceId }
+                            });
+                    }
+                    catch { }
+                }
+
+                // Sync legacy 'orders' table
                 try
                 {
                     await _spService.ExecuteSqlNonQueryAsync(
-                        "UPDATE invoices SET status = @st, payment_status = @pst, updated_at = UTC_TIMESTAMP() WHERE invoice_id = @iid;",
+                        "UPDATE orders SET status = 'cancelled', cancelled_reason = @reason, updated_by = @uid, updated_at = UTC_TIMESTAMP() WHERE order_id = @oid;",
                         new Dictionary<string, object?>
                         {
-                            { "@st", targetInvoiceStatus },
-                            { "@pst", targetInvoicePayStatus },
-                            { "@iid", inv.InvoiceId }
+                            { "@reason", cleanReason },
+                            { "@uid", cancelledByUserId },
+                            { "@oid", txOrder.Id }
                         });
                 }
                 catch { }
-            }
 
-            // Sync legacy 'orders' table
-            try
-            {
-                await _spService.ExecuteSqlNonQueryAsync(
-                    "UPDATE orders SET status = 'cancelled', cancelled_reason = @reason, updated_by = @uid, updated_at = UTC_TIMESTAMP() WHERE order_id = @oid;",
-                    new Dictionary<string, object?>
-                    {
-                        { "@reason", cleanReason },
-                        { "@uid", cancelledByUserId },
-                        { "@oid", order.Id }
-                    });
-            }
-            catch { }
-
-            // Collect & cancel kitchen_orders
-            try
-            {
-                var koNums = await _spService.ExecuteSqlQueryAsync(
-                    "SELECT kot_number FROM kitchen_orders WHERE order_id = @oid;",
-                    r => r.IsDBNull(0) ? string.Empty : r.GetString(0),
-                    new Dictionary<string, object?> { { "@oid", order.Id } });
-                foreach (var kn in koNums)
+                // Collect & cancel kitchen_orders
+                try
                 {
-                    if (!string.IsNullOrWhiteSpace(kn) && !cancelledTickets.Contains(kn))
+                    var koNums = await _spService.ExecuteSqlQueryAsync(
+                        "SELECT kot_number FROM kitchen_orders WHERE order_id = @oid;",
+                        r => r.IsDBNull(0) ? string.Empty : r.GetString(0),
+                        new Dictionary<string, object?> { { "@oid", txOrder.Id } });
+                    foreach (var kn in koNums)
                     {
-                        cancelledTickets.Add(kn);
+                        if (!string.IsNullOrWhiteSpace(kn) && !cancelledTickets.Contains(kn))
+                        {
+                            cancelledTickets.Add(kn);
+                        }
                     }
+                    await _spService.ExecuteSqlNonQueryAsync(
+                        "UPDATE kitchen_orders SET status = 'cancelled' WHERE order_id = @oid;",
+                        new Dictionary<string, object?> { { "@oid", txOrder.Id } });
                 }
-                await _spService.ExecuteSqlNonQueryAsync(
-                    "UPDATE kitchen_orders SET status = 'cancelled' WHERE order_id = @oid;",
-                    new Dictionary<string, object?> { { "@oid", order.Id } });
-            }
-            catch { }
+                catch { }
 
-            // Collect & cancel bar_order_tickets + bar_bot_items
-            try
-            {
-                var botNums = await _spService.ExecuteSqlQueryAsync(
-                    "SELECT bot_number FROM bar_order_tickets WHERE order_id = @oid;",
-                    r => r.IsDBNull(0) ? string.Empty : r.GetString(0),
-                    new Dictionary<string, object?> { { "@oid", order.Id } });
-                foreach (var bn in botNums)
+                // Collect & cancel bar_order_tickets + bar_bot_items
+                try
                 {
-                    if (!string.IsNullOrWhiteSpace(bn) && !cancelledTickets.Contains(bn))
+                    var botNums = await _spService.ExecuteSqlQueryAsync(
+                        "SELECT bot_number FROM bar_order_tickets WHERE order_id = @oid;",
+                        r => r.IsDBNull(0) ? string.Empty : r.GetString(0),
+                        new Dictionary<string, object?> { { "@oid", txOrder.Id } });
+                    foreach (var bn in botNums)
                     {
-                        cancelledTickets.Add(bn);
+                        if (!string.IsNullOrWhiteSpace(bn) && !cancelledTickets.Contains(bn))
+                        {
+                            cancelledTickets.Add(bn);
+                        }
                     }
+                    await _spService.ExecuteSqlNonQueryAsync(
+                        "UPDATE bar_bot_items SET item_status = 'cancelled' WHERE bot_id IN (SELECT bot_id FROM bar_order_tickets WHERE order_id = @oid);",
+                        new Dictionary<string, object?> { { "@oid", txOrder.Id } });
+                    await _spService.ExecuteSqlNonQueryAsync(
+                        "UPDATE bar_order_tickets SET status = 'cancelled' WHERE order_id = @oid;",
+                        new Dictionary<string, object?> { { "@oid", txOrder.Id } });
                 }
-                await _spService.ExecuteSqlNonQueryAsync(
-                    "UPDATE bar_bot_items SET item_status = 'cancelled' WHERE bot_id IN (SELECT bot_id FROM bar_order_tickets WHERE order_id = @oid);",
-                    new Dictionary<string, object?> { { "@oid", order.Id } });
-                await _spService.ExecuteSqlNonQueryAsync(
-                    "UPDATE bar_order_tickets SET status = 'cancelled' WHERE order_id = @oid;",
-                    new Dictionary<string, object?> { { "@oid", order.Id } });
-            }
-            catch { }
+                catch { }
 
-            // Insert immutable audit_logs record inside transaction
-            await RecordAuditLogAsync(
-                cancelledByUserId,
-                "CANCEL_ORDER",
-                "restaurant_orders",
-                order.Id,
-                new
+                // Insert immutable audit_logs record inside transaction
+                await RecordAuditLogAsync(
+                    cancelledByUserId,
+                    "CANCEL_ORDER",
+                    "restaurant_orders",
+                    txOrder.Id,
+                    new
+                    {
+                        orderStatus = previousOrderStatus,
+                        fulfillmentStatus = currentFulfillment,
+                        paymentStatus = previousPaymentStatus,
+                        invoiceStatus = primaryInvoice?.Status
+                    },
+                    new
+                    {
+                        orderStatus = txOrder.Status,
+                        fulfillmentStatus = txOrder.FulfillmentStatus,
+                        paymentStatus = txOrder.PaymentStatus,
+                        invoiceStatus = finalInvoiceStatus,
+                        reason = cleanReason,
+                        refundMethod = request?.RefundMethod?.Trim(),
+                        refundStatus = refundStatus,
+                        refundedAmount = refundedAmount,
+                        notes = request?.Notes?.Trim(),
+                        cancelledBy = cancelledByUserId,
+                        cancelledByName = cancelledByName,
+                        cancelledTickets = cancelledTickets
+                    },
+                    ipAddress);
+
+                await transaction.CommitAsync();
+
+                cancelPayload = new
                 {
-                    orderStatus = previousOrderStatus,
-                    fulfillmentStatus = currentFulfillment,
-                    paymentStatus = previousPaymentStatus,
-                    invoiceStatus = primaryInvoice?.Status
-                },
-                new
-                {
-                    orderStatus = order.Status,
-                    fulfillmentStatus = order.FulfillmentStatus,
-                    paymentStatus = order.PaymentStatus,
-                    invoiceStatus = primaryInvoice != null ? targetInvoiceStatus : null,
-                    reason = cleanReason,
-                    refundMethod = request?.RefundMethod?.Trim(),
-                    refundStatus = refundStatus,
-                    refundedAmount = refundedAmount,
-                    notes = request?.Notes?.Trim(),
-                    cancelledBy = cancelledByUserId,
-                    cancelledByName = cancelledByName,
-                    cancelledTickets = cancelledTickets
-                },
-                ipAddress);
-
-            await transaction.CommitAsync();
-
-            if (!string.IsNullOrWhiteSpace(order.IdempotencyKey))
-            {
-                IdempotencyCache.TryRemove(order.IdempotencyKey, out _);
-            }
-
-            try
-            {
-                var cancelPayload = new
-                {
-                    orderId = order.Id,
-                    orderNumber = order.OrderNumber,
-                    orderStatus = order.Status,
-                    fulfillmentStatus = order.FulfillmentStatus,
-                    paymentStatus = order.PaymentStatus,
-                    invoiceStatus = primaryInvoice != null ? targetInvoiceStatus : null,
+                    orderId = txOrder.Id,
+                    orderNumber = txOrder.OrderNumber,
+                    orderStatus = txOrder.Status,
+                    fulfillmentStatus = txOrder.FulfillmentStatus,
+                    paymentStatus = txOrder.PaymentStatus,
+                    invoiceStatus = finalInvoiceStatus,
                     cancellationReason = cleanReason,
                     cancelledAt = utcNow,
                     cancelledBy = cancelledByUserId,
                     cancelledByName = cancelledByName,
                     cancelledTickets = cancelledTickets
                 };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
+
+        if (!string.IsNullOrWhiteSpace(targetOrderIdemKey))
+        {
+            IdempotencyCache.TryRemove(targetOrderIdemKey, out _);
+        }
+
+        if (cancelPayload != null)
+        {
+            try
+            {
                 await _hubContext.Clients.Group("floor").SendAsync("TakeawayOrderCancelled", cancelPayload);
                 await _hubContext.Clients.Group("floor").SendAsync("TakeawayStatusUpdated", cancelPayload);
                 await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderCancelled", cancelPayload);
@@ -2600,42 +2759,57 @@ public class TakeawayService
                 await _hubContext.Clients.All.SendAsync("BarKotCancelled", cancelPayload);
             }
             catch { }
-
-            var history = await GetOrderStatusHistoryAsync(order.Id);
-
-            return new CancelTakeawayOrderResponseDto
-            {
-                Success = true,
-                Message = $"Takeaway order {order.OrderNumber} has been cancelled.",
-                OrderId = order.Id,
-                OrderNumber = order.OrderNumber,
-                OrderType = order.OrderType,
-                OrderStatus = order.Status,
-                FulfillmentStatus = order.FulfillmentStatus ?? "Cancelled",
-                PaymentStatus = order.PaymentStatus ?? "Cancelled",
-                InvoiceStatus = primaryInvoice != null ? targetInvoiceStatus : null,
-                RefundStatus = refundStatus,
-                RefundedAmount = Math.Round(refundedAmount, 2),
-                CancellationReason = cleanReason,
-                CancelledAt = utcNow,
-                CancelledBy = cancelledByUserId,
-                CancelledByName = cancelledByName,
-                CancelledTickets = cancelledTickets,
-                StatusHistory = history
-            };
         }
-        catch
+
+        var history = await GetOrderStatusHistoryAsync(targetOrderId);
+
+        return new CancelTakeawayOrderResponseDto
         {
-            await transaction.RollbackAsync();
-            throw;
-        }
+            Success = true,
+            Message = $"Takeaway order {targetOrderNumber} has been cancelled.",
+            OrderId = targetOrderId,
+            OrderNumber = targetOrderNumber,
+            OrderType = order.OrderType,
+            OrderStatus = finalOrderStatus,
+            FulfillmentStatus = finalFulfillment,
+            PaymentStatus = finalPaymentStatus,
+            InvoiceStatus = finalInvoiceStatus,
+            RefundStatus = refundStatus,
+            RefundedAmount = Math.Round(refundedAmount, 2),
+            CancellationReason = cleanReason,
+            CancelledAt = utcNow,
+            CancelledBy = cancelledByUserId,
+            CancelledByName = cancelledByName,
+            CancelledTickets = cancelledTickets,
+            StatusHistory = history
+        };
     }
 
-    private async Task<List<TakeawayOrderListItemDto>> LoadTakeawayOrderListItemsAsync(DateTime? fromDate, DateTime? toDate)
+    private async Task<List<TakeawayOrderListItemDto>> LoadTakeawayOrderListItemsAsync(
+        DateTime? fromDate,
+        DateTime? toDate,
+        long? customerIdFilter = null,
+        string? customerPhoneSuffix = null)
     {
         var query = _context.Orders
             .AsNoTracking()
             .Where(o => !o.IsDeleted && o.OrderType == "Takeaway");
+
+        if (customerIdFilter.HasValue)
+        {
+            long cid = customerIdFilter.Value;
+            if (!string.IsNullOrEmpty(customerPhoneSuffix))
+            {
+                string suffix = customerPhoneSuffix;
+                query = query.Where(o =>
+                    o.CustomerId == cid ||
+                    (o.CustomerId == null && o.CustomerPhone != null && o.CustomerPhone.Contains(suffix)));
+            }
+            else
+            {
+                query = query.Where(o => o.CustomerId == cid);
+            }
+        }
 
         if (fromDate.HasValue)
         {

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
-using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -21,12 +20,21 @@ public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
     private readonly InventoryService _inventoryService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<InventoryController> _logger;
 
-    public InventoryController(SpService spService, InventoryService inventoryService, ILogger<InventoryController> logger)
+    public InventoryController(
+        SpService spService,
+        InventoryService inventoryService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<InventoryController> logger)
     {
         _spService = spService;
         _inventoryService = inventoryService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 

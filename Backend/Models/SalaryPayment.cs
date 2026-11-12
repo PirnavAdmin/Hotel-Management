@@ -14,6 +14,9 @@ public class SalaryPayment
     [Column("staff_id")]
     public long? StaffId { get; set; }
 
+    [ForeignKey("StaffId")]
+    public StaffPerson? StaffPerson { get; set; }
+
     [Required]
     [MaxLength(100)]
     [Column("staff_name")]

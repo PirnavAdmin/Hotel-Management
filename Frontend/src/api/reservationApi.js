@@ -147,7 +147,35 @@ export async function apiGetReservationById(id) {
   return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`));
 }
 export async function apiCreateReservation(reservationData) {
-  return unwrap(await apiClient(BASE, { method: "POST", body: JSON.stringify(reservationData) }));
+  try {
+    const remote = await apiClient(BASE, { method: "POST", body: JSON.stringify(reservationData) });
+    if (remote?.success) return unwrap(remote);
+  } catch {
+    // Fallback to local storage when backend is unreachable or offline
+  }
+
+  const all = getStoredReservations();
+  const nextNum = 1000 + all.length + 1;
+  const newReservation = {
+    id: `RES-${nextNum}`,
+    reservationId: `RES-${nextNum}`,
+    ...reservationData,
+    advanceAmount: reservationData?.advanceAmount || 100,
+    status: "confirmed",
+    createdAt: new Date().toISOString(),
+  };
+  const updated = [newReservation, ...all];
+  saveStoredReservations(updated);
+
+  if (reservationData?.tableId) {
+    const tables = getStoredReservationTables();
+    const updatedTables = tables.map((t) =>
+      t.id === reservationData.tableId ? { ...t, status: "reserved" } : t
+    );
+    saveStoredReservationTables(updatedTables);
+  }
+
+  return { success: true, data: newReservation };
 }
 export async function apiUpdateReservation(id, data) {
   return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }));
