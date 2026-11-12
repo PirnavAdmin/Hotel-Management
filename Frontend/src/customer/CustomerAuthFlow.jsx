@@ -90,6 +90,7 @@ export function CustomerAuthFlow({
 
   // ── Screen 3: OTP State ─────────────────────────────────────────────────
   const [otpPurpose, setOtpPurpose] = useState("ACCOUNT_VERIFY");
+  const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(30);
   const [otpError, setOtpError] = useState("");
@@ -124,7 +125,9 @@ export function CustomerAuthFlow({
   });
   const [busy, setBusy] = useState(false);
   const [resetToken, setResetToken] = useState("");
+  const loginInFlightRef = useRef(false);
   const registerInFlightRef = useRef(false);
+  const verifyOtpInFlightRef = useRef(false);
 
   // Countdown for OTP resend
   useEffect(() => {
@@ -153,9 +156,10 @@ export function CustomerAuthFlow({
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
-  // Screen 1: Submit Login (Existing/already registered user - Direct Login without OTP!)
+  // Screen 1: Submit Login (the backend may require OTP verification)
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (loginInFlightRef.current) return;
     setLoginError("");
 
     if (!loginIdentifier.trim()) {
@@ -167,23 +171,59 @@ export function CustomerAuthFlow({
       return;
     }
 
+    loginInFlightRef.current = true;
     setBusy(true);
-    const result = await apiCustomerLogin(loginIdentifier.trim(), loginPassword, rememberMe);
-    setBusy(false);
-    if (!result.success) return setLoginError(result.error || "Unable to sign in. Please try again.");
-    const payload = result.data?.data || result.data;
-    const userData = payload?.user || payload?.customer || {};
-    const token = payload?.accessToken || payload?.token || payload?.jwt;
-    if (!token) return setLoginError("The server response did not include an access token.");
-    setCurrentUserData({
-      name: userData.fullName || userData.name || userData.customerName || loginIdentifier.trim(),
-      email: userData.email || (loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
-      phone: userData.mobile || userData.phone || (!loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
-      token,
-      refreshToken: payload?.refreshToken || "",
-      rememberMe,
-    });
-    setActiveStep("success");
+    try {
+      const result = await apiCustomerLogin(loginIdentifier.trim(), loginPassword, rememberMe);
+      if (!result.success) {
+        setLoginError(result.error || "Unable to sign in. Please try again.");
+        return;
+      }
+      // CustomerAuthResponseDto is returned directly by the backend controller.
+      const payload = result.data;
+      const customer = payload?.customer || {};
+      const userData = {
+        name: customer.fullName || loginIdentifier.trim(),
+        email: payload?.verificationTarget || customer.email || (loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
+        phone: customer.mobileNumber || customer.phone || (!loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
+        verificationTarget: payload?.verificationTarget || customer.email || "",
+        rememberMe,
+      };
+
+      if (payload?.requiresVerification === true) {
+        if (!payload.purpose) {
+          setLoginError("The server did not specify the OTP verification purpose. Please try signing in again.");
+          return;
+        }
+        setCurrentUserData(userData);
+        setOtpPurpose(payload.purpose);
+        const devOtp = import.meta.env.DEV && payload.devOtp ? String(payload.devOtp) : "";
+        setCurrentGeneratedOtp(devOtp);
+        setOtpDigits(devOtp ? devOtp.split("") : ["", "", "", "", "", ""]);
+        setResendTimer(payload.resendAfterSeconds ?? 30);
+        setOtpError("");
+        setOtpMessage(payload.message || "");
+        setActiveStep("otp");
+        return;
+      }
+
+      const token = payload?.accessToken || payload?.token;
+      if (!token) {
+        setLoginError("The server response did not include an access token.");
+        return;
+      }
+      setCurrentUserData({
+        ...userData,
+        token,
+        refreshToken: payload.refreshToken || "",
+      });
+      setActiveStep("success");
+    } catch (error) {
+      setLoginError(error.message || "Unable to sign in. Please try again.");
+    } finally {
+      loginInFlightRef.current = false;
+      setBusy(false);
+    }
   };
 
   // Screen 2: Submit Register (New user signup - Generates dynamic auto-increment OTP!)
@@ -212,23 +252,49 @@ export function CustomerAuthFlow({
     const newUser = {
       name: regFullName.trim(),
       phone: regMobile.trim(),
-      email:
-        regEmail.trim() ||
-        `${regFullName.toLowerCase().replace(/\s+/g, "")}@example.com`,
+      email: regEmail.trim(),
     };
-    setCurrentUserData(newUser);
-
-    // Generate dynamic auto-increment OTP exclusively for new user signup!
-    const newOtp = getNextOtp();
-    setCurrentGeneratedOtp(newOtp);
-    setOtpDigits(newOtp.split(""));
-    setResendTimer(58);
-    setActiveStep("otp");
+    registerInFlightRef.current = true;
+    setBusy(true);
+    try {
+      const result = await apiCustomerRegister({
+        fullName: newUser.name,
+        mobileNumber: newUser.phone,
+        email: newUser.email,
+        password: regPassword,
+        confirmPassword: regConfirmPassword,
+      });
+      if (!result.success) {
+        setRegError(result.error || "Unable to create your account. Please try again.");
+        return;
+      }
+      const payload = result.data?.data || result.data;
+      const customer = payload?.customer || {};
+      const userData = {
+        name: customer.fullName || newUser.name,
+        phone: customer.mobileNumber || customer.phone || newUser.phone,
+        email: payload?.verificationTarget || customer.email || newUser.email,
+      };
+      setCurrentUserData(userData);
+      const generatedOtp = String(payload?.devOtp || "");
+      setCurrentGeneratedOtp(generatedOtp);
+      setOtpDigits(generatedOtp ? generatedOtp.split("") : ["", "", "", "", "", ""]);
+      setOtpPurpose(payload?.purpose || "ACCOUNT_VERIFY");
+      setResendTimer(payload?.resendAfterSeconds ?? 30);
+      setOtpError("");
+      setOtpMessage(payload?.message || "");
+      setActiveStep("otp");
+    } catch (error) {
+      setRegError(error.message || "Unable to create your account. Please try again.");
+    } finally {
+      registerInFlightRef.current = false;
+      setBusy(false);
+    }
   };
 
   // Screen 3: OTP Input Handling
   const handleOtpChange = (index, value) => {
-    const val = value.slice(-1); // Only take latest char
+    const val = value.replace(/\D/g, "").slice(-1); // Keep only the latest numeric digit.
     const newOtp = [...otpDigits];
     newOtp[index] = val;
     setOtpDigits(newOtp);
@@ -266,29 +332,60 @@ export function CustomerAuthFlow({
 
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
+    if (verifyOtpInFlightRef.current) return;
     setOtpError("");
     const code = otpDigits.join("");
-    if (code.length < 6) {
+    if (!/^\d{6}$/.test(code)) {
       setOtpError("Please enter the complete 6-digit OTP.");
       return;
     }
 
-    setBusy(true);
     const identifier = currentUserData.email || currentUserData.phone;
-    const result = await apiCustomerVerifyOtp(identifier, code, otpPurpose);
-    setBusy(false);
-    if (!result.success) return setOtpError(result.error || "OTP verification failed.");
-    const payload = result.data?.data || result.data;
-    if (otpPurpose === "PASSWORD_RESET") {
-      if (!payload?.resetToken) return setOtpError("The server response did not include a reset token.");
-      setResetToken(payload.resetToken);
-      setActiveStep("reset");
+    if (!identifier) {
+      setOtpError("The customer identifier is missing. Please restart verification.");
       return;
     }
-    const token = payload?.accessToken || payload?.token || payload?.jwt;
-    if (!token) return setOtpError("The server response did not include an access token.");
-    setCurrentUserData((user) => ({ ...user, token, refreshToken: payload?.refreshToken || "" }));
-    setActiveStep("success");
+
+    verifyOtpInFlightRef.current = true;
+    setBusy(true);
+    try {
+      const result = await apiCustomerVerifyOtp(identifier, code, otpPurpose, currentUserData.rememberMe);
+      if (!result.success) {
+        setOtpError(result.error || "OTP verification failed.");
+        return;
+      }
+      const payload = result.data;
+      if (otpPurpose === "PASSWORD_RESET") {
+        if (!payload?.resetToken) {
+          setOtpError("The server response did not include a reset token.");
+          return;
+        }
+        setResetToken(payload.resetToken);
+        setActiveStep("reset");
+        return;
+      }
+      const token = payload?.accessToken || payload?.token;
+      if (!token) {
+        setOtpError("The server response did not include an access token.");
+        return;
+      }
+      const customer = payload?.customer || {};
+      setCurrentUserData((user) => ({
+        ...user,
+        name: customer.fullName || user.name,
+        email: customer.email || user.email,
+        phone: customer.mobileNumber || customer.phone || user.phone,
+        token,
+        refreshToken: payload.refreshToken || "",
+        rememberMe: payload.rememberMe ?? user.rememberMe,
+      }));
+      setActiveStep("success");
+    } catch (error) {
+      setOtpError(error.message || "OTP verification failed.");
+    } finally {
+      verifyOtpInFlightRef.current = false;
+      setBusy(false);
+    }
   };
 
   const handleResendOtp = async () => {
@@ -302,7 +399,8 @@ export function CustomerAuthFlow({
     }
     const response = result.data?.data || result.data;
     setOtpDigits(["", "", "", "", "", ""]);
-    setResendTimer(30);
+    setCurrentGeneratedOtp(import.meta.env.DEV && response?.devOtp ? String(response.devOtp) : "");
+    setResendTimer(response?.resendAfterSeconds ?? 30);
     setOtpError("");
     setOtpMessage(response?.message || "OTP resend request was accepted. Check your inbox and Spam/Junk folder.");
   };
@@ -676,7 +774,7 @@ export function CustomerAuthFlow({
                   <p>
                     We've sent a 6-digit OTP to{" "}
                     <strong>
-                      {currentUserData.phone || "+91 98765 43210"}
+                      {currentUserData.verificationTarget || currentUserData.email || currentUserData.phone}
                     </strong>
                     :{" "}
                     <span

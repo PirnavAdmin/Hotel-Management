@@ -100,6 +100,7 @@ import {
 } from "./admin/AdminPortal";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
+const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks";
 const STORAGE_KEY_DELETED_TABLES = "gourmet_pos_deleted_tables_v2";
 const STORAGE_KEY_ORDERS = "gourmet_pos_past_orders_v2_inr";
 const STORAGE_KEY_THEME = "gourmet_pos_theme_v2";
@@ -641,6 +642,22 @@ export function App() {
     }
     return [];
   });
+  const [tableLocks, setTableLocks] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLE_LOCKS) || "{}");
+      return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+    } catch {
+      return {};
+    }
+  });
+  const saveLocks = (locks) => {
+    const nextLocks = locks && typeof locks === "object" && !Array.isArray(locks) ? locks : {};
+    setTableLocks(nextLocks);
+    try {
+      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(nextLocks));
+      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: nextLocks }));
+    } catch {}
+  };
   const [tablesReadyForSync, setTablesReadyForSync] = useState(false);
   const replaceCachedTableOrdersRef = useRef(false);
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
@@ -3730,8 +3747,9 @@ export function App() {
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
             restaurantLogo={restaurantSettings.logo || ""}
-            menuItems={menuItems}
-            menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+            menuItems={sharedRecordLoad.menu === "ready" ? menuItems : []}
+            menuLoading={sharedRecordLoad.menu === "loading"}
+            menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
             tables={tables}
             onHotelLogin={handleHotelLogin}
             kitchenNotifications={kitchenNotifications}

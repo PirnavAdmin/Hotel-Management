@@ -37,11 +37,6 @@ import {
   ChevronRight,
   RefreshCw,
   Flame,
-  Sparkles,
-  Sandwich,
-  Soup,
-  Wheat,
-  IceCream,
   Heart,
   ChevronDown,
   LogOut,
@@ -54,8 +49,11 @@ import {
   apiCreatePublicReservation,
   apiSendReservationOtp,
   apiVerifyReservationOtp,
-  apiGetMyReservations,
+  apiGetCustomerReservations,
   apiGetReservationDetails,
+  apiGetCustomerProfile,
+  apiGetCustomerTakeawayOrder,
+  apiCreateCustomerTakeawayOrder,
   apiModifyReservation,
   apiCancelCustomerReservation,
   apiGetReservationPaymentStatus,
@@ -63,7 +61,6 @@ import {
   setReservationCheckoutToken,
   setReservationCustomerToken,
 } from "../api/reservationApi";
-import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
 import { apiCustomerLogout, getCustomerRefreshToken, setCustomerRefreshToken } from "../api/customerAuthApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
@@ -95,314 +92,6 @@ const formatPrice = (value) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-
-export const TAKEAWAY_CATEGORIES = [
-  { id: "all", label: "All Items", icon: Utensils },
-  { id: "breads", label: "Breads", icon: Wheat },
-  { id: "biryani", label: "Biryani", icon: Flame },
-  { id: "curries", label: "Curries", icon: Soup },
-  { id: "starters", label: "Starters", icon: Sparkles },
-  { id: "tandoor", label: "Tandoor", icon: Flame },
-  { id: "fastfood", label: "Fast Food", icon: Sandwich },
-  { id: "desserts", label: "Desserts", icon: IceCream },
-];
-
-export const CURATED_TAKEAWAY_ITEMS = [
-  {
-    id: "item-burger-1",
-    name: "chicken burger",
-    category: "Fast Food",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "12 min",
-    spiceLevel: 0,
-    price: 120,
-    image: "/assets/fast-food/burger.jpg",
-    description: "Crispy seasoned chicken patty in toasted sesame bun with lettuce",
-    isAvailable: true,
-  },
-  {
-    id: "item-biryani-1",
-    name: "Hyderabadi Chicken Dum Biryani",
-    category: "Biryani",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "15 min",
-    spiceLevel: 3,
-    price: 320,
-    image: "/assets/chicken-dum-biryani.jpg",
-    description: "Authentic kacchi dum biryani cooked with secret spices & fried onions",
-    isAvailable: true,
-  },
-  {
-    id: "item-biryani-3",
-    name: "Royal Mutton Dum Biryani",
-    category: "Biryani",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "15 min",
-    spiceLevel: 3,
-    price: 440,
-    image: "/assets/biryani/mutton-biryani.jpg",
-    description: "Succulent baby goat mutton slow-cooked with aged basmati rice",
-    isAvailable: true,
-  },
-  {
-    id: "item-biryani-4",
-    name: "Special Boneless Chicken Biryani",
-    category: "Biryani",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "15 min",
-    spiceLevel: 1,
-    price: 350,
-    image: "/assets/chicken-dum-biryani.jpg",
-    description: "Juicy boneless chicken cubes spiced and layered with saffron rice",
-    isAvailable: true,
-  },
-  {
-    id: "item-biryani-5",
-    name: "Chicken 65 Biryani",
-    category: "Biryani",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "14 min",
-    spiceLevel: 2,
-    price: 360,
-    image: "/assets/biryani/chicken-65-biryani.jpg",
-    description: "Crispy spicy Chicken 65 tossed with aromatic saffron rice",
-    isAvailable: true,
-  },
-  {
-    id: "item-biryani-6",
-    name: "Veg Dum Biryani",
-    category: "Biryani",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "14 min",
-    spiceLevel: 1,
-    price: 260,
-    image: "/assets/biryani/veg-dum-biryani.jpg",
-    description: "Garden fresh vegetables and paneer slow-cooked with fragrant basmati",
-    isAvailable: true,
-  },
-  {
-    id: "item-main-1",
-    name: "Paneer Butter Masala",
-    category: "Curries",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "12 min",
-    spiceLevel: 1,
-    price: 260,
-    image: "/assets/curries/paneer-butter-masala.jpg",
-    description: "Cottage cheese cubes in rich creamy tomato butter gravy",
-    isAvailable: true,
-  },
-  {
-    id: "item-main-2",
-    name: "Butter Chicken",
-    category: "Curries",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "15 min",
-    spiceLevel: 1,
-    price: 330,
-    image: "/assets/curries/butter-chicken.jpg",
-    description: "Char-grilled tandoori chicken cooked in creamy tomato butter sauce",
-    isAvailable: true,
-  },
-  {
-    id: "item-bread-1",
-    name: "Tandoori Roti",
-    category: "breads",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "6 min",
-    spiceLevel: 0,
-    price: 45,
-    image: "/assets/breads/tandoori-roti.jpg",
-    description: "Traditional whole wheat flatbread baked in clay tandoor",
-    isAvailable: true,
-  },
-  {
-    id: "item-bread-2",
-    name: "Butter Naan",
-    category: "breads",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "8 min",
-    spiceLevel: 0,
-    price: 60,
-    image: "/assets/breads/butter-naan.jpg",
-    description: "Soft leavened tandoori bread brushed with butter",
-    isAvailable: true,
-  },
-  {
-    id: "item-starter-1",
-    name: "Chicken Tikka",
-    category: "Starters",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "14 min",
-    spiceLevel: 2,
-    price: 280,
-    image: "/assets/starters/tandoori-chicken.jpg",
-    description: "Boneless chicken chunks marinated in aromatic spices and char-grilled",
-    isAvailable: true,
-  },
-  {
-    id: "item-starter-2",
-    name: "Crispy Corn Salt & Pepper",
-    category: "Starters",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "10 min",
-    spiceLevel: 1,
-    price: 220,
-    image: "/assets/starters/crispy-corn.jpg",
-    description: "Crunchy golden sweet corn kernels tossed with peppers and scallions",
-    isAvailable: true,
-  },
-  {
-    id: "item-starter-3",
-    name: "Mutton Seekh Kebab",
-    category: "Tandoor",
-    station: "kitchen",
-    dietaryType: "NON-VEG",
-    isVeg: false,
-    prepTime: "14 min",
-    spiceLevel: 2,
-    price: 350,
-    image: "/assets/starters/mutton-seekh-kebab.jpg",
-    description: "Minced spiced mutton skewered and char-grilled over live embers",
-    isAvailable: true,
-  },
-  {
-    id: "item-fastfood-1",
-    name: "Masala Fries",
-    category: "Fast Food",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "10 min",
-    spiceLevel: 1,
-    price: 160,
-    image: "/assets/fast-food/french-fries.jpg",
-    description: "Crispy french fries tossed with zesty bistro special masala",
-    isAvailable: true,
-  },
-  {
-    id: "item-fastfood-2",
-    name: "Veg Supreme Pizza",
-    category: "Fast Food",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "15 min",
-    spiceLevel: 0,
-    price: 299,
-    image: "/assets/fast-food/pizza.jpg",
-    description: "Loaded with capsicum, olives, golden corn, and melted mozzarella",
-    isAvailable: true,
-  },
-  {
-    id: "item-dessert-1",
-    name: "Chocolate Brownie",
-    category: "Desserts",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "5 min",
-    spiceLevel: 0,
-    price: 180,
-    image: "/assets/desserts/cake.jpg",
-    description: "Decadent warm chocolate brownie with rich fudge drizzle",
-    isAvailable: true,
-  },
-  {
-    id: "item-dessert-2",
-    name: "Gulab Jamun with Rabdi",
-    category: "Desserts",
-    station: "kitchen",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "5 min",
-    spiceLevel: 0,
-    price: 140,
-    image: "/assets/desserts/rabdi-gulab-jamun.jpg",
-    description: "Warm syrup-soaked jamuns paired with rich saffron rabdi",
-    isAvailable: true,
-  },
-  {
-    id: "item-bev-1",
-    name: "Sweet Punjabi Lassi",
-    category: "Beverages",
-    station: "bar",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "5 min",
-    spiceLevel: 0,
-    price: 90,
-    image: "/assets/beverages/sweet-lassi.jpg",
-    description: "Rich blended yogurt drink infused with cardamom",
-    isAvailable: true,
-  },
-  {
-    id: "item-bev-2",
-    name: "Fresh Lime Soda",
-    category: "Beverages",
-    station: "bar",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "4 min",
-    spiceLevel: 0,
-    price: 70,
-    image: "/assets/beverages/fresh-lime-soda.jpg",
-    description: "Refreshing fizzy soda with freshly squeezed lime and mint",
-    isAvailable: true,
-  },
-  {
-    id: "item-bev-3",
-    name: "Virgin Mojito",
-    category: "Beverages",
-    station: "bar",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "4 min",
-    spiceLevel: 0,
-    price: 130,
-    image: "/assets/beverages/fresh-lime-soda.jpg",
-    description: "Crushed mint sprigs, lime wedges, and sparkling soda",
-    isAvailable: true,
-  },
-  {
-    id: "item-bev-4",
-    name: "Cold Coffee with Ice Cream",
-    category: "Beverages",
-    station: "bar",
-    dietaryType: "VEG",
-    isVeg: true,
-    prepTime: "5 min",
-    spiceLevel: 0,
-    price: 120,
-    image: "/assets/beverages/sweet-lassi.jpg",
-    description: "Rich blended espresso shake topped with vanilla ice cream",
-    isAvailable: true,
-  },
-];
 
 const getAvailableTables = (tables, guests) => {
   const filtered = (Array.isArray(tables) ? tables : []).filter((table) => {
@@ -453,21 +142,13 @@ export function CustomerLandingPage({
   restaurantLogo = "",
   menuItems = [],
   menuLoading = false,
+  menuError = "",
   onHotelLogin,
   kitchenNotifications = [],
   onClearNotifications,
 }) {
   // --- Cart & Navigation State ---
-  const [cart, setCart] = useState(() => {
-    // Pre-populate with exact item from POS screenshot: Hyderabadi Chicken Dum Biryani x 1
-    const biryani = CURATED_TAKEAWAY_ITEMS.find((i) => i.id === "item-biryani-1") || CURATED_TAKEAWAY_ITEMS[0];
-    return {
-      "item-biryani-1": {
-        item: biryani,
-        quantity: 1,
-      },
-    };
-  });
+  const [cart, setCart] = useState({});
   // Customer Authentication & Profile State (Frontend-Only)
   const [customerUser, setCustomerUser] = useState(getInitialCustomer);
   const [intendedDestination, setIntendedDestination] = useState("home");
@@ -499,20 +180,11 @@ export function CustomerLandingPage({
   const [dietaryFilter, setDietaryFilter] = useState("all"); // "all" | "veg" | "non-veg" | "special"
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [favorites, setFavorites] = useState({
-    "item-biryani-1": true,
-    "item-fastfood-1": true,
-  });
-
-  const toggleFavorite = (itemId) => {
-    setFavorites((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
-  };
-
   // --- Checkout Details State ---
   const [pickupDate, setPickupDate] = useState(getFormattedPickupDate);
   const [pickupTime, setPickupTime] = useState("08:00 PM");
-  const [customerName, setCustomerName] = useState(() => customerUser?.name || "Priya Sharma");
-  const [customerPhone, setCustomerPhone] = useState(() => customerUser?.phone || "+91 98765 43210");
+  const [customerName, setCustomerName] = useState(() => customerUser?.name || "");
+  const [customerPhone, setCustomerPhone] = useState(() => customerUser?.phone || "");
   const [customerPhoneError, setCustomerPhoneError] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
 
@@ -533,6 +205,10 @@ export function CustomerLandingPage({
   // --- Payment State ---
   const [paymentMethod, setPaymentMethod] = useState("upi"); // 'upi' | 'cash' (Matches POS Screen Payment Modes)
   const [processingStage, setProcessingStage] = useState(1); // 1: Initiating, 2: Processing, 3: Confirming
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const checkoutInFlightRef = useRef(false);
+  const takeawayIdempotencyRef = useRef({ signature: "", key: "" });
 
   // --- Placed Order & Tracking State ---
   const [placedOrder, setPlacedOrder] = useState(null);
@@ -567,6 +243,13 @@ export function CustomerLandingPage({
   const [reservationCustomerAuthed, setReservationCustomerAuthed] = useState(Boolean(getReservationCustomerToken()));
   const [myReservations, setMyReservations] = useState([]);
   const [reservationTab, setReservationTab] = useState("upcoming");
+  const [reservationPage, setReservationPage] = useState(1);
+  const [reservationTotal, setReservationTotal] = useState(0);
+  const [reservationUpcomingCount, setReservationUpcomingCount] = useState(0);
+  const [reservationPastCount, setReservationPastCount] = useState(0);
+  const [reservationListLoading, setReservationListLoading] = useState(false);
+  const [reservationListError, setReservationListError] = useState("");
+  const reservationSessionExpiredRef = useRef(false);
   const [reservationAccountOpen, setReservationAccountOpen] = useState(false);
   const [selectedReservationDetails, setSelectedReservationDetails] = useState(null);
   const [reservationPaymentStatus, setReservationPaymentStatus] = useState(null);
@@ -702,8 +385,10 @@ export function CustomerLandingPage({
 
   // Auth Success Callback
   const handleLoginSuccess = (user, destination) => {
+    reservationSessionExpiredRef.current = false;
     setCustomerUser(user);
     if (user?.token) setReservationCustomerToken(user.token);
+    setReservationCustomerAuthed(Boolean(user?.token));
     if (user?.refreshToken) setCustomerRefreshToken(user.refreshToken, user.rememberMe);
     try {
       const { token, refreshToken, ...profile } = user || {};
@@ -735,54 +420,54 @@ export function CustomerLandingPage({
     navigateScreen("home");
   };
 
-  // Merge custom menu items with curated takeaway items ensuring the 6 signature screenshot items exist
+  const handleReservationSessionExpired = () => {
+    if (reservationSessionExpiredRef.current) return;
+    reservationSessionExpiredRef.current = true;
+    setReservationCustomerAuthed(false);
+    handleLogout();
+    navigateScreen("auth");
+  };
+
+  // Takeaway uses the same API-backed menu items as POS Dine In.
   const combinedMenuItems = useMemo(() => {
-    const custom = (Array.isArray(menuItems) ? menuItems : []).filter(
-      (item) => item && item.isAvailable !== false,
-    );
-    if (custom.length === 0) return CURATED_TAKEAWAY_ITEMS;
-    const names = new Set(custom.map((i) => String(i.name || "").toLowerCase()));
-    const missing = CURATED_TAKEAWAY_ITEMS.filter(
-      (i) => !names.has(String(i.name || "").toLowerCase()),
-    );
-    return [...custom, ...missing];
+    return Array.isArray(menuItems) ? menuItems.filter(Boolean) : [];
   }, [menuItems]);
 
-  // Active Category Name & Label
-  const activeCategoryObj = useMemo(
-    () => TAKEAWAY_CATEGORIES.find((c) => c.id === selectedCategory) || TAKEAWAY_CATEGORIES[0],
-    [selectedCategory],
-  );
-  const activeCategoryLabel = activeCategoryObj.label;
+  const takeawayCategories = useMemo(() => [
+    { id: "all", label: "All Items", icon: Utensils },
+    ...Array.from(new Set(combinedMenuItems.map((item) => String(item.category || "").trim()).filter(Boolean)))
+      .map((categoryName) => ({ id: `category:${categoryName}`, categoryName, label: categoryName, icon: Utensils })),
+  ], [combinedMenuItems]);
+  const activeCategory = takeawayCategories.find((category) => category.id === selectedCategory) || takeawayCategories[0];
+  const activeCategoryId = activeCategory.id;
+
+  useEffect(() => {
+    setCart((current) => {
+      let changed = false;
+      const next = {};
+      Object.entries(current).forEach(([id, line]) => {
+        const latestItem = combinedMenuItems.find((item) => String(item.id) === String(id));
+        if (!latestItem || latestItem.isAvailable === false) {
+          changed = true;
+          return;
+        }
+        if (latestItem !== line.item) changed = true;
+        next[id] = { ...line, item: latestItem };
+      });
+      return changed ? next : current;
+    });
+  }, [combinedMenuItems]);
 
   // Filtered food items by category, dietary type, and search.
   const visibleMenuItems = useMemo(() => {
     return combinedMenuItems.filter((item) => {
-      const isBarItem =
-        item.station === "bar" ||
-        String(item.category || "").toLowerCase().includes("bev") ||
-        String(item.category || "").toLowerCase().includes("drink");
-      if (isBarItem) return false;
-
-      // 2. Category filter
-      const cat = String(item.category || "").toLowerCase();
-      let matchesCat = true;
-      if (selectedCategory === "biryani") matchesCat = cat.includes("biryani") || cat.includes("rice");
-      else if (selectedCategory === "starters") matchesCat = cat.includes("starter") || cat.includes("appetizer");
-      else if (selectedCategory === "tandoor") matchesCat = cat.includes("tandoor") || cat.includes("kebab") || cat.includes("tikka") || cat.includes("roti") || cat.includes("naan");
-      else if (selectedCategory === "fastfood") matchesCat = cat.includes("fast") || cat.includes("burger") || cat.includes("pizza") || cat.includes("fries");
-      else if (selectedCategory === "curries") matchesCat = cat.includes("curry") || cat.includes("curries") || cat.includes("main");
-      else if (selectedCategory === "breads") matchesCat = cat.includes("bread") || cat.includes("naan") || cat.includes("roti");
-      else if (selectedCategory === "desserts") matchesCat = cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice") || cat.includes("cake") || cat.includes("brownie") || cat.includes("jamun");
-      else if (selectedCategory !== "all") matchesCat = cat.includes(selectedCategory.toLowerCase());
-
-      if (!matchesCat) return false;
+      if (activeCategoryId !== "all" && String(item.category || "").trim() !== activeCategory.categoryName) return false;
 
       // 3. Dietary filter
       const isVeg = item.isVeg === true || String(item.dietaryType || "").toUpperCase() === "VEG";
       if (dietaryFilter === "veg" && !isVeg) return false;
       if (dietaryFilter === "non-veg" && isVeg) return false;
-      if (dietaryFilter === "special" && !(item.spiceLevel >= 2 || item.isChefSpecial)) return false;
+      if (dietaryFilter === "special" && !item.isChefSpecial) return false;
 
       // 4. Search query
       const query = searchQuery.trim().toLowerCase();
@@ -795,7 +480,7 @@ export function CustomerLandingPage({
 
       return true;
     });
-  }, [combinedMenuItems, selectedCategory, dietaryFilter, searchQuery]);
+  }, [combinedMenuItems, activeCategoryId, activeCategory.categoryName, dietaryFilter, searchQuery]);
 
   // Cart calculations matching screenshot financial breakdown:
   // Subtotal ₹640 + Packaging Charge ₹20 + GST (5%) ₹33 = Total Amount ₹693
@@ -812,7 +497,7 @@ export function CustomerLandingPage({
   const totalAmount = Math.max(0, itemsSubtotal - discount + packingCharges + taxes);
 
   useEffect(() => {
-    if (activeScreen !== "reservation") return undefined;
+    if (activeScreen !== "reservation" || !reservationCustomerAuthed) return undefined;
     const timer = window.setTimeout(async () => {
       setReservationAvailabilityLoading(true);
       setReservationAvailabilityError("");
@@ -845,7 +530,7 @@ export function CustomerLandingPage({
       setReservationAvailabilityLoading(false);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeScreen, reservationDate, reservationTime, reservationGuests, reservationTablePreference]);
+  }, [activeScreen, reservationCustomerAuthed, reservationDate, reservationTime, reservationGuests, reservationTablePreference]);
 
   useEffect(() => {
     if (!reservationOtpCooldown) return undefined;
@@ -854,6 +539,7 @@ export function CustomerLandingPage({
   }, [reservationOtpCooldown]);
 
   const changeQuantity = (item, delta) => {
+    if (delta > 0 && item?.isAvailable === false) return;
     setCart((current) => {
       const quantity = Math.max(0, (current[item.id]?.quantity || 0) + delta);
       const next = { ...current };
@@ -861,6 +547,35 @@ export function CustomerLandingPage({
       else next[item.id] = { item, quantity };
       return next;
     });
+  };
+
+  const handleReorderCustomerOrder = async (orderId) => {
+    const result = await apiGetCustomerTakeawayOrder(orderId);
+    const response = result?.data?.data ?? result?.data;
+    if (!result?.success || response?.success === false) {
+      const error = new Error(result?.error || response?.message || "Could not retrieve this order.");
+      error.status = result?.status;
+      throw error;
+    }
+    const orderLines = Array.isArray(response?.items) ? response.items : [];
+    const nextCart = {};
+    let skipped = 0;
+    orderLines.forEach((line) => {
+      const id = line.itemId ?? line.menuItemId;
+      const menuItem = combinedMenuItems.find((item) => String(item.id) === String(id));
+      const quantity = Number(line.quantity);
+      if (!menuItem || menuItem.isAvailable === false || !Number.isInteger(quantity) || quantity < 1) {
+        skipped += 1;
+        return;
+      }
+      nextCart[menuItem.id] = { item: menuItem, quantity };
+    });
+    if (!Object.keys(nextCart).length) {
+      throw new Error("None of the dishes in this order are currently available to reorder.");
+    }
+    setCart(nextCart);
+    navigateScreen("menu");
+    return skipped ? `${skipped} unavailable item(s) were left out of your cart.` : "Order items added to your cart.";
   };
 
   const removeFromCart = (itemId) => {
@@ -890,81 +605,136 @@ export function CustomerLandingPage({
     }
   };
 
-  // --- Step 5 -> 6 -> 7: Payment Execution ---
+  // Submit once at checkout confirmation. The backend creates the KOT as part of this request.
   const handleStartPayment = async () => {
-    if (cartItems.length === 0) return;
+    if (checkoutInFlightRef.current) return;
+    setCheckoutError("");
+    if (cartItems.length === 0) {
+      setCheckoutError("Add at least one available dish before confirming your order.");
+      return;
+    }
+    if (!customerName.trim() || !isValidIndianMobileNumber(customerPhone)) {
+      setCheckoutError("Enter your name and a valid mobile number to place the order.");
+      return;
+    }
+
+    const requestItems = cartItems.map(({ item, quantity }) => {
+      const rawId = item?.menuItemId ?? item?.menu_item_id ?? item?.id;
+      const itemId = Number(rawId);
+      return { itemId, menuItemId: itemId, quantity: Number(quantity), notes: "" };
+    });
+    if (requestItems.some((item, index) => !Number.isSafeInteger(item.itemId) || item.itemId <= 0 || !Number.isInteger(item.quantity) || item.quantity < 1 || cartItems[index].item?.isAvailable === false)) {
+      setCheckoutError("One or more dishes are no longer available. Refresh the menu and try again.");
+      return;
+    }
+
+    const signature = JSON.stringify({
+      items: requestItems,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      customerEmail: customerUser?.email || "",
+      paymentMethod,
+      notes: customerNotes.trim(),
+      discount,
+      packingCharges,
+    });
+    if (takeawayIdempotencyRef.current.signature !== signature) {
+      takeawayIdempotencyRef.current = {
+        signature,
+        key: globalThis.crypto?.randomUUID?.() || `takeaway-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      };
+    }
+
+    checkoutInFlightRef.current = true;
+    setCheckoutSubmitting(true);
     setActiveScreen("processing");
     setProcessingStage(1);
+    try {
+      const result = await apiCreateCustomerTakeawayOrder({
+        orderType: "TAKEAWAY",
+        items: requestItems,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerEmail: customerUser?.email || null,
+        paymentMethod: paymentMethod === "cash" ? "Cash" : "UPI",
+        paymentStatus: "Pending",
+        isPaid: false,
+        paidAmount: 0,
+        discountAmount: discount,
+        packagingCharge: packingCharges,
+        notes: customerNotes.trim() || null,
+        specialInstructions: customerNotes.trim() || null,
+        idempotencyKey: takeawayIdempotencyRef.current.key,
+      });
+      const response = result?.data?.data ?? result?.data;
+      if (!result?.success || response?.success === false) {
+        throw new Error(result?.error || response?.message || "The server could not create your takeaway order.");
+      }
+      if (!response?.orderId || !response?.orderNumber) {
+        throw new Error(response?.message || "The server response did not confirm the created order.");
+      }
+      const kitchenKot = response?.kitchenKot ?? response?.KitchenKot;
+      const barKot = response?.barKot ?? response?.BarKot;
+      if (!kitchenKot && !barKot) {
+        throw new Error("The order was saved, but the server did not confirm a kitchen ticket. Retry safely; duplicate orders are prevented.");
+      }
 
-    const orderNumber = `TAK-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date();
-    const timeFormatted = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      setProcessingStage(3);
+      const now = new Date(response.createdAt || Date.now());
+      const orderItems = Array.isArray(response.items) ? response.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: Number(item.unitPrice) || 0,
+        notes: item.notes || "",
+      })) : cartItems.map(({ item, quantity }) => ({ name: item.name, quantity, price: Number(item.price) || 0 }));
+      const financials = response.financials || {};
+      const newOrderData = {
+        id: response.orderId,
+        orderId: response.orderId,
+        orderNumber: response.orderNumber,
+        orderType: "TAKEAWAY",
+        tableName: "Takeaway",
+        customerName: response.customerName || customerName.trim(),
+        customerPhone: response.customerPhone || customerPhone.trim(),
+        itemsCount: orderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+        items: orderItems,
+        itemsSubtotal: Number(financials.subtotal ?? itemsSubtotal),
+        packingCharges: Number(financials.packagingCharge ?? packingCharges),
+        taxes: Number(financials.gstAmount ?? financials.taxAmount ?? taxes),
+        discount: Number(financials.discountAmount ?? discount),
+        totalAmount: Number(financials.totalAmount ?? totalAmount),
+        amount: Number(financials.totalAmount ?? totalAmount),
+        status: response.orderStatus || "Active",
+        paymentStatus: response.paymentStatus || "Pending",
+        paymentMethod: response.paymentMethod || (paymentMethod === "cash" ? "Cash" : "UPI"),
+        date: now.toISOString(),
+        orderTime: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+        pickupDate,
+        pickupTime,
+        notes: customerNotes.trim(),
+        kitchenKot,
+        barKot,
+      };
 
-    const newOrderData = {
-      id: orderNumber,
-      orderNumber,
-      orderType: "Takeaway",
-      tableName: "Takeaway",
-      customerName: customerName.trim() || "Priya Sharma",
-      customerPhone: customerPhone.trim() || "+91 98765 43210",
-      itemsCount: cartCount,
-      items: cartItems.map((line) => ({
-        name: line.item.name,
-        quantity: line.quantity,
-        price: Number(line.item.price) || 0,
-      })),
-      itemsSubtotal,
-      packingCharges,
-      taxes,
-      discount,
-      totalAmount,
-      amount: totalAmount,
-      status: "Pending",
-      paymentMethod: paymentMethod === "cash" ? "CASH" : "UPI",
-      date: now.toISOString(),
-      orderTime: timeFormatted,
-      pickupDate,
-      pickupTime,
-      notes: customerNotes.trim(),
-    };
+      try {
+        const key = "avsr_admin_takeaway_orders_v1";
+        const existing = JSON.parse(localStorage.getItem(key) || "[]");
+        const withoutDuplicate = Array.isArray(existing) ? existing.filter((order) => String(order.orderId ?? order.id) !== String(response.orderId)) : [];
+        localStorage.setItem(key, JSON.stringify([newOrderData, ...withoutDuplicate]));
+      } catch { /* The backend remains the source of truth. */ }
 
-    // Stage 1: Initiating (600ms)
-    setTimeout(() => {
-      setProcessingStage(2); // Processing with Bank
-
-      // Stage 2: Processing (800ms)
-      setTimeout(async () => {
-        setProcessingStage(3); // Confirming Payment
-
-        // Save order to backend and localStorage for Admin Takeaway sync
-        try {
-          await apiCreatePaidTakeawayOrder({
-            orderNumber,
-            orderType: "Takeaway",
-            tableName: "Takeaway",
-            customerName: newOrderData.customerName,
-            customerPhone: newOrderData.customerPhone,
-            totalAmount,
-            paymentMethod: paymentMethod.toUpperCase(),
-            items: newOrderData.items,
-          }).catch(() => null);
-        } catch {}
-
-        try {
-          const STORAGE_KEY_TAKEAWAY = "avsr_admin_takeaway_orders_v1";
-          const existing = JSON.parse(localStorage.getItem(STORAGE_KEY_TAKEAWAY) || "[]");
-          localStorage.setItem(STORAGE_KEY_TAKEAWAY, JSON.stringify([newOrderData, ...existing]));
-        } catch {}
-
-        // Stage 3 complete: Go to Order Confirmed
-        setTimeout(() => {
-          setPlacedOrder(newOrderData);
-          setTrackingStage(2); // Kitchen starts preparing
-          setCart({});
-          navigateScreen("confirmation");
-        }, 600);
-      }, 900);
-    }, 700);
+      setPlacedOrder(newOrderData);
+      setTrackingStage(2);
+      setCart({});
+      takeawayIdempotencyRef.current = { signature: "", key: "" };
+      navigateScreen("confirmation");
+    } catch (error) {
+      setCheckoutError(error?.message || "Unable to place the order. Please try again.");
+      navigateScreen("payment");
+    } finally {
+      checkoutInFlightRef.current = false;
+      setCheckoutSubmitting(false);
+    }
   };
 
   // Table reservation handler
@@ -1060,6 +830,7 @@ export function CustomerLandingPage({
       return;
     }
     const verified = result.data?.data ?? result.data;
+    reservationSessionExpiredRef.current = false;
     if (verified?.token) setReservationCustomerToken(verified.token);
     setReservationCustomerAuthed(true);
     setReservationOtpSent(false);
@@ -1086,38 +857,80 @@ export function CustomerLandingPage({
     setReservationAccountMessage(result?.success ? "A verification code was sent to your mobile number." : result?.error || "The verification code could not be sent.");
   };
 
-  async function loadCustomerReservations(tab = reservationTab) {
-    const result = await apiGetMyReservations({ tab, page: 1, pageSize: 50 });
-    if (!result?.success) {
-      setReservationAccountMessage(result?.error || "Your reservations could not be loaded.");
-      return;
+  async function loadCustomerReservations(tab = reservationTab, requestedPage = reservationPage) {
+    setReservationListLoading(true);
+    setReservationListError("");
+    if (!getReservationCustomerToken()) {
+      setReservationListLoading(false);
+      handleReservationSessionExpired();
+      return false;
     }
-    const payload = result.data?.data ?? result.data;
-    const rows = tab === "past"
-      ? payload?.pastAndCancelled
-      : payload?.upcoming;
-    setMyReservations(Array.isArray(rows) ? rows : Array.isArray(payload?.items) ? payload.items : []);
+    const result = await apiGetCustomerReservations({ tab, page: requestedPage, pageSize: 20 });
+    const payload = result?.data?.data ?? result?.data;
+    if (!result?.success || payload?.success === false) {
+      const message = result?.error || payload?.message || "Your reservations could not be loaded.";
+      setReservationListError(message);
+      setReservationAccountMessage(message);
+      setReservationListLoading(false);
+      if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
+      return false;
+    }
+    setMyReservations(Array.isArray(payload?.items) ? payload.items : []);
+    setReservationTotal(Number(payload?.total) || 0);
+    setReservationUpcomingCount(Number(payload?.upcomingCount) || 0);
+    setReservationPastCount(Number(payload?.pastAndCancelledCount) || 0);
     setReservationTab(tab);
+    setReservationPage(requestedPage);
+    setReservationListLoading(false);
+    return true;
   }
 
   useEffect(() => {
-    if (activeScreen === "reservation" && reservationCustomerAuthed && !reservationAccountOpen) {
+    if (activeScreen === "reservation" && reservationCustomerAuthed) {
       setReservationAccountOpen(true);
-      loadCustomerReservations("upcoming");
+      setReservationTab("upcoming");
+      setReservationPage(1);
+      loadCustomerReservations("upcoming", 1);
     }
-  }, [activeScreen, reservationCustomerAuthed, reservationAccountOpen]);
+  }, [activeScreen, reservationCustomerAuthed]);
+
+  useEffect(() => {
+    if (activeScreen !== "reservation") return;
+    if (!getReservationCustomerToken()) {
+      handleReservationSessionExpired();
+      return;
+    }
+    let cancelled = false;
+    apiGetCustomerProfile().then((result) => {
+      if (cancelled) return;
+      const response = result?.data?.data ?? result?.data;
+      if (!result?.success || response?.success === false) {
+        if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
+        else setReservationListError(result?.error || response?.message || "Customer profile could not be loaded.");
+        return;
+      }
+      const profile = response?.data ?? response;
+      if (!profile) return;
+      setCustomerUser((current) => ({
+        ...current,
+        name: profile.fullName,
+        phone: profile.mobileNumber || profile.phone,
+        email: profile.email || current?.email || "",
+      }));
+    }).catch((error) => {
+      if (!cancelled) setReservationListError(error?.message || "Customer profile could not be loaded.");
+    });
+    return () => { cancelled = true; };
+  }, [activeScreen]);
 
   const openCustomerReservation = async (reservation) => {
     setReservationActionBusy(true);
-    const id = reservation.reservationNumber || reservation.reservationId;
-    const [detailsResult, paymentResult] = await Promise.all([
-      apiGetReservationDetails(id, getReservationCustomerToken()),
-      apiGetReservationPaymentStatus(id),
-    ]);
+    const id = reservation.reservationId || reservation.reservationNumber;
+    const detailsResult = await apiGetReservationDetails(id, getReservationCustomerToken());
     setReservationActionBusy(false);
     if (!detailsResult?.success) {
-      setReservationAccountMessage(detailsResult?.error || "Reservation details could not be loaded.");
-      return;
+      if (detailsResult?.status === 401 || detailsResult?.status === 403) handleReservationSessionExpired();
+      throw new Error(detailsResult?.error || "Reservation details could not be loaded.");
     }
     const details = detailsResult.data?.data ?? detailsResult.data;
     setSelectedReservationDetails(details);
@@ -1127,23 +940,23 @@ export function CustomerLandingPage({
     if (details?.seatingPreference) setReservationTablePreference(details.seatingPreference);
     if (details?.notes) setReservationNotes(details.notes);
     if (details?.tableId) setReservationTableId(String(details.tableId));
-    if (paymentResult?.success) setReservationPaymentStatus(paymentResult.data?.data ?? paymentResult.data);
+    return details;
   };
 
   const cancelCustomerReservation = async (reservation) => {
-    const id = reservation.reservationNumber || reservation.reservationId;
-    if (!window.confirm(`Cancel reservation ${reservation.reservationNumber || id}? The applicable refund is determined by the reservation service.`)) return;
+    const id = reservation.reservationId || reservation.reservationNumber;
     setReservationActionBusy(true);
     const result = await apiCancelCustomerReservation(id, { cancellationReason: "Cancelled by customer" });
     setReservationActionBusy(false);
     if (!result?.success) {
-      setReservationAccountMessage(result?.error || "Reservation cancellation failed.");
-      return;
+      if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
+      throw new Error(result?.error || "Reservation cancellation failed.");
     }
     const response = result.data?.data ?? result.data;
     setReservationAccountMessage(`${response?.message || "Reservation cancelled."} Refund: ${formatPrice(response?.refundAmount)} (${response?.refundStatus || "status unavailable"}).`);
     setSelectedReservationDetails(response?.reservation || null);
-    await loadCustomerReservations(reservationTab);
+    await loadCustomerReservations(reservationTab, reservationPage);
+    return response;
   };
 
   const inspectReservationTable = async (table) => {
@@ -1162,27 +975,28 @@ export function CustomerLandingPage({
     if (details?.isAvailableForSlot) setReservationTableId(String(details.tableId));
   };
 
-  const saveReservationChanges = async () => {
-    if (!selectedReservationDetails) return;
-    const tableId = reservationTableId || selectedReservationDetails.tableId;
+  const saveReservationChanges = async (draft = selectedReservationDetails) => {
+    if (!draft) throw new Error("Select a reservation before saving changes.");
+    const tableId = draft.tableId || selectedReservationDetails?.tableId;
     setReservationActionBusy(true);
-    const result = await apiModifyReservation(selectedReservationDetails.reservationNumber || selectedReservationDetails.reservationId, {
-      reservationDate,
-      reservationTime,
-      guestsCount: Number(reservationGuests),
+    const result = await apiModifyReservation(draft.reservationId || draft.reservationNumber, {
+      reservationDate: draft.date,
+      reservationTime: draft.time,
+      guestsCount: Number(draft.guests),
       tableId: Number(tableId),
-      seatingPreference: reservationTablePreference,
-      specialRequests: reservationNotes.trim(),
+      seatingPreference: draft.seatingPreference || selectedReservationDetails?.seatingPreference,
+      specialRequests: String(draft.specialRequests || "").trim(),
     });
     setReservationActionBusy(false);
     if (!result?.success) {
-      setReservationAccountMessage(result?.error || "Reservation changes could not be saved.");
-      return;
+      if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
+      throw new Error(result?.error || "Reservation changes could not be saved.");
     }
     const updated = result.data?.data ?? result.data;
     setSelectedReservationDetails(updated?.reservation ?? updated);
     setReservationAccountMessage(updated?.message || "Reservation updated.");
-    await loadCustomerReservations(reservationTab);
+    await loadCustomerReservations(reservationTab, reservationPage);
+    return updated;
   };
 
   // Format data for standard POS ReceiptModal
@@ -1321,7 +1135,7 @@ export function CustomerLandingPage({
                     {(customerUser.name || "Priya")[0].toUpperCase()}
                   </div>
                   <span className="customer-profile-name">
-                    {customerUser.name || "Priya Sharma"}
+                    {customerUser.name || ""}
                   </span>
                   <ChevronDown size={14} />
                 </button>
@@ -1333,7 +1147,7 @@ export function CustomerLandingPage({
                         {(customerUser.name || "Priya")[0].toUpperCase()}
                       </div>
                       <div>
-                        <strong>{customerUser.name || "Priya Sharma"}</strong>
+                        <strong>{customerUser.name || ""}</strong>
                         <small>{customerUser.phone || customerUser.email || "+91 98765 43210"}</small>
                       </div>
                     </div>
@@ -1571,9 +1385,9 @@ export function CustomerLandingPage({
                   <h4>CATEGORIES</h4>
                 </div>
                 <div className="pos-takeaway-categories-list">
-                  {TAKEAWAY_CATEGORIES.map((cat) => {
+                  {takeawayCategories.map((cat) => {
                     const IconComp = cat.icon || Utensils;
-                    const isSelected = selectedCategory === cat.id;
+                    const isSelected = activeCategoryId === cat.id;
                     return (
                       <button
                         key={cat.id}
@@ -1598,7 +1412,7 @@ export function CustomerLandingPage({
                     <Search size={15} className="pos-search-icon" />
                     <input
                       type="text"
-                      placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
+                      placeholder="Search dishes by name, description, or category..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -1619,11 +1433,11 @@ export function CustomerLandingPage({
                     <Utensils size={14} className="pos-category-select-icon" />
                     <select
                       className="pos-category-select"
-                      value={selectedCategory}
+                      value={activeCategoryId}
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       aria-label="Filter by category"
                     >
-                      {TAKEAWAY_CATEGORIES.map((cat) => (
+                      {takeawayCategories.map((cat) => (
                         <option key={cat.id} value={cat.id}>
                           {cat.label}
                         </option>
@@ -1662,9 +1476,9 @@ export function CustomerLandingPage({
 
                 {/* Horizontal Quick Category Filter Strip */}
                 <div className="pos-takeaway-category-strip">
-                  {TAKEAWAY_CATEGORIES.map((cat) => {
+                  {takeawayCategories.map((cat) => {
                     const IconComp = cat.icon || Utensils;
-                    const isSelected = selectedCategory === cat.id;
+                    const isSelected = activeCategoryId === cat.id;
                     return (
                       <button
                         key={cat.id}
@@ -1681,27 +1495,39 @@ export function CustomerLandingPage({
 
                 {/* Compact POS Menu Grid */}
                 <div className="pos-takeaway-grid">
-                  {visibleMenuItems.length === 0 ? (
+                  {menuLoading ? (
+                    <div className="pos-takeaway-empty" role="status">
+                      <h4>Loading menu…</h4>
+                    </div>
+                  ) : menuError ? (
+                    <div className="pos-takeaway-empty" role="alert">
+                      <h4>Menu unavailable</h4>
+                      <p>{menuError}</p>
+                    </div>
+                  ) : visibleMenuItems.length === 0 ? (
                     <div className="pos-takeaway-empty">
                       <Flame size={40} color="var(--accent-amber)" />
-                      <h4>No dishes found</h4>
-                      <p>Try searching with another keyword or resetting the category filter.</p>
-                      <button
-                        type="button"
-                        className="pos-takeaway-empty-reset"
-                        onClick={() => {
-                          setSelectedCategory("all");
-                          setSearchQuery("");
-                          setDietaryFilter("all");
-                        }}
-                      >
-                        Show All Dishes
-                      </button>
+                      <h4>{combinedMenuItems.length === 0 ? "No dishes available" : "No dishes found"}</h4>
+                      <p>{combinedMenuItems.length === 0 ? "No dishes were returned by the menu API." : "Try searching with another keyword or resetting the category filter."}</p>
+                      {combinedMenuItems.length > 0 && (
+                        <button
+                          type="button"
+                          className="pos-takeaway-empty-reset"
+                          onClick={() => {
+                            setSelectedCategory("all");
+                            setSearchQuery("");
+                            setDietaryFilter("all");
+                          }}
+                        >
+                          Show All Dishes
+                        </button>
+                      )}
                     </div>
                   ) : (
                     visibleMenuItems.map((item) => {
                       const qty = cart[item.id]?.quantity || 0;
                       const isVeg = item.isVeg || item.dietaryType === "VEG";
+                      const isAvailable = item.isAvailable !== false;
                       return (
                         <article
                           key={item.id}
@@ -1728,7 +1554,7 @@ export function CustomerLandingPage({
                             {/* Prep Time Badge */}
                             <div className="pos-takeaway-time">
                               <Clock size={10} />
-                              <span>{item.prepTime || "12 min"}</span>
+                              <span>{item.prepTime || "—"}</span>
                             </div>
                           </div>
 
@@ -1738,6 +1564,9 @@ export function CustomerLandingPage({
                               <h4 className="pos-takeaway-card-title" title={item.name}>
                                 {item.name}
                               </h4>
+                              {item.isChefSpecial && (
+                                <Star size={13} fill="#f59e0b" color="#f59e0b" title="Chef special" aria-label="Chef special" />
+                              )}
                               {item.spiceLevel > 0 && (
                                 <div className="pos-takeaway-spices" title={`Spicy Level: ${item.spiceLevel}`}>
                                   {[...Array(item.spiceLevel)].map((_, i) => (
@@ -1759,16 +1588,17 @@ export function CustomerLandingPage({
                               <button
                                 type="button"
                                 className="pos-takeaway-add-btn"
+                                disabled={!isAvailable}
                                 onClick={() => changeQuantity(item, 1)}
-                                title="Add to Order"
+                                title={isAvailable ? "Add to Order" : "Currently unavailable"}
                               >
-                                <Plus size={12} />
-                                <span>Add</span>
+                                {isAvailable ? <><Plus size={12} /><span>Add</span></> : <span>Unavailable</span>}
                               </button>
                             ) : (
                               <div className="pos-takeaway-qty-stepper">
                                 <button
                                   type="button"
+                                  disabled={!isAvailable}
                                   onClick={() => changeQuantity(item, -1)}
                                   aria-label="Decrease quantity"
                                 >
@@ -1777,6 +1607,7 @@ export function CustomerLandingPage({
                                 <span className="font-mono pos-takeaway-qty-count">{qty}</span>
                                 <button
                                   type="button"
+                                  disabled={!isAvailable}
                                   onClick={() => changeQuantity(item, 1)}
                                   aria-label="Increase quantity"
                                 >
@@ -2016,9 +1847,9 @@ export function CustomerLandingPage({
                           <input
                             type="text"
                             required
-                            placeholder="e.g. Priya Sharma"
+                            placeholder="Your name"
                             value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => { setCustomerName(e.target.value); setCheckoutError(""); }}
                           />
                         </div>
                       </div>
@@ -2035,6 +1866,7 @@ export function CustomerLandingPage({
                             onChange={(e) => {
                               setCustomerPhone(e.target.value);
                               setCustomerPhoneError("");
+                              setCheckoutError("");
                             }}
                           />
                         </div>
@@ -2052,7 +1884,7 @@ export function CustomerLandingPage({
                         rows={2}
                         placeholder="e.g. Extra spicy, pack gravy separately"
                         value={customerNotes}
-                        onChange={(e) => setCustomerNotes(e.target.value)}
+                        onChange={(e) => { setCustomerNotes(e.target.value); setCheckoutError(""); }}
                         className="customer-field-textarea"
                       />
                     </div>
@@ -2226,8 +2058,9 @@ export function CustomerLandingPage({
                     type="button"
                     className="customer-proceed-cta-btn"
                     onClick={handleStartPayment}
+                    disabled={checkoutSubmitting}
                   >
-                    {paymentMethod === "cash" ? (
+                    {checkoutSubmitting ? "Submitting order…" : paymentMethod === "cash" ? (
                       <>
                         <Check size={15} /> Confirm Order (Cash Tender)
                       </>
@@ -2237,6 +2070,7 @@ export function CustomerLandingPage({
                       </>
                     )}
                   </button>
+                  {checkoutError && <p role="alert" style={{ color: "#dc2626", fontSize: "0.82rem", marginTop: "0.75rem" }}>{checkoutError}</p>}
                 </div>
               </div>
             </div>
@@ -2258,8 +2092,8 @@ export function CustomerLandingPage({
                 )}
               </div>
 
-              <h2>{paymentMethod === "cash" ? "Confirming Takeaway Order..." : "Processing Payment..."}</h2>
-              <p>{paymentMethod === "cash" ? "Registering order with the kitchen and counter." : "Please do not close this window."}</p>
+              <h2>Submitting Takeaway Order...</h2>
+              <p>Saving your order and sending the kitchen ticket.</p>
 
               {/* 3-Step Progress Track */}
               <div className="customer-processing-stepper">
@@ -2267,7 +2101,7 @@ export function CustomerLandingPage({
                   <div className="customer-proc-circle">
                     <Check size={13} />
                   </div>
-                  <span>{paymentMethod === "cash" ? "Initiating Order" : "Initiating Payment"}</span>
+                  <span>Creating Order</span>
                 </div>
 
                 <div className={`customer-proc-line ${processingStage >= 2 ? "is-done" : ""}`} />
@@ -2276,7 +2110,7 @@ export function CustomerLandingPage({
                   <div className="customer-proc-circle">
                     {processingStage > 2 ? <Check size={13} /> : <div className="customer-spinner-dot" />}
                   </div>
-                  <span>{paymentMethod === "cash" ? "Counter Sync" : "Processing with Bank"}</span>
+                  <span>Kitchen Ticket</span>
                 </div>
 
                 <div className={`customer-proc-line ${processingStage >= 3 ? "is-done" : ""}`} />
@@ -2285,7 +2119,7 @@ export function CustomerLandingPage({
                   <div className="customer-proc-circle">
                     {processingStage >= 3 ? <div className="customer-spinner-dot" /> : <div />}
                   </div>
-                  <span>{paymentMethod === "cash" ? "Order Confirmed" : "Confirming Payment"}</span>
+                  <span>KOT Created</span>
                 </div>
               </div>
             </div>
@@ -2565,6 +2399,23 @@ export function CustomerLandingPage({
               backLabel="Back to Home"
               initialStep={reservationInitialStep}
               customerUser={customerUser}
+              customerReservations={myReservations}
+              customerReservationTab={reservationTab}
+              customerReservationPage={reservationPage}
+              customerReservationTotal={reservationTotal}
+              customerUpcomingCount={reservationUpcomingCount}
+              customerPastCount={reservationPastCount}
+              customerReservationsLoading={reservationListLoading}
+              customerReservationsError={reservationListError}
+              customerReservationActionBusy={reservationActionBusy}
+              customerAvailableTables={reservationTables}
+              onCustomerReservationTabChange={(tab) => { setReservationTab(tab); setReservationPage(1); loadCustomerReservations(tab, 1); }}
+              onCustomerReservationPageChange={(page) => loadCustomerReservations(reservationTab, page)}
+              onCustomerReservationsRetry={() => loadCustomerReservations(reservationTab, reservationPage)}
+              onLoadCustomerReservation={openCustomerReservation}
+              onSaveCustomerReservation={saveReservationChanges}
+              onCancelCustomerReservation={cancelCustomerReservation}
+              onCustomerSessionExpired={handleReservationSessionExpired}
               onLogout={handleLogout}
               onNavigate={(route) => {
                 if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
@@ -2594,7 +2445,9 @@ export function CustomerLandingPage({
         {(activeScreen === "orders" || activeScreen === "my-orders") && (
           <CustomerOrdersPage
             customerUser={customerUser}
-            placedOrder={placedOrder}
+            menuItems={combinedMenuItems}
+            onReorderOrder={handleReorderCustomerOrder}
+            onSessionExpired={() => { handleLogout(); navigateScreen("auth"); }}
             onNavigate={(route) => {
               if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
                 setReservationInitialStep(6);
@@ -2674,8 +2527,8 @@ export function CustomerLandingPage({
                 {(customerUser?.name || "P")[0].toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: "16px", color: "#1a100b" }}>{customerUser?.name || "Priya Sharma"}</div>
-                <div style={{ fontSize: "13px", color: "#6f6158" }}>{customerUser?.phone || "+91 98765 43210"}</div>
+                <div style={{ fontWeight: 800, fontSize: "16px", color: "#1a100b" }}>{customerUser?.name || ""}</div>
+                <div style={{ fontSize: "13px", color: "#6f6158" }}>{customerUser?.phone || ""}</div>
                 <div style={{ fontSize: "12px", color: "#ea580c" }}>{customerUser?.email || "priya@example.com"}</div>
               </div>
             </div>
@@ -2685,7 +2538,7 @@ export function CustomerLandingPage({
                 <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Full Name</label>
                 <input
                   type="text"
-                  value={customerUser?.name || "Priya Sharma"}
+                  value={customerUser?.name || ""}
                   onChange={(e) => {
                     const updated = { ...customerUser, name: e.target.value };
                     setCustomerUser(updated);
@@ -2698,7 +2551,7 @@ export function CustomerLandingPage({
                 <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Mobile Number</label>
                 <input
                   type="text"
-                  value={customerUser?.phone || "+91 98765 43210"}
+                  value={customerUser?.phone || ""}
                   onChange={(e) => {
                     const updated = { ...customerUser, phone: e.target.value };
                     setCustomerUser(updated);

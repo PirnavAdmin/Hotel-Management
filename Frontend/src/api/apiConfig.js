@@ -5,7 +5,7 @@ const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 // or gracefully falls back to local server-db.json when offline so data is NEVER lost.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
 export const RESERVATION_API_BASE_URL = String(
-  import.meta.env.VITE_RESERVATION_API_BASE_URL || "https://brooks-steven-farmers-decimal.trycloudflare.com",
+  import.meta.env.VITE_RESERVATION_API_BASE_URL || configuredApiBase,
 ).trim().replace(/\/$/, "");
 export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;

@@ -83,8 +83,21 @@ export const apiSendReservationOtp = (phone) => post(`${BASE}/otp/send`, { phone
 export const apiVerifyReservationOtp = (phone, otp) => post(`${BASE}/otp/verify`, { phone, otp });
 export const apiGetMyReservations = (params = {}) =>
   guestRequest(`${BASE}/my${queryString(params)}`, {}, getReservationCustomerToken());
+export const apiGetCustomerReservations = (params = {}) =>
+  guestRequest(`/api/v1/customers/me/reservations${queryString(params)}`, {}, getReservationCustomerToken());
 export const apiGetReservationDetails = (id, token = getReservationCustomerToken()) =>
   guestRequest(`${BASE}/${encodeURIComponent(id)}`, {}, token);
+export const apiGetCustomerProfile = () =>
+  guestRequest("/api/v1/customers/me", {}, getReservationCustomerToken());
+export const apiGetMyCustomerOrders = ({ page = 1, pageSize = 20, status } = {}) =>
+  guestRequest(`/api/v1/customers/me/orders${queryString({ page, pageSize, status })}`, {}, getReservationCustomerToken());
+export const apiGetCustomerTakeawayOrder = (orderId) =>
+  guestRequest(`/api/v1/takeaway/orders/${encodeURIComponent(orderId)}`, {}, getReservationCustomerToken());
+export const apiCreateCustomerTakeawayOrder = (orderData) =>
+  guestRequest("/api/v1/takeaway/orders", {
+    method: "POST",
+    body: JSON.stringify(orderData),
+  }, getReservationCustomerToken());
 export const apiModifyReservation = (id, data) =>
   guestRequest(`${BASE}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }, getReservationCustomerToken());
 export const apiCancelCustomerReservation = (id, data = {}) =>
@@ -97,11 +110,7 @@ export const apiGetReservationPaymentStatus = (id) =>
 // Local helpers remain for the legacy POS reservation wizard only.
 const STORAGE_KEY = "bhanu_bistro_reservations_v1";
 const TABLES_STORAGE_KEY = "bhanu_bistro_reservation_tables_v1";
-const INITIAL_RESERVATIONS = [
-  { id: "RES-1023", reservationId: "RES-1023", customerName: "Priya Sharma", phone: "+91 98765 43210", email: "priya@example.com", guests: 2, date: "2026-11-11", time: "07:30 PM", tableId: "T-03", tableName: "T-03 (Indoor)", section: "Indoor", specialRequests: "Anniversary celebration, window table preference.", estimatedAmount: 2000, advanceAmount: 100, paymentMethod: "UPI (Google Pay)", status: "confirmed", createdAt: "2026-11-10T14:30:00Z" },
-  { id: "RES-1018", reservationId: "RES-1018", customerName: "Rajesh Varma", phone: "+91 91234 56789", email: "rajesh@example.com", guests: 4, date: "2026-11-05", time: "08:00 PM", tableId: "T-05", tableName: "T-05 (Indoor)", section: "Indoor", specialRequests: "High chair needed for child.", estimatedAmount: 3500, advanceAmount: 100, paymentMethod: "Credit Card", status: "completed", createdAt: "2026-11-04T10:00:00Z" },
-  { id: "RES-1012", reservationId: "RES-1012", customerName: "Ananya Roy", phone: "+91 99887 76655", email: "ananya@example.com", guests: 6, date: "2026-10-28", time: "01:30 PM", tableId: "T-08", tableName: "T-08 (Outdoor)", section: "Outdoor", specialRequests: "Family lunch reunion.", estimatedAmount: 5000, advanceAmount: 100, paymentMethod: "Net Banking", status: "completed", createdAt: "2026-10-27T16:00:00Z" },
-];
+const INITIAL_RESERVATIONS = [];
 const INITIAL_TABLES = [
   { id: "T-01", name: "T-01", capacity: 2, section: "Indoor", status: "available" },
   { id: "T-02", name: "T-02", capacity: 4, section: "Indoor", status: "reserved" },
