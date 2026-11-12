@@ -37,7 +37,7 @@ import {
   saveStoredReservationTables,
 } from "../../api/reservationApi";
 import { apiGetTables } from "../../api/tableApi";
-import { ReceiptModal } from "../../user/ReceiptModal";
+import { ReceiptModal, formatOrderNumber } from "../../user/ReceiptModal";
 
 const STORAGE_KEY_RESERVATIONS = "bhanu_bistro_reservations_v1";
 
@@ -930,7 +930,7 @@ export function ReservationsManagement({
 
     return {
       id: resId,
-      invoiceNo: resId,
+      invoiceNo: formatOrderNumber(resId),
       name: tableName,
       tableName: tableName,
       tableNumber: r.tableNumber || r.tableId || 1,

@@ -649,14 +649,6 @@ export function App() {
       return {};
     }
   });
-  const saveLocks = (locks) => {
-    const nextLocks = locks && typeof locks === "object" && !Array.isArray(locks) ? locks : {};
-    setTableLocks(nextLocks);
-    try {
-      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(nextLocks));
-      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: nextLocks }));
-    } catch {}
-  };
   const [tablesReadyForSync, setTablesReadyForSync] = useState(false);
   const replaceCachedTableOrdersRef = useRef(false);
   const [sharedRecordLoad, setSharedRecordLoad] = useState({
@@ -1916,9 +1908,6 @@ export function App() {
 
   // ── Table Concurrency Locking System ──────────────────────────────
   // Prevents multiple waiters from concurrently modifying the same table order.
-  const STORAGE_KEY_TABLE_LOCKS = "avsr_table_locks_v1";
-
-
   useEffect(() => {
     const handleStorage = (e) => {
       if (e.key === STORAGE_KEY_TABLE_LOCKS && e.newValue) {
@@ -1952,6 +1941,17 @@ export function App() {
     };
   }, []);
 
+  const saveLocks = (newLocks) => {
+    const nextLocks = newLocks && typeof newLocks === "object" && !Array.isArray(newLocks)
+      ? newLocks
+      : {};
+    setTableLocks(nextLocks);
+    try {
+      localStorage.setItem(STORAGE_KEY_TABLE_LOCKS, JSON.stringify(nextLocks));
+      window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: nextLocks }));
+      broadcastSync("SYNC_TABLE_LOCKS", nextLocks);
+    } catch {}
+  };
 
   const acquireTableLock = (tableId, session) => {
     const tableKey = String(tableId);

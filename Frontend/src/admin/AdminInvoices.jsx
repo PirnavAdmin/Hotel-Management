@@ -19,7 +19,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { ReceiptModal } from "../user/ReceiptModal";
+import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
 import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
@@ -268,6 +268,7 @@ export function AdminInvoices({
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
+      formatOrderNumber(order.invoiceNo || order.id || "").toLowerCase().includes(query) ||
       String(order.invoiceNo || "").toLowerCase().includes(query) ||
       String(order.id ?? "").toLowerCase().includes(query) ||
       String(order.tableName || "").toLowerCase().includes(query) ||
@@ -1171,6 +1172,7 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
+<<<<<<< HEAD
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Invoice No</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Table &amp; Waiter</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Date &amp; Time</th>
@@ -1178,6 +1180,15 @@ export function AdminInvoices({
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Mode</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Grand Total</th>
                 <th style={{ padding: "0.55rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
+=======
+                <th style={{ padding: "0.85rem 1rem" }}>Order / Invoice No</th>
+                <th style={{ padding: "0.85rem 1rem" }}>Table & Waiter</th>
+                <th style={{ padding: "0.85rem 1rem" }}>Date & Time</th>
+                <th style={{ padding: "0.85rem 1rem" }}>Items Summary</th>
+                <th style={{ padding: "0.85rem 1rem" }}>Payment Mode</th>
+                <th style={{ padding: "0.85rem 1rem" }}>Grand Total</th>
+                <th style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
+>>>>>>> cc53bf247a67d279394f764cf894ea9f26a0f453
                   Action
                 </th>
               </tr>
@@ -1218,7 +1229,11 @@ export function AdminInvoices({
                           fontSize: "0.76rem",
                         }}
                       >
+<<<<<<< HEAD
                         {order.invoiceNo || (order.id != null ? "Order #" + order.id : "—")}
+=======
+                        {formatOrderNumber(order.invoiceNo || order.id || order.orderId)}
+>>>>>>> cc53bf247a67d279394f764cf894ea9f26a0f453
                       </span>
                     </td>
 
@@ -1602,7 +1617,7 @@ export function AdminInvoices({
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
                 <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                  {editingInvoice.invoiceNo || (editingInvoice.id != null ? `Order #${editingInvoice.id}` : "—")}
+                  {formatOrderNumber(editingInvoice.invoiceNo || editingInvoice.id)}
                 </div>
               </div>
               <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
