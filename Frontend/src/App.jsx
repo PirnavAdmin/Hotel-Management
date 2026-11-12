@@ -3859,7 +3859,15 @@ export function App() {
               </>
             </ErrorBoundary>
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="kot" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
+            <LoginPage
+              currentTheme={theme}
+              onChangeTheme={setTheme}
+              role="kot"
+              onLoginSuccess={handleGlobalLogin}
+              restaurantName={restaurantSettings.restaurantName}
+              restaurantLogo={restaurantSettings.logo}
+              onBackToLanding={() => navigate("/")}
+            />
           ))}
 
         {/* 2. DEDICATED ADMIN PORTAL VIEW (ROUTE: /admin) */}
@@ -3908,6 +3916,7 @@ export function App() {
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName}
               restaurantLogo={restaurantSettings.logo}
+              onBackToLanding={() => navigate("/")}
             />
           ))}
 
@@ -4041,7 +4050,15 @@ export function App() {
               )}
             </>
           ) : (
-            <LoginPage currentTheme={theme} onChangeTheme={setTheme} role="pos" onLoginSuccess={handleGlobalLogin} restaurantName={restaurantSettings.restaurantName} restaurantLogo={restaurantSettings.logo} />
+            <LoginPage
+              currentTheme={theme}
+              onChangeTheme={setTheme}
+              role="pos"
+              onLoginSuccess={handleGlobalLogin}
+              restaurantName={restaurantSettings.restaurantName}
+              restaurantLogo={restaurantSettings.logo}
+              onBackToLanding={() => navigate("/")}
+            />
           ))}
       </main>
 
