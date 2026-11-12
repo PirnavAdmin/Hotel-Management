@@ -30,9 +30,23 @@ export default function SearchableSelect({
   const searchRef = useRef(null);
   const optionRefs = useRef([]);
   const childrenMode = suppliedOptions == null;
-  const options = useMemo(() => childrenMode
-    ? Children.toArray(children).filter((child) => isValidElement(child) && child.type === "option").map((child) => ({ value: child.props.value ?? child.props.children ?? "", label: child.props.children ?? "", disabled: child.props.disabled }))
-    : suppliedOptions, [children, childrenMode, suppliedOptions]);
+  const options = useMemo(() => {
+    if (!childrenMode) return suppliedOptions;
+    const collected = [];
+    Children.toArray(children).forEach((child) => {
+      if (!isValidElement(child)) return;
+      if (child.type === "option") {
+        collected.push({ value: child.props.value ?? child.props.children ?? "", label: child.props.children ?? "", disabled: child.props.disabled });
+      } else if (child.type === "optgroup") {
+        Children.toArray(child.props.children).forEach((sub) => {
+          if (isValidElement(sub) && sub.type === "option") {
+            collected.push({ value: sub.props.value ?? sub.props.children ?? "", label: sub.props.children ?? "", disabled: sub.props.disabled });
+          }
+        });
+      }
+    });
+    return collected;
+  }, [children, childrenMode, suppliedOptions]);
   const normalizedOptions = useMemo(() => {
     const seen = new Set();
     return options.map((option) => typeof option === "string" ? { label: option, value: option } : option)
@@ -61,7 +75,8 @@ export default function SearchableSelect({
       const maxHeight = Math.min(300, window.innerHeight - 20);
       const below = window.innerHeight - rect.bottom - 8;
       const top = below >= 190 || rect.top < maxHeight + 16 ? rect.bottom + 4 : Math.max(8, rect.top - maxHeight - 4);
-      setPosition({ top, left: Math.max(8, Math.min(rect.left, window.innerWidth - rect.width - 8)), width: rect.width, maxHeight });
+      const popoverWidth = Math.min(Math.max(rect.width, 220), window.innerWidth - 16);
+      setPosition({ top, left: Math.max(8, Math.min(rect.left, window.innerWidth - popoverWidth - 8)), width: popoverWidth, maxHeight });
     };
     place();
     const outside = (event) => { if (!rootRef.current?.contains(event.target) && !popoverRef.current?.contains(event.target)) close(); };

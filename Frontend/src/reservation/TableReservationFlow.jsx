@@ -1605,13 +1605,35 @@ function Step2SelectTable({
   onBack,
   onContinue,
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState("all");
+
+  const filteredTables = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return tables.filter((table) => {
+      if (availabilityFilter === "available" && table.status === "reserved") return false;
+      if (availabilityFilter === "reserved" && table.status !== "reserved") return false;
+      if (!q) return true;
+      const haystack = [
+        table.name,
+        table.section,
+        table.capacity ? `${table.capacity} guests` : "",
+        table.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [tables, searchQuery, availabilityFilter]);
+
   return (
     <div
       style={{
         background: "#ffffff",
         color: "#1f1610",
         borderRadius: "18px",
-        padding: "26px 30px",
+        padding: "20px 24px",
         boxShadow: "0 18px 45px rgba(0,0,0,0.45)",
         border: "1px solid #e8ded6",
       }}
@@ -1621,7 +1643,9 @@ function Step2SelectTable({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: "16px",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "14px",
         }}
       >
         <div>
@@ -1644,43 +1668,143 @@ function Step2SelectTable({
           </p>
         </div>
 
-        {/* Section Filters */}
-        <div style={{ display: "flex", gap: "6px" }}>
-          {[
-            { id: "all", label: "All Tables" },
-            { id: "indoor", label: "Indoor" },
-            { id: "outdoor", label: "Outdoor" },
-          ].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setTableFilter(f.id)}
+        {/* Section Filters + Search */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", width: "210px" }}>
+            <Search size={14} color="#8c7f74" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search table, section, guests..."
+              aria-label="Search tables"
               style={{
-                background: tableFilter === f.id ? "#ea580c" : "#f4eee7",
-                color: tableFilter === f.id ? "#fff" : "#4b3f36",
-                border: "none",
+                width: "100%",
+                boxSizing: "border-box",
                 borderRadius: "16px",
-                padding: "6px 14px",
+                padding: "6px 28px 6px 30px",
+                border: "1px solid #dfd3c7",
+                background: "#faf7f2",
+                color: "#1f1610",
                 fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
+                outline: "none",
               }}
-            >
-              {f.label}
-            </button>
-          ))}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear table search"
+                style={{
+                  position: "absolute",
+                  right: "7px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  color: "#6b5d52",
+                  cursor: "pointer",
+                  padding: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <select
+            value={availabilityFilter}
+            onChange={(e) => setAvailabilityFilter(e.target.value)}
+            aria-label="Filter tables by availability"
+            style={{
+              borderRadius: "16px",
+              padding: "6px 10px",
+              border: "1px solid #dfd3c7",
+              background: "#faf7f2",
+              color: "#4b3f36",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            <option value="all">All Statuses</option>
+            <option value="available">Available</option>
+            <option value="reserved">Reserved</option>
+          </select>
+          <div style={{ display: "flex", gap: "6px" }}>
+            {[
+              { id: "all", label: "All Tables" },
+              { id: "indoor", label: "Indoor" },
+              { id: "outdoor", label: "Outdoor" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setTableFilter(f.id)}
+                style={{
+                  background: tableFilter === f.id ? "#ea580c" : "#f4eee7",
+                  color: tableFilter === f.id ? "#fff" : "#4b3f36",
+                  border: "none",
+                  borderRadius: "16px",
+                  padding: "6px 14px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Tables Grid */}
+      {filteredTables.length === 0 ? (
+        <div
+          style={{
+            padding: "28px 16px",
+            textAlign: "center",
+            background: "#faf7f2",
+            borderRadius: "12px",
+            color: "#6b5d52",
+            margin: "12px 0 18px",
+          }}
+        >
+          <p style={{ fontSize: "13px", fontWeight: 600, margin: "0 0 10px" }}>
+            No matching tables found.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery("");
+              setAvailabilityFilter("all");
+              setTableFilter("all");
+            }}
+            style={{
+              background: "#ea580c",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "7px 14px",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
+      ) : (
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: "14px",
-          margin: "20px 0 24px",
+          gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))",
+          gap: "10px",
+          margin: "14px 0 18px",
         }}
       >
-        {tables.map((table) => {
+        {filteredTables.map((table) => {
           const isSelected = selectedTable?.id === table.id;
           const isReserved = table.status === "reserved";
 
@@ -1701,14 +1825,14 @@ function Step2SelectTable({
                   : isReserved
                     ? "#f9f7f4"
                     : "#ffffff",
-                borderRadius: "12px",
-                padding: "16px 14px",
+                borderRadius: "10px",
+                padding: "10px 12px",
                 cursor: isReserved ? "not-allowed" : "pointer",
                 opacity: isReserved ? 0.65 : 1,
                 position: "relative",
                 boxShadow: isSelected
-                  ? "0 6px 18px rgba(234, 88, 12, 0.25)"
-                  : "0 2px 6px rgba(0,0,0,0.04)",
+                  ? "0 4px 14px rgba(234, 88, 12, 0.22)"
+                  : "0 1px 4px rgba(0,0,0,0.04)",
                 transition: "all 0.15s ease",
               }}
             >
@@ -1717,10 +1841,10 @@ function Step2SelectTable({
                 <div
                   style={{
                     position: "absolute",
-                    top: "10px",
-                    right: "10px",
-                    width: "20px",
-                    height: "20px",
+                    top: "8px",
+                    right: "8px",
+                    width: "18px",
+                    height: "18px",
                     borderRadius: "50%",
                     background: "#ea580c",
                     color: "#ffffff",
@@ -1729,12 +1853,12 @@ function Step2SelectTable({
                     justifyContent: "center",
                   }}
                 >
-                  <Check size={13} strokeWidth={3} />
+                  <Check size={12} strokeWidth={3} />
                 </div>
               )}
 
               <div
-                style={{ fontSize: "16px", fontWeight: 800, color: "#1f1610" }}
+                style={{ fontSize: "14.5px", fontWeight: 800, color: "#1f1610" }}
               >
                 {table.name}
               </div>
@@ -1742,7 +1866,7 @@ function Step2SelectTable({
                 style={{
                   fontSize: "11px",
                   color: "#6b5d52",
-                  margin: "2px 0 6px",
+                  margin: "2px 0 4px",
                 }}
               >
                 {table.capacity} Guests • {table.section}
@@ -1766,6 +1890,7 @@ function Step2SelectTable({
           );
         })}
       </div>
+      )}
 
       {/* Buttons */}
       <div

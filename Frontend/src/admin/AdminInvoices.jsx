@@ -950,25 +950,27 @@ export function AdminInvoices({
           </div>
         </div>
 
-        {/* Invoice date filters */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "0.65rem", flexWrap: "wrap", minHeight: "54px", boxSizing: "border-box", padding: "0.55rem 0.8rem", marginBottom: "0.9rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "10px" }}>
-          <Calendar size={16} color="#f59e0b" style={{ flex: "0 0 auto" }} />
-          <SearchableSelect
-            aria-label="Filter invoices by date"
-            value={dateFilter}
-            onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
-            style={{ height: "38px", minWidth: "160px", boxSizing: "border-box", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
-          >
-            <option value="all">All Dates</option>
-            <option value="daily">Today</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="custom">Custom Date Range</option>
-          </SearchableSelect>
+        {/* Invoice date & dining type filters */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "0.85rem", flexWrap: "wrap", minHeight: "56px", boxSizing: "border-box", padding: "0.6rem 0.9rem", marginBottom: "0.95rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "12px", boxShadow: "0 4px 14px rgba(0, 0, 0, 0.14)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", height: "38px", flex: "0 0 auto" }}>
+            <Calendar size={15} color="#f59e0b" style={{ flex: "0 0 auto" }} />
+            <SearchableSelect
+              aria-label="Filter invoices by date"
+              value={dateFilter}
+              onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
+              style={{ height: "38px", width: "auto", minWidth: "170px", boxSizing: "border-box", padding: "0 0.75rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
+            >
+              <option value="all">All Dates</option>
+              <option value="daily">Today</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="custom">Custom Date Range</option>
+            </SearchableSelect>
+          </div>
 
           {/* Service / Dining Type Filter Dropdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", height: "38px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", height: "38px", flex: "0 0 auto" }}>
             <Utensils size={15} color="#f59e0b" style={{ flex: "0 0 auto" }} />
             <SearchableSelect
               aria-label="Filter by Service / Dining Type"
@@ -979,9 +981,10 @@ export function AdminInvoices({
               }}
               style={{
                 height: "38px",
-                minWidth: "175px",
+                width: "auto",
+                minWidth: "215px",
                 boxSizing: "border-box",
-                padding: "0 0.7rem",
+                padding: "0 0.75rem",
                 borderRadius: "8px",
                 border: "1px solid var(--border-card)",
                 color: "var(--text-main)",
@@ -1080,7 +1083,7 @@ export function AdminInvoices({
             </div>
           )}
           {invalidCustomDate && <span role="alert" style={{ color: "var(--danger)", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
-          <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem", whiteSpace: "nowrap" }}>Showing {filteredOrders.length} invoices</span>
+          <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 600, whiteSpace: "nowrap", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border-subtle)", padding: "0.3rem 0.65rem", borderRadius: "999px" }}>Showing {filteredOrders.length} invoices</span>
         </div>
 
         {/* Filter Strip & Mini Metrics */}
@@ -1094,14 +1097,12 @@ export function AdminInvoices({
             marginBottom: "1.25rem",
           }}
         >
-          {/* Quick Filter Pills (ALL PAYMENTS, UPI, CASH, TAKEAWAY, DINE-IN) */}
+          {/* Quick Payment Filter Pills (ALL PAYMENTS, UPI, CASH) */}
           <div style={{ display: "inline-flex", gap: "0.35rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)", flexWrap: "wrap" }}>
             {[
-              { id: "all", label: "ALL PAYMENTS", active: paymentFilter === "all" && orderTypeFilter === "all", onClick: () => { setPaymentFilter("all"); setOrderTypeFilter("all"); setCurrentPage(1); } },
-              { id: "upi", label: "UPI", active: paymentFilter === "upi", onClick: () => { setPaymentFilter("upi"); setOrderTypeFilter("all"); setCurrentPage(1); } },
-              { id: "cash", label: "CASH", active: paymentFilter === "cash", onClick: () => { setPaymentFilter("cash"); setOrderTypeFilter("all"); setCurrentPage(1); } },
-              { id: "takeaway", label: "TAKEAWAY", active: orderTypeFilter === "takeaway", onClick: () => { setOrderTypeFilter("takeaway"); setPaymentFilter("all"); setCurrentPage(1); } },
-              { id: "dine_in", label: "DINE-IN", active: orderTypeFilter === "dine_in", onClick: () => { setOrderTypeFilter("dine_in"); setPaymentFilter("all"); setCurrentPage(1); } },
+              { id: "all", label: "ALL PAYMENTS", active: paymentFilter === "all", onClick: () => { setPaymentFilter("all"); setCurrentPage(1); } },
+              { id: "upi", label: "UPI", active: paymentFilter === "upi", onClick: () => { setPaymentFilter("upi"); setCurrentPage(1); } },
+              { id: "cash", label: "CASH", active: paymentFilter === "cash", onClick: () => { setPaymentFilter("cash"); setCurrentPage(1); } },
             ].map(({ id, label, active, onClick }) => (
               <button
                 key={id}
@@ -1112,10 +1113,6 @@ export function AdminInvoices({
                       ? "rgba(56, 189, 248, 0.2)"
                       : id === "cash"
                       ? "rgba(16, 185, 129, 0.2)"
-                      : id === "takeaway"
-                      ? "rgba(249, 115, 22, 0.2)"
-                      : id === "dine_in"
-                      ? "rgba(99, 102, 241, 0.2)"
                       : "rgba(245, 158, 11, 0.2)"
                     : "transparent",
                   border: active
@@ -1123,10 +1120,6 @@ export function AdminInvoices({
                       ? "1px solid #38bdf8"
                       : id === "cash"
                       ? "1px solid var(--success)"
-                      : id === "takeaway"
-                      ? "1px solid #f97316"
-                      : id === "dine_in"
-                      ? "1px solid rgba(99, 102, 241, 0.6)"
                       : "1px solid var(--accent-amber)"
                     : "1px solid transparent",
                   color: active
@@ -1134,10 +1127,6 @@ export function AdminInvoices({
                       ? "#38bdf8"
                       : id === "cash"
                       ? "var(--success)"
-                      : id === "takeaway"
-                      ? "#f97316"
-                      : id === "dine_in"
-                      ? "var(--accent-indigo)"
                       : "var(--accent-amber)"
                     : "var(--text-muted)",
                   padding: "0.32rem 0.85rem",
@@ -1154,47 +1143,6 @@ export function AdminInvoices({
             ))}
           </div>
 
-          <div
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--text-muted)",
-              display: "flex",
-              gap: "0.85rem",
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <span>
-              Total:{" "}
-              <strong style={{ color: "var(--accent-amber-light)" }}>
-                {formatCurrency(totalCollected)}
-              </strong>
-            </span>
-            <span>
-              UPI:{" "}
-              <strong style={{ color: "var(--info)" }}>
-                {formatCurrency(upiTotal)}
-              </strong>
-            </span>
-            <span>
-              Cash:{" "}
-              <strong style={{ color: "var(--success)" }}>
-                {formatCurrency(cashTotal)}
-              </strong>
-            </span>
-            <span>
-              Takeaway:{" "}
-              <strong style={{ color: "#f97316" }}>
-                {formatCurrency(takeawayTotal)}
-              </strong>
-            </span>
-            <span>
-              Dine-In:{" "}
-              <strong style={{ color: "var(--accent-indigo)" }}>
-                {formatCurrency(dineInTotal)}
-              </strong>
-            </span>
-          </div>
         </div>
 
         {/* Invoices Table */}
@@ -1210,7 +1158,7 @@ export function AdminInvoices({
               width: "100%",
               borderCollapse: "collapse",
               textAlign: "left",
-              fontSize: "0.85rem",
+              fontSize: "0.76rem",
             }}
           >
             <thead>
@@ -1219,17 +1167,17 @@ export function AdminInvoices({
                   borderBottom: "1px solid var(--border-subtle)",
                   background: "var(--bg-tertiary)",
                   color: "var(--text-muted)",
-                  fontSize: "0.8rem",
+                  fontSize: "0.72rem",
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.85rem 1rem" }}>Invoice No</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Table & Waiter</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Date & Time</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Items Summary</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Payment Mode</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Grand Total</th>
-                <th style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Invoice No</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Table &amp; Waiter</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Date &amp; Time</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Items Summary</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Mode</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Grand Total</th>
+                <th style={{ padding: "0.55rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
                   Action
                 </th>
               </tr>
@@ -1261,29 +1209,29 @@ export function AdminInvoices({
                     }
                   >
                     {/* Invoice No */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
                       <span
                         style={{
                           fontFamily: "monospace",
                           fontWeight: 800,
                           color: "var(--text-main)",
-                          fontSize: "0.88rem",
+                          fontSize: "0.76rem",
                         }}
                       >
-                        {order.invoiceNo || (order.id != null ? `Order #${order.id}` : "—")}
+                        {order.invoiceNo || (order.id != null ? "Order #" + order.id : "—")}
                       </span>
                     </td>
 
                     {/* Table & Server */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
                       <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
-                        {order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "—")}
+                        {order.tableName || (order.tableId != null ? "Table " + order.tableId : "—")}
                       </div>
                       <div
                         style={{
-                          fontSize: "0.72rem",
+                          fontSize: "0.68rem",
                           color: "var(--text-muted)",
-                          marginTop: "2px",
+                          marginTop: "1px",
                         }}
                       >
                         Waiter: {order.server || "—"}
@@ -1291,15 +1239,15 @@ export function AdminInvoices({
                     </td>
 
                     {/* Date & Time */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
                       <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
                         {invoiceDisplayDate(order)}
                       </div>
                       <div
                         style={{
-                          fontSize: "0.72rem",
+                          fontSize: "0.68rem",
                           color: "var(--text-muted)",
-                          marginTop: "2px",
+                          marginTop: "1px",
                         }}
                       >
                         {formatInvoiceTime(order.settledAt || order.orderTime)}
@@ -1307,13 +1255,13 @@ export function AdminInvoices({
                     </td>
 
                     {/* Items */}
-                    <td style={{ padding: "1rem", color: "var(--text-main)" }}>
+                    <td style={{ padding: "0.5rem 0.65rem", color: "var(--text-main)" }}>
                       <span style={{ fontWeight: 600 }}>{itemCount} items</span>
                       <div
                         style={{
-                          fontSize: "0.7rem",
+                          fontSize: "0.68rem",
                           color: "var(--text-muted)",
-                          maxWidth: "180px",
+                          maxWidth: "160px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -1324,7 +1272,7 @@ export function AdminInvoices({
                     </td>
 
                     {/* Payment Mode Badge */}
-                    <td style={{ padding: "1rem" }}>
+                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
                       {pMode === "upi" ? (
                         <span
                           style={{
@@ -1332,15 +1280,15 @@ export function AdminInvoices({
                             border: "1px solid rgba(56, 189, 248, 0.3)",
                             color: "var(--info)",
                             borderRadius: "20px",
-                            padding: "3px 10px",
-                            fontSize: "0.72rem",
+                            padding: "2px 8px",
+                            fontSize: "0.68rem",
                             fontWeight: 700,
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "5px",
+                            gap: "4px",
                           }}
                         >
-                          <Smartphone size={11} />
+                          <Smartphone size={10} />
                           {paymentLabel}
                         </span>
                       )  : (
@@ -1350,15 +1298,15 @@ export function AdminInvoices({
                             border: pMode === "card" ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)",
                             color: pMode === "card" ? "var(--accent-indigo)" : "var(--success)",
                             borderRadius: "20px",
-                            padding: "3px 10px",
-                            fontSize: "0.72rem",
+                            padding: "2px 8px",
+                            fontSize: "0.68rem",
                             fontWeight: 700,
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "5px",
+                            gap: "4px",
                           }}
                         >
-                          {pMode === "card" ? <CreditCard size={11} /> : pMode === "cash" ? <Banknote size={11} /> : null}
+                          {pMode === "card" ? <CreditCard size={10} /> : pMode === "cash" ? <Banknote size={10} /> : null}
                           {paymentLabel}
                         </span>
                       )}
@@ -1367,35 +1315,36 @@ export function AdminInvoices({
                     {/* Grand Total */}
                     <td
                       style={{
-                        padding: "1rem",
+                        padding: "0.5rem 0.65rem",
                         fontWeight: 800,
                         color: "var(--accent-amber-light)",
-                        fontSize: "0.95rem",
+                        fontSize: "0.82rem",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {formatCurrency(order.grandTotal ?? order.totalAmount ?? order.total ?? 0)}
                     </td>
 
                     {/* Action */}
-                    <td style={{ padding: "1rem", textAlign: "center" }}>
-                      <div style={{ display: "flex", justifyContent: "center", gap: "0.4rem" }}>
+                    <td style={{ padding: "0.5rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
+                      <div style={{ display: "inline-flex", justifyContent: "center", gap: "0.3rem" }}>
                         <button
                           onClick={() => setSelectedReceipt(order)}
                           style={{
-                          background: "rgba(245, 158, 11, 0.08)",
-                          border: "1px solid rgba(245, 158, 11, 0.35)",
-                          color: "var(--accent-amber-light)",
-                          borderRadius: "7px",
-                          padding: "5px 12px",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
+                            background: "rgba(245, 158, 11, 0.08)",
+                            border: "1px solid rgba(245, 158, 11, 0.35)",
+                            color: "var(--accent-amber-light)",
+                            borderRadius: "6px",
+                            padding: "4px 8px",
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
                           }}
                         >
-                          <Eye size={12} />
+                          <Eye size={11} />
                           <span>View</span>
                         </button>
                         <button
@@ -1406,9 +1355,9 @@ export function AdminInvoices({
                             background: "rgba(59, 130, 246, 0.08)",
                             border: "1px solid rgba(59, 130, 246, 0.35)",
                             color: "var(--info)",
-                            borderRadius: "7px",
-                            padding: "5px 9px",
-                            fontSize: "0.75rem",
+                            borderRadius: "6px",
+                            padding: "4px 8px",
+                            fontSize: "0.7rem",
                             fontWeight: 700,
                             cursor: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? "pointer" : "not-allowed",
                             opacity: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? 1 : 0.5,
@@ -1417,7 +1366,7 @@ export function AdminInvoices({
                             gap: "4px",
                           }}
                         >
-                          <Pencil size={12} />
+                          <Pencil size={11} />
                           <span>Edit</span>
                         </button>
                       </div>

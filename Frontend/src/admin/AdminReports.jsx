@@ -1866,9 +1866,11 @@ export function AdminReports({
                   alignItems: "center",
                   background: "var(--bg-tertiary)",
                   border: "1px solid var(--border-subtle)",
-                  borderRadius: "9px",
-                  padding: "0.32rem 0.55rem",
+                  borderRadius: "8px",
+                  padding: "0.3rem 0.55rem",
                   gap: "0.35rem",
+                  height: "32px",
+                  boxSizing: "border-box",
                 }}
               >
                 <Calendar size={13} color="#f59e0b" />
@@ -1883,6 +1885,11 @@ export function AdminReports({
                     fontSize: "0.76rem",
                     fontWeight: 700,
                     cursor: "pointer",
+                    minWidth: "95px",
+                    minHeight: "unset",
+                    height: "auto",
+                    whiteSpace: "nowrap",
+                    padding: "0",
                   }}
                   title="Select reporting period"
                 >
@@ -2207,124 +2214,6 @@ export function AdminReports({
               </div>
             </div>
 
-          </div>
-
-          {/* ========================================================================= */}
-          {/* OPENING BALANCE & CLOSING BALANCE REGISTER BANNER (USER REQUESTED)        */}
-          {/* ========================================================================= */}
-          <div
-            className="daily-balance-banner"
-            style={{
-              background: 'var(--bg-secondary)',
-              border: '1.5px solid rgba(245, 158, 11, 0.35)',
-              borderRadius: '12px',
-              padding: '0.85rem 1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'stretch',
-              flexWrap: 'wrap',
-              gap: '1rem',
-              marginBottom: '1rem',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            <div className="daily-register-balance-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div
-              className="daily-register-balance-icon"
-              style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: '#f59e0b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Wallet size={20} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="daily-register-balance-title" style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Daily Register &bull; Today's Balance Bar
-                  </span>
-                  <span className="daily-register-balance-status" style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: todaySavedRecord?.isClosed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: todaySavedRecord?.isClosed ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
-                    {todaySavedRecord?.isClosed ? 'Shift Closed' : 'Live Shift'}
-                  </span>
-                </div>
-                <div className="balance-subtitle" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Date: {now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} &bull; Cash Float: {formatCurrency(todayOpeningCash)} &bull; Bank: {formatCurrency(todayOpeningBank)}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-              <div>
-                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Opening Balance
-                </span>
-                <div className="daily-register-opening-value" style={{ fontSize: '1.1rem', fontWeight: 900, color: '#f59e0b' }}>
-                  {formatCurrency(todayOpeningTotal)}
-                </div>
-              </div>
-
-              <div className="balance-arrow" style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&rarr;</div>
-
-              <div>
-                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Inflows (Sales)
-                </span>
-                <div className="daily-register-inflow-value" style={{ fontSize: '1.1rem', fontWeight: 900, color: '#10b981' }}>
-                  +{formatCurrency(todayTotalInflow)}
-                </div>
-              </div>
-
-              <div className="balance-arrow" style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>&minus;</div>
-
-              <div>
-                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Outflows (Expenses)
-                </span>
-                <div className="daily-register-outflow-value" style={{ fontSize: '1.1rem', fontWeight: 900, color: '#ef4444' }}>
-                  -{formatCurrency(todayTotalOutflow)}
-                </div>
-              </div>
-
-              <div className="balance-arrow" style={{ fontSize: '1.2rem', color: 'var(--text-dim)', fontWeight: 700 }}>=</div>
-
-              <div>
-                <span className="balance-label" style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                  Closing Balance
-                </span>
-                <div className="daily-register-closing-value" style={{ fontSize: '1.2rem', fontWeight: 900, color: '#3b82f6' }}>
-                  {formatCurrency(todayClosingTotal)}
-                </div>
-              </div>
-
-              <button
-                className="daily-register-manage-button"
-                type="button"
-                onClick={() => setActiveTab('daily-register')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '0.45rem 0.85rem',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                  borderRadius: '8px',
-                  color: '#f59e0b',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span>Manage Register</span>
-                <ArrowRight size={13} />
-              </button>
-            </div>
           </div>
 
           {/* ========================================================================= */}

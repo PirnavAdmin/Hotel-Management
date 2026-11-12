@@ -182,48 +182,48 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
         </div>
       ) : (
         <div style={{ overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.72rem' }}>
             <thead>
-              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '0.75rem 1rem' }}>Customer Name</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Phone</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Email</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Address</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Visits</th>
-                <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                <th style={{ padding: '0.45rem 0.55rem', whiteSpace: 'nowrap' }}>Customer Name</th>
+                <th style={{ padding: '0.45rem 0.55rem', whiteSpace: 'nowrap' }}>Phone</th>
+                <th style={{ padding: '0.45rem 0.55rem', whiteSpace: 'nowrap' }}>Email</th>
+                <th style={{ padding: '0.45rem 0.55rem', whiteSpace: 'nowrap' }}>Address</th>
+                <th style={{ padding: '0.45rem 0.55rem', whiteSpace: 'nowrap' }}>Visits</th>
+                <th style={{ padding: '0.45rem 0.55rem', textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {customers.map((c) => (
                 <tr key={c.customerId || c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                  <td style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <td style={{ padding: '0.38rem 0.55rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
                     {c.fullName || c.name || 'Unnamed'}
                   </td>
-                  <td style={{ padding: '0.85rem 1rem', color: 'var(--text-main)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Phone size={13} color="var(--accent-amber)" /> {c.phone}
+                  <td style={{ padding: '0.38rem 0.55rem', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Phone size={12} color="var(--accent-amber)" /> {c.phone}
                     </span>
                   </td>
-                  <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)' }}>
+                  <td style={{ padding: '0.38rem 0.55rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                     {c.email ? (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <Mail size={13} /> {c.email}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <Mail size={12} /> {c.email}
                       </span>
                     ) : '—'}
                   </td>
-                  <td style={{ padding: '0.85rem 1rem', color: 'var(--text-muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '0.38rem 0.55rem', color: 'var(--text-muted)', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {c.address ? (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <MapPin size={13} /> {c.address}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <MapPin size={12} /> {c.address}
                       </span>
                     ) : '—'}
                   </td>
-                  <td style={{ padding: '0.85rem 1rem' }}>
-                    <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber-light)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                  <td style={{ padding: '0.38rem 0.55rem', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'inline-block', whiteSpace: 'nowrap', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--accent-amber-light)', padding: '2px 7px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 700 }}>
                       {c.totalOrders ?? c.visitsCount ?? 1} orders
                     </span>
                   </td>
-                  <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                  <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
                       onClick={() => handleDelete(c.customerId || c.id, c.fullName || c.name)}
@@ -232,11 +232,13 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                         border: 'none',
                         color: '#ef4444',
                         cursor: 'pointer',
-                        padding: '4px',
+                        padding: '2px 4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
                       }}
                       title="Delete Customer"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>

@@ -1552,7 +1552,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 borderRadius: "9px",
                 padding: "0 0.85rem",
                 fontWeight: 700,
-                fontSize: "0.78rem",
+                fontSize: "0.72rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.4rem",
@@ -1574,7 +1574,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 borderRadius: "9px",
                 padding: "0 0.95rem",
                 fontWeight: 700,
-                fontSize: "0.78rem",
+                fontSize: "0.72rem",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.45rem",
@@ -1637,7 +1637,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   borderRadius: "9px",
                   padding: "0 12px 0 36px",
                   color: "var(--text-main)",
-                  fontSize: "0.82rem",
+                  fontSize: "0.74rem",
                   outline: "none",
                 }}
               />
@@ -1704,7 +1704,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                       background: "var(--bg-tertiary)",
                       border: "1px solid var(--border-card)",
                       borderRadius: "9px",
-                      fontSize: "0.82rem",
+                      fontSize: "0.74rem",
                       fontWeight: 600,
                       outline: "none",
                       appearance: "none",
@@ -1891,7 +1891,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 style={{
                   color: "var(--text-main)",
                   fontWeight: 800,
-                  fontSize: "0.84rem",
+                  fontSize: "0.76rem",
                 }}
               >
                 Menu Recipes
@@ -1972,7 +1972,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               width: "100%",
               borderCollapse: "collapse",
               textAlign: "left",
-              fontSize: "0.85rem",
+              fontSize: "0.75rem",
             }}
           >
             <thead>
@@ -1981,21 +1981,21 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   borderBottom: "1px solid var(--border-subtle)",
                   background: "var(--bg-tertiary)",
                   color: "var(--text-muted)",
-                  fontSize: "0.8rem",
+                  fontSize: "0.71rem",
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.55rem 0.65rem" }}>
+                <th style={{ padding: "0.42rem 0.5rem" }}>
                   Ingredient / Supply
                 </th>
-                <th style={{ padding: "0.55rem 0.65rem" }}>Category</th>
-                <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>MRP</th>
-                <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>In-Stock</th>
-                <th style={{ padding: "0.55rem 0.5rem", textAlign: "right" }}>Stock Value</th>
-                <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Used</th>
-                <th style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>Threshold</th>
-                <th style={{ padding: "0.55rem 0.6rem", textAlign: "center" }}>Status</th>
-                <th style={{ padding: "0.55rem 0.65rem", textAlign: "right" }}>
+                <th style={{ padding: "0.42rem 0.5rem" }}>Category</th>
+                <th style={{ padding: "0.42rem 0.45rem", textAlign: "right" }}>MRP</th>
+                <th style={{ padding: "0.42rem 0.45rem", textAlign: "center" }}>In-Stock</th>
+                <th style={{ padding: "0.42rem 0.45rem", textAlign: "right" }}>Stock Value</th>
+                <th style={{ padding: "0.42rem 0.45rem", textAlign: "center" }}>Used</th>
+                <th style={{ padding: "0.42rem 0.45rem", textAlign: "center" }}>Threshold</th>
+                <th style={{ padding: "0.42rem 0.45rem", textAlign: "center" }}>Status</th>
+                <th style={{ padding: "0.42rem 0.5rem", textAlign: "right" }}>
                   Actions
                 </th>
               </tr>
@@ -2025,12 +2025,12 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     }
                   >
                     {/* Item Name */}
-                    <td style={{ padding: "0.55rem 0.65rem" }}>
+                    <td style={{ padding: "0.42rem 0.5rem" }}>
                       <div
                         style={{
                           fontWeight: 800,
                           color: "var(--text-main)",
-                          fontSize: "0.84rem",
+                          fontSize: "0.76rem",
                           lineHeight: "1.25",
                         }}
                       >
@@ -2038,7 +2038,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                       </div>
                       <div
                         style={{
-                          fontSize: "0.7rem",
+                          fontSize: "0.66rem",
                           color: "var(--text-muted)",
                           marginTop: "2px",
                           maxWidth: "180px",
@@ -2055,7 +2055,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     {/* Category */}
                     <td
                       style={{
-                        padding: "0.55rem 0.65rem",
+                        padding: "0.42rem 0.5rem",
                         color: "var(--text-main)",
                         fontWeight: 600,
                       }}
@@ -2065,7 +2065,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                         <div
                           style={{
                             color: "var(--text-muted)",
-                            fontSize: "0.7rem",
+                            fontSize: "0.66rem",
                             fontWeight: 500,
                             marginTop: "1px",
                             maxWidth: "140px",
@@ -2083,7 +2083,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     {/* MRP */}
                     <td
                       style={{
-                        padding: "0.55rem 0.5rem",
+                        padding: "0.42rem 0.45rem",
                         color: "var(--text-main)",
                         fontWeight: 700,
                         whiteSpace: "nowrap",
@@ -2096,7 +2096,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     </td>
 
                     {/* In-Stock */}
-                    <td style={{ padding: "0.55rem 0.5rem", textAlign: "center" }}>
+                    <td style={{ padding: "0.42rem 0.45rem", textAlign: "center" }}>
                       <div
                         style={{
                           fontWeight: 800,
@@ -2105,7 +2105,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                             : isLowStock
                               ? "#f59e0b"
                               : "#10b981",
-                          fontSize: "0.82rem",
+                          fontSize: "0.74rem",
                           whiteSpace: "nowrap",
                         }}
                       >
@@ -2116,7 +2116,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     {/* Stock Value / Expenditure */}
                     <td
                       style={{
-                        padding: "0.55rem 0.5rem",
+                        padding: "0.42rem 0.45rem",
                         whiteSpace: "nowrap",
                         textAlign: "right",
                       }}
@@ -2129,7 +2129,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                             <span
                               style={{
                                 color: "var(--text-dim)",
-                                fontSize: "0.78rem",
+                                fontSize: "0.72rem",
                               }}
                             >
                               ₹0.00
@@ -2141,7 +2141,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                             style={{
                               color: "#f59e0b",
                               fontWeight: 800,
-                              fontSize: "0.82rem",
+                              fontSize: "0.74rem",
                             }}
                           >
                             {formatCurrency(stockVal)}
@@ -2153,7 +2153,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     {/* Used since recipe tracking started */}
                     <td
                       style={{
-                        padding: "0.55rem 0.5rem",
+                        padding: "0.42rem 0.45rem",
                         textAlign: "center",
                         whiteSpace: "nowrap",
                       }}
@@ -2174,7 +2174,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                           cursor: "pointer",
                           color: "var(--text-main)",
                           fontWeight: 700,
-                          fontSize: "0.8rem",
+                          fontSize: "0.73rem",
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "3px",
@@ -2198,19 +2198,19 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     {/* Min Threshold */}
                     <td
                       style={{
-                        padding: "0.55rem 0.5rem",
+                        padding: "0.42rem 0.45rem",
                         color: "var(--text-muted)",
                         fontWeight: 600,
                         textAlign: "center",
                         whiteSpace: "nowrap",
-                        fontSize: "0.8rem",
+                        fontSize: "0.73rem",
                       }}
                     >
                       {item.minThreshold} {item.unit}
                     </td>
 
                     {/* Status Badge */}
-                    <td style={{ padding: "0.55rem 0.6rem", textAlign: "center", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "0.42rem 0.45rem", textAlign: "center", whiteSpace: "nowrap" }}>
                       <span
                         style={{
                           background: `${statusColor}1f`,
@@ -2218,7 +2218,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                           color: statusColor,
                           borderRadius: "12px",
                           padding: "2px 8px",
-                          fontSize: "0.7rem",
+                          fontSize: "0.66rem",
                           fontWeight: 700,
                           display: "inline-flex",
                           alignItems: "center",
@@ -2247,7 +2247,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     {/* Actions */}
                     <td
                       style={{
-                        padding: "0.55rem 0.65rem",
+                        padding: "0.42rem 0.5rem",
                         textAlign: "right",
                         whiteSpace: "nowrap",
                       }}
@@ -2412,7 +2412,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               padding: "0.65rem 0.85rem",
               borderTop: "1px solid var(--border-subtle)",
               background: "var(--bg-tertiary)",
-              fontSize: "0.78rem",
+              fontSize: "0.72rem",
               color: "var(--text-muted)",
               flexWrap: "wrap",
               gap: "0.75rem 1rem",
@@ -2440,7 +2440,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 style={{ display: "flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}
               >
                 <span
-                  style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}
+                  style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}
                 >
                   Per page:
                 </span>
@@ -2995,7 +2995,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 background: "var(--bg-tertiary)",
                 border: "1px solid var(--border-subtle)",
                 marginBottom: "0.85rem",
-                fontSize: "0.78rem",
+                fontSize: "0.72rem",
               }}
             >
               <div>
@@ -3121,7 +3121,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-tertiary)",
                 color: "var(--text-main)",
-                fontSize: "0.8rem",
+                fontSize: "0.73rem",
                 marginBottom: "1rem",
               }}
             />
@@ -3144,7 +3144,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   color: "var(--text-main)",
                   background: "var(--bg-tertiary)",
                   fontWeight: 700,
-                  fontSize: "0.78rem",
+                  fontSize: "0.72rem",
                   cursor: "pointer",
                 }}
               >
@@ -3161,7 +3161,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
                   fontWeight: 800,
-                  fontSize: "0.78rem",
+                  fontSize: "0.72rem",
                   cursor: "pointer",
                   boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
                 }}
@@ -3245,7 +3245,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-tertiary)",
                 color: "var(--text-main)",
-                fontSize: "0.82rem",
+                fontSize: "0.74rem",
                 marginBottom: "0.7rem",
               }}
             />
@@ -3277,7 +3277,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-tertiary)",
                 color: "var(--text-main)",
-                fontSize: "0.82rem",
+                fontSize: "0.74rem",
                 marginBottom: "0.7rem",
               }}
             />
@@ -3459,7 +3459,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
                     color: "var(--text-main)",
-                    fontSize: "0.85rem",
+                    fontSize: "0.75rem",
                     outline: "none",
                   }}
                 />
@@ -3512,7 +3512,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     borderRadius: "8px",
                     padding: "0.6rem 0.8rem",
                     color: "var(--text-main)",
-                    fontSize: "0.85rem",
+                    fontSize: "0.75rem",
                     outline: "none",
                   }}
                 />
@@ -3674,7 +3674,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
                       color: "var(--text-main)",
-                      fontSize: "0.85rem",
+                      fontSize: "0.75rem",
                       outline: "none",
                     }}
                   />
@@ -3706,7 +3706,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                         borderRadius: "8px",
                         padding: "0.6rem 0.8rem",
                         color: "var(--text-main)",
-                        fontSize: "0.85rem",
+                        fontSize: "0.75rem",
                         outline: "none",
                       }}
                     />
@@ -3738,7 +3738,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                       borderRadius: "8px",
                       padding: "0.6rem 0.8rem",
                       color: "var(--text-main)",
-                      fontSize: "0.85rem",
+                      fontSize: "0.75rem",
                       outline: "none",
                     }}
                   />
@@ -3762,7 +3762,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     border: "1.5px solid var(--border-subtle)",
                     borderRadius: "8px",
                     color: "var(--text-main)",
-                    fontSize: "0.85rem",
+                    fontSize: "0.75rem",
                     fontWeight: 700,
                     cursor: "pointer",
                     transition: "all 0.15s ease",

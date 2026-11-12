@@ -725,6 +725,9 @@ export function ReservationsManagement({
     showToast("🎉 Table reserved successfully!");
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   // ── 8. Robust Filter Logic (Safe String Conversions to Prevent .toLowerCase Crashes) ──
   const filteredReservations = useMemo(() => {
     let list = [...reservations];
@@ -811,6 +814,18 @@ export function ReservationsManagement({
     customEndDate,
     searchQuery,
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReservations.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const paginatedReservations = useMemo(
+    () => filteredReservations.slice(pageStart, pageStart + PAGE_SIZE),
+    [filteredReservations, pageStart]
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeStatusTab, secondaryStatusFilter, dateFilter, particularDate, customStartDate, customEndDate, searchQuery]);
 
   // ── 9. KPI Metrics Calculation ─────────────────────────────────────────
   const metrics = useMemo(() => {
@@ -1244,7 +1259,7 @@ export function ReservationsManagement({
             background: "var(--bg-card, #18181b)",
             border: "1px solid var(--border-card, #27272a)",
             borderRadius: "12px",
-            padding: "0.85rem 1rem",
+            padding: "0.4rem 0.45rem",
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
@@ -1282,7 +1297,7 @@ export function ReservationsManagement({
             background: "var(--bg-card, #18181b)",
             border: "1px solid var(--border-card, #27272a)",
             borderRadius: "12px",
-            padding: "0.85rem 1rem",
+            padding: "0.4rem 0.45rem",
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
@@ -1320,7 +1335,7 @@ export function ReservationsManagement({
             background: "var(--bg-card, #18181b)",
             border: "1px solid var(--border-card, #27272a)",
             borderRadius: "12px",
-            padding: "0.85rem 1rem",
+            padding: "0.4rem 0.45rem",
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
@@ -1358,7 +1373,7 @@ export function ReservationsManagement({
             background: "var(--bg-card, #18181b)",
             border: "1px solid var(--border-card, #27272a)",
             borderRadius: "12px",
-            padding: "0.85rem 1rem",
+            padding: "0.4rem 0.45rem",
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
@@ -1684,7 +1699,7 @@ export function ReservationsManagement({
               width: "100%",
               borderCollapse: "collapse",
               textAlign: "left",
-              fontSize: "0.85rem",
+              fontSize: "0.7rem",
             }}
           >
             <thead>
@@ -1693,25 +1708,25 @@ export function ReservationsManagement({
                   background: "var(--bg-secondary, #202024)",
                   borderBottom: "1px solid var(--border-card, #27272a)",
                   color: "var(--text-muted, #94a3b8)",
-                  fontSize: "0.74rem",
+                  fontSize: "0.64rem",
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.04em",
                 }}
               >
-                <th style={{ padding: "0.85rem 1rem", width: "40px" }}>#</th>
-                <th style={{ padding: "0.85rem 1rem" }}>RESERVATION ID</th>
-                <th style={{ padding: "0.85rem 1rem" }}>GUEST NAME</th>
-                <th style={{ padding: "0.85rem 1rem" }}>PHONE</th>
-                <th style={{ padding: "0.85rem 1rem" }}>TABLE</th>
-                <th style={{ padding: "0.85rem 1rem" }}>GUESTS</th>
-                <th style={{ padding: "0.85rem 1rem" }}>DATE & TIME</th>
-                <th style={{ padding: "0.85rem 1rem" }}>STATUS</th>
-                <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>ACTIONS</th>
+                <th style={{ padding: "0.4rem 0.45rem", width: "40px" }}>#</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>RESERVATION ID</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>GUEST NAME</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>PHONE</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>TABLE</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>GUESTS</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>DATE & TIME</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>STATUS</th>
+                <th style={{ padding: "0.4rem 0.45rem", textAlign: "right" }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              {filteredReservations.length === 0 ? (
+              {paginatedReservations.length === 0 ? (
                 <tr>
                   <td
                     colSpan={9}
@@ -1731,7 +1746,7 @@ export function ReservationsManagement({
                   </td>
                 </tr>
               ) : (
-                filteredReservations.map((r, index) => {
+                paginatedReservations.map((r, index) => {
                   const resId = String(r.reservationId || r.id || `RES-${index + 1000}`);
                   const badge = getStatusBadge(r.status);
                   const BadgeIcon = badge.icon;
@@ -1753,12 +1768,12 @@ export function ReservationsManagement({
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       {/* Row Index */}
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                        {index + 1}
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem", whiteSpace: "nowrap" }}>
+                        {pageStart + index + 1}
                       </td>
 
                       {/* Reservation ID */}
-                      <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             fontFamily: "monospace",
@@ -1771,19 +1786,19 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Guest Name */}
-                      <td style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "inline-flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}>
                           <div
                             style={{
-                              width: "24px",
-                              height: "24px",
+                              width: "20px",
+                              height: "20px",
                               borderRadius: "50%",
                               background: "rgba(249, 115, 22, 0.15)",
                               color: "#ea580c",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "0.72rem",
+                              fontSize: "0.65rem",
                               fontWeight: 800,
                               flexShrink: 0,
                             }}
@@ -1795,7 +1810,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Phone */}
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
                           <Phone size={13} color="#94a3b8" />
                           {r.phone || r.customerPhone || "—"}
@@ -1803,7 +1818,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Table */}
-                      <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1811,9 +1826,9 @@ export function ReservationsManagement({
                             gap: "0.35rem",
                             background: "rgba(255, 255, 255, 0.04)",
                             border: "1px solid var(--border-card, #27272a)",
-                            padding: "0.2rem 0.55rem",
+                            padding: "0.15rem 0.45rem",
                             borderRadius: "6px",
-                            fontSize: "0.78rem",
+                            fontSize: "0.7rem",
                             whiteSpace: "nowrap",
                           }}
                         >
@@ -1823,7 +1838,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Guests Count */}
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
                           <Users size={14} color="#f59e0b" />
                           <strong>{r.guestsCount || r.guests || 2}</strong> Guests
@@ -1831,10 +1846,10 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Date & Time */}
-                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", whiteSpace: "nowrap" }}>
                           <span>{r.reservationDate || r.date || "Today"}</span>
-                          <span style={{ fontSize: "0.78rem", color: "var(--text-muted, #94a3b8)", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted, #94a3b8)", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
                             <Clock size={12} color="#ea580c" />
                             {r.reservationTime || r.time || "07:30 PM"}
                           </span>
@@ -1842,7 +1857,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1853,7 +1868,7 @@ export function ReservationsManagement({
                             background: badge.bg,
                             color: badge.color,
                             border: `1px solid ${badge.border}`,
-                            fontSize: "0.74rem",
+                            fontSize: "0.7rem",
                             fontWeight: 700,
                           }}
                         >
@@ -1863,7 +1878,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Actions: Eye Icon (Opens ReceiptModal Bill), Printer, More Menu */}
-                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.4rem 0.45rem", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
                           {/* Eye Icon -> Opens the 5th picture Invoice & Bill Print (ReceiptModal) */}
                           <button
@@ -2105,6 +2120,90 @@ export function ReservationsManagement({
             </tbody>
           </table>
         </div>
+        {filteredReservations.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+              padding: "0.65rem 1rem",
+              borderTop: "1px solid var(--border-card, #27272a)",
+              background: "var(--bg-secondary, #202024)",
+              fontSize: "0.7rem",
+              color: "var(--text-muted, #94a3b8)",
+            }}
+          >
+            <span>
+              Showing <strong style={{ color: "var(--text-main, #f8fafc)" }}>{pageStart + 1}</strong>–
+              <strong style={{ color: "var(--text-main, #f8fafc)" }}>{Math.min(pageStart + PAGE_SIZE, filteredReservations.length)}</strong> of{" "}
+              <strong style={{ color: "var(--text-main, #f8fafc)" }}>{filteredReservations.length}</strong> reservations
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <button
+                type="button"
+                disabled={safePage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                style={{
+                  padding: "0.3rem 0.65rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-card, #27272a)",
+                  background: "var(--bg-card, #18181b)",
+                  color: safePage <= 1 ? "var(--text-dim, #52525b)" : "var(--text-main, #f8fafc)",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: safePage <= 1 ? "not-allowed" : "pointer",
+                }}
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((pNum) => pNum === 1 || pNum === totalPages || Math.abs(pNum - safePage) <= 1)
+                .map((pNum, idx, arr) => (
+                  <React.Fragment key={pNum}>
+                    {idx > 0 && arr[idx - 1] !== pNum - 1 && (
+                      <span style={{ padding: "0 0.25rem", color: "var(--text-dim, #52525b)" }}>…</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(pNum)}
+                      style={{
+                        minWidth: "28px",
+                        padding: "0.3rem 0.5rem",
+                        borderRadius: "6px",
+                        border: pNum === safePage ? "1px solid #ea580c" : "1px solid var(--border-card, #27272a)",
+                        background: pNum === safePage ? "#ea580c" : "var(--bg-card, #18181b)",
+                        color: pNum === safePage ? "#ffffff" : "var(--text-main, #f8fafc)",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {pNum}
+                    </button>
+                  </React.Fragment>
+                ))}
+              <button
+                type="button"
+                disabled={safePage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                style={{
+                  padding: "0.3rem 0.65rem",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-card, #27272a)",
+                  background: "var(--bg-card, #18181b)",
+                  color: safePage >= totalPages ? "var(--text-dim, #52525b)" : "var(--text-main, #f8fafc)",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: safePage >= totalPages ? "not-allowed" : "pointer",
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── 6. Modal: "+ Book Table" (New Reservation Modal) ── */}
@@ -2449,7 +2548,7 @@ export function ReservationsManagement({
                   gridTemplateColumns: "1fr 1fr",
                   gap: "0.75rem",
                   background: "rgba(255, 255, 255, 0.03)",
-                  padding: "0.85rem 1rem",
+                  padding: "0.4rem 0.45rem",
                   borderRadius: "10px",
                   border: "1px solid #27272a",
                 }}
