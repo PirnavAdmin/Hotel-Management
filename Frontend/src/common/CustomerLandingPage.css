@@ -119,7 +119,7 @@
   min-height: 100dvh;
   flex-direction: column;
   justify-content: space-between;
-  padding: 92px clamp(20px, 6vw, 96px) 20px;
+  padding: 68px clamp(16px, 4vw, 64px) 16px;
   overflow-x: hidden;
   background: #18110b url("/assets/login-restaurant.jpg") center 48% / cover
     no-repeat;
@@ -139,15 +139,15 @@
 }
 .customer-hero-content {
   text-align: center;
-  margin-top: clamp(8px, 2vh, 24px);
+  margin-top: clamp(4px, 1.2vh, 16px);
 }
 .customer-hero h1 {
   margin: 0;
   font:
-    700 clamp(36px, 4.8vw, 56px)/1.1 Georgia,
+    700 clamp(28px, 3.4vw, 42px)/1.15 Georgia,
     "Times New Roman",
     serif;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   color: #ffffff;
 }
 .customer-hero h1 span {
@@ -158,10 +158,10 @@
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  margin: 12px 0 0;
+  gap: 12px;
+  margin: 8px 0 0;
   color: rgba(255, 255, 255, 0.92);
-  font-size: clamp(14px, 1.4vw, 17px);
+  font-size: clamp(12.5px, 1.1vw, 14.5px);
   font-weight: 500;
   letter-spacing: 0.02em;
 }
@@ -185,29 +185,29 @@
 }
 .customer-action-grid {
   display: grid;
-  width: min(100%, 1120px);
+  width: min(100%, 920px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin: clamp(18px, 2.8vh, 32px) auto 0;
+  gap: 18px;
+  margin: clamp(12px, 2vh, 22px) auto 0;
 }
 .customer-action-card {
   position: relative;
   display: flex;
-  min-height: clamp(210px, 28vh, 255px);
+  min-height: clamp(160px, 21vh, 195px);
   align-items: center;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  border-radius: 22px;
+  border: 1.5px solid rgba(255, 255, 255, 0.88);
+  border-radius: 18px;
   background-color: #ffffff;
   color: #171717;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
 }
 .customer-action-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.44);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.4);
 }
 .takeaway-action {
   background-color: #ffffff;
@@ -250,15 +250,15 @@
 .customer-action-copy {
   position: relative;
   z-index: 1;
-  width: min(72%, 390px);
-  padding: 20px clamp(18px, 2.5vw, 32px);
+  width: min(72%, 340px);
+  padding: 14px clamp(14px, 2vw, 24px);
 }
 .customer-action-icon {
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 11px;
 }
 .takeaway-icon {
   background: #ffedd5;
@@ -269,37 +269,37 @@
   color: #16a34a;
 }
 .customer-action-copy h2 {
-  margin: 12px 0 6px;
+  margin: 8px 0 4px;
   color: #111827;
-  font-size: clamp(21px, 2.3vw, 27px);
+  font-size: clamp(17px, 1.8vw, 22px);
   font-weight: 800;
   line-height: 1.15;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 .customer-action-copy p {
   margin: 0;
-  max-width: 320px;
+  max-width: 280px;
   color: #4b5563;
-  font-size: 13.5px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
 }
 .customer-action-button {
   display: inline-flex;
-  min-width: 175px;
-  height: 44px;
+  min-width: 145px;
+  height: 36px;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 0 20px;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   color: #fff;
   font: inherit;
   font-weight: 750;
-  font-size: 14px;
+  font-size: 12.5px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
   transition:
     transform 0.18s ease,
     filter 0.18s ease;
@@ -322,11 +322,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: min(100%, 1120px);
-  margin: clamp(20px, 3.6vh, 40px) auto 4px;
-  padding: 16px 8px 6px;
+  width: min(100%, 920px);
+  margin: clamp(12px, 2vh, 24px) auto 2px;
+  padding: 12px 8px 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.16);
-  gap: 16px;
+  gap: 14px;
 }
 .customer-feature-item {
   display: flex;
@@ -2547,14 +2547,22 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ffffff;
-  color: #ea580c;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  color: #f59e0b;
   font-weight: 750;
-  font-size: 0.88rem;
-  padding: 7px 18px;
+  font-size: 0.86rem;
+  padding: 6px 18px;
   border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   letter-spacing: -0.01em;
+  transition: all 0.2s ease;
+}
+
+.takeaway-header-center-pill:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
 }
 
 .takeaway-header-user-pill {
@@ -3126,6 +3134,95 @@
   flex-wrap: wrap;
 }
 
+.pos-category-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pos-category-select-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--accent-amber, #f59e0b);
+  pointer-events: none;
+}
+
+.pos-category-select {
+  height: 35px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-subtle, #cbd5e1);
+  border-radius: 6px;
+  color: var(--text-main, #0f172a);
+  padding: 0.4rem 1.8rem 0.4rem 2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.pos-category-select:focus,
+.pos-category-select:hover {
+  border-color: var(--accent-amber, #f59e0b);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.pos-takeaway-category-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-secondary, #ffffff);
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  flex-shrink: 0;
+}
+
+.pos-takeaway-category-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.pos-takeaway-category-strip::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.35);
+  border-radius: 4px;
+}
+
+.pos-category-strip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-subtle, #cbd5e1);
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pos-category-strip-btn:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  color: var(--accent-amber-light, #d97706);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.pos-category-strip-btn.is-active {
+  background: var(--accent-amber, #f59e0b);
+  border-color: var(--accent-amber, #f59e0b);
+  color: #000000;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+}
+
 .pos-dietary-btn {
   display: flex;
   align-items: center;
@@ -3150,7 +3247,7 @@
   font-weight: 800;
 }
 
-/* Compact POS Card Grid */
+/* Compact POS Card Grid (Matches Image 2 Small Card Size) */
 .pos-takeaway-grid {
   display: grid;
   flex: 1 1 auto;
@@ -3158,12 +3255,12 @@
   min-width: 0;
   min-height: 0;
   box-sizing: border-box;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 185px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
   grid-auto-rows: min-content;
   align-content: start;
-  gap: 10px;
+  gap: 7px;
   overflow-y: auto;
-  padding: 10px;
+  padding: 8px;
   background: var(--bg-primary, #f8fafc);
 }
 
@@ -3171,7 +3268,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary, #ffffff);
-  border-radius: 8px;
+  border-radius: 7px;
   border: 1px solid var(--border-subtle, #e2e8f0);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
@@ -3184,7 +3281,7 @@
 .pos-takeaway-card:hover {
   transform: translateY(-2px);
   border-color: rgba(245, 158, 11, 0.65);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.1);
 }
 
 .pos-takeaway-card.has-qty {
@@ -3194,8 +3291,8 @@
 
 .pos-takeaway-card-image {
   position: relative;
-  height: 72px;
-  min-height: 72px;
+  height: 56px;
+  min-height: 56px;
   background: #1e293b;
   overflow: hidden;
 }
@@ -3214,39 +3311,39 @@
 
 .pos-takeaway-badge {
   position: absolute;
-  top: 5px;
-  left: 5px;
+  top: 3px;
+  left: 3px;
   z-index: 2;
-  background: rgba(0, 0, 0, 0.78);
+  background: rgba(0, 0, 0, 0.82);
   backdrop-filter: blur(4px);
-  padding: 2px 5px;
+  padding: 1px 4px;
   border-radius: 3px;
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.54rem;
+  gap: 2.5px;
+  font-size: 0.5rem;
   font-weight: 800;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .pos-badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   display: inline-block;
 }
 
 .pos-takeaway-time {
   position: absolute;
-  bottom: 5px;
-  right: 5px;
+  bottom: 3px;
+  right: 3px;
   z-index: 2;
-  background: rgba(0, 0, 0, 0.76);
+  background: rgba(0, 0, 0, 0.8);
   color: #ffffff;
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 3px;
-  font-size: 0.52rem;
+  font-size: 0.48rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -3256,24 +3353,24 @@
 .pos-takeaway-card-body {
   display: flex;
   flex: 1 0 auto;
-  min-height: 48px;
+  min-height: 36px;
   flex-direction: column;
-  padding: 6px 7px 3px;
+  padding: 4px 6px 2px;
 }
 
 .pos-takeaway-card-title-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
 .pos-takeaway-card-title {
   margin: 0;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: var(--text-main, #0f172a);
-  line-height: 1.2;
+  line-height: 1.15;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -3289,10 +3386,10 @@
 }
 
 .pos-takeaway-card-desc {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: var(--text-muted, #64748b);
-  line-height: 1.25;
-  margin: 2px 0 0;
+  line-height: 1.2;
+  margin: 1px 0 0;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -3303,14 +3400,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  margin-top: 3px;
-  padding: 4px 7px 5px;
+  gap: 3px;
+  margin-top: 2px;
+  padding: 3px 6px 4px;
   border-top: 1px solid var(--border-subtle, #f1f5f9);
 }
 
 .pos-takeaway-card-price {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
   color: var(--accent-amber-light, #d97706);
   white-space: nowrap;
@@ -3319,17 +3416,17 @@
 .pos-takeaway-add-btn {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.25rem 0.5rem;
-  min-height: 24px;
+  gap: 0.15rem;
+  padding: 0.2rem 0.45rem;
+  min-height: 21px;
   border-radius: 4px;
   background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
   color: #ffffff;
   font-weight: 800;
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   border: none;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.28);
+  box-shadow: 0 2px 5px rgba(245, 158, 11, 0.28);
   transition:
     transform 140ms ease,
     filter 140ms ease;
@@ -3343,16 +3440,16 @@
 .pos-takeaway-qty-stepper {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.15rem;
   background: var(--bg-tertiary, #f8fafc);
-  padding: 2px 3px;
-  border-radius: 5px;
+  padding: 1px 2px;
+  border-radius: 4px;
   border: 1px solid var(--accent-amber, #f59e0b);
 }
 
 .pos-takeaway-qty-stepper button {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   border-radius: 3px;
   border: none;
   background: var(--accent-amber, #f59e0b);
@@ -3365,8 +3462,8 @@
 
 .pos-takeaway-qty-count {
   font-weight: 800;
-  font-size: 0.76rem;
-  min-width: 17px;
+  font-size: 0.72rem;
+  min-width: 14px;
   text-align: center;
   color: var(--accent-amber-light, #d97706);
 }

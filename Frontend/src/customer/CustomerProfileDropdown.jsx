@@ -86,44 +86,45 @@ export function CustomerProfileDropdown({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: "8px",
-          minHeight: "38px",
-          padding: "4px 14px 4px 6px",
+          gap: "7px",
+          minHeight: "34px",
+          padding: "3px 12px 3px 5px",
           border: "1.5px solid #f59e0b",
-          borderRadius: "24px",
-          background: "rgba(25, 16, 12, 0.9)",
+          borderRadius: "20px",
+          background: "rgba(25, 16, 12, 0.92)",
           color: "#ffffff",
-          fontSize: "13.5px",
+          fontSize: "12.5px",
           fontWeight: 700,
           cursor: "pointer",
           transition: "all 0.2s ease",
           boxShadow: isOpen
-            ? "0 0 0 3px rgba(245, 158, 11, 0.35), 0 4px 14px rgba(0,0,0,0.5)"
+            ? "0 0 16px rgba(245, 158, 11, 0.5), 0 0 0 2px #f59e0b"
             : "0 2px 8px rgba(0,0,0,0.3)",
         }}
       >
         <div
           style={{
-            width: "28px",
-            height: "28px",
+            width: "24px",
+            height: "24px",
             borderRadius: "50%",
             background: "linear-gradient(135deg, #f59e0b, #ea580c)",
             color: "#ffffff",
-            fontSize: "13px",
+            fontSize: "11.5px",
             fontWeight: 800,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            flexShrink: 0,
           }}
         >
           {avatarLetter}
         </div>
-        <span style={{ fontSize: "13px", fontWeight: 700, color: "#ffffff" }}>
+        <span style={{ fontSize: "12.5px", fontWeight: 700, color: "#ffffff" }}>
           {displayName}
         </span>
         <ChevronDown
-          size={14}
+          size={13}
           color="#f59e0b"
           style={{
             transition: "transform 0.2s ease",
@@ -138,14 +139,14 @@ export function CustomerProfileDropdown({
           className="customer-profile-dropdown-menu"
           style={{
             position: "absolute",
-            top: "calc(100% + 10px)",
+            top: "calc(100% + 8px)",
             right: 0,
-            width: "240px",
-            background: "#19110d",
-            border: "1px solid rgba(245, 158, 11, 0.35)",
-            borderRadius: "16px",
-            boxShadow: "0 20px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05)",
-            padding: "10px",
+            width: "230px",
+            background: "#160f0b",
+            border: "1.5px solid rgba(245, 158, 11, 0.45)",
+            borderRadius: "14px",
+            boxShadow: "0 20px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05)",
+            padding: "8px",
             zIndex: 9999,
             animation: "authCardFadeIn 0.18s ease-out",
           }}
@@ -155,20 +156,20 @@ export function CustomerProfileDropdown({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "12px",
-              padding: "8px 10px 12px 10px",
+              gap: "10px",
+              padding: "6px 8px 10px 8px",
               borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-              marginBottom: "8px",
+              marginBottom: "6px",
             }}
           >
             <div
               style={{
-                width: "42px",
-                height: "42px",
+                width: "38px",
+                height: "38px",
                 borderRadius: "50%",
                 background: "linear-gradient(135deg, #f97316, #ea580c)",
                 color: "#ffffff",
-                fontSize: "17px",
+                fontSize: "16px",
                 fontWeight: 800,
                 display: "flex",
                 alignItems: "center",
@@ -183,9 +184,9 @@ export function CustomerProfileDropdown({
               <strong
                 style={{
                   display: "block",
-                  fontSize: "14px",
+                  fontSize: "13.5px",
                   color: "#ffffff",
-                  fontWeight: 700,
+                  fontWeight: 800,
                   whiteSpace: "nowrap",
                   textOverflow: "ellipsis",
                   overflow: "hidden",
@@ -196,10 +197,10 @@ export function CustomerProfileDropdown({
               <small
                 style={{
                   display: "block",
-                  fontSize: "11.5px",
+                  fontSize: "11px",
                   color: "#f59e0b",
                   fontWeight: 600,
-                  marginTop: "2px",
+                  marginTop: "1px",
                 }}
               >
                 {displayPhone}
@@ -215,21 +216,22 @@ export function CustomerProfileDropdown({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "11px",
+              gap: "9px",
               width: "100%",
-              padding: "10px 12px",
+              padding: "8px 10px",
               background: currentRoute === "/my-orders" ? "rgba(245, 158, 11, 0.18)" : "transparent",
               border: "none",
-              borderRadius: "10px",
-              color: currentRoute === "/my-orders" ? "#f59e0b" : "#e5d7cc",
-              fontSize: "13.5px",
+              borderRadius: "8px",
+              color: currentRoute === "/my-orders" ? "#f59e0b" : "#f1e5dc",
+              fontSize: "12.5px",
               fontWeight: 600,
               textAlign: "left",
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
           >
-            <span style={{ fontSize: "16px" }}>📋</span>
+            <ShoppingBag size={15} color="#d4c5b9" />
+            <span style={{ fontSize: "14px" }}>📋</span>
             <span>My Orders</span>
           </button>
 
@@ -241,21 +243,22 @@ export function CustomerProfileDropdown({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "11px",
+              gap: "9px",
               width: "100%",
-              padding: "10px 12px",
+              padding: "8px 10px",
               background: currentRoute === "/my-reservations" ? "rgba(245, 158, 11, 0.18)" : "transparent",
               border: "none",
-              borderRadius: "10px",
-              color: currentRoute === "/my-reservations" ? "#f59e0b" : "#e5d7cc",
-              fontSize: "13.5px",
+              borderRadius: "8px",
+              color: currentRoute === "/my-reservations" ? "#f59e0b" : "#f1e5dc",
+              fontSize: "12.5px",
               fontWeight: 600,
               textAlign: "left",
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
           >
-            <span style={{ fontSize: "16px" }}>📅</span>
+            <CalendarDays size={15} color="#d4c5b9" />
+            <span style={{ fontSize: "14px" }}>📅</span>
             <span>My Reservations</span>
           </button>
 
@@ -267,21 +270,22 @@ export function CustomerProfileDropdown({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "11px",
+              gap: "9px",
               width: "100%",
-              padding: "10px 12px",
+              padding: "8px 10px",
               background: currentRoute === "/profile" ? "rgba(245, 158, 11, 0.18)" : "transparent",
               border: "none",
-              borderRadius: "10px",
-              color: currentRoute === "/profile" ? "#f59e0b" : "#e5d7cc",
-              fontSize: "13.5px",
+              borderRadius: "8px",
+              color: currentRoute === "/profile" ? "#f59e0b" : "#f1e5dc",
+              fontSize: "12.5px",
               fontWeight: 600,
               textAlign: "left",
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
           >
-            <span style={{ fontSize: "16px" }}>👤</span>
+            <User size={15} color="#d4c5b9" />
+            <span style={{ fontSize: "14px" }}>👤</span>
             <span>My Profile</span>
           </button>
 
@@ -289,7 +293,7 @@ export function CustomerProfileDropdown({
             style={{
               height: "1px",
               background: "rgba(255, 255, 255, 0.08)",
-              margin: "6px 0",
+              margin: "5px 0",
             }}
           />
 
@@ -301,22 +305,23 @@ export function CustomerProfileDropdown({
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "11px",
+              gap: "9px",
               width: "100%",
-              padding: "10px 12px",
+              padding: "8px 10px",
               background: "transparent",
               border: "none",
-              borderRadius: "10px",
+              borderRadius: "8px",
               color: "#ef4444",
-              fontSize: "13.5px",
+              fontSize: "12.5px",
               fontWeight: 700,
               textAlign: "left",
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
           >
-            <span style={{ fontSize: "16px" }}>🚪</span>
-            <span>Logout</span>
+            <LogOut size={15} color="#ef4444" />
+            <span style={{ fontSize: "14px" }}>🚪</span>
+            <span style={{ color: "#ef4444" }}>Logout</span>
           </button>
         </div>
       )}
