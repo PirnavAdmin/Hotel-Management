@@ -13545,88 +13545,70 @@
   ],
   "gourmet_pos_staff_v1": [
     {
-      "staffId": 1,
       "id": 1,
-      "fullName": "Rajesh K.",
+      "backendStaffId": 1,
       "name": "Rajesh K.",
-      "roleTitle": "Senior Captain",
       "role": "Senior Captain",
       "phone": "+91 98450 11223",
+      "email": "",
       "shift": "Morning Shift (10 AM - 4 PM)",
-      "isActive": true,
-      "assignedTablesCount": 3,
-      "avatarInitial": "R",
-      "createdAt": "2026-10-09T04:27:02.068846"
+      "monthlySalary": 10000,
+      "status": "active"
     },
     {
-      "staffId": 2,
       "id": 2,
-      "fullName": "Vikram S.",
+      "backendStaffId": 2,
       "name": "Vikram S.",
-      "roleTitle": "Head Waiter",
       "role": "Head Waiter",
       "phone": "+91 98450 44556",
+      "email": "",
       "shift": "Evening Shift (5 PM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 1,
-      "avatarInitial": "V",
-      "createdAt": "2026-10-09T04:27:02.069079"
+      "monthlySalary": 0,
+      "status": "active"
     },
     {
-      "staffId": 3,
       "id": 3,
-      "fullName": "Ananya R.",
+      "backendStaffId": 3,
       "name": "Ananya R.",
-      "roleTitle": "Stewardess",
       "role": "Stewardess",
       "phone": "+91 98450 77889",
+      "email": "",
       "shift": "Full Day (11 AM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 3,
-      "avatarInitial": "A",
-      "createdAt": "2026-10-09T04:27:02.06908"
+      "monthlySalary": 0,
+      "status": "active"
     },
     {
-      "staffId": 4,
       "id": 4,
-      "fullName": "Pooja M.",
+      "backendStaffId": 4,
       "name": "Pooja M.",
-      "roleTitle": "Captain",
       "role": "Captain",
       "phone": "+91 98450 99001",
+      "email": "",
       "shift": "Morning Shift (10 AM - 4 PM)",
-      "isActive": true,
-      "assignedTablesCount": 1,
-      "avatarInitial": "P",
-      "createdAt": "2026-10-09T04:27:02.06908"
+      "monthlySalary": 0,
+      "status": "active"
     },
     {
-      "staffId": 5,
       "id": 5,
-      "fullName": "Suresh N.",
+      "backendStaffId": 5,
       "name": "Suresh N.",
-      "roleTitle": "Server / Waiter",
       "role": "Server / Waiter",
       "phone": "+91 98450 33445",
+      "email": "",
       "shift": "Evening Shift (5 PM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 3,
-      "avatarInitial": "S",
-      "createdAt": "2026-10-09T04:27:02.06908"
+      "monthlySalary": 0,
+      "status": "active"
     },
     {
-      "staffId": 6,
       "id": 6,
-      "fullName": "Karan D.",
+      "backendStaffId": 6,
       "name": "Karan D.",
-      "roleTitle": "VIP Lounge Captain",
       "role": "VIP Lounge Captain",
       "phone": "+91 98450 66778",
+      "email": "",
       "shift": "Evening Shift (5 PM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 4,
-      "avatarInitial": "K",
-      "createdAt": "2026-10-09T04:27:02.069081"
+      "monthlySalary": 0,
+      "status": "active"
     }
   ]
 }

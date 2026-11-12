@@ -501,6 +501,7 @@ export function AdminPortal({
   inventory: propInventory = [],
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const isLight = currentTheme === "light-bistro";
 
   // Track Admin Portal Tab Navigation
   const prevTabRef = useRef(activeTab);
@@ -5966,7 +5967,13 @@ export function AdminPortal({
 
                 {/* ================= TAB: RESERVATIONS ================= */}
                 {activeTab === "reservations" && (
-                  <ReservationsManagement isLight={isLight} showToast={showToast} />
+                  <ReservationsManagement
+                    isLight={isLight}
+                    showToast={showToast}
+                    tables={tables}
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                  />
                 )}
 
                 {/* ================= TAB: SUPPLIERS ================= */}

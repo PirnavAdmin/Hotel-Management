@@ -1,386 +1,2503 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, RefreshCw, CheckCircle, Clock, XCircle, Trash2, User, Phone, Users } from 'lucide-react';
-import { apiGetReservations, apiCreateReservation, apiUpdateReservationStatus, apiDeleteReservation } from '../../api/reservationApi';
-import { apiGetTables } from '../../api/tableApi';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Calendar,
+  Plus,
+  RefreshCw,
+  CheckCircle2,
+  Check,
+  Clock,
+  Hourglass,
+  Utensils,
+  XCircle,
+  X,
+  Trash2,
+  User,
+  Phone,
+  Users,
+  Search,
+  ChevronDown,
+  Eye,
+  Printer,
+  MoreHorizontal,
+  MapPin,
+  Sparkles,
+  CreditCard,
+  FileText,
+  AlertCircle,
+} from "lucide-react";
+import {
+  apiGetReservations,
+  apiCreateReservation,
+  apiUpdateReservationStatus,
+  apiDeleteReservation,
+  getStoredReservations,
+  saveStoredReservations,
+  getStoredReservationTables,
+  saveStoredReservationTables,
+} from "../../api/reservationApi";
+import { apiGetTables } from "../../api/tableApi";
 
-export function ReservationsManagement({ isLight = false, showToast = alert }) {
-  const [reservations, setReservations] = useState([]);
-  const [tables, setTables] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+const STORAGE_KEY_RESERVATIONS = "bhanu_bistro_reservations_v1";
 
-  const [form, setForm] = useState({
-    customerName: '',
-    phone: '',
-    tableId: 1,
-    reservationDate: new Date().toISOString().split('T')[0],
-    reservationTime: '19:30:00',
+// ── Default Curated Seed Reservations (matches Takeaway scale & IDs: RES-4964, RES-3884, etc.) ──
+const INITIAL_SEED_RESERVATIONS = [
+  {
+    id: "RES-4964",
+    reservationId: "RES-4964",
+    customerName: "Priya Sharma",
+    phone: "+91 98765 43210",
+    email: "priya.sharma@example.com",
+    tableId: 3,
+    tableName: "Table 3 (Indoor AC)",
+    tableNumber: 3,
     guestsCount: 2,
-    notes: '',
+    reservationDate: "2026-11-12",
+    reservationTime: "07:30 PM",
+    status: "confirmed",
+    advanceAmount: 100,
+    paymentMethod: "UPI (Google Pay)",
+    notes: "Anniversary celebration. Window table preference.",
+    createdAt: "2026-11-12T10:30:00",
+  },
+  {
+    id: "RES-3884",
+    reservationId: "RES-3884",
+    customerName: "Ramesh Kumar",
+    phone: "+91 98450 11223",
+    email: "ramesh.k@example.com",
+    tableId: 5,
+    tableName: "Table 5 (Main Hall)",
+    tableNumber: 5,
+    guestsCount: 4,
+    reservationDate: "2026-11-12",
+    reservationTime: "08:00 PM",
+    status: "pending",
+    advanceAmount: 200,
+    paymentMethod: "UPI (PhonePe)",
+    notes: "High chair needed for a child.",
+    createdAt: "2026-11-12T11:15:00",
+  },
+  {
+    id: "RES-9156",
+    reservationId: "RES-9156",
+    customerName: "Vikram Singh",
+    phone: "+91 90085 33445",
+    email: "vikram.s@example.com",
+    tableId: 8,
+    tableName: "Table 8 (Outdoor Patio)",
+    tableNumber: 8,
+    guestsCount: 6,
+    reservationDate: "2026-11-12",
+    reservationTime: "08:30 PM",
+    status: "seated",
+    advanceAmount: 300,
+    paymentMethod: "Card",
+    notes: "Family reunion dinner. Warm lighting preferred.",
+    createdAt: "2026-11-12T09:45:00",
+  },
+  {
+    id: "RES-6157",
+    reservationId: "RES-6157",
+    customerName: "Ananya Reddy",
+    phone: "+91 99887 76655",
+    email: "ananya.r@example.com",
+    tableId: 2,
+    tableName: "Table 2 (Indoor AC)",
+    tableNumber: 2,
+    guestsCount: 2,
+    reservationDate: "2026-11-12",
+    reservationTime: "07:00 PM",
+    status: "confirmed",
+    advanceAmount: 100,
+    paymentMethod: "UPI (Paytm)",
+    notes: "Quiet corner table for birthday celebration.",
+    createdAt: "2026-11-12T12:00:00",
+  },
+  {
+    id: "RES-2515",
+    reservationId: "RES-2515",
+    customerName: "Karthik Mohan",
+    phone: "+91 78902 55661",
+    email: "karthik.m@example.com",
+    tableId: 4,
+    tableName: "Table 4 (Indoor AC)",
+    tableNumber: 4,
+    guestsCount: 4,
+    reservationDate: "2026-11-12",
+    reservationTime: "09:00 PM",
+    status: "pending",
+    advanceAmount: 200,
+    paymentMethod: "UPI",
+    notes: "Please keep dessert menu ready.",
+    createdAt: "2026-11-12T13:20:00",
+  },
+  {
+    id: "RES-5306",
+    reservationId: "RES-5306",
+    customerName: "Suresh Das",
+    phone: "+91 99804 22110",
+    email: "suresh.das@example.com",
+    tableId: 6,
+    tableName: "Table 6 (Outdoor Garden)",
+    tableNumber: 6,
+    guestsCount: 6,
+    reservationDate: "2026-11-12",
+    reservationTime: "01:30 PM",
+    status: "completed",
+    advanceAmount: 300,
+    paymentMethod: "Cash",
+    notes: "Corporate executive lunch meeting.",
+    createdAt: "2026-11-12T08:15:00",
+  },
+  {
+    id: "RES-1023",
+    reservationId: "RES-1023",
+    customerName: "Sneha Reddy",
+    phone: "+91 98451 22334",
+    email: "sneha.reddy@example.com",
+    tableId: 1,
+    tableName: "Table 1 (Indoor)",
+    tableNumber: 1,
+    guestsCount: 2,
+    reservationDate: "2026-11-13",
+    reservationTime: "08:00 PM",
+    status: "confirmed",
+    advanceAmount: 100,
+    paymentMethod: "UPI",
+    notes: "Candlelight arrangement requested.",
+    createdAt: "2026-11-11T16:40:00",
+  },
+  {
+    id: "RES-1022",
+    reservationId: "RES-1022",
+    customerName: "Rahul Verma",
+    phone: "+91 98112 44556",
+    email: "rahul.v@example.com",
+    tableId: 7,
+    tableName: "Table 7 (Outdoor)",
+    tableNumber: 7,
+    guestsCount: 4,
+    reservationDate: "2026-11-13",
+    reservationTime: "07:30 PM",
+    status: "pending",
+    advanceAmount: 200,
+    paymentMethod: "Card",
+    notes: "Non-smoking zone required.",
+    createdAt: "2026-11-11T15:20:00",
+  },
+  {
+    id: "RES-1021",
+    reservationId: "RES-1021",
+    customerName: "Meenakshi Sundaram",
+    phone: "+91 97334 55667",
+    email: "meenakshi@example.com",
+    tableId: 9,
+    tableName: "Table 9 (Private Dining)",
+    tableNumber: 9,
+    guestsCount: 8,
+    reservationDate: "2026-11-13",
+    reservationTime: "08:30 PM",
+    status: "confirmed",
+    advanceAmount: 500,
+    paymentMethod: "Net Banking",
+    notes: "Exclusive private dining booking with custom banquet menu.",
+    createdAt: "2026-11-11T14:10:00",
+  },
+  {
+    id: "RES-1020",
+    reservationId: "RES-1020",
+    customerName: "Aditya Roy",
+    phone: "+91 96221 88990",
+    email: "aditya.roy@example.com",
+    tableId: 3,
+    tableName: "Table 3 (Indoor AC)",
+    tableNumber: 3,
+    guestsCount: 2,
+    reservationDate: "2026-11-11",
+    reservationTime: "08:00 PM",
+    status: "completed",
+    advanceAmount: 100,
+    paymentMethod: "UPI",
+    notes: "Dinner completed happily.",
+    createdAt: "2026-11-10T12:00:00",
+  },
+  {
+    id: "RES-1019",
+    reservationId: "RES-1019",
+    customerName: "Pooja Hegde",
+    phone: "+91 95443 22110",
+    email: "pooja.h@example.com",
+    tableId: 5,
+    tableName: "Table 5 (Main Hall)",
+    tableNumber: 5,
+    guestsCount: 4,
+    reservationDate: "2026-11-11",
+    reservationTime: "07:30 PM",
+    status: "completed",
+    advanceAmount: 200,
+    paymentMethod: "UPI",
+    notes: "",
+    createdAt: "2026-11-10T11:00:00",
+  },
+  {
+    id: "RES-1018",
+    reservationId: "RES-1018",
+    customerName: "Rajesh Varma",
+    phone: "+91 91234 56789",
+    email: "rajesh@example.com",
+    tableId: 8,
+    tableName: "Table 8 (Outdoor Patio)",
+    tableNumber: 8,
+    guestsCount: 4,
+    reservationDate: "2026-11-11",
+    reservationTime: "08:30 PM",
+    status: "completed",
+    advanceAmount: 200,
+    paymentMethod: "Credit Card",
+    notes: "High chair for child.",
+    createdAt: "2026-11-09T18:00:00",
+  },
+  {
+    id: "RES-1017",
+    reservationId: "RES-1017",
+    customerName: "Gautam Rao",
+    phone: "+91 94332 11998",
+    email: "gautam.rao@example.com",
+    tableId: 2,
+    tableName: "Table 2 (Indoor AC)",
+    tableNumber: 2,
+    guestsCount: 2,
+    reservationDate: "2026-11-10",
+    reservationTime: "08:00 PM",
+    status: "completed",
+    advanceAmount: 100,
+    paymentMethod: "UPI",
+    notes: "",
+    createdAt: "2026-11-09T14:30:00",
+  },
+  {
+    id: "RES-1016",
+    reservationId: "RES-1016",
+    customerName: "Divya Nair",
+    phone: "+91 94810 77550",
+    email: "divya.n@example.com",
+    tableId: 6,
+    tableName: "Table 6 (Outdoor Garden)",
+    tableNumber: 6,
+    guestsCount: 6,
+    reservationDate: "2026-11-09",
+    reservationTime: "01:30 PM",
+    status: "completed",
+    advanceAmount: 300,
+    paymentMethod: "UPI",
+    notes: "Team celebration lunch.",
+    createdAt: "2026-11-08T16:00:00",
+  },
+  {
+    id: "RES-1015",
+    reservationId: "RES-1015",
+    customerName: "Manoj Tiwari",
+    phone: "+91 97422 88990",
+    email: "manoj.t@example.com",
+    tableId: 4,
+    tableName: "Table 4 (Indoor AC)",
+    tableNumber: 4,
+    guestsCount: 4,
+    reservationDate: "2026-11-08",
+    reservationTime: "08:00 PM",
+    status: "cancelled",
+    advanceAmount: 200,
+    paymentMethod: "UPI",
+    notes: "Guest cancelled due to travel delay.",
+    createdAt: "2026-11-07T10:15:00",
+  },
+  {
+    id: "RES-1014",
+    reservationId: "RES-1014",
+    customerName: "Kavitha Narayan",
+    phone: "+91 93221 00887",
+    email: "kavitha.n@example.com",
+    tableId: 1,
+    tableName: "Table 1 (Indoor)",
+    tableNumber: 1,
+    guestsCount: 2,
+    reservationDate: "2026-11-07",
+    reservationTime: "07:30 PM",
+    status: "completed",
+    advanceAmount: 100,
+    paymentMethod: "Cash",
+    notes: "",
+    createdAt: "2026-11-06T15:00:00",
+  },
+  {
+    id: "RES-1013",
+    reservationId: "RES-1013",
+    customerName: "Arun Kumar",
+    phone: "+91 98452 33445",
+    email: "arun.k@example.com",
+    tableId: 7,
+    tableName: "Table 7 (Outdoor)",
+    tableNumber: 7,
+    guestsCount: 4,
+    reservationDate: "2026-11-06",
+    reservationTime: "08:00 PM",
+    status: "completed",
+    advanceAmount: 200,
+    paymentMethod: "UPI",
+    notes: "",
+    createdAt: "2026-11-05T12:00:00",
+  },
+  {
+    id: "RES-1012",
+    reservationId: "RES-1012",
+    customerName: "Ananya Roy",
+    phone: "+91 99887 76655",
+    email: "ananya@example.com",
+    tableId: 8,
+    tableName: "Table 8 (Outdoor Patio)",
+    tableNumber: 8,
+    guestsCount: 6,
+    reservationDate: "2026-11-05",
+    reservationTime: "01:30 PM",
+    status: "completed",
+    advanceAmount: 300,
+    paymentMethod: "Net Banking",
+    notes: "Family reunion.",
+    createdAt: "2026-11-04T16:00:00",
+  },
+  {
+    id: "RES-1011",
+    reservationId: "RES-1011",
+    customerName: "Deepa Menon",
+    phone: "+91 98113 55667",
+    email: "deepa.m@example.com",
+    tableId: 3,
+    tableName: "Table 3 (Indoor AC)",
+    tableNumber: 3,
+    guestsCount: 2,
+    reservationDate: "2026-11-04",
+    reservationTime: "08:30 PM",
+    status: "completed",
+    advanceAmount: 100,
+    paymentMethod: "UPI",
+    notes: "",
+    createdAt: "2026-11-03T11:20:00",
+  },
+  {
+    id: "RES-1010",
+    reservationId: "RES-1010",
+    customerName: "Kiran Bedi",
+    phone: "+91 97335 66778",
+    email: "kiran.b@example.com",
+    tableId: 5,
+    tableName: "Table 5 (Main Hall)",
+    tableNumber: 5,
+    guestsCount: 4,
+    reservationDate: "2026-11-03",
+    reservationTime: "07:30 PM",
+    status: "completed",
+    advanceAmount: 200,
+    paymentMethod: "UPI",
+    notes: "",
+    createdAt: "2026-11-02T17:45:00",
+  },
+  {
+    id: "RES-1009",
+    reservationId: "RES-1009",
+    customerName: "Sanjay Vyas",
+    phone: "+91 96222 99001",
+    email: "sanjay.v@example.com",
+    tableId: 2,
+    tableName: "Table 2 (Indoor AC)",
+    tableNumber: 2,
+    guestsCount: 2,
+    reservationDate: "2026-11-02",
+    reservationTime: "08:00 PM",
+    status: "cancelled",
+    advanceAmount: 100,
+    paymentMethod: "UPI",
+    notes: "Cancelled by guest.",
+    createdAt: "2026-11-01T14:10:00",
+  },
+  {
+    id: "RES-1008",
+    reservationId: "RES-1008",
+    customerName: "Meera Sengupta",
+    phone: "+91 95444 33221",
+    email: "meera.s@example.com",
+    tableId: 9,
+    tableName: "Table 9 (Private Dining)",
+    tableNumber: 9,
+    guestsCount: 8,
+    reservationDate: "2026-11-01",
+    reservationTime: "08:30 PM",
+    status: "completed",
+    advanceAmount: 500,
+    paymentMethod: "Card",
+    notes: "Anniversary celebration dinner.",
+    createdAt: "2026-10-31T18:00:00",
+  },
+];
+
+const DEFAULT_TABLES = [
+  { id: 1, tableId: 1, name: "Table 1", section: "Indoor AC", capacity: 2, status: "available" },
+  { id: 2, tableId: 2, name: "Table 2", section: "Indoor AC", capacity: 2, status: "reserved" },
+  { id: 3, tableId: 3, name: "Table 3", section: "Indoor AC", capacity: 2, status: "reserved" },
+  { id: 4, tableId: 4, name: "Table 4", section: "Indoor AC", capacity: 4, status: "available" },
+  { id: 5, tableId: 5, name: "Table 5", section: "Main Hall", capacity: 4, status: "reserved" },
+  { id: 6, tableId: 6, name: "Table 6", section: "Outdoor Garden", capacity: 6, status: "available" },
+  { id: 7, tableId: 7, name: "Table 7", section: "Outdoor Patio", capacity: 4, status: "available" },
+  { id: 8, tableId: 8, name: "Table 8", section: "Outdoor Patio", capacity: 6, status: "reserved" },
+  { id: 9, tableId: 9, name: "Table 9", section: "Private Dining", capacity: 8, status: "available" },
+  { id: 10, tableId: 10, name: "Table 10", section: "Family Lounge", capacity: 6, status: "available" },
+];
+
+export function ReservationsManagement({
+  isLight = false,
+  showToast = alert,
+  tables = [],
+  restaurantName = "Bhanu Bistro",
+  restaurantSettings = {},
+}) {
+  // ── 1. Reservations & Tables State with Local Storage fallback ────────
+  const [reservations, setReservations] = useState(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_RESERVATIONS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      // Also check customer reservations
+      const customerRaw = localStorage.getItem("avsr_customer_reservations");
+      if (customerRaw) {
+        const parsedCustomer = JSON.parse(customerRaw);
+        if (Array.isArray(parsedCustomer) && parsedCustomer.length > 0) {
+          return [...parsedCustomer, ...INITIAL_SEED_RESERVATIONS];
+        }
+      }
+    } catch (e) {
+      console.warn("Could not read local reservations, using seed data:", e);
+    }
+    return INITIAL_SEED_RESERVATIONS;
   });
 
-  const fetchReservations = async () => {
-    setLoading(true);
-    setError(null);
+  const [tablesList, setTablesList] = useState(() => {
+    if (Array.isArray(tables) && tables.length > 0) return tables;
+    const stored = getStoredReservationTables();
+    if (Array.isArray(stored) && stored.length > 0) return stored;
+    return DEFAULT_TABLES;
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // ── 2. Filters & Search State ──────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeStatusTab, setActiveStatusTab] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all"); // "all" | "today" | "tomorrow" | "7days" | "month" | "custom"
+  const [dateRangeLabel, setDateRangeLabel] = useState("All Dates");
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [customDateRangeOpen, setCustomDateRangeOpen] = useState(false);
+  const [secondaryStatusFilter, setSecondaryStatusFilter] = useState("all");
+
+  // ── 3. Modals & Actions Menu State ─────────────────────────────────────
+  const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
+  const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
+  const [viewingReservation, setViewingReservation] = useState(null);
+  const [printingReservation, setPrintingReservation] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  // New Booking Form State
+  const [form, setForm] = useState({
+    customerName: "",
+    phone: "",
+    email: "",
+    tableId: 3,
+    guestsCount: 2,
+    reservationDate: new Date().toISOString().split("T")[0],
+    reservationTime: "07:30 PM",
+    notes: "",
+    advanceAmount: 100,
+  });
+
+  // Action Menu & Dropdown outside click ref
+  const actionMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
+        setActionMenuOpenId(null);
+      }
+    };
+    if (actionMenuOpenId) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [actionMenuOpenId]);
+
+  // Sync state to localStorage whenever reservations change
+  useEffect(() => {
     try {
-      const [resRes, tblRes] = await Promise.all([
+      localStorage.setItem(STORAGE_KEY_RESERVATIONS, JSON.stringify(reservations));
+    } catch (e) {
+      console.warn("Storage sync failed:", e);
+    }
+  }, [reservations]);
+
+  // ── 4. Fetch / Refresh Reservations ────────────────────────────────────
+  const fetchReservations = async (silent = false) => {
+    if (!silent) setIsRefreshing(true);
+    try {
+      const [resRes, tblRes] = await Promise.allSettled([
         apiGetReservations(),
         apiGetTables(),
       ]);
-      if (resRes?.success) {
-        setReservations(resRes.data || []);
-      } else {
-        setError(resRes?.message || 'Failed to load reservations.');
-      }
-      if (tblRes?.success) {
-        setTables(tblRes.data || []);
-        if (tblRes.data?.length > 0 && form.tableId === 1) {
-          setForm((prev) => ({ ...prev, tableId: tblRes.data[0].id || tblRes.data[0].tableId || 1 }));
+
+      if (resRes.status === "fulfilled" && resRes.value?.success && Array.isArray(resRes.value.data)) {
+        const serverData = resRes.value.data;
+        if (serverData.length > 0) {
+          setReservations((prev) => {
+            // merge server with local custom records
+            const serverIds = new Set(serverData.map((r) => r.reservationId || r.id));
+            const localOnly = prev.filter((r) => !serverIds.has(r.reservationId || r.id));
+            return [...localOnly, ...serverData];
+          });
         }
       }
+
+      if (tblRes.status === "fulfilled" && tblRes.value?.success && Array.isArray(tblRes.value.data)) {
+        if (tblRes.value.data.length > 0) {
+          setTablesList(tblRes.value.data);
+        }
+      }
+      if (!silent) {
+        showToast("✅ Table reservations refreshed successfully.");
+      }
     } catch (err) {
-      setError(err.message || 'Error loading reservations.');
+      console.warn("API refresh fallback to local state:", err);
+      if (!silent) {
+        showToast("ℹ️ Loaded current table reservations.");
+      }
     } finally {
+      setIsRefreshing(false);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReservations();
+    fetchReservations(true);
   }, []);
 
-  const handleCreate = async (e) => {
+  // ── 5. Status Update Handler ───────────────────────────────────────────
+  const handleStatusUpdate = async (reservationId, newStatus) => {
+    setReservations((prev) =>
+      prev.map((r) =>
+        (r.reservationId || r.id) === reservationId
+          ? { ...r, status: newStatus, updatedAt: new Date().toISOString() }
+          : r
+      )
+    );
+    setActionMenuOpenId(null);
+    if (viewingReservation && (viewingReservation.reservationId || viewingReservation.id) === reservationId) {
+      setViewingReservation((prev) => ({ ...prev, status: newStatus }));
+    }
+
+    try {
+      await apiUpdateReservationStatus(reservationId, newStatus);
+    } catch (e) {
+      console.warn("Backend status update offline, state kept locally:", e);
+    }
+    showToast(`✅ Reservation marked as ${newStatus.toUpperCase()}`);
+  };
+
+  // ── 6. Delete / Cancel Handler ─────────────────────────────────────────
+  const handleDelete = async (reservationId) => {
+    if (!window.confirm("Are you sure you want to remove this reservation?")) return;
+    setReservations((prev) =>
+      prev.filter((r) => (r.reservationId || r.id) !== reservationId)
+    );
+    setActionMenuOpenId(null);
+    if (viewingReservation && (viewingReservation.reservationId || viewingReservation.id) === reservationId) {
+      setViewingReservation(null);
+    }
+    try {
+      await apiDeleteReservation(reservationId);
+    } catch (e) {
+      console.warn("Backend delete offline, removed locally:", e);
+    }
+    showToast("✅ Reservation removed.");
+  };
+
+  // ── 7. Create New Reservation ──────────────────────────────────────────
+  const handleCreateReservation = async (e) => {
     e.preventDefault();
     if (!form.customerName.trim() || !form.phone.trim()) {
-      showToast('❌ Customer name and phone are required.');
+      showToast("❌ Customer name and phone number are required.");
       return;
     }
     setSaving(true);
+    const chosenTable = tablesList.find(
+      (t) => (t.id || t.tableId) === Number(form.tableId)
+    );
+    const nextIdNum = 5000 + Math.floor(Math.random() * 4000);
+    const newReservation = {
+      id: `RES-${nextIdNum}`,
+      reservationId: `RES-${nextIdNum}`,
+      customerName: form.customerName.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+      tableId: Number(form.tableId),
+      tableName: chosenTable ? (chosenTable.name || chosenTable.tableName || `Table ${chosenTable.id}`) : `Table ${form.tableId}`,
+      tableNumber: chosenTable ? (chosenTable.tableNumber || chosenTable.id) : form.tableId,
+      guestsCount: Number(form.guestsCount) || 2,
+      reservationDate: form.reservationDate,
+      reservationTime: form.reservationTime,
+      status: "confirmed",
+      advanceAmount: Number(form.advanceAmount) || 100,
+      paymentMethod: "Advance (Cash / Counter)",
+      notes: form.notes.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    setReservations((prev) => [newReservation, ...prev]);
+    setIsNewBookingModalOpen(false);
+    setForm({
+      customerName: "",
+      phone: "",
+      email: "",
+      tableId: tablesList[0]?.id || 1,
+      guestsCount: 2,
+      reservationDate: new Date().toISOString().split("T")[0],
+      reservationTime: "07:30 PM",
+      notes: "",
+      advanceAmount: 100,
+    });
+    setSaving(false);
+
     try {
-      const res = await apiCreateReservation({
-        ...form,
-        tableId: Number(form.tableId),
-        guestsCount: Number(form.guestsCount),
+      await apiCreateReservation(newReservation);
+    } catch (e) {
+      console.warn("Backend reservation create offline, preserved locally:", e);
+    }
+    showToast("🎉 Table reserved successfully!");
+  };
+
+  // ── 8. Filter Logic ────────────────────────────────────────────────────
+  const filteredReservations = useMemo(() => {
+    let list = [...reservations];
+
+    // Status Tab Filter
+    if (activeStatusTab !== "all") {
+      list = list.filter(
+        (r) => String(r.status || "").toLowerCase() === activeStatusTab.toLowerCase()
+      );
+    }
+
+    // Secondary Status Dropdown Filter
+    if (secondaryStatusFilter !== "all") {
+      list = list.filter(
+        (r) => String(r.status || "").toLowerCase() === secondaryStatusFilter.toLowerCase()
+      );
+    }
+
+    // Date Range Filter
+    const todayStr = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+    if (dateFilter === "today") {
+      list = list.filter((r) => (r.reservationDate || r.date || "").startsWith(todayStr));
+    } else if (dateFilter === "tomorrow") {
+      list = list.filter((r) => (r.reservationDate || r.date || "").startsWith(tomorrowStr));
+    } else if (dateFilter === "7days") {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
+      list = list.filter((r) => {
+        const d = r.reservationDate || r.date || "";
+        return d >= sevenDaysAgoStr && d <= todayStr;
       });
-      if (res?.success) {
-        showToast('✅ Table reserved successfully in MySQL!');
-        setIsAddOpen(false);
-        setForm({
-          customerName: '',
-          phone: '',
-          tableId: tables[0]?.id || 1,
-          reservationDate: new Date().toISOString().split('T')[0],
-          reservationTime: '19:30:00',
-          guestsCount: 2,
-          notes: '',
-        });
-        fetchReservations();
-      } else {
-        showToast(`❌ ${res?.message || 'Failed to book table'}`);
-      }
-    } catch (err) {
-      showToast(`❌ ${err.message}`);
-    } finally {
-      setSaving(false);
+    } else if (dateFilter === "month") {
+      const currentMonth = todayStr.slice(0, 7);
+      list = list.filter((r) => (r.reservationDate || r.date || "").startsWith(currentMonth));
+    } else if (dateFilter === "custom" && customStartDate && customEndDate) {
+      list = list.filter((r) => {
+        const d = r.reservationDate || r.date || "";
+        return d >= customStartDate && d <= customEndDate;
+      });
     }
-  };
 
-  const handleStatusUpdate = async (id, newStatus) => {
-    try {
-      const res = await apiUpdateReservationStatus(id, newStatus);
-      if (res?.success) {
-        showToast(`✅ Reservation marked as ${newStatus}`);
-        fetchReservations();
-      } else {
-        showToast(`❌ ${res?.message || 'Status update failed'}`);
-      }
-    } catch (err) {
-      showToast(`❌ ${err.message}`);
+    // Text Search Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (r) =>
+          (r.reservationId || r.id || "").toLowerCase().includes(q) ||
+          (r.customerName || "").toLowerCase().includes(q) ||
+          (r.phone || "").toLowerCase().includes(q) ||
+          (r.tableName || "").toLowerCase().includes(q) ||
+          (r.notes || "").toLowerCase().includes(q)
+      );
     }
-  };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel and remove this reservation?')) return;
-    try {
-      const res = await apiDeleteReservation(id);
-      if (res?.success) {
-        showToast('✅ Reservation cancelled.');
-        fetchReservations();
-      } else {
-        showToast(`❌ ${res?.message || 'Failed to cancel reservation'}`);
-      }
-    } catch (err) {
-      showToast(`❌ ${err.message}`);
+    return list;
+  }, [
+    reservations,
+    activeStatusTab,
+    secondaryStatusFilter,
+    dateFilter,
+    customStartDate,
+    customEndDate,
+    searchQuery,
+  ]);
+
+  // ── 9. KPI Metrics Calculation ─────────────────────────────────────────
+  const metrics = useMemo(() => {
+    const total = reservations.length;
+    const confirmed = reservations.filter(
+      (r) => String(r.status || "").toLowerCase() === "confirmed"
+    ).length;
+    const pending = reservations.filter(
+      (r) => String(r.status || "").toLowerCase() === "pending"
+    ).length;
+    const seatedOrCompleted = reservations.filter((r) => {
+      const s = String(r.status || "").toLowerCase();
+      return s === "seated" || s === "completed";
+    }).length;
+
+    return { total, confirmed, pending, seatedOrCompleted };
+  }, [reservations]);
+
+  // Tab badge counts
+  const tabCounts = useMemo(() => {
+    return {
+      all: reservations.length,
+      confirmed: reservations.filter((r) => String(r.status).toLowerCase() === "confirmed").length,
+      pending: reservations.filter((r) => String(r.status).toLowerCase() === "pending").length,
+      seated: reservations.filter((r) => String(r.status).toLowerCase() === "seated").length,
+      completed: reservations.filter((r) => String(r.status).toLowerCase() === "completed").length,
+      cancelled: reservations.filter((r) => String(r.status).toLowerCase() === "cancelled").length,
+    };
+  }, [reservations]);
+
+  // Status Badge Helper
+  const getStatusBadge = (status) => {
+    const s = String(status || "").toLowerCase();
+    switch (s) {
+      case "confirmed":
+        return {
+          label: "Confirmed",
+          color: "#10b981",
+          bg: "rgba(16, 185, 129, 0.12)",
+          border: "rgba(16, 185, 129, 0.35)",
+          icon: CheckCircle2,
+        };
+      case "seated":
+        return {
+          label: "Seated",
+          color: "#3b82f6",
+          bg: "rgba(59, 130, 246, 0.12)",
+          border: "rgba(59, 130, 246, 0.35)",
+          icon: Utensils,
+        };
+      case "completed":
+        return {
+          label: "Completed",
+          color: "#059669",
+          bg: "rgba(5, 150, 105, 0.12)",
+          border: "rgba(5, 150, 105, 0.35)",
+          icon: Check,
+        };
+      case "cancelled":
+        return {
+          label: "Cancelled",
+          color: "#ef4444",
+          bg: "rgba(239, 68, 68, 0.12)",
+          border: "rgba(239, 68, 68, 0.35)",
+          icon: XCircle,
+        };
+      case "pending":
+      default:
+        return {
+          label: "Pending",
+          color: "#f59e0b",
+          bg: "rgba(245, 158, 11, 0.12)",
+          border: "rgba(245, 158, 11, 0.35)",
+          icon: Hourglass,
+        };
     }
   };
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Calendar size={22} color="var(--accent-amber)" /> Table Reservations
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Schedule dining room bookings, manage guest arrivals, and prevent table clashes in MySQL.
-          </p>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "1.15rem",
+        padding: "1.25rem",
+        color: "var(--text-main, #f8fafc)",
+        background: "transparent",
+      }}
+    >
+      {/* ── 1. Top Header Banner (Matches Takeaway Orders Banner) ── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 4px 12px rgba(234, 88, 12, 0.3)",
+              flexShrink: 0,
+            }}
+          >
+            <Calendar size={24} />
+          </div>
+          <div>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "1.45rem",
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                color: "var(--text-main, #f8fafc)",
+                lineHeight: 1.2,
+              }}
+            >
+              Table Reservations
+            </h1>
+            <p
+              style={{
+                margin: "0.2rem 0 0",
+                fontSize: "0.84rem",
+                color: "var(--text-muted, #94a3b8)",
+              }}
+            >
+              Schedule dining room bookings, manage guest arrivals, and track table allocations
+            </p>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+
+        {/* Top Right Controls: Date Range Selector & + Book Table Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {/* Date Selector Dropdown */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.55rem",
+                height: "42px",
+                padding: "0 1rem",
+                borderRadius: "10px",
+                border: "1px solid var(--border-card, #27272a)",
+                background: "var(--bg-card, #18181b)",
+                color: "var(--text-main, #f8fafc)",
+                fontSize: "0.84rem",
+                fontWeight: 500,
+                cursor: "pointer",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Calendar size={15} color="#ea580c" />
+              <span>{dateRangeLabel}</span>
+              <ChevronDown size={14} style={{ opacity: 0.6 }} />
+            </button>
+
+            {dateDropdownOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "calc(100% + 6px)",
+                  background: "var(--bg-card, #18181b)",
+                  border: "1px solid var(--border-card, #27272a)",
+                  borderRadius: "10px",
+                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.4)",
+                  padding: "0.4rem",
+                  zIndex: 50,
+                  minWidth: "210px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.2rem",
+                }}
+              >
+                {[
+                  { label: "All Dates", value: "all" },
+                  { label: "Today", value: "today" },
+                  { label: "Tomorrow", value: "tomorrow" },
+                  { label: "Last 7 Days", value: "7days" },
+                  { label: "This Month (Nov 2026)", value: "month" },
+                ].map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => {
+                      setDateFilter(preset.value);
+                      setDateRangeLabel(preset.label);
+                      setDateDropdownOpen(false);
+                      setCustomDateRangeOpen(false);
+                    }}
+                    style={{
+                      textAlign: "left",
+                      padding: "0.55rem 0.85rem",
+                      borderRadius: "6px",
+                      border: "none",
+                      background: dateFilter === preset.value ? "rgba(234, 88, 12, 0.15)" : "transparent",
+                      color: dateFilter === preset.value ? "#ea580c" : "var(--text-main, #f8fafc)",
+                      fontSize: "0.82rem",
+                      fontWeight: dateFilter === preset.value ? 600 : 400,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCustomDateRangeOpen((open) => !open)}
+                  style={{
+                    textAlign: "left",
+                    padding: "0.55rem 0.85rem",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: customDateRangeOpen || dateFilter === "custom" ? "rgba(234, 88, 12, 0.15)" : "transparent",
+                    color: customDateRangeOpen || dateFilter === "custom" ? "#ea580c" : "var(--text-main, #f8fafc)",
+                    fontSize: "0.82rem",
+                    fontWeight: customDateRangeOpen || dateFilter === "custom" ? 600 : 400,
+                    cursor: "pointer",
+                  }}
+                >
+                  Custom date range
+                </button>
+                {customDateRangeOpen && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.5rem",
+                      padding: "0.5rem 0.45rem 0.35rem",
+                      borderTop: "1px solid var(--border-card, #27272a)",
+                    }}
+                  >
+                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem" }}>
+                      From
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        max={customEndDate || undefined}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          padding: "0.45rem",
+                          border: "1px solid var(--border-card, #27272a)",
+                          borderRadius: "6px",
+                          background: "var(--bg-secondary, #27272a)",
+                          color: "var(--text-main, #f8fafc)",
+                        }}
+                      />
+                    </label>
+                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem" }}>
+                      To
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        min={customStartDate || undefined}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          padding: "0.45rem",
+                          border: "1px solid var(--border-card, #27272a)",
+                          borderRadius: "6px",
+                          background: "var(--bg-secondary, #27272a)",
+                          color: "var(--text-main, #f8fafc)",
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
+                      onClick={() => {
+                        setDateFilter("custom");
+                        setDateRangeLabel(`${customStartDate} to ${customEndDate}`);
+                        setDateDropdownOpen(false);
+                      }}
+                      style={{
+                        padding: "0.5rem",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "linear-gradient(135deg, #f97316, #ea580c)",
+                        color: "#fff",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Apply date range
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* + Book Table Button */}
           <button
             type="button"
-            onClick={fetchReservations}
+            onClick={() => setIsNewBookingModalOpen(true)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.55rem 0.9rem',
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              height: "42px",
+              padding: "0 1.25rem",
+              borderRadius: "10px",
+              border: "none",
+              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              color: "#fff",
+              fontSize: "0.88rem",
               fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
+              transition: "transform 0.15s ease",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
           >
-            <RefreshCw size={15} /> Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsAddOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.55rem 1rem',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-              border: 'none',
-              borderRadius: 'var(--radius-md)',
-              color: '#ffffff',
-              cursor: 'pointer',
-              fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
-            }}
-          >
-            <Plus size={16} /> Book Table
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Book Table</span>
           </button>
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading reservations from MySQL...</div>
-      ) : error ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>{error}</div>
-      ) : reservations.length === 0 ? (
-        <div style={{ padding: '3rem', textAlign: 'center', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
-          No reservations found. Click <strong>Book Table</strong> to create a new reservation.
+      {/* ── 2. Key Metrics / KPI Summary Cards (4 Cards, exact Takeaway layout) ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "0.75rem",
+        }}
+      >
+        {/* Card 1: Total Reservations */}
+        <div
+          style={{
+            background: "var(--bg-card, #18181b)",
+            border: "1px solid var(--border-card, #27272a)",
+            borderRadius: "12px",
+            padding: "0.85rem 1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.85rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              background: "rgba(249, 115, 22, 0.14)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ea580c",
+              flexShrink: 0,
+            }}
+          >
+            <Calendar size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
+              Total Reservations
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "var(--text-main, #f8fafc)", letterSpacing: "-0.02em" }}>
+              {metrics.total}
+            </div>
+          </div>
         </div>
-      ) : (
-        <div style={{ overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+
+        {/* Card 2: Confirmed Bookings */}
+        <div
+          style={{
+            background: "var(--bg-card, #18181b)",
+            border: "1px solid var(--border-card, #27272a)",
+            borderRadius: "12px",
+            padding: "0.85rem 1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.85rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              background: "rgba(34, 197, 94, 0.14)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#16a34a",
+              flexShrink: 0,
+            }}
+          >
+            <CheckCircle2 size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
+              Confirmed Bookings
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#16a34a", letterSpacing: "-0.02em" }}>
+              {metrics.confirmed}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Pending Bookings */}
+        <div
+          style={{
+            background: "var(--bg-card, #18181b)",
+            border: "1px solid var(--border-card, #27272a)",
+            borderRadius: "12px",
+            padding: "0.85rem 1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.85rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              background: "rgba(245, 158, 11, 0.14)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#d97706",
+              flexShrink: 0,
+            }}
+          >
+            <Hourglass size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
+              Pending Bookings
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#d97706", letterSpacing: "-0.02em" }}>
+              {metrics.pending}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Seated / Completed */}
+        <div
+          style={{
+            background: "var(--bg-card, #18181b)",
+            border: "1px solid var(--border-card, #27272a)",
+            borderRadius: "12px",
+            padding: "0.85rem 1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.85rem",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <div
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "50%",
+              background: "rgba(59, 130, 246, 0.14)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#3b82f6",
+              flexShrink: 0,
+            }}
+          >
+            <Utensils size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
+              Seated & Completed
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#3b82f6", letterSpacing: "-0.02em" }}>
+              {metrics.seatedOrCompleted}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Status Filter Tabs (Horizontal Pills) ─────────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.6rem",
+          overflowX: "auto",
+          paddingBottom: "0.2rem",
+        }}
+      >
+        {[
+          { key: "all", label: "All Bookings", count: tabCounts.all, icon: Calendar },
+          { key: "confirmed", label: "Confirmed", count: tabCounts.confirmed, icon: CheckCircle2 },
+          { key: "pending", label: "Pending", count: tabCounts.pending, icon: Hourglass },
+          { key: "seated", label: "Seated", count: tabCounts.seated, icon: Utensils },
+          { key: "completed", label: "Completed", count: tabCounts.completed, icon: Check },
+          { key: "cancelled", label: "Cancelled", count: tabCounts.cancelled, icon: XCircle },
+        ].map((tab) => {
+          const isActive = activeStatusTab.toLowerCase() === tab.key.toLowerCase();
+          const Icon = tab.icon;
+
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveStatusTab(tab.key)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                padding: "0.48rem 0.95rem",
+                borderRadius: "10px",
+                border: isActive
+                  ? "1px solid #ea580c"
+                  : "1px solid var(--border-card, #27272a)",
+                background: isActive
+                  ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"
+                  : "var(--bg-card, #18181b)",
+                color: isActive ? "#ffffff" : "var(--text-main, #cbd5e1)",
+                fontSize: "0.82rem",
+                fontWeight: isActive ? 700 : 500,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+                boxShadow: isActive ? "0 2px 8px rgba(234, 88, 12, 0.3)" : "none",
+              }}
+            >
+              <Icon size={14} />
+              <span>
+                {tab.label} ({tab.count})
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── 4. Search & Filter Controls Bar ──────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "0.75rem",
+        }}
+      >
+        {/* Search input */}
+        <div
+          style={{
+            position: "relative",
+            flex: "1 1 320px",
+            maxWidth: "480px",
+          }}
+        >
+          <Search
+            size={16}
+            style={{
+              position: "absolute",
+              left: "0.95rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--text-muted, #94a3b8)",
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by Reservation ID, Guest, Phone or Table..."
+            style={{
+              width: "100%",
+              height: "42px",
+              padding: "0 0.95rem 0 2.5rem",
+              borderRadius: "10px",
+              border: "1px solid var(--border-card, #27272a)",
+              background: "var(--bg-card, #18181b)",
+              color: "var(--text-main, #f8fafc)",
+              fontSize: "0.84rem",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              style={{
+                position: "absolute",
+                right: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "transparent",
+                border: "none",
+                color: "var(--text-muted, #94a3b8)",
+                cursor: "pointer",
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Dropdown Filters and Refresh Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          {/* Quick Date Select */}
+          <select
+            value={dateFilter}
+            onChange={(e) => {
+              setDateFilter(e.target.value);
+              const labelMap = {
+                all: "All Dates",
+                today: "Today",
+                tomorrow: "Tomorrow",
+                "7days": "Last 7 Days",
+                month: "This Month",
+              };
+              setDateRangeLabel(labelMap[e.target.value] || "Custom");
+            }}
+            style={{
+              height: "42px",
+              padding: "0 1rem",
+              borderRadius: "10px",
+              border: "1px solid var(--border-card, #27272a)",
+              background: "var(--bg-card, #18181b)",
+              color: "var(--text-main, #f8fafc)",
+              fontSize: "0.83rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              outline: "none",
+            }}
+          >
+            <option value="all">All Dates</option>
+            <option value="today">Today</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="month">This Month</option>
+          </select>
+
+          {/* Secondary Status Filter */}
+          <select
+            value={secondaryStatusFilter}
+            onChange={(e) => setSecondaryStatusFilter(e.target.value)}
+            style={{
+              height: "42px",
+              padding: "0 1rem",
+              borderRadius: "10px",
+              border: "1px solid var(--border-card, #27272a)",
+              background: "var(--bg-card, #18181b)",
+              color: "var(--text-main, #f8fafc)",
+              fontSize: "0.83rem",
+              fontWeight: 500,
+              cursor: "pointer",
+              outline: "none",
+            }}
+          >
+            <option value="all">All Status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="pending">Pending</option>
+            <option value="seated">Seated</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          {/* Refresh Button */}
+          <button
+            type="button"
+            onClick={() => fetchReservations(false)}
+            title="Refresh reservations from server"
+            style={{
+              height: "42px",
+              width: "42px",
+              borderRadius: "10px",
+              border: "1px solid var(--border-card, #27272a)",
+              background: "var(--bg-card, #18181b)",
+              color: "var(--text-main, #f8fafc)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "transform 0.2s ease",
+            }}
+          >
+            <RefreshCw
+              size={16}
+              style={{
+                animation: isRefreshing ? "spin 0.8s linear infinite" : "none",
+              }}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* ── 5. Main Table: Table Reservations ────────────────── */}
+      <div
+        style={{
+          background: "var(--bg-card, #18181b)",
+          border: "1px solid var(--border-card, #27272a)",
+          borderRadius: "14px",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+        }}
+      >
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              textAlign: "left",
+              fontSize: "0.85rem",
+            }}
+          >
             <thead>
-              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '0.75rem 1rem' }}>Guest Details</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Table</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Date & Time</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Guests</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-                <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+              <tr
+                style={{
+                  background: "var(--bg-secondary, #202024)",
+                  borderBottom: "1px solid var(--border-card, #27272a)",
+                  color: "var(--text-muted, #94a3b8)",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                <th style={{ padding: "0.85rem 1rem", width: "40px" }}>#</th>
+                <th style={{ padding: "0.85rem 1rem" }}>RESERVATION ID</th>
+                <th style={{ padding: "0.85rem 1rem" }}>GUEST NAME</th>
+                <th style={{ padding: "0.85rem 1rem" }}>PHONE</th>
+                <th style={{ padding: "0.85rem 1rem" }}>TABLE</th>
+                <th style={{ padding: "0.85rem 1rem" }}>GUESTS</th>
+                <th style={{ padding: "0.85rem 1rem" }}>DATE & TIME</th>
+                <th style={{ padding: "0.85rem 1rem" }}>STATUS</th>
+                <th style={{ padding: "0.85rem 1rem", textAlign: "right" }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
-              {reservations.map((r) => {
-                const statusColor =
-                  r.status === 'confirmed' || r.status === 'seated'
-                    ? '#10b981'
-                    : r.status === 'cancelled'
-                    ? '#ef4444'
-                    : '#f59e0b';
-                return (
-                  <tr key={r.reservationId} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{r.customerName || 'Guest'}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginTop: '2px' }}>
-                        <Phone size={12} color="var(--accent-amber)" /> {r.customerPhone || '—'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                      {r.tableNumber ? `Table #${r.tableNumber}` : `Table ID #${r.tableId}`}
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-main)' }}>
-                      <div>{r.reservationDate}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Clock size={12} /> {r.reservationTime}
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', color: 'var(--text-main)' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Users size={14} color="var(--accent-amber)" /> {r.guestsCount} guests
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <span
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          background: `${statusColor}20`,
-                          color: statusColor,
-                          border: `1px solid ${statusColor}40`,
-                        }}
-                      >
-                        {r.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        {r.status !== 'confirmed' && r.status !== 'seated' && (
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdate(r.reservationId, 'confirmed')}
-                            style={{ background: 'rgba(16, 185, 129, 0.15)', border: 'none', color: '#10b981', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-                            title="Confirm Booking"
-                          >
-                            Confirm
-                          </button>
-                        )}
-                        {r.status === 'confirmed' && (
-                          <button
-                            type="button"
-                            onClick={() => handleStatusUpdate(r.reservationId, 'seated')}
-                            style={{ background: 'rgba(59, 130, 246, 0.15)', border: 'none', color: '#3b82f6', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
-                            title="Mark as Seated"
-                          >
-                            Seat
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(r.reservationId)}
-                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                          title="Cancel Reservation"
+              {filteredReservations.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={9}
+                    style={{
+                      padding: "3.5rem 1rem",
+                      textAlign: "center",
+                      color: "var(--text-muted, #94a3b8)",
+                    }}
+                  >
+                    <Calendar size={36} color="#ea580c" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", marginBottom: "0.25rem" }}>
+                      No reservations found
+                    </div>
+                    <p style={{ margin: 0, fontSize: "0.84rem" }}>
+                      Try adjusting your search query, status filters or date range.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredReservations.map((r, index) => {
+                  const resId = r.reservationId || r.id;
+                  const badge = getStatusBadge(r.status);
+                  const BadgeIcon = badge.icon;
+                  const isMenuOpen = actionMenuOpenId === resId;
+
+                  return (
+                    <tr
+                      key={resId || index}
+                      style={{
+                        borderBottom: "1px solid var(--border-card, #27272a)",
+                        transition: "background 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary, #27272a)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* Row Index */}
+                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.78rem" }}>
+                        {index + 1}
+                      </td>
+
+                      {/* Reservation ID */}
+                      <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            letterSpacing: "-0.01em",
+                            color: "#ea580c",
+                          }}
                         >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                          {resId}
+                        </span>
+                      </td>
+
+                      {/* Guest Name */}
+                      <td style={{ padding: "0.85rem 1rem" }}>
+                        <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          <div
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "50%",
+                              background: "rgba(249, 115, 22, 0.15)",
+                              color: "#ea580c",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "0.72rem",
+                              fontWeight: 800,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(r.customerName || "G")[0].toUpperCase()}
+                          </div>
+                          <span>{r.customerName || "Guest"}</span>
+                        </div>
+                      </td>
+
+                      {/* Phone */}
+                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                          <Phone size={13} color="#94a3b8" />
+                          {r.phone || r.customerPhone || "—"}
+                        </span>
+                      </td>
+
+                      {/* Table */}
+                      <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: "var(--text-main, #f8fafc)" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            background: "rgba(255, 255, 255, 0.04)",
+                            border: "1px solid var(--border-card, #27272a)",
+                            padding: "0.2rem 0.55rem",
+                            borderRadius: "6px",
+                            fontSize: "0.78rem",
+                          }}
+                        >
+                          <MapPin size={12} color="#ea580c" />
+                          {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
+                        </span>
+                      </td>
+
+                      {/* Guests Count */}
+                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                          <Users size={14} color="#f59e0b" />
+                          <strong>{r.guestsCount || r.guests || 2}</strong> Guests
+                        </span>
+                      </td>
+
+                      {/* Date & Time */}
+                      <td style={{ padding: "0.85rem 1rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                        <div>{r.reservationDate || r.date || "Today"}</div>
+                        <div style={{ fontSize: "0.76rem", color: "var(--text-muted, #94a3b8)", display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "2px" }}>
+                          <Clock size={11} color="#ea580c" />
+                          {r.reservationTime || r.time || "07:30 PM"}
+                        </div>
+                      </td>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: "0.85rem 1rem", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            padding: "0.28rem 0.65rem",
+                            borderRadius: "999px",
+                            background: badge.bg,
+                            color: badge.color,
+                            border: `1px solid ${badge.border}`,
+                            fontSize: "0.74rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <BadgeIcon size={12} />
+                          {badge.label}
+                        </span>
+                      </td>
+
+                      {/* Actions: View, Print, More Menu */}
+                      <td style={{ padding: "0.85rem 1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                          {/* Eye / View Details */}
+                          <button
+                            type="button"
+                            onClick={() => setViewingReservation(r)}
+                            title="View Reservation Details"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-card, #27272a)",
+                              background: "rgba(255, 255, 255, 0.04)",
+                              color: "var(--text-main, #f8fafc)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#ea580c";
+                              e.currentTarget.style.color = "#ea580c";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "var(--border-card, #27272a)";
+                              e.currentTarget.style.color = "var(--text-main, #f8fafc)";
+                            }}
+                          >
+                            <Eye size={15} />
+                          </button>
+
+                          {/* Print Booking Voucher */}
+                          <button
+                            type="button"
+                            onClick={() => setPrintingReservation(r)}
+                            title="Print Booking Voucher"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-card, #27272a)",
+                              background: "rgba(255, 255, 255, 0.04)",
+                              color: "var(--text-main, #f8fafc)",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#ea580c";
+                              e.currentTarget.style.color = "#ea580c";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "var(--border-card, #27272a)";
+                              e.currentTarget.style.color = "var(--text-main, #f8fafc)";
+                            }}
+                          >
+                            <Printer size={15} />
+                          </button>
+
+                          {/* More Horizontal Dropdown Button */}
+                          <div style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              onClick={() => setActionMenuOpenId(isMenuOpen ? null : resId)}
+                              title="Actions"
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-card, #27272a)",
+                                background: isMenuOpen ? "rgba(234, 88, 12, 0.15)" : "rgba(255, 255, 255, 0.04)",
+                                color: isMenuOpen ? "#ea580c" : "var(--text-main, #f8fafc)",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <MoreHorizontal size={15} />
+                            </button>
+
+                            {/* Dropdown Menu (Matches Takeaway Actions Dropdown) */}
+                            {isMenuOpen && (
+                              <div
+                                ref={actionMenuRef}
+                                style={{
+                                  position: "absolute",
+                                  right: 0,
+                                  top: "calc(100% + 5px)",
+                                  background: "#18181b",
+                                  border: "1px solid #27272a",
+                                  borderRadius: "10px",
+                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.75)",
+                                  padding: "0.35rem",
+                                  minWidth: "195px",
+                                  zIndex: 100,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "0.15rem",
+                                  textAlign: "left",
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewingReservation(r);
+                                    setActionMenuOpenId(null);
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#f8fafc",
+                                    fontSize: "0.8rem",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                >
+                                  <FileText size={14} color="#ea580c" />
+                                  <span>Reservation Details</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPrintingReservation(r);
+                                    setActionMenuOpenId(null);
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#f8fafc",
+                                    fontSize: "0.8rem",
+                                    cursor: "pointer",
+                                    fontWeight: 500,
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                >
+                                  <Printer size={14} color="#f59e0b" />
+                                  <span>Print Booking Voucher</span>
+                                </button>
+
+                                <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
+
+                                {r.status !== "confirmed" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusUpdate(resId, "confirmed")}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                      padding: "0.5rem 0.75rem",
+                                      borderRadius: "6px",
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#10b981",
+                                      fontSize: "0.8rem",
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(16, 185, 129, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <CheckCircle2 size={14} />
+                                    <span>Mark as Confirmed</span>
+                                  </button>
+                                )}
+
+                                {r.status !== "seated" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusUpdate(resId, "seated")}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                      padding: "0.5rem 0.75rem",
+                                      borderRadius: "6px",
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#3b82f6",
+                                      fontSize: "0.8rem",
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <Utensils size={14} />
+                                    <span>Mark as Seated</span>
+                                  </button>
+                                )}
+
+                                {r.status !== "completed" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusUpdate(resId, "completed")}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                      padding: "0.5rem 0.75rem",
+                                      borderRadius: "6px",
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#059669",
+                                      fontSize: "0.8rem",
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(5, 150, 105, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <Check size={14} />
+                                    <span>Mark as Completed</span>
+                                  </button>
+                                )}
+
+                                {r.status !== "cancelled" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusUpdate(resId, "cancelled")}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.5rem",
+                                      padding: "0.5rem 0.75rem",
+                                      borderRadius: "6px",
+                                      border: "none",
+                                      background: "transparent",
+                                      color: "#ef4444",
+                                      fontSize: "0.8rem",
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                                  >
+                                    <XCircle size={14} />
+                                    <span>Cancel Reservation</span>
+                                  </button>
+                                )}
+
+                                <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(resId)}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.5rem 0.75rem",
+                                    borderRadius: "6px",
+                                    border: "none",
+                                    background: "transparent",
+                                    color: "#94a3b8",
+                                    fontSize: "0.78rem",
+                                    cursor: "pointer",
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete Record</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
-      {/* Book Table Modal */}
-      {isAddOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: 'var(--bg-card)', padding: '1.75rem', borderRadius: 'var(--radius-lg)', width: '90%', maxWidth: '480px', border: '1px solid var(--border-subtle)' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1rem' }}>Book Table Reservation</h3>
-            <form onSubmit={handleCreate}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+      {/* ── 6. Modal: "+ Book Table" (Matches Takeaway Order Modal) ── */}
+      {isNewBookingModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              background: "#18181b",
+              border: "1px solid #27272a",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "520px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "1.1rem 1.4rem",
+                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
+                borderBottom: "1px solid #27272a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <Calendar size={20} color="#ea580c" />
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Customer Name *</label>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                    New Table Reservation
+                  </h3>
+                  <small style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
+                    Reserve a dining table at {restaurantName}
+                  </small>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewBookingModalOpen(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleCreateReservation} style={{ padding: "1.25rem 1.4rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                    Guest Full Name *
+                  </label>
                   <input
                     type="text"
                     required
+                    placeholder="e.g. Ramesh Kumar"
                     value={form.customerName}
                     onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                    style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                    }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Phone Number *</label>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                    Mobile Number *
+                  </label>
                   <input
                     type="text"
                     required
+                    placeholder="+91 98765 43210"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                    }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Dining Table *</label>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                    Dining Table *
+                  </label>
                   <select
                     value={form.tableId}
                     onChange={(e) => setForm({ ...form, tableId: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                      cursor: "pointer",
+                    }}
                   >
-                    {tables.map((tbl) => (
+                    {tablesList.map((tbl) => (
                       <option key={tbl.id || tbl.tableId} value={tbl.id || tbl.tableId}>
-                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.seatingCapacity || tbl.capacity || 4} seats)
+                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.section || "Indoor"} • {tbl.capacity || tbl.seatingCapacity || 4} Guests)
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Guests Count</label>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                    Number of Guests
+                  </label>
                   <input
                     type="number"
                     min="1"
                     max="50"
                     value={form.guestsCount}
                     onChange={(e) => setForm({ ...form, guestsCount: e.target.value })}
-                    style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                    }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Reservation Date</label>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                    Reservation Date
+                  </label>
                   <input
                     type="date"
                     value={form.reservationDate}
                     onChange={(e) => setForm({ ...form, reservationDate: e.target.value })}
-                    style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                    }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Reservation Time</label>
-                  <input
-                    type="time"
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                    Time Slot
+                  </label>
+                  <select
                     value={form.reservationTime}
                     onChange={(e) => setForm({ ...form, reservationTime: e.target.value })}
-                    style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
-                  />
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {[
+                      "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM",
+                      "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM", "09:00 PM", "09:30 PM"
+                    ].map((time) => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Special Notes / Dietary Requests</label>
+              <div style={{ marginBottom: "0.85rem" }}>
+                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  Special Requests / Occasion (Optional)
+                </label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Window seat, anniversary dinner, extra high chair"
+                  placeholder="e.g. Birthday arrangement, quiet window corner, high chair required"
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  style={{ width: '100%', padding: '0.55rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)' }}
+                  style={{
+                    width: "100%",
+                    padding: "0.55rem 0.75rem",
+                    background: "#27272a",
+                    border: "1px solid #3f3f46",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    fontSize: "0.84rem",
+                    boxSizing: "border-box",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.25rem" }}>
                 <button
                   type="button"
-                  onClick={() => setIsAddOpen(false)}
-                  style={{ padding: '0.55rem 1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', color: 'var(--text-main)', cursor: 'pointer' }}
+                  onClick={() => setIsNewBookingModalOpen(false)}
+                  style={{
+                    padding: "0.6rem 1.15rem",
+                    background: "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid #3f3f46",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    cursor: "pointer",
+                    fontSize: "0.84rem",
+                    fontWeight: 500,
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                  style={{
+                    padding: "0.6rem 1.4rem",
+                    background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                    border: "none",
+                    borderRadius: "8px",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontSize: "0.84rem",
+                    boxShadow: "0 2px 8px rgba(234, 88, 12, 0.35)",
+                  }}
                 >
-                  {saving ? 'Booking...' : 'Book Reservation'}
+                  {saving ? "Confirming..." : "Confirm Reservation"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── 7. Modal: View Reservation Details ──────────────── */}
+      {viewingReservation && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              background: "#18181b",
+              border: "1px solid #27272a",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "500px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "1.1rem 1.4rem",
+                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
+                borderBottom: "1px solid #27272a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <Calendar size={20} color="#ea580c" />
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                  Reservation {viewingReservation.reservationId || viewingReservation.id}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingReservation(null)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "1.4rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Guest & Table Strip */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0.75rem",
+                  background: "rgba(255, 255, 255, 0.03)",
+                  padding: "0.85rem 1rem",
+                  borderRadius: "10px",
+                  border: "1px solid #27272a",
+                }}
+              >
+                <div>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Name</small>
+                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
+                    {viewingReservation.customerName || "Guest"}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Contact Phone</small>
+                  <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
+                    {viewingReservation.phone || "—"}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Assigned Table</small>
+                  <div style={{ fontWeight: 650, color: "#ea580c", fontSize: "0.9rem" }}>
+                    {viewingReservation.tableName || `Table ${viewingReservation.tableId}`}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Count</small>
+                  <div style={{ fontWeight: 650, color: "#f8fafc", fontSize: "0.9rem" }}>
+                    {viewingReservation.guestsCount || 2} Persons
+                  </div>
+                </div>
+              </div>
+
+              {/* Timing & Advance Paid */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0.75rem",
+                }}
+              >
+                <div>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Date & Time</small>
+                  <div style={{ color: "#f8fafc", fontWeight: 600 }}>
+                    {viewingReservation.reservationDate} at {viewingReservation.reservationTime}
+                  </div>
+                </div>
+                <div>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Advance Paid</small>
+                  <div style={{ color: "#10b981", fontWeight: 700 }}>
+                    ₹ {Number(viewingReservation.advanceAmount || 100).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Special Requests */}
+              <div>
+                <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Special Requests & Notes</small>
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.03)",
+                    padding: "0.6rem 0.85rem",
+                    borderRadius: "8px",
+                    border: "1px solid #27272a",
+                    color: "#cbd5e1",
+                    fontSize: "0.82rem",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  {viewingReservation.notes || "No special requests mentioned."}
+                </div>
+              </div>
+
+              {/* Status Actions in Modal */}
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                {viewingReservation.status !== "confirmed" && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "confirmed")}
+                    style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: "none", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    Confirm Booking
+                  </button>
+                )}
+                {viewingReservation.status !== "seated" && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "seated")}
+                    style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: "none", background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    Seat Guests
+                  </button>
+                )}
+                {viewingReservation.status !== "completed" && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "completed")}
+                    style={{ flex: 1, padding: "0.5rem", borderRadius: "8px", border: "none", background: "rgba(5, 150, 105, 0.2)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.78rem" }}
+                  >
+                    Complete Visit
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 8. Modal: Print Booking Voucher ──────────────────── */}
+      {printingReservation && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              color: "#18181b",
+              borderRadius: "14px",
+              width: "100%",
+              maxWidth: "420px",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: "1.5rem", borderBottom: "1px dashed #cbd5e1" }}>
+              <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+                <h2 style={{ margin: "0 0 2px", fontSize: "1.3rem", fontWeight: 900, color: "#ea580c" }}>
+                  {restaurantName}
+                </h2>
+                <small style={{ color: "#64748b", fontSize: "0.76rem" }}>
+                  FINE DINING & TABLE RESERVATIONS
+                </small>
+                <div style={{ fontSize: "0.74rem", color: "#94a3b8", marginTop: "2px" }}>
+                  Main Road, Hyderabad • Phone: +91 98765 43210
+                </div>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "0.85rem", borderRadius: "8px", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Booking Ref:</span>
+                  <strong style={{ fontFamily: "monospace", color: "#ea580c" }}>
+                    {printingReservation.reservationId || printingReservation.id}
+                  </strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Date:</span>
+                  <strong>{printingReservation.reservationDate}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Time:</span>
+                  <strong>{printingReservation.reservationTime}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Table:</span>
+                  <strong>{printingReservation.tableName || `Table ${printingReservation.tableId}`}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Guests:</span>
+                  <strong>{printingReservation.guestsCount || 2} Persons</strong>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "1rem" }}>
+                <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Guest Details:</div>
+                <div style={{ fontWeight: 700, fontSize: "0.92rem" }}>{printingReservation.customerName}</div>
+                <div style={{ fontSize: "0.8rem", color: "#64748b" }}>{printingReservation.phone}</div>
+                {printingReservation.notes && (
+                  <div style={{ marginTop: "4px", fontSize: "0.74rem", color: "#ea580c" }}>
+                    Note: {printingReservation.notes}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>Advance Deposit Paid:</span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#16a34a" }}>
+                  ₹ {Number(printingReservation.advanceAmount || 100).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ padding: "1rem 1.5rem", background: "#f8fafc", display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => setPrintingReservation(null)}
+                style={{ padding: "0.5rem 1rem", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontSize: "0.8rem" }}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.print();
+                }}
+                style={{ padding: "0.5rem 1.25rem", borderRadius: "6px", border: "none", background: "#ea580c", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+              >
+                Print Voucher
+              </button>
+            </div>
           </div>
         </div>
       )}
