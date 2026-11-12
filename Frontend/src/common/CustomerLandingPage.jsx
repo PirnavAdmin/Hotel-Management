@@ -612,6 +612,13 @@ export function CustomerLandingPage({
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
+  const effectiveNotifications = Array.isArray(kitchenNotifications)
+    ? kitchenNotifications
+    : [];
+  const handleClearAllNotifs = () => {
+    onClearNotifications?.();
+    setIsNotifOpen(false);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {

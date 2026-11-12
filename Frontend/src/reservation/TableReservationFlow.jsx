@@ -1927,72 +1927,97 @@ function Step3Payment({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
+              gap: "10px",
               marginBottom: "16px",
             }}
           >
-            {[
-              {
-                id: "upi",
-                title: "UPI (Google Pay, PhonePe, Paytm)",
-                desc: "Instant confirmation via UPI QR / VPA",
-              },
-              {
-                id: "card",
-                title: "Credit / Debit Card",
-                desc: "Visa, Mastercard, RuPay",
-              },
-              {
-                id: "netbanking",
-                title: "Net Banking",
-                desc: "All Major Indian Banks",
-              },
-              {
-                id: "wallet",
-                title: "Wallets",
-                desc: "Paytm, Amazon Pay, etc.",
-              },
-            ].map((m) => (
-              <label
-                key={m.id}
-                onClick={() => setPaymentMethod(m.id)}
+            <label
+              onClick={() => setPaymentMethod("upi")}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+                padding: "10px 12px",
+                borderRadius: "10px",
+                border: "1.5px solid #ea580c",
+                background: "#fff8f3",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name="payment"
+                checked={paymentMethod === "upi"}
+                onChange={() => setPaymentMethod("upi")}
+                style={{ accentColor: "#ea580c", marginTop: "3px" }}
+              />
+              <div>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    color: "#1f1610",
+                  }}
+                >
+                  UPI (Google Pay, PhonePe, Paytm)
+                </div>
+                <div style={{ fontSize: "11px", color: "#786c62" }}>
+                  Instant confirmation via UPI QR / VPA
+                </div>
+              </div>
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                padding: "10px",
+                borderRadius: "12px",
+                border: "1px solid #e7ded4",
+                background: "#f5f2ee",
+              }}
+            >
+              <div
                 style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "10px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border:
-                    paymentMethod === m.id
-                      ? "1.5px solid #ea580c"
-                      : "1px solid #e7ded4",
-                  background: paymentMethod === m.id ? "#fff8f3" : "#faf7f2",
-                  cursor: "pointer",
+                  width: "100%",
+                  maxWidth: "230px",
+                  aspectRatio: "1",
+                  padding: "10px",
+                  boxSizing: "border-box",
+                  border: "2px solid #d8d2cc",
+                  borderRadius: "12px",
+                  background: "#ffffff",
                 }}
               >
-                <input
-                  type="radio"
-                  name="payment"
-                  checked={paymentMethod === m.id}
-                  onChange={() => setPaymentMethod(m.id)}
-                  style={{ accentColor: "#ea580c", marginTop: "3px" }}
-                />
-                <div>
-                  <div
+                {upiQrDataUrl ? (
+                  <img
+                    src={upiQrDataUrl}
+                    alt="Sample UPI QR code"
                     style={{
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      color: "#1f1610",
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                ) : (
+                  <div
+                    role="status"
+                    style={{
+                      display: "grid",
+                      width: "100%",
+                      height: "100%",
+                      placeItems: "center",
+                      color: "#6b7280",
+                      fontSize: "12px",
+                      textAlign: "center",
                     }}
                   >
-                    QR
+                    Generating sample QR...
                   </div>
-                  <div style={{ fontSize: "11px", color: "#786c62" }}>
-                    {m.desc}
-                  </div>
-                </div>
-              </label>
-            ))}
+                )}
+              </div>
+            </div>
           </div>
 
           <div
