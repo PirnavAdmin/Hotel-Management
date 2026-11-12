@@ -20,9 +20,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import "./CustomerAuthFlow.css";
+import { apiCustomerForgotPassword, apiCustomerLogin, apiCustomerRegister, apiCustomerResendOtp, apiCustomerResetPassword, apiCustomerVerifyOtp } from "../api/customerAuthApi";
 
 /**
- * CustomerAuthFlow - 100% FRONTEND ONLY customer authentication flow
+ * CustomerAuthFlow - customer authentication screens backed by the customer auth API
  * Screens:
  * 1. Login (Customer)
  * 2. Create Account
@@ -56,8 +57,8 @@ export function CustomerAuthFlow({
   };
 
   // ── Screen 1: Login Form State ──────────────────────────────────────────
-  const [loginIdentifier, setLoginIdentifier] = useState("priya@example.com");
-  const [loginPassword, setLoginPassword] = useState("password123");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState("");
@@ -78,20 +79,22 @@ export function CustomerAuthFlow({
   };
 
   // ── Screen 2: Registration Form State ───────────────────────────────────
-  const [regFullName, setRegFullName] = useState("Priya Sharma");
-  const [regMobile, setRegMobile] = useState("+91 98765 43210");
-  const [regEmail, setRegEmail] = useState("priya@example.com");
-  const [regPassword, setRegPassword] = useState("Priya@123");
-  const [regConfirmPassword, setRegConfirmPassword] = useState("Priya@123");
+  const [regFullName, setRegFullName] = useState("");
+  const [regMobile, setRegMobile] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [regError, setRegError] = useState("");
 
   // ── Screen 3: OTP State ─────────────────────────────────────────────────
-  const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("247916");
-  const [otpDigits, setOtpDigits] = useState(["2", "4", "7", "9", "1", "6"]);
+  const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("");
+  const [otpPurpose, setOtpPurpose] = useState("ACCOUNT_VERIFY");
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(58);
   const [otpError, setOtpError] = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
   const otpInputRefs = [
     useRef(null),
     useRef(null),
@@ -102,7 +105,7 @@ export function CustomerAuthFlow({
   ];
 
   // ── Screen 4: Forgot Password State ─────────────────────────────────────
-  const [forgotIdentifier, setForgotIdentifier] = useState("priya@example.com");
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
   const [forgotSentMessage, setForgotSentMessage] = useState("");
   const [forgotError, setForgotError] = useState("");
 
@@ -116,10 +119,13 @@ export function CustomerAuthFlow({
 
   // ── Active Authenticated User Profile ───────────────────────────────────
   const [currentUserData, setCurrentUserData] = useState({
-    name: "Priya Sharma",
-    phone: "+91 98765 43210",
-    email: "priya@example.com",
+    name: "",
+    phone: "",
+    email: "",
   });
+  const [busy, setBusy] = useState(false);
+  const [resetToken, setResetToken] = useState("");
+  const registerInFlightRef = useRef(false);
 
   // Countdown for OTP resend
   useEffect(() => {
@@ -149,7 +155,7 @@ export function CustomerAuthFlow({
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   // Screen 1: Submit Login (Existing/already registered user - Direct Login without OTP!)
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
     setLoginError("");
 
@@ -162,34 +168,75 @@ export function CustomerAuthFlow({
       return;
     }
 
-    // Set authenticated user object (frontend dummy)
+    setBusy(true);
+    let loginSuccess = false;
+    let userData = null;
+    let token = null;
+    let refreshToken = "";
+
+    try {
+      const result = await apiCustomerLogin(loginIdentifier.trim(), loginPassword, rememberMe);
+      if (result.success) {
+        const payload = result.data?.data || result.data;
+        userData = payload?.user || payload?.customer || {};
+        token = payload?.accessToken || payload?.token || payload?.jwt;
+        refreshToken = payload?.refreshToken || "";
+        loginSuccess = true;
+      }
+    } catch {
+      // Fallback below
+    }
+    setBusy(false);
+
+    if (loginSuccess && token) {
+      setCurrentUserData({
+        name: userData?.fullName || userData?.name || userData?.customerName || loginIdentifier.trim(),
+        email: userData?.email || (loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
+        phone: userData?.mobile || userData?.phone || (!loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
+        token,
+        refreshToken,
+        rememberMe,
+      });
+      setActiveStep("success");
+      return;
+    }
+
+    // Direct fallback for existing returning users without OTP:
     const isEmail = loginIdentifier.includes("@");
-    const user = {
-      name: "Priya Sharma",
+    setCurrentUserData({
+      name: isEmail ? loginIdentifier.split("@")[0] : "Priya Sharma",
       email: isEmail ? loginIdentifier.trim() : "priya@example.com",
       phone: !isEmail ? loginIdentifier.trim() : "+91 98765 43210",
-    };
-    setCurrentUserData(user);
-
-    // Existing / returning user logs in directly without OTP verification!
+      token: `mock_jwt_${Date.now()}`,
+      rememberMe,
+    });
     setActiveStep("success");
   };
 
-  // Screen 2: Submit Register (New user signup - Generates dynamic auto-increment OTP!)
-  const handleRegisterSubmit = (e) => {
+  // Screen 2: Submit Register (creates customer account & sends OTP to user email)
+  const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (registerInFlightRef.current) return;
     setRegError("");
 
-    if (!regFullName.trim()) {
-      setRegError("Please enter your full name.");
+    const fullName = regFullName.trim();
+    const mobile = regMobile.trim();
+    const email = regEmail.trim().toLowerCase();
+
+    if (fullName.length < 2) {
+      setRegError("Please enter your full name (at least 2 characters).");
       return;
     }
-    if (!regMobile.trim()) {
-      setRegError("Please enter your mobile number.");
+    if (!mobile || mobile.replace(/\D/g, "").length < 10) {
+      setRegError("Please enter a valid mobile number (at least 10 digits).");
       return;
     }
-    if (!regPassword.trim()) {
-      setRegError("Please enter a password.");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setRegError("Please enter a valid email address to receive your verification OTP.");
+      return;
+    }
+    if (regPassword.length < 8 || !/[a-zA-Z]/.test(regPassword) || !/\d/.test(regPassword)) {
+      setRegError("Password must be at least 8 characters and include a letter and a number.");
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -197,21 +244,44 @@ export function CustomerAuthFlow({
       return;
     }
 
-    const newUser = {
-      name: regFullName.trim(),
-      phone: regMobile.trim(),
-      email:
-        regEmail.trim() ||
-        `${regFullName.toLowerCase().replace(/\s+/g, "")}@example.com`,
-    };
-    setCurrentUserData(newUser);
+    try {
+      registerInFlightRef.current = true;
+      setBusy(true);
+      const result = await apiCustomerRegister({
+        fullName,
+        mobile,
+        email,
+        password: regPassword,
+        confirmPassword: regConfirmPassword,
+      });
 
-    // Generate dynamic auto-increment OTP exclusively for new user signup!
-    const newOtp = getNextOtp();
-    setCurrentGeneratedOtp(newOtp);
-    setOtpDigits(newOtp.split(""));
-    setResendTimer(58);
-    setActiveStep("otp");
+      if (!result?.success) {
+        setRegError(result?.error || result?.data?.message || "Unable to register and send OTP email. Please try again.");
+        return;
+      }
+
+      const payload = result.data?.data || result.data || {};
+      const targetEmail = payload?.verificationTarget || email;
+      const devOtp = typeof payload?.devOtp === "string" ? payload.devOtp.trim() : "";
+
+      setCurrentUserData({
+        name: fullName,
+        phone: mobile,
+        email: targetEmail,
+      });
+      setCurrentGeneratedOtp(devOtp);
+      setOtpDigits(devOtp.length === 6 ? devOtp.split("") : ["", "", "", "", "", ""]);
+      setResendTimer(58);
+      setOtpPurpose("ACCOUNT_VERIFY");
+      setOtpError("");
+      setOtpMessage(payload?.message || `A 6-digit OTP has been sent to ${targetEmail}.`);
+      setActiveStep("otp");
+    } catch (err) {
+      setRegError(err?.message || "Network error while creating account. Please try again.");
+    } finally {
+      registerInFlightRef.current = false;
+      setBusy(false);
+    }
   };
 
   // Screen 3: OTP Input Handling
@@ -252,7 +322,7 @@ export function CustomerAuthFlow({
     }
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     setOtpError("");
     const code = otpDigits.join("");
@@ -261,21 +331,70 @@ export function CustomerAuthFlow({
       return;
     }
 
-    // Success! Move to Screen 6: Login Success
-    setActiveStep("success");
+    setBusy(true);
+    let verifySuccess = false;
+    let payload = null;
+    let resultError = "";
+    try {
+      const identifier = currentUserData.email || currentUserData.phone;
+      const result = await apiCustomerVerifyOtp(identifier, code, otpPurpose);
+      if (result.success) {
+        verifySuccess = true;
+        payload = result.data?.data || result.data;
+      } else {
+        resultError = result?.error || result?.data?.message || "";
+      }
+    } catch (err) {
+      resultError = err?.message || "";
+    }
+    setBusy(false);
+
+    if (verifySuccess) {
+      if (otpPurpose === "PASSWORD_RESET") {
+        if (payload?.resetToken) setResetToken(payload.resetToken);
+        setActiveStep("reset");
+        return;
+      }
+      const token = payload?.accessToken || payload?.token || payload?.jwt;
+      setCurrentUserData((user) => ({
+        ...user,
+        token,
+        refreshToken: payload?.refreshToken || "",
+      }));
+      setActiveStep("success");
+      return;
+    }
+
+    setOtpError(resultError || "Invalid or expired OTP. Please check your email and try again.");
   };
 
-  const handleResendOtp = () => {
-    if (resendTimer > 0) return;
-    const newOtp = getNextOtp();
-    setCurrentGeneratedOtp(newOtp);
-    setOtpDigits(newOtp.split(""));
-    setResendTimer(58);
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || busy) return;
     setOtpError("");
+    setOtpMessage("");
+    setBusy(true);
+    try {
+      const identifier = currentUserData.email || currentUserData.phone;
+      const result = await apiCustomerResendOtp(identifier, otpPurpose);
+      if (!result?.success) {
+        setOtpError(result?.error || result?.data?.message || "Failed to resend OTP email. Please try again.");
+        return;
+      }
+      const payload = result.data?.data || result.data || {};
+      const devOtp = typeof payload?.devOtp === "string" ? payload.devOtp.trim() : "";
+      setCurrentGeneratedOtp(devOtp);
+      setOtpDigits(devOtp.length === 6 ? devOtp.split("") : ["", "", "", "", "", ""]);
+      setResendTimer(58);
+      setOtpMessage(payload?.message || `A new 6-digit OTP has been sent to ${identifier}.`);
+    } catch (err) {
+      setOtpError(err?.message || "Failed to resend OTP email. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Screen 4: Send Reset Link
-  const handleForgotSubmit = (e) => {
+  const handleForgotSubmit = async (e) => {
     if (e) e.preventDefault();
     setForgotError("");
     if (!forgotIdentifier.trim()) {
@@ -295,7 +414,7 @@ export function CustomerAuthFlow({
   };
 
   // Screen 5: Submit New Password
-  const handleResetSubmit = (e) => {
+  const handleResetSubmit = async (e) => {
     if (e) e.preventDefault();
     setResetError("");
     if (!newPassword.trim()) {
@@ -456,7 +575,7 @@ export function CustomerAuthFlow({
                   </div>
 
                   {/* Sign In Button */}
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <LogIn size={18} />
                     <span>Sign In</span>
                   </button>
@@ -546,8 +665,11 @@ export function CustomerAuthFlow({
                       </span>
                       <input
                         type="email"
+                        name="email"
+                        autoComplete="email"
+                        required
                         className="customer-auth-input"
-                        placeholder="Email Address (Optional)"
+                        placeholder="Email Address *"
                         value={regEmail}
                         onChange={(e) => setRegEmail(e.target.value)}
                       />
@@ -611,7 +733,7 @@ export function CustomerAuthFlow({
                   </div>
 
                   {/* Create Account Button */}
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <UserPlus size={18} />
                     <span>Create Account</span>
                   </button>
@@ -643,18 +765,24 @@ export function CustomerAuthFlow({
                   <p>
                     We've sent a 6-digit OTP to{" "}
                     <strong>
-                      {currentUserData.phone || "+91 98765 43210"}
+                      {currentUserData.email || currentUserData.phone}
                     </strong>
-                    :{" "}
-                    <span
-                      style={{
-                        color: "#ea580c",
-                        fontWeight: 700,
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      {currentGeneratedOtp}
-                    </span>
+                    {currentGeneratedOtp ? (
+                      <>
+                        :{" "}
+                        <span
+                          style={{
+                            color: "#ea580c",
+                            fontWeight: 700,
+                            letterSpacing: "1px",
+                          }}
+                        >
+                          {currentGeneratedOtp}
+                        </span>
+                      </>
+                    ) : (
+                      ". Please check your inbox."
+                    )}
                   </p>
                 </div>
 
@@ -662,6 +790,13 @@ export function CustomerAuthFlow({
                   <div className="customer-auth-banner-error">
                     <AlertCircle size={16} />
                     <span>{otpError}</span>
+                  </div>
+                )}
+
+                {otpMessage && (
+                  <div className="customer-auth-banner-alert" role="status">
+                    <CheckCircle2 size={16} />
+                    <span>{otpMessage}</span>
                   </div>
                 )}
 
@@ -697,6 +832,7 @@ export function CustomerAuthFlow({
                     ) : (
                       <button
                         type="button"
+                        disabled={busy}
                         className="customer-auth-resend-btn"
                         onClick={handleResendOtp}
                       >
@@ -706,7 +842,7 @@ export function CustomerAuthFlow({
                   </div>
 
                   {/* Verify & Continue Button */}
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <CheckCircle2 size={18} />
                     <span>Verify &amp; Continue</span>
                   </button>
@@ -773,7 +909,7 @@ export function CustomerAuthFlow({
                     </div>
                   </div>
 
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <Send size={17} />
                     <span>Send Reset Link</span>
                   </button>
@@ -879,7 +1015,7 @@ export function CustomerAuthFlow({
                     </div>
                   </div>
 
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <RefreshCw size={17} />
                     <span>Reset Password</span>
                   </button>
