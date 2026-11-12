@@ -1172,23 +1172,13 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
-<<<<<<< HEAD
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Invoice No</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Order / Invoice No</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Table &amp; Waiter</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Date &amp; Time</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Items Summary</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Mode</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Grand Total</th>
                 <th style={{ padding: "0.55rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
-=======
-                <th style={{ padding: "0.85rem 1rem" }}>Order / Invoice No</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Table & Waiter</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Date & Time</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Items Summary</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Payment Mode</th>
-                <th style={{ padding: "0.85rem 1rem" }}>Grand Total</th>
-                <th style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
->>>>>>> cc53bf247a67d279394f764cf894ea9f26a0f453
                   Action
                 </th>
               </tr>
@@ -1229,11 +1219,7 @@ export function AdminInvoices({
                           fontSize: "0.76rem",
                         }}
                       >
-<<<<<<< HEAD
-                        {order.invoiceNo || (order.id != null ? "Order #" + order.id : "—")}
-=======
                         {formatOrderNumber(order.invoiceNo || order.id || order.orderId)}
->>>>>>> cc53bf247a67d279394f764cf894ea9f26a0f453
                       </span>
                     </td>
 

@@ -1683,13 +1683,8 @@ export function AdminTakeaway({
                       <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {rowNumber}
                       </td>
-<<<<<<< HEAD
                       <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {order.orderNumber || order.id}
-=======
-                      <td style={{ padding: "0.65rem 0.55rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {formatOrderNumber(order.orderNumber || order.id)}
->>>>>>> cc53bf247a67d279394f764cf894ea9f26a0f453
                       </td>
                       <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {order.customer}
