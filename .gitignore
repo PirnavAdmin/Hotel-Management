@@ -1,0 +1,23 @@
+# Visual Studio / IDE cache and user-specific files
+.vs/
+**/.vs/
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsidx
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# .NET build and NuGet restore outputs
+**/bin/
+**/obj/
+*.pdb
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
