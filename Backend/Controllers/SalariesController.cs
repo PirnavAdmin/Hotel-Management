@@ -11,15 +11,23 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/salaries")]
 [AllowAnonymous]
-[Tags("Admin", "Salaries")]
+[Tags("Salaries", "Admin")]
 public class SalariesController : ControllerBase
 {
     private readonly SalaryService _salaryService;
+    private readonly ReportingExportService _reportingExportService;
+    private readonly ExportService _exportService;
     private readonly ILogger<SalariesController> _logger;
 
-    public SalariesController(SalaryService salaryService, ILogger<SalariesController> logger)
+    public SalariesController(
+        SalaryService salaryService,
+        ReportingExportService reportingExportService,
+        ExportService exportService,
+        ILogger<SalariesController> logger)
     {
         _salaryService = salaryService;
+        _reportingExportService = reportingExportService;
+        _exportService = exportService;
         _logger = logger;
     }
 
@@ -166,21 +174,29 @@ public class SalariesController : ControllerBase
     }
 
     /// <summary>
-    /// Exports salary payments matching filter criteria as CSV.
+    /// Exports salary payments matching filter criteria as CSV or XLSX.
+    /// Supports ?month=...&amp;paymentMonth=...&amp;department=...&amp;status=...&amp;format=csv|xlsx.
     /// </summary>
     [HttpGet("export")]
-    public async Task<IActionResult> ExportSalariesCsv([FromQuery] SalaryFilterDto filter)
+    public async Task<IActionResult> ExportSalaries(
+        [FromQuery] SalaryFilterDto filter,
+        [FromQuery] string? month = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? format = "csv")
     {
         try
         {
-            var bytes = await _salaryService.ExportSalariesCsvAsync(filter);
-            var fileName = $"salary_payments_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
-            return File(bytes, "text/csv; charset=utf-8", fileName);
+            if (string.IsNullOrWhiteSpace(filter.PaymentMonth) && !string.IsNullOrWhiteSpace(month))
+            {
+                filter.PaymentMonth = month;
+            }
+            var doc = await _reportingExportService.GenerateSalariesExportAsync(filter, status);
+            return _exportService.ExportResult(doc, format, "Salary_Payments");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error exporting salaries CSV");
-            return StatusCode(500, new { success = false, message = ex.Message });
+            _logger.LogError(ex, "Error exporting salaries");
+            return StatusCode(500, new { success = false, message = "Failed to export salaries.", error = ex.Message });
         }
     }
 }

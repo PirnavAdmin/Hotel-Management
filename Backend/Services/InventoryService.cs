@@ -274,6 +274,7 @@ public class InventoryService
         {
             return (false, $"Item '{item.Name}' at index {index}: Unit cost cannot be negative ({item.UnitCost}).");
         }
+
         if (item.Mrp < 0 || item.SellingPrice < 0)
         {
             return (false, $"Item '{item.Name}' at index {index}: Selling price cannot be negative.");
@@ -281,10 +282,6 @@ public class InventoryService
         if (item.Abv < 0 || item.Abv > 100)
         {
             return (false, $"Item '{item.Name}' at index {index}: ABV must be between 0 and 100.");
-        }
-        if (item.VolumeMl <= 0)
-        {
-            return (false, $"Item '{item.Name}' at index {index}: Volume must be greater than zero.");
         }
 
         return (true, null);

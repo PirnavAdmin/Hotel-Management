@@ -16,6 +16,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
+[Tags("Inventory", "Admin")]
 public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
@@ -42,6 +43,7 @@ public class InventoryController : ControllerBase
     /// Retrieves all ingredients from the inventory.
     /// </summary>
     [AllowAnonymous]
+    [HttpGet("ingredients")]
     [HttpGet]
     public async Task<IActionResult> GetIngredients([FromQuery] string? category, [FromQuery] string? search)
     {
@@ -175,6 +177,7 @@ public class InventoryController : ControllerBase
     /// Supports single item object, JSON array [ ... ], or wrapped batch { items: [ ... ] }.
     /// </summary>
     [AllowAnonymous]
+    [HttpPost("ingredients")]
     [HttpPost]
     public async Task<IActionResult> CreateIngredient([FromBody] JsonElement body, [FromQuery] bool? atomic = false)
     {
@@ -257,6 +260,7 @@ public class InventoryController : ControllerBase
     /// Updates an existing ingredient in MySQL.
     /// </summary>
     [AllowAnonymous]
+    [HttpPut("ingredients/{id:long}")]
     [HttpPut("{id:long}")]
     public async Task<IActionResult> UpdateIngredient(long id, [FromBody] JsonElement body)
     {
@@ -314,6 +318,7 @@ public class InventoryController : ControllerBase
     /// Soft deletes / deactivates an ingredient in MySQL.
     /// </summary>
     [AllowAnonymous]
+    [HttpDelete("ingredients/{id:long}")]
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteIngredient(long id)
     {

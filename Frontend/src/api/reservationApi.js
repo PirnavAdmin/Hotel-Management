@@ -186,15 +186,56 @@ export async function apiCreateReservation(reservationData) {
 
   return { success: true, data: newReservation };
 }
-export async function apiUpdateReservation(id, data) {
-  return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }));
+
+export async function apiUpdateReservation(id, reservationData) {
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(reservationData)
+    });
+    if (res?.success) return res;
+  } catch {}
+
+  const all = getStoredReservations();
+  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, ...reservationData } : r));
+  saveStoredReservations(updated);
+  return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
 }
+
 export async function apiUpdateReservationStatus(id, status) {
-  return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}/status`, {
-    method: "PUT", body: JSON.stringify({ status }),
-  }));
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    if (res?.success) return res;
+  } catch {}
+
+  return await apiUpdateReservation(id, { status });
 }
+
 export async function apiDeleteReservation(id) {
-  return apiClient(`${BASE}/${encodeURIComponent(id)}`, { method: "DELETE" });
+  try {
+    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    if (res?.success) return res;
+  } catch {}
+
+  const all = getStoredReservations();
+  const target = all.find((r) => r.id === id || r.reservationId === id);
+  const updated = all.filter((r) => r.id !== id && r.reservationId !== id);
+  saveStoredReservations(updated);
+
+  if (target?.tableId) {
+    const tables = getStoredReservationTables();
+    const updatedTables = tables.map((t) =>
+      t.id === target.tableId ? { ...t, status: "available" } : t
+    );
+    saveStoredReservationTables(updatedTables);
+  }
+
+  return { success: true, message: "Reservation deleted successfully." };
 }
+
 export const apiCancelReservation = apiDeleteReservation;

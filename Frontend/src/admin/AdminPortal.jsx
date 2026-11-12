@@ -1,5 +1,5 @@
 import { SearchableSelect } from "../common/SearchableSelect";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
 import {
   X,
@@ -69,10 +69,7 @@ import { AttendanceManagement } from "./modules/AttendanceManagement";
 import { PromotionsManagement } from "./modules/PromotionsManagement";
 import { SuppliersManagement } from "./modules/SuppliersManagement";
 import { RolesManagement } from "./modules/RolesManagement";
-import {
-  apiGetRestaurantSettings,
-  apiUpdateRestaurantSettings,
-} from "../api/settingsApi";
+import { apiGetRestaurantSettings, apiSaveRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
@@ -499,8 +496,26 @@ export function AdminPortal({
   pastOrders = [],
   onUpdateInvoiceDiscount = null,
   inventory: propInventory = [],
+  showToast: propShowToast = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const isLight = currentTheme === "light-bistro";
+<<<<<<< HEAD
+
+  const [internalToast, setInternalToast] = useState(null);
+  const showToast = useCallback((msg) => {
+    if (typeof propShowToast === "function") {
+      propShowToast(msg);
+    }
+    const text = typeof msg === "string" ? msg : String(msg?.message || msg || "");
+    setInternalToast(text);
+    const timer = setTimeout(() => {
+      setInternalToast(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [propShowToast]);
+=======
+>>>>>>> 85adac018d9cb6e201ed2b0923817afd5b535b4b
 
   // Track Admin Portal Tab Navigation
   const prevTabRef = useRef(activeTab);
@@ -5966,7 +5981,13 @@ export function AdminPortal({
 
                 {/* ================= TAB: RESERVATIONS ================= */}
                 {activeTab === "reservations" && (
-                  <ReservationsManagement isLight={isLight} showToast={showToast} />
+                  <ReservationsManagement
+                    isLight={isLight}
+                    showToast={showToast}
+                    tables={tables}
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                  />
                 )}
 
                 {/* ================= TAB: SUPPLIERS ================= */}
@@ -7484,6 +7505,32 @@ export function AdminPortal({
         isLight={currentTheme === "light-bistro"}
         role="admin"
       />
+
+      {/* Admin Floating Toast Notification */}
+      {internalToast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            zIndex: 99999,
+            background: "rgba(15, 23, 42, 0.95)",
+            color: "#ffffff",
+            padding: "10px 18px",
+            borderRadius: "8px",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+            border: "1.5px solid rgba(245, 158, 11, 0.6)",
+            fontSize: "13px",
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            pointerEvents: "none"
+          }}
+        >
+          <span>{internalToast}</span>
+        </div>
+      )}
     </div>
   );
 }

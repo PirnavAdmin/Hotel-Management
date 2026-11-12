@@ -1,4 +1,4 @@
-import { apiClient, RESERVATION_API_BASE_URL } from "./apiConfig";
+import { apiClient } from "./apiConfig";
 
 const BASE = "/api/v1/auth/customer";
 const REFRESH_TOKEN_KEY = "bhanu_customer_refresh_token";
@@ -29,9 +29,9 @@ export const setCustomerRefreshToken = (token, rememberMe) => {
 const customerAuthRequest = async (path, body, options = {}) => {
   const result = await apiClient(`${BASE}/${path}`, {
     method: "POST",
-    baseUrl: RESERVATION_API_BASE_URL,
+    // routed through active API_HTTP_BASE / API_BASE_URL
     skipDefaultAuth: true,
-    remoteOnly: true,
+    // Allow same-origin Vite proxy in dev and API_BASE_URL in production
     ...options,
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });

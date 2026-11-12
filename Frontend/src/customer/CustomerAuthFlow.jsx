@@ -89,10 +89,11 @@ export function CustomerAuthFlow({
   const [regError, setRegError] = useState("");
 
   // ── Screen 3: OTP State ─────────────────────────────────────────────────
+  const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("");
   const [otpPurpose, setOtpPurpose] = useState("ACCOUNT_VERIFY");
   const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
-  const [resendTimer, setResendTimer] = useState(30);
+  const [resendTimer, setResendTimer] = useState(58);
   const [otpError, setOtpError] = useState("");
   const [otpMessage, setOtpMessage] = useState("");
   const otpInputRefs = [
@@ -226,22 +227,30 @@ export function CustomerAuthFlow({
     }
   };
 
-  // Screen 2: Submit Register (New user signup - Generates dynamic auto-increment OTP!)
+  // Screen 2: Submit Register (creates customer account & sends OTP to user email)
   const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
     if (registerInFlightRef.current) return;
     setRegError("");
 
-    if (!regFullName.trim()) {
-      setRegError("Please enter your full name.");
+    const fullName = regFullName.trim();
+    const mobile = regMobile.trim();
+    const email = regEmail.trim().toLowerCase();
+
+    if (fullName.length < 2) {
+      setRegError("Please enter your full name (at least 2 characters).");
       return;
     }
-    if (!regMobile.trim() && !regEmail.trim()) {
-      setRegError("Please enter an email address or mobile number.");
+    if (!mobile || mobile.replace(/\D/g, "").length < 10) {
+      setRegError("Please enter a valid mobile number (at least 10 digits).");
       return;
     }
-    if (!regPassword.trim()) {
-      setRegError("Please enter a password.");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setRegError("Please enter a valid email address to receive your verification OTP.");
+      return;
+    }
+    if (regPassword.length < 8 || !/[a-zA-Z]/.test(regPassword) || !/\d/.test(regPassword)) {
+      setRegError("Password must be at least 8 characters and include a letter and a number.");
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -389,13 +398,27 @@ export function CustomerAuthFlow({
   };
 
   const handleResendOtp = async () => {
-    if (resendTimer > 0) return;
+    if (resendTimer > 0 || busy) return;
+    setOtpError("");
+    setOtpMessage("");
     setBusy(true);
-    const result = await apiCustomerResendOtp(currentUserData.email || currentUserData.phone, otpPurpose);
-    setBusy(false);
-    if (!result.success) {
-      if (result.status === 429) setResendTimer(result.retryAfterSeconds ?? 30);
-      return setOtpError(result.error || "Unable to resend the OTP.");
+    try {
+      const identifier = currentUserData.email || currentUserData.phone;
+      const result = await apiCustomerResendOtp(identifier, otpPurpose);
+      if (!result?.success) {
+        setOtpError(result?.error || result?.data?.message || "Failed to resend OTP email. Please try again.");
+        return;
+      }
+      const payload = result.data?.data || result.data || {};
+      const devOtp = typeof payload?.devOtp === "string" ? payload.devOtp.trim() : "";
+      setCurrentGeneratedOtp(devOtp);
+      setOtpDigits(devOtp.length === 6 ? devOtp.split("") : ["", "", "", "", "", ""]);
+      setResendTimer(58);
+      setOtpMessage(payload?.message || `A new 6-digit OTP has been sent to ${identifier}.`);
+    } catch (err) {
+      setOtpError(err?.message || "Failed to resend OTP email. Please try again.");
+    } finally {
+      setBusy(false);
     }
     const response = result.data?.data || result.data;
     setOtpDigits(["", "", "", "", "", ""]);
@@ -677,8 +700,11 @@ export function CustomerAuthFlow({
                       </span>
                       <input
                         type="email"
+                        name="email"
+                        autoComplete="email"
+                        required
                         className="customer-auth-input"
-                        placeholder="Email Address (Optional)"
+                        placeholder="Email Address *"
                         value={regEmail}
                         onChange={(e) => setRegEmail(e.target.value)}
                       />
@@ -776,16 +802,22 @@ export function CustomerAuthFlow({
                     <strong>
                       {currentUserData.verificationTarget || currentUserData.email || currentUserData.phone}
                     </strong>
-                    :{" "}
-                    <span
-                      style={{
-                        color: "#ea580c",
-                        fontWeight: 700,
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      {currentGeneratedOtp}
-                    </span>
+                    {currentGeneratedOtp ? (
+                      <>
+                        :{" "}
+                        <span
+                          style={{
+                            color: "#ea580c",
+                            fontWeight: 700,
+                            letterSpacing: "1px",
+                          }}
+                        >
+                          {currentGeneratedOtp}
+                        </span>
+                      </>
+                    ) : (
+                      ". Please check your inbox."
+                    )}
                   </p>
                 </div>
 

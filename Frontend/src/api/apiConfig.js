@@ -8,7 +8,7 @@ export const RESERVATION_API_BASE_URL = String(
   import.meta.env.VITE_RESERVATION_API_BASE_URL || configuredApiBase,
 ).trim().replace(/\/$/, "");
 export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
-export const API_SYNC_BASE = import.meta.env.DEV ? "" : API_BASE_URL;
+export const API_SYNC_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
 // Keep development SSE on Vite for LAN state broadcasts; production uses the API.
