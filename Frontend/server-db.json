@@ -3611,6 +3611,96 @@
       "billingSessionId": "35"
     },
     {
+<<<<<<< HEAD
+=======
+      "id": 38,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "serverName": "Rajesh K.",
+      "guests": 2,
+      "status": "Settled",
+      "subtotal": 935,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 46.75,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 46.75,
+      "tipAmount": 0,
+      "grandTotal": 1028.5,
+      "paymentMethod": "upi",
+      "invoiceNo": "INV-038",
+      "settledAt": "2026-11-02T10:23:46",
+      "createdAt": "2026-11-02T10:23:46",
+      "items": [
+        {
+          "id": 0,
+          "kotId": 14,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 38,
+          "menuItemId": 1,
+          "name": "Mojito",
+          "price": 235,
+          "quantity": 1,
+          "notes": "Extra mint",
+          "kotStatus": "served",
+          "kotBatch": 1,
+          "department": "Kitchen",
+          "category": null
+        },
+        {
+          "id": 0,
+          "kotId": null,
+          "botId": 1,
+          "isBarItem": true,
+          "orderId": 38,
+          "menuItemId": 7,
+          "name": "Vikas Vodka",
+          "price": 700,
+          "quantity": 1,
+          "notes": "On the rocks",
+          "kotStatus": "served",
+          "kotBatch": 1,
+          "department": "Bar",
+          "category": null
+        }
+      ],
+      "total": 1028.5,
+      "totalAmount": 1028.5,
+      "paidAmount": 1028.5,
+      "Status": "Settled",
+      "orderId": 38,
+      "invoiceNumber": "INV-038",
+      "server": "Rajesh K.",
+      "taxableAmount": 935,
+      "payments": [],
+      "date": "2026-11-02T10:23:46",
+      "orderTime": "2026-11-02T10:23:46",
+      "isPaid": true,
+      "serviceCharge": 5,
+      "capacity": 5,
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledDate": "2026-11-01",
+      "cookingStartedAt": "03:53 PM",
+      "completedAt": "03:53 PM",
+      "completedDuration": "5h 30m 01s",
+      "orderTimestamp": 1793353277058,
+      "backendOrderId": 38,
+      "billingSessionId": "38",
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102102346012",
+      "barBotNumber": "BOT-20261102102346040",
+      "tableId": 2,
+      "invoiceId": 38
+    },
+    {
+>>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
       "id": 28,
       "tableId": 2,
       "tableName": "Table-2",
@@ -3698,6 +3788,11 @@
         {
           "id": 0,
           "kotId": null,
+<<<<<<< HEAD
+=======
+          "botId": null,
+          "isBarItem": false,
+>>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
           "orderId": 47,
           "menuItemId": 2,
           "name": "Royal Mutton Dum Biryani",
@@ -3706,14 +3801,22 @@
           "notes": "",
           "kotStatus": "served",
           "kotBatch": 1,
+<<<<<<< HEAD
           "botId": null,
           "isBarItem": false,
+=======
+>>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
           "department": "Kitchen",
           "category": null
         },
         {
           "id": 0,
           "kotId": null,
+<<<<<<< HEAD
+=======
+          "botId": null,
+          "isBarItem": false,
+>>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
           "orderId": 47,
           "menuItemId": 3,
           "name": "Special Boneless Chicken Biryani",
@@ -3722,8 +3825,11 @@
           "notes": "",
           "kotStatus": "served",
           "kotBatch": 1,
+<<<<<<< HEAD
           "botId": null,
           "isBarItem": false,
+=======
+>>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
           "department": "Kitchen",
           "category": null
         }

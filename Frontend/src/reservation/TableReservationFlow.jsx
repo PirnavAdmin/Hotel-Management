@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
+<<<<<<< HEAD
 import QRCode from "../utils/qrCode";
+=======
+>>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
 import {
   Calendar,
   Clock,
@@ -157,14 +160,8 @@ export function TableReservationFlow({
 
   useEffect(() => {
     const upiString = `upi://pay?pa=priya@oksbi&pn=Priya%20Sharma&am=100.00&cu=INR&tn=Table%20Reservation%20Advance`;
-
-    QRCode.toDataURL(upiString, {
-      width: 640,
-      margin: 2,
-      color: { dark: "#000000", light: "#ffffff" },
-    })
-      .then((url) => setUpiQrDataUrl(url))
-      .catch(() => setUpiQrDataUrl(""));
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiString)}`;
+    setUpiQrDataUrl(qrUrl);
   }, []);
 
   // Reservation management (Step 6, 7, 8)

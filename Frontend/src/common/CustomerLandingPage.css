@@ -2624,6 +2624,12 @@
   font-family: inherit;
 }
 
+.takeaway-header-cart-btn {
+  width: 40px;
+  justify-content: center;
+  padding: 0;
+}
+
 .takeaway-header-cart-btn.has-items,
 .customer-header-cart-btn.has-items {
   background: linear-gradient(135deg, rgba(234, 88, 12, 0.22) 0%, rgba(245, 158, 11, 0.14) 100%);
@@ -2673,36 +2679,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-.takeaway-cart-btn-details {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.takeaway-cart-btn-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  letter-spacing: 0.01em;
-}
-
-.takeaway-cart-btn-dot {
-  color: rgba(245, 158, 11, 0.7);
-  font-size: 0.75rem;
-}
-
-.takeaway-cart-btn-total {
-  font-size: 0.84rem;
-  font-weight: 800;
-  color: #ffb52e;
-  font-family: var(--font-mono, monospace);
-  letter-spacing: -0.01em;
-}
-
 @media (max-width: 640px) {
-  .takeaway-cart-btn-details {
-    display: none;
-  }
   .takeaway-header-cart-btn,
   .customer-header-cart-btn {
     padding: 0 10px;
@@ -3140,10 +3117,11 @@
   border-bottom: 1px solid var(--border-subtle, #e2e8f0);
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.65rem;
   background: var(--bg-secondary, #ffffff);
   flex-shrink: 0;
+  overflow-x: auto;
 }
 
 .pos-station-group {
@@ -3224,7 +3202,8 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .pos-category-select-wrapper {

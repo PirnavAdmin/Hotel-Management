@@ -1428,15 +1428,6 @@ export function CustomerLandingPage({
                     </span>
                   )}
                 </div>
-                <div className="takeaway-cart-btn-details">
-                  <span className="takeaway-cart-btn-label">Cart</span>
-                  {cartCount > 0 && (
-                    <>
-                      <span className="takeaway-cart-btn-dot">•</span>
-                      <span className="takeaway-cart-btn-total">{formatPrice(totalAmount)}</span>
-                    </>
-                  )}
-                </div>
               </button>
             )}
 
@@ -1746,7 +1737,7 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
-                  {/* Station Toggle: Kitchen / Food vs Bar / Beverages */}
+                  {/* Station Toggle */}
                   <div className="pos-station-group">
                     <button
                       type="button"
@@ -1758,17 +1749,6 @@ export function CustomerLandingPage({
                     >
                       <ChefHat size={14} />
                       <span>Kitchen / Food</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "bar" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("bar");
-                        setSelectedCategory("all");
-                      }}
-                    >
-                      <Coffee size={14} />
-                      <span>Bar / Beverages</span>
                     </button>
                   </div>
 
@@ -1795,23 +1775,6 @@ export function CustomerLandingPage({
                         <X size={14} />
                       </button>
                     )}
-                  </div>
-
-                  {/* Categories Filter Dropdown (Matches Template Controls) */}
-                  <div className="pos-category-select-wrapper">
-                    <Utensils size={14} className="pos-category-select-icon" />
-                    <select
-                      className="pos-category-select"
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      aria-label="Filter by category"
-                    >
-                      {TAKEAWAY_CATEGORIES.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.label}
-                        </option>
-                      ))}
-                    </select>
                   </div>
 
                   {/* Dietary Filter Buttons: Veg, Non-Veg, Specials */}
@@ -1841,25 +1804,6 @@ export function CustomerLandingPage({
                       <span>Specials</span>
                     </button>
                   </div>
-                </div>
-
-                {/* Horizontal Quick Category Filter Strip */}
-                <div className="pos-takeaway-category-strip">
-                  {TAKEAWAY_CATEGORIES.map((cat) => {
-                    const IconComp = cat.icon || Utensils;
-                    const isSelected = selectedCategory === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        className={`pos-category-strip-btn ${isSelected ? "is-active" : ""}`}
-                        onClick={() => setSelectedCategory(cat.id)}
-                      >
-                        <IconComp size={13} />
-                        <span>{cat.label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
 
                 {/* Compact POS Menu Grid */}
