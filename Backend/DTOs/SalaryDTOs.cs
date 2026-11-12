@@ -14,7 +14,7 @@ public class CreateSalaryPaymentDto
     [Range(0.01, 10000000.00, ErrorMessage = "Payment amount must be greater than zero.")]
     public decimal Amount { get; set; }
 
-    public string? PaymentMonth { get; set; }
+    public string? PaymentMonth { get; set; } // e.g. "2026-11"
 
     public DateTime? PaymentDate { get; set; }
 
@@ -30,7 +30,7 @@ public class CreateSalaryPaymentDto
         set => PaymentMonth = value;
     }
 
-    public string PaymentMethod { get; set; } = "BANK_TRANSFER";
+    public string PaymentMethod { get; set; } = "BANK_TRANSFER"; // "BANK_TRANSFER", "CASH", "UPI", "CHEQUE"
 
     public string? TransactionReference { get; set; }
 

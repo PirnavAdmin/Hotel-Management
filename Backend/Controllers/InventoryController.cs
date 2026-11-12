@@ -16,6 +16,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
+[Tags("Inventory", "Admin")]
 public class InventoryController : ControllerBase
 {
     private readonly SpService _spService;
