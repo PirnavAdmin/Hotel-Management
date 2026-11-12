@@ -26,15 +26,42 @@ public class SalaryService
     public async Task<SalaryPaymentDto> RecordSalaryPaymentAsync(CreateSalaryPaymentDto dto, long? createdBy = 1L)
     {
         if (dto == null) throw new ArgumentNullException(nameof(dto));
-        if (!dto.StaffId.HasValue || dto.StaffId.Value <= 0) throw new ArgumentException("A valid Staff ID is required.");
         if (dto.Amount <= 0) throw new ArgumentException("Salary payment amount must be greater than zero.");
 
-        var staff = await _context.StaffPersons
-            .FirstOrDefaultAsync(s => s.StaffId == dto.StaffId.Value && s.DeletedAt == null);
+        StaffPerson? staff = null;
+        if (dto.StaffId.HasValue && dto.StaffId.Value > 0)
+        {
+            staff = await _context.StaffPersons
+                .FirstOrDefaultAsync(s => s.StaffId == dto.StaffId.Value && s.DeletedAt == null);
+        }
+        else if (!string.IsNullOrWhiteSpace(dto.StaffName))
+        {
+            var trimmedName = dto.StaffName.Trim();
+            staff = await _context.StaffPersons
+                .FirstOrDefaultAsync(s => s.FullName == trimmedName && s.DeletedAt == null);
+        }
 
         if (staff == null)
         {
-            throw new KeyNotFoundException($"Staff person with ID {dto.StaffId.Value} was not found.");
+            if (dto.StaffId.HasValue && dto.StaffId.Value > 0)
+                throw new KeyNotFoundException($"Staff person with ID {dto.StaffId.Value} was not found.");
+            else if (!string.IsNullOrWhiteSpace(dto.StaffName))
+            {
+                staff = new StaffPerson
+                {
+                    FullName = dto.StaffName.Trim(),
+                    RoleTitle = "Staff",
+                    Department = dto.Department ?? "Dining / Service",
+                    BaseSalary = dto.Amount
+                };
+                _context.StaffPersons.Add(staff);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new ArgumentException("A valid Staff ID or Staff Name is required.");
+            }
+        }
         }
 
         var paymentDate = dto.PaymentDate ?? DateTime.UtcNow;

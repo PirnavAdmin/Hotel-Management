@@ -39,6 +39,8 @@ export function TableReservationFlow({
   initialStep = 1,
   customerUser,
   onLogout,
+  onAdminLogin,
+  onHotelLogin,
   onNavigate,
   onOpenProfile,
   onOpenOrders,
@@ -451,8 +453,28 @@ export function TableReservationFlow({
           </div>
         </div>
 
-        {/* Action Controls (Profile Pill & Dropdown matching Screenshot 2) */}
+{/* Action Controls (Profile Pill & Dropdown matching Screenshot 2) */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {(onHotelLogin || onAdminLogin) && (
+            <button
+              onClick={() => {
+                if (onHotelLogin) onHotelLogin();
+                else if (onAdminLogin) onAdminLogin();
+              }}
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(245, 158, 11, 0.4)",
+                color: "#f5ede6",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Hotel Login
+            </button>
+          )}
           {onBackToPos && (
             <button
               type="button"

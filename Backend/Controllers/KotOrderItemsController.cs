@@ -84,6 +84,7 @@ public class KotOrderItemsController : ControllerBase
 
     // PUT/PATCH /api/v1/kot-order-items/{id}/status
     [AllowAnonymous]
+    [HttpPut("{id:long}/status")]
     [HttpPatch("{id:long}/status")]
     public async Task<IActionResult> UpdateStatus(long id, [FromBody] UpdateItemStatusDto dto)
     {
