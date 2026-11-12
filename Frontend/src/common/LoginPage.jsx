@@ -2,6 +2,7 @@ import './LoginPage.css';
 import { logFormSubmission, logUserAction } from '../utils/logger';
 import { ThemeToggle } from './ThemeToggle';
 import React, { useState, useEffect, useRef, useId } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
@@ -73,9 +74,31 @@ const HEADLINE_ITEMS = [
   { icon: <Heart size={15} />, text: 'Happy Customers \u2014 Everyday.' }
 ];
 
-export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Restaurant', restaurantLogo = '', logo = '', currentTheme = 'royal-saffron', onChangeTheme }) {
+export function LoginPage({
+  role = 'pos',
+  onLoginSuccess,
+  restaurantName = 'Restaurant',
+  restaurantLogo = '',
+  logo = '',
+  currentTheme = 'royal-saffron',
+  onChangeTheme,
+  onBackToLanding,
+}) {
+  const navigate = useNavigate();
   const [currentRole, setCurrentRole] = useState(role);
   const [mode, setMode] = useState('login'); // 'login' | 'forgot'
+
+  const handleBackToLanding = () => {
+    try {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    } catch {}
+    if (typeof onBackToLanding === 'function') {
+      onBackToLanding();
+    } else {
+      navigate('/');
+    }
+  };
 
   // Dynamic restaurant name and tagline from Settings / localStorage / prop
   const [currentRestaurantName, setCurrentRestaurantName] = useState(() =>
@@ -422,6 +445,18 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
   return (
     <main className="bhanu-login" data-mode={mode}>
+      <div className="auth-back-nav">
+        <button
+          type="button"
+          className="bhanu-login-back-btn"
+          onClick={handleBackToLanding}
+          title="Back to Landing Page"
+          aria-label="Back to Customer Landing Page"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Home</span>
+        </button>
+      </div>
       <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
       <section className="bhanu-story" aria-label={`Welcome to ${currentRestaurantName}`}><header><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
       <div className="bhanu-welcome"><h1 style={{ color: '#ff9d00' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
@@ -499,14 +534,14 @@ export function LoginPage({ role = 'pos', onLoginSuccess, restaurantName = 'Rest
 
       <div className="bhanu-form-content">
         <div className="bhanu-form-heading">
-          <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em', textAlign: 'center' }}>
             {mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
           {mode === 'forgot' && (
-            <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600 }}>
-            {forgotOtpStep ? 'Verification OTP generated & auto-filled below. Set your new password.' : 'Enter email or username to auto-generate verification OTP.'}
-          </p>
-        )}
+            <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600, textAlign: 'center' }}>
+              {forgotOtpStep ? 'Verification OTP generated & auto-filled below. Set your new password.' : 'Enter email or username to auto-generate verification OTP.'}
+            </p>
+          )}
         </div>
 
         {/* Tab toggle — Admin only */}
