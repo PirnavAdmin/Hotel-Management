@@ -1,8 +1,4 @@
 import React, { useState, useEffect } from "react";
-<<<<<<< HEAD
-import QRCode from "../utils/qrCode";
-=======
->>>>>>> f338a89d70ad47f03795140805cc35cdae8cde86
 import {
   Calendar,
   Clock,
