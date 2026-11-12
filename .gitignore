@@ -1,3 +1,11 @@
+# Dependencies and builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+
 # Visual Studio / IDE cache and user-specific files
 .vs/
 **/.vs/

@@ -4,6 +4,9 @@ const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
 // During development, Vite forwards requests to the backend,
 // or gracefully falls back to local server-db.json when offline so data is NEVER lost.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
+export const RESERVATION_API_BASE_URL = String(
+  import.meta.env.VITE_RESERVATION_API_BASE_URL || "https://brooks-steven-farmers-decimal.trycloudflare.com",
+).trim().replace(/\/$/, "");
 export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const API_SYNC_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
@@ -34,17 +37,20 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const { remoteOnly = false, ...requestOptions } = options;
-  const url = apiUrl(endpoint);
+  const { remoteOnly = false, baseUrl, skipDefaultAuth = false, ...requestOptions } = options;
+  const requestBase = String(baseUrl || "").trim().replace(/\/$/, "");
+  const url = requestBase
+    ? `${requestBase}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
+    : apiUrl(endpoint);
 
   try {
     const token =
-      typeof localStorage !== "undefined"
+      !skipDefaultAuth && typeof localStorage !== "undefined"
         ? localStorage.getItem("avsr_jwt_token")
         : null;
 
     const headers = {
-      ...(remoteOnly && import.meta.env.DEV ? { "X-Remote-Only": "true" } : {}),
+      ...(remoteOnly && import.meta.env.DEV && !requestBase ? { "X-Remote-Only": "true" } : {}),
       ...DEFAULT_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
@@ -124,6 +130,14 @@ async function performApiRequest(endpoint, options = {}) {
         error: displayError,
         rawError: errorText,
         status: res.status,
+        retryAfterSeconds: (() => {
+          const retryAfter = res.headers.get("Retry-After");
+          if (!retryAfter) return undefined;
+          const seconds = Number(retryAfter);
+          if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds));
+          const retryAt = Date.parse(retryAfter);
+          return Number.isNaN(retryAt) ? undefined : Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+        })(),
       };
     }
 
@@ -172,16 +186,17 @@ export function apiClient(endpoint, options = {}) {
 
   let token = "";
   try {
-    token = typeof localStorage !== "undefined"
+    token = !options.skipDefaultAuth && typeof localStorage !== "undefined"
       ? localStorage.getItem("avsr_jwt_token") || ""
       : "";
   } catch {
     // The request layer still supports environments where storage is blocked.
   }
   const key = JSON.stringify({
-    url: `${API_BASE_URL}${endpoint}`,
+    url: `${options.baseUrl || API_BASE_URL}${endpoint}`,
     token,
     remoteOnly: Boolean(options.remoteOnly),
+    skipDefaultAuth: Boolean(options.skipDefaultAuth),
     headers: options.headers || {},
   });
   const existing = inFlightGetRequests.get(key);
