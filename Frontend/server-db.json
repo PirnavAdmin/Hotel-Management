@@ -1,7 +1,4 @@
 {
-<<<<<<< HEAD
-  "gourmet_pos_staff_v1": [
-=======
   "gourmet_pos_past_orders_v2_inr": [
     {
       "id": 118,
@@ -203,7 +200,7 @@
       "kitchenKotNumber": "KOT-20261106050236440",
       "barBotNumber": null,
       "settledAt": "10:32 AM",
-      "createdAt": "2026-11-06T05:02:36",
+      "createdAt": "10:32 AM",
       "items": [
         {
           "menuItemId": 3,
@@ -346,10 +343,10 @@
           "quantity": 1
         }
       ],
-      "orderId": 87,
-      "invoiceNumber": "INV-087",
+      "orderId": "ord_1793941354840_1a3oa",
+      "invoiceNumber": "INV-001",
       "server": "pirnav",
-      "date": "06 Nov 2026",
+      "date": "10:32 AM",
       "orderTime": "10:32 AM",
       "isPaid": true,
       "taxableAmount": 710,
@@ -473,9 +470,33 @@
         },
         {
           "name": "Order Item",
-          "quantity": 6,
+          "quantity": 7,
           "price": 150,
-          "total": 900
+          "total": 1050
+        },
+        {
+          "name": "Royal Mutton Dum Biryani",
+          "quantity": 1,
+          "price": 440,
+          "total": 440
+        },
+        {
+          "name": "beers",
+          "quantity": 1,
+          "price": 300,
+          "total": 300
+        },
+        {
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "quantity": 2,
+          "price": 320,
+          "total": 640
+        },
+        {
+          "name": "Chicken 65 Biryani",
+          "quantity": 1,
+          "price": 360,
+          "total": 360
         }
       ],
       "id": 34,
@@ -1363,8 +1384,8 @@
       "id": 45,
       "orderType": "Takeaway",
       "tableId": 0,
-      "tableName": "Table 1",
-      "section": "",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
       "status": "Settled",
@@ -1395,7 +1416,7 @@
           "total": 235
         }
       ],
-      "invoiceId": 39,
+      "invoiceId": 45,
       "orderId": 45,
       "invoiceNumber": "INV-20261102-45",
       "taxableAmount": 655,
@@ -1421,8 +1442,8 @@
       "id": 33,
       "orderType": "Takeaway",
       "tableId": 0,
-      "tableName": "Table 1",
-      "section": "",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
       "status": "Settled",
@@ -1447,7 +1468,7 @@
           "total": 640
         }
       ],
-      "invoiceId": 35,
+      "invoiceId": 33,
       "orderId": 33,
       "invoiceNumber": "INV-E2E-1793612356050",
       "taxableAmount": 576,
@@ -1473,8 +1494,8 @@
       "id": 31,
       "orderType": "Takeaway",
       "tableId": 0,
-      "tableName": "Table 1",
-      "section": "",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
       "status": "Settled",
@@ -1499,7 +1520,7 @@
           "total": 640
         }
       ],
-      "invoiceId": 34,
+      "invoiceId": 31,
       "orderId": 31,
       "invoiceNumber": "INV-E2E-1793612202957",
       "taxableAmount": 576,
@@ -1525,8 +1546,8 @@
       "id": 30,
       "orderType": "Takeaway",
       "tableId": 0,
-      "tableName": "Table 1",
-      "section": "",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
       "status": "Settled",
@@ -1551,7 +1572,7 @@
           "total": 500
         }
       ],
-      "invoiceId": 33,
+      "invoiceId": 30,
       "orderId": 30,
       "invoiceNumber": "INV-TEST-1793611304594",
       "taxableAmount": 450,
@@ -1593,7 +1614,7 @@
       "grandTotal": 830,
       "invoiceNo": "INV-053",
       "settledAt": "02:12 PM",
-      "createdAt": "2026-11-03T08:42:06",
+      "createdAt": "02:12 PM",
       "items": [
         {
           "menuItemId": 2,
@@ -1736,10 +1757,10 @@
           "quantity": 1
         }
       ],
-      "orderId": 80,
-      "invoiceNumber": "INV-080",
+      "orderId": "ord_1793695325119_vm2uu",
+      "invoiceNumber": "INV-053",
       "server": "pirnav",
-      "date": "03 Nov 2026",
+      "date": "02:12 PM",
       "orderTime": "02:12 PM",
       "isPaid": true,
       "taxableAmount": 790,
@@ -1773,8 +1794,8 @@
       "id": 55,
       "orderType": "Takeaway",
       "tableId": 0,
-      "tableName": "Table 1",
-      "section": "",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
       "status": "Settled",
@@ -1825,8 +1846,8 @@
       "id": 54,
       "orderType": "Takeaway",
       "tableId": 0,
-      "tableName": "Table 1",
-      "section": "",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
       "status": "Settled",
@@ -1880,7 +1901,7 @@
       "dueAmount": 0
     },
     {
-      "invoiceId": 44,
+      "invoiceId": 52,
       "orderId": 52,
       "invoiceNumber": "INV-20261102-115022347",
       "subtotal": 360,
@@ -1924,7 +1945,7 @@
       "id": 48,
       "orderType": "DineIn",
       "tableId": 101,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-101",
       "section": "",
       "serverName": "Staff",
       "guests": 2,
@@ -1944,6 +1965,9 @@
       "items": [
         {
           "id": 132,
+          "kotId": 33,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 48,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -1951,12 +1975,7 @@
           "quantity": 1,
           "notes": "Spicy",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": 33,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 48,
@@ -1983,7 +2002,7 @@
       "id": 49,
       "orderType": "DineIn",
       "tableId": 102,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-102",
       "section": "",
       "serverName": "Staff",
       "guests": 2,
@@ -2003,6 +2022,9 @@
       "items": [
         {
           "id": 133,
+          "kotId": null,
+          "botId": 12,
+          "isBarItem": true,
           "orderId": 49,
           "menuItemId": 7,
           "name": "Mojito",
@@ -2010,15 +2032,13 @@
           "quantity": 1,
           "notes": "Extra mint",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 12,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 134,
+          "kotId": null,
+          "botId": 12,
+          "isBarItem": true,
           "orderId": 49,
           "menuItemId": 13,
           "name": "Vikas Vodka",
@@ -2026,12 +2046,7 @@
           "quantity": 1,
           "notes": "On the rocks",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 12,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 49,
@@ -2058,7 +2073,7 @@
       "id": 50,
       "orderType": "DineIn",
       "tableId": 103,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-103",
       "section": "",
       "serverName": "Staff",
       "guests": 3,
@@ -2078,6 +2093,9 @@
       "items": [
         {
           "id": 135,
+          "kotId": 34,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 50,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -2085,15 +2103,13 @@
           "quantity": 1,
           "notes": "Extra raita",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 34,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 136,
+          "kotId": null,
+          "botId": 13,
+          "isBarItem": true,
           "orderId": 50,
           "menuItemId": 7,
           "name": "Mojito",
@@ -2101,15 +2117,13 @@
           "quantity": 1,
           "notes": "Less ice",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 13,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 137,
+          "kotId": null,
+          "botId": 13,
+          "isBarItem": true,
           "orderId": 50,
           "menuItemId": 13,
           "name": "Vikas Vodka",
@@ -2117,15 +2131,13 @@
           "quantity": 1,
           "notes": "60ml",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 13,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 138,
+          "kotId": 35,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 50,
           "menuItemId": 1,
           "name": "Butter Naan",
@@ -2133,15 +2145,13 @@
           "quantity": 2,
           "notes": "Hot & crisp",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 35,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 139,
+          "kotId": null,
+          "botId": 14,
+          "isBarItem": true,
           "orderId": 50,
           "menuItemId": 7,
           "name": "Kingfisher Beer",
@@ -2149,12 +2159,7 @@
           "quantity": 1,
           "notes": "Chilled bottle",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 14,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 50,
@@ -2180,7 +2185,7 @@
     {
       "id": 43,
       "tableId": 102,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-102",
       "section": "",
       "serverName": "Staff",
       "guests": 2,
@@ -2206,6 +2211,9 @@
       "items": [
         {
           "id": 117,
+          "kotId": null,
+          "botId": 7,
+          "isBarItem": true,
           "orderId": 43,
           "menuItemId": 7,
           "name": "Mojito",
@@ -2213,15 +2221,13 @@
           "quantity": 1,
           "notes": "Extra mint",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 7,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 118,
+          "kotId": null,
+          "botId": 7,
+          "isBarItem": true,
           "orderId": 43,
           "menuItemId": 13,
           "name": "Vikas Vodka",
@@ -2229,12 +2235,7 @@
           "quantity": 1,
           "notes": "On the rocks",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 7,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 43,
@@ -2255,7 +2256,7 @@
     {
       "id": 44,
       "tableId": 103,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-103",
       "section": "",
       "serverName": "Staff",
       "guests": 3,
@@ -2281,6 +2282,9 @@
       "items": [
         {
           "id": 119,
+          "kotId": 28,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 44,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -2288,15 +2292,13 @@
           "quantity": 1,
           "notes": "Extra raita",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 28,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 120,
+          "kotId": null,
+          "botId": 8,
+          "isBarItem": true,
           "orderId": 44,
           "menuItemId": 7,
           "name": "Mojito",
@@ -2304,15 +2306,13 @@
           "quantity": 1,
           "notes": "Less ice",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 8,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 121,
+          "kotId": null,
+          "botId": 8,
+          "isBarItem": true,
           "orderId": 44,
           "menuItemId": 13,
           "name": "Vikas Vodka",
@@ -2320,15 +2320,13 @@
           "quantity": 1,
           "notes": "60ml",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 8,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 122,
+          "kotId": 29,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 44,
           "menuItemId": 1,
           "name": "Butter Naan",
@@ -2336,15 +2334,13 @@
           "quantity": 2,
           "notes": "Hot & crisp",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 29,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 123,
+          "kotId": null,
+          "botId": 9,
+          "isBarItem": true,
           "orderId": 44,
           "menuItemId": 7,
           "name": "Kingfisher Beer",
@@ -2352,12 +2348,7 @@
           "quantity": 1,
           "notes": "Chilled bottle",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 9,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 44,
@@ -2378,7 +2369,7 @@
     {
       "id": 42,
       "tableId": 101,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-101",
       "section": "",
       "serverName": "Staff",
       "guests": 2,
@@ -2404,6 +2395,9 @@
       "items": [
         {
           "id": 116,
+          "kotId": 27,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 42,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -2411,12 +2405,7 @@
           "quantity": 1,
           "notes": "Spicy",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": 27,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 42,
@@ -2509,7 +2498,7 @@
     {
       "id": 39,
       "tableId": 101,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-101",
       "section": "",
       "serverName": "Staff",
       "guests": 2,
@@ -2535,22 +2524,9 @@
       "items": [
         {
           "id": 100,
-          "orderId": 39,
-          "menuItemId": 1,
-          "name": "Hyderabad Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "Spicy",
-          "kotStatus": "queued",
-          "kotBatch": 1,
           "kotId": 18,
           "botId": null,
           "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
-        },
-        {
-          "id": 108,
           "orderId": 39,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -2558,12 +2534,21 @@
           "quantity": 1,
           "notes": "Spicy",
           "kotStatus": "queued",
-          "kotBatch": 1,
+          "kotBatch": 1
+        },
+        {
+          "id": 108,
           "kotId": 23,
           "botId": null,
           "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "orderId": 39,
+          "menuItemId": 1,
+          "name": "Hyderabad Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "Spicy",
+          "kotStatus": "queued",
+          "kotBatch": 1
         }
       ],
       "orderId": 39,
@@ -2584,7 +2569,7 @@
     {
       "id": 40,
       "tableId": 102,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-102",
       "section": "",
       "serverName": "Staff",
       "guests": 2,
@@ -2610,6 +2595,9 @@
       "items": [
         {
           "id": 101,
+          "kotId": 19,
+          "botId": 5,
+          "isBarItem": true,
           "orderId": 40,
           "menuItemId": 1,
           "name": "Mojito",
@@ -2617,15 +2605,13 @@
           "quantity": 1,
           "notes": "Extra mint",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": 19,
-          "botId": 5,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 102,
+          "kotId": null,
+          "botId": 3,
+          "isBarItem": true,
           "orderId": 40,
           "menuItemId": 7,
           "name": "Vikas Vodka",
@@ -2633,15 +2619,13 @@
           "quantity": 1,
           "notes": "On the rocks",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 3,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 109,
+          "kotId": null,
+          "botId": 5,
+          "isBarItem": true,
           "orderId": 40,
           "menuItemId": 7,
           "name": "Mojito",
@@ -2649,15 +2633,13 @@
           "quantity": 1,
           "notes": "Extra mint",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 5,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 110,
+          "kotId": null,
+          "botId": 5,
+          "isBarItem": true,
           "orderId": 40,
           "menuItemId": 13,
           "name": "Vikas Vodka",
@@ -2665,12 +2647,7 @@
           "quantity": 1,
           "notes": "On the rocks",
           "kotStatus": "queued",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 5,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 40,
@@ -2691,7 +2668,7 @@
     {
       "id": 41,
       "tableId": 103,
-      "tableName": "Takeaway / Direct",
+      "tableName": "Table-103",
       "section": "",
       "serverName": "Staff",
       "guests": 3,
@@ -2717,6 +2694,9 @@
       "items": [
         {
           "id": 103,
+          "kotId": 20,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -2724,15 +2704,13 @@
           "quantity": 1,
           "notes": "Extra raita",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 20,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 104,
+          "kotId": 20,
+          "botId": 6,
+          "isBarItem": true,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Mojito",
@@ -2740,15 +2718,13 @@
           "quantity": 1,
           "notes": "Less ice",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 20,
-          "botId": 6,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 105,
+          "kotId": null,
+          "botId": 4,
+          "isBarItem": true,
           "orderId": 41,
           "menuItemId": 7,
           "name": "Vikas Vodka",
@@ -2756,15 +2732,13 @@
           "quantity": 1,
           "notes": "60ml",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 4,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 106,
+          "kotId": 21,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Butter Naan",
@@ -2772,15 +2746,13 @@
           "quantity": 2,
           "notes": "Hot & crisp",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 21,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 107,
+          "kotId": 22,
+          "botId": null,
+          "isBarItem": true,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Kingfisher Beer",
@@ -2788,15 +2760,13 @@
           "quantity": 1,
           "notes": "Chilled bottle",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 22,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 111,
+          "kotId": 24,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Hyderabad Chicken Dum Biryani",
@@ -2804,15 +2774,13 @@
           "quantity": 1,
           "notes": "Extra raita",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 24,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 112,
+          "kotId": null,
+          "botId": 6,
+          "isBarItem": true,
           "orderId": 41,
           "menuItemId": 7,
           "name": "Mojito",
@@ -2820,15 +2788,13 @@
           "quantity": 1,
           "notes": "Less ice",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 6,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 113,
+          "kotId": null,
+          "botId": 6,
+          "isBarItem": true,
           "orderId": 41,
           "menuItemId": 13,
           "name": "Vikas Vodka",
@@ -2836,15 +2802,13 @@
           "quantity": 1,
           "notes": "60ml",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 6,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 114,
+          "kotId": 25,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Butter Naan",
@@ -2852,15 +2816,13 @@
           "quantity": 2,
           "notes": "Hot & crisp",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 25,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         },
         {
           "id": 115,
+          "kotId": 26,
+          "botId": null,
+          "isBarItem": true,
           "orderId": 41,
           "menuItemId": 1,
           "name": "Kingfisher Beer",
@@ -2868,12 +2830,7 @@
           "quantity": 1,
           "notes": "Chilled bottle",
           "kotStatus": "ready",
-          "kotBatch": 1,
-          "kotId": 26,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
+          "kotBatch": 1
         }
       ],
       "orderId": 41,
@@ -3152,7 +3109,7 @@
       "paymentMethod": "upi",
       "invoiceNo": "INV-005",
       "settledAt": "03:25 PM",
-      "createdAt": "2026-11-02T09:54:39",
+      "createdAt": "03:25 PM",
       "items": [
         {
           "id": 1,
@@ -3268,10 +3225,10 @@
         }
       ],
       "invoiceId": "ord_1793613335048_ykigs",
-      "orderId": 35,
-      "invoiceNumber": "INV-035",
+      "orderId": "ord_1793613335048_ykigs",
+      "invoiceNumber": "INV-005",
       "server": "Staff",
-      "date": "02 Nov 2026",
+      "date": "03:25 PM",
       "orderTime": "03:24 PM",
       "isPaid": true,
       "taxableAmount": 1885,
@@ -3297,183 +3254,6 @@
       "orderTimestamp": 1793613250162,
       "backendOrderId": 35,
       "billingSessionId": "35"
-    },
-    {
-      "id": 47,
-      "tableName": "Table-2",
-      "section": "Main Hall",
-      "serverName": "Staff",
-      "guests": 2,
-      "status": "Settled",
-      "subtotal": 790,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxPercent": 5,
-      "taxAmount": 39.5,
-      "serviceChargePercent": 5,
-      "serviceChargeAmount": 39.5,
-      "tipAmount": 0,
-      "grandTotal": 869,
-      "paymentMethod": "Cash",
-      "invoiceNo": "INV-047",
-      "settledAt": "2026-11-02T10:59:43",
-      "createdAt": "2026-11-02T10:59:43",
-      "items": [
-        {
-          "id": 128,
-          "orderId": 47,
-          "menuItemId": 2,
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "kotStatus": "served",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
-        },
-        {
-          "id": 129,
-          "orderId": 47,
-          "menuItemId": 3,
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "kotStatus": "served",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
-        }
-      ],
-      "total": 869,
-      "totalAmount": 869,
-      "paidAmount": 869,
-      "Status": "Settled",
-      "orderId": 47,
-      "invoiceNumber": "INV-047",
-      "server": "Staff",
-      "taxableAmount": 790,
-      "payments": [],
-      "date": "2026-11-02T10:59:43",
-      "orderTime": "2026-11-02T10:59:43",
-      "isPaid": true,
-      "serviceCharge": 5,
-      "capacity": 5,
-      "paymentMode": "upi",
-      "PaymentMethod": "upi",
-      "cashTendered": 869,
-      "changeDue": 0,
-      "settledDate": "2026-11-01",
-      "cookingStartedAt": "03:53 PM",
-      "completedAt": "03:53 PM",
-      "completedDuration": "5h 30m 01s",
-      "orderTimestamp": 1793353277058,
-      "backendOrderId": 47,
-      "billingSessionId": "47",
-      "orderType": "DineIn",
-      "customerName": null,
-      "customerPhone": null,
-      "kitchenKotNumber": null,
-      "barBotNumber": null,
-      "amountPaid": 1507,
-      "updatedAt": "2026-11-02T15:50:18",
-      "dueAmount": 0,
-      "tableId": 2,
-      "invoiceId": 47
-    },
-    {
-      "id": 38,
-      "tableName": "Table-2",
-      "section": "Main Hall",
-      "serverName": "Staff",
-      "guests": 2,
-      "status": "Settled",
-      "subtotal": 935,
-      "discountPercent": 0,
-      "discountAmount": 0,
-      "taxPercent": 5,
-      "taxAmount": 46.75,
-      "serviceChargePercent": 5,
-      "serviceChargeAmount": 46.75,
-      "tipAmount": 0,
-      "grandTotal": 1028.5,
-      "paymentMethod": "Cash",
-      "invoiceNo": "INV-038",
-      "settledAt": "2026-11-02T10:23:46",
-      "createdAt": "2026-11-02T10:23:46",
-      "items": [
-        {
-          "id": 93,
-          "orderId": 38,
-          "menuItemId": 1,
-          "name": "Mojito",
-          "price": 235,
-          "quantity": 1,
-          "notes": "Extra mint",
-          "kotStatus": "served",
-          "kotBatch": 1,
-          "kotId": 14,
-          "botId": null,
-          "isBarItem": false,
-          "department": "Kitchen",
-          "category": null
-        },
-        {
-          "id": 94,
-          "orderId": 38,
-          "menuItemId": 7,
-          "name": "Vikas Vodka",
-          "price": 700,
-          "quantity": 1,
-          "notes": "On the rocks",
-          "kotStatus": "served",
-          "kotBatch": 1,
-          "kotId": null,
-          "botId": 1,
-          "isBarItem": true,
-          "department": "Bar",
-          "category": null
-        }
-      ],
-      "total": 1028.5,
-      "totalAmount": 1028.5,
-      "paidAmount": 1028.5,
-      "Status": "Settled",
-      "orderId": 38,
-      "invoiceNumber": "INV-038",
-      "server": "Staff",
-      "taxableAmount": 935,
-      "payments": [],
-      "date": "2026-11-02T10:23:46",
-      "orderTime": "2026-11-02T10:23:46",
-      "isPaid": true,
-      "serviceCharge": 5,
-      "capacity": 5,
-      "paymentMode": "upi",
-      "PaymentMethod": "upi",
-      "cashTendered": 869,
-      "changeDue": 0,
-      "settledDate": "2026-11-01",
-      "cookingStartedAt": "03:53 PM",
-      "completedAt": "03:53 PM",
-      "completedDuration": "5h 30m 01s",
-      "orderTimestamp": 1793353277058,
-      "backendOrderId": 38,
-      "billingSessionId": "38",
-      "orderType": "DineIn",
-      "customerName": null,
-      "customerPhone": null,
-      "kitchenKotNumber": "KOT-20261102102346012",
-      "barBotNumber": "BOT-20261102102346040",
-      "tableId": 2,
-      "invoiceId": 38
     },
     {
       "id": 28,
@@ -3538,6 +3318,175 @@
       "kitchenKotNumber": null,
       "barBotNumber": null,
       "dueAmount": 0
+    },
+    {
+      "id": 47,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Settled",
+      "subtotal": 790,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 39.5,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 39.5,
+      "tipAmount": 0,
+      "grandTotal": 869,
+      "paymentMethod": "Cash",
+      "invoiceNo": "INV-047",
+      "settledAt": "2026-11-02T10:59:43",
+      "createdAt": "2026-11-02T10:59:43",
+      "items": [
+        {
+          "id": 128,
+          "kotId": null,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 47,
+          "menuItemId": 2,
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
+        },
+        {
+          "id": 129,
+          "kotId": null,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 47,
+          "menuItemId": 3,
+          "name": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
+        }
+      ],
+      "total": 869,
+      "totalAmount": 869,
+      "paidAmount": 869,
+      "Status": "Settled",
+      "orderId": 47,
+      "invoiceNumber": "INV-047",
+      "server": "Staff",
+      "taxableAmount": 790,
+      "payments": [],
+      "date": "2026-11-02T10:59:43",
+      "orderTime": "2026-11-02T10:59:43",
+      "isPaid": true,
+      "serviceCharge": 5,
+      "capacity": 5,
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledDate": "2026-11-01",
+      "cookingStartedAt": "03:53 PM",
+      "completedAt": "03:53 PM",
+      "completedDuration": "5h 30m 01s",
+      "orderTimestamp": 1793353277058,
+      "backendOrderId": 47,
+      "billingSessionId": "47",
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "amountPaid": 1507,
+      "updatedAt": "2026-11-02T15:50:18",
+      "dueAmount": 0,
+      "tableId": 2,
+      "invoiceId": 47
+    },
+    {
+      "id": 38,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Settled",
+      "subtotal": 935,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 46.75,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 46.75,
+      "tipAmount": 0,
+      "grandTotal": 1028.5,
+      "paymentMethod": "Cash",
+      "invoiceNo": "INV-038",
+      "settledAt": "2026-11-02T10:23:46",
+      "createdAt": "2026-11-02T10:23:46",
+      "items": [
+        {
+          "id": 93,
+          "kotId": 14,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 38,
+          "menuItemId": 1,
+          "name": "Mojito",
+          "price": 235,
+          "quantity": 1,
+          "notes": "Extra mint",
+          "kotStatus": "served",
+          "kotBatch": 1
+        },
+        {
+          "id": 94,
+          "kotId": null,
+          "botId": 1,
+          "isBarItem": true,
+          "orderId": 38,
+          "menuItemId": 7,
+          "name": "Vikas Vodka",
+          "price": 700,
+          "quantity": 1,
+          "notes": "On the rocks",
+          "kotStatus": "served",
+          "kotBatch": 1
+        }
+      ],
+      "total": 1028.5,
+      "totalAmount": 1028.5,
+      "paidAmount": 1028.5,
+      "Status": "Settled",
+      "orderId": 38,
+      "invoiceNumber": "INV-038",
+      "server": "Staff",
+      "taxableAmount": 935,
+      "payments": [],
+      "date": "2026-11-02T10:23:46",
+      "orderTime": "2026-11-02T10:23:46",
+      "isPaid": true,
+      "serviceCharge": 5,
+      "capacity": 5,
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledDate": "2026-11-01",
+      "cookingStartedAt": "03:53 PM",
+      "completedAt": "03:53 PM",
+      "completedDuration": "5h 30m 01s",
+      "orderTimestamp": 1793353277058,
+      "backendOrderId": 38,
+      "billingSessionId": "38",
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102102346012",
+      "barBotNumber": "BOT-20261102102346040",
+      "tableId": 2,
+      "invoiceId": 38
     },
     {
       "id": 29,
@@ -3774,7 +3723,7 @@
       "tableId": 2,
       "tableName": "Table-2",
       "section": "Main Hall",
-      "serverName": "Staff",
+      "serverName": "Rajesh K.",
       "guests": 2,
       "status": "Settled",
       "subtotal": 790,
@@ -3789,7 +3738,7 @@
       "paymentMethod": "upi",
       "invoiceNo": "INV-005",
       "settledAt": "12:21 PM",
-      "createdAt": "2026-10-26T04:38:09",
+      "createdAt": "12:21 PM",
       "items": [
         {
           "id": "bir-2",
@@ -3818,13 +3767,13 @@
       "totalAmount": 869,
       "paidAmount": 869,
       "Status": "Settled",
-      "invoiceId": 28,
-      "orderId": 28,
-      "invoiceNumber": "INV-034",
+      "invoiceId": "ord_1793602272680_tcyif",
+      "orderId": "ord_1793602272680_tcyif",
+      "invoiceNumber": "INV-005",
       "server": "Rajesh K.",
       "taxableAmount": 980,
       "payments": [],
-      "date": "02 Nov 2026",
+      "date": "12:21 PM",
       "orderTime": "03:11 PM",
       "isPaid": true,
       "serviceCharge": 5,
@@ -4035,26 +3984,16 @@
       "createdAt": "2026-10-29T11:55:51",
       "items": [
         {
-          "id": 54,
-          "orderId": 24,
-          "menuItemId": 41,
           "name": "bagara with mutton",
-          "price": 280,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "served",
-          "kotBatch": 1
+          "price": 280,
+          "total": 280
         },
         {
-          "id": 55,
-          "orderId": 24,
-          "menuItemId": 35,
           "name": "Paneer Butter Masala",
-          "price": 250,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "served",
-          "kotBatch": 1
+          "price": 250,
+          "total": 250
         }
       ],
       "invoiceId": 24,
@@ -4103,15 +4042,10 @@
       "createdAt": "2026-10-29T11:55:45",
       "items": [
         {
-          "id": 53,
-          "orderId": 23,
-          "menuItemId": 1,
           "name": "Aromas Fresh Brewed Coffee",
-          "price": 90,
           "quantity": 5,
-          "notes": "",
-          "kotStatus": "served",
-          "kotBatch": 1
+          "price": 90,
+          "total": 450
         }
       ],
       "invoiceId": 23,
@@ -4160,15 +4094,10 @@
       "createdAt": "2026-10-29T11:55:43",
       "items": [
         {
-          "id": 52,
-          "orderId": 22,
-          "menuItemId": 1,
           "name": "Chicken 65 Biryani",
-          "price": 360,
           "quantity": 3,
-          "notes": "",
-          "kotStatus": "served",
-          "kotBatch": 1
+          "price": 360,
+          "total": 1080
         }
       ],
       "invoiceId": 22,
@@ -4210,30 +4139,25 @@
       "serviceChargePercent": 5,
       "serviceChargeAmount": 32,
       "tipAmount": 0,
-      "grandTotal": 704,
+      "grandTotal": 672,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261027-21",
       "settledAt": "2026-10-27T17:26:57",
       "createdAt": "2026-10-27T17:26:57",
       "items": [
         {
-          "id": 51,
-          "orderId": 21,
-          "menuItemId": 1,
           "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
           "quantity": 2,
-          "notes": "Extra spicy",
-          "kotStatus": "served",
-          "kotBatch": 1
+          "price": 320,
+          "total": 640
         }
       ],
       "invoiceId": 21,
       "orderId": 21,
       "invoiceNumber": "INV-20261027-21",
       "taxableAmount": 640,
-      "totalAmount": 704,
-      "paidAmount": 704,
+      "totalAmount": 672,
+      "paidAmount": 672,
       "amountPaid": 672,
       "updatedAt": "2026-10-27T17:26:57",
       "payments": [],
@@ -4242,7 +4166,7 @@
       "orderTime": "2026-10-27T17:26:57",
       "isPaid": true,
       "serviceCharge": 5,
-      "total": 704,
+      "total": 672,
       "Status": "Settled",
       "customerName": null,
       "customerPhone": null,
@@ -4284,7 +4208,7 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxAmount": 28,
-      "serviceCharge": 5,
+      "serviceCharge": 0,
       "serviceChargeAmount": 28,
       "tipAmount": 0,
       "grandTotal": 616,
@@ -4295,7 +4219,7 @@
       "cashTendered": 616,
       "changeDue": 0,
       "settledAt": "05:56 PM",
-      "date": "27 Oct 2026",
+      "date": "05:56 PM",
       "settledDate": "2026-10-26",
       "invoiceNo": "INV-001",
       "id": "ord_1793103961347_7rds2",
@@ -4372,7 +4296,7 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxAmount": 69.5,
-      "serviceCharge": 5,
+      "serviceCharge": 0,
       "serviceChargeAmount": 69.5,
       "tipAmount": 0,
       "grandTotal": 1529,
@@ -4383,7 +4307,7 @@
       "cashTendered": 1529,
       "changeDue": 0,
       "settledAt": "05:26 PM",
-      "date": "26 Oct 2026",
+      "date": "05:26 PM",
       "settledDate": "2026-10-25",
       "invoiceNo": "INV-217",
       "id": "ord_1793015785655_6n7io",
@@ -4686,7 +4610,7 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxAmount": 40.5,
-      "serviceCharge": 5,
+      "serviceCharge": 0,
       "serviceChargeAmount": 40.5,
       "tipAmount": 0,
       "grandTotal": 891,
@@ -4697,7 +4621,7 @@
       "cashTendered": 891,
       "changeDue": 0,
       "settledAt": "10:59 AM",
-      "date": "23 Oct 2026",
+      "date": "10:59 AM",
       "settledDate": "2026-10-22",
       "invoiceNo": "INV-001",
       "id": "ord_1792733381905_rykfc",
@@ -4728,38 +4652,33 @@
       "guests": 1,
       "status": "Settled",
       "subtotal": 320,
-      "discountPercent": 0,
-      "discountAmount": 0,
+      "discountPercent": 10,
+      "discountAmount": 32,
       "taxPercent": 5,
-      "taxAmount": 16,
+      "taxAmount": 14.4,
       "serviceChargePercent": 5,
       "serviceChargeAmount": 16,
       "tipAmount": 0,
-      "grandTotal": 352,
+      "grandTotal": 316.8,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261021-16",
       "settledAt": "2026-10-21T11:03:29",
       "createdAt": "2026-10-21T11:03:29",
       "items": [
         {
-          "id": 41,
-          "orderId": 16,
-          "menuItemId": 1,
           "name": "Chicken Biryani",
-          "price": 320,
           "quantity": 1,
-          "notes": null,
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 320,
+          "total": 320
         }
       ],
       "invoiceId": 16,
       "orderId": 16,
       "invoiceNumber": "INV-20261021-16",
       "taxableAmount": 288,
-      "totalAmount": 352,
-      "paidAmount": 352,
-      "amountPaid": 316.8,
+      "totalAmount": 316.8,
+      "paidAmount": 316.8,
+      "amountPaid": 352,
       "updatedAt": "2026-10-21T10:29:16",
       "payments": [],
       "server": "Staff",
@@ -4767,7 +4686,7 @@
       "orderTime": "2026-10-21T11:03:29",
       "isPaid": true,
       "serviceCharge": 5,
-      "total": 352,
+      "total": 316.8,
       "Status": "Settled",
       "customerName": null,
       "customerPhone": null,
@@ -4785,60 +4704,45 @@
       "guests": 4,
       "status": "Settled",
       "subtotal": 545,
-      "discountPercent": 0,
-      "discountAmount": 0,
+      "discountPercent": 10,
+      "discountAmount": 54.5,
       "taxPercent": 5,
-      "taxAmount": 27.25,
+      "taxAmount": 24.53,
       "serviceChargePercent": 5,
       "serviceChargeAmount": 27.25,
       "tipAmount": 0,
-      "grandTotal": 599.5,
+      "grandTotal": 539.55,
       "paymentMethod": "WALLET",
       "invoiceNo": "INV-20261021-15",
       "settledAt": "2026-10-21T10:59:49",
       "createdAt": "2026-10-21T10:59:49",
       "items": [
         {
-          "id": 38,
-          "orderId": 15,
-          "menuItemId": 35,
           "name": "Paneer Butter Masala",
+          "quantity": 1,
           "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "total": 250
         },
         {
-          "id": 39,
-          "orderId": 15,
-          "menuItemId": 34,
           "name": "Brownie with ice cream",
-          "price": 115,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 115,
+          "total": 115
         },
         {
-          "id": 40,
-          "orderId": 15,
-          "menuItemId": 33,
           "name": "Gulab Jamun with Rabdi",
-          "price": 180,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 180,
+          "total": 180
         }
       ],
       "invoiceId": 15,
       "orderId": 15,
       "invoiceNumber": "INV-20261021-15",
       "taxableAmount": 490.5,
-      "totalAmount": 599.5,
-      "paidAmount": 599.5,
-      "amountPaid": 539.55,
+      "totalAmount": 539.55,
+      "paidAmount": 539.55,
+      "amountPaid": 599.5,
       "updatedAt": "2026-10-21T10:29:44",
       "payments": [],
       "server": "Staff",
@@ -4846,7 +4750,7 @@
       "orderTime": "2026-10-21T10:59:49",
       "isPaid": true,
       "serviceCharge": 5,
-      "total": 599.5,
+      "total": 539.55,
       "Status": "Settled",
       "customerName": null,
       "customerPhone": null,
@@ -4878,15 +4782,10 @@
       "createdAt": "2026-10-21T10:48:02",
       "items": [
         {
-          "id": 37,
-          "orderId": 14,
-          "menuItemId": 1,
           "name": "Chicken Biryani",
-          "price": 250,
           "quantity": 2,
-          "notes": null,
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 250,
+          "total": 500
         }
       ],
       "invoiceId": 14,
@@ -4952,7 +4851,7 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxAmount": 20.75,
-      "serviceCharge": 5,
+      "serviceCharge": 0,
       "serviceChargeAmount": 20.75,
       "tipAmount": 0,
       "grandTotal": 457,
@@ -4963,7 +4862,7 @@
       "cashTendered": 457,
       "changeDue": 0,
       "settledAt": "10:48 AM",
-      "date": "22 Oct 2026",
+      "date": "10:48 AM",
       "settledDate": "2026-10-21",
       "invoiceNo": "INV-002",
       "id": "ord_1792646329649_nyvky",
@@ -4994,38 +4893,33 @@
       "guests": 2,
       "status": "Settled",
       "subtotal": 640,
-      "discountPercent": 0,
-      "discountAmount": 0,
+      "discountPercent": 10,
+      "discountAmount": 64,
       "taxPercent": 5,
-      "taxAmount": 32,
+      "taxAmount": 28.8,
       "serviceChargePercent": 5,
       "serviceChargeAmount": 32,
       "tipAmount": 0,
-      "grandTotal": 704,
+      "grandTotal": 633.6,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261021-13",
       "settledAt": "2026-10-21T10:42:39",
       "createdAt": "2026-10-21T10:42:39",
       "items": [
         {
-          "id": 36,
-          "orderId": 13,
-          "menuItemId": 1,
           "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
           "quantity": 2,
-          "notes": null,
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 320,
+          "total": 640
         }
       ],
       "invoiceId": 13,
       "orderId": 13,
       "invoiceNumber": "INV-20261021-13",
       "taxableAmount": 576,
-      "totalAmount": 704,
-      "paidAmount": 704,
-      "amountPaid": 633.6,
+      "totalAmount": 633.6,
+      "paidAmount": 633.6,
+      "amountPaid": 704,
       "updatedAt": "2026-10-21T09:36:36",
       "payments": [],
       "server": "Staff",
@@ -5033,7 +4927,7 @@
       "orderTime": "2026-10-21T10:42:39",
       "isPaid": true,
       "serviceCharge": 5,
-      "total": 704,
+      "total": 633.6,
       "Status": "Settled",
       "customerName": null,
       "customerPhone": null,
@@ -5064,7 +4958,7 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxAmount": 12.5,
-      "serviceCharge": 5,
+      "serviceCharge": 0,
       "serviceChargeAmount": 12.5,
       "tipAmount": 0,
       "grandTotal": 275,
@@ -5075,7 +4969,7 @@
       "cashTendered": 275,
       "changeDue": 0,
       "settledAt": "10:04 AM",
-      "date": "22 Oct 2026",
+      "date": "10:04 AM",
       "settledDate": "2026-10-21",
       "invoiceNo": "INV-001",
       "id": "ord_1792643685156_vf3nw",
@@ -5120,37 +5014,22 @@
       "createdAt": "2026-10-19T14:42:36",
       "items": [
         {
-          "id": 33,
-          "orderId": 12,
-          "menuItemId": 25,
           "name": "Tandoori Roti",
-          "price": 25,
           "quantity": 2,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 25,
+          "total": 50
         },
         {
-          "id": 34,
-          "orderId": 12,
-          "menuItemId": 21,
           "name": "Andhra Mutton Curry",
-          "price": 350,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 350,
+          "total": 350
         },
         {
-          "id": 35,
-          "orderId": 12,
-          "menuItemId": 32,
           "name": "Gulab Jamun",
-          "price": 100,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 100,
+          "total": 100
         }
       ],
       "invoiceId": 12,
@@ -5199,26 +5078,16 @@
       "createdAt": "2026-10-19T10:12:40",
       "items": [
         {
-          "id": 31,
-          "orderId": 11,
-          "menuItemId": 34,
           "name": "Brownie with ice cream",
-          "price": 115,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 115,
+          "total": 115
         },
         {
-          "id": 32,
-          "orderId": 11,
-          "menuItemId": 33,
           "name": "Gulab Jamun with Rabdi",
-          "price": 180,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 180,
+          "total": 180
         }
       ],
       "invoiceId": 11,
@@ -5267,15 +5136,10 @@
       "createdAt": "2026-10-19T09:48:34",
       "items": [
         {
-          "id": 30,
-          "orderId": 10,
-          "menuItemId": 1,
           "name": "Butter Chicken",
-          "price": 250,
           "quantity": 1,
-          "notes": null,
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 250,
+          "total": 250
         }
       ],
       "invoiceId": 10,
@@ -5324,48 +5188,28 @@
       "createdAt": "2026-10-16T13:34:13",
       "items": [
         {
-          "id": 26,
-          "orderId": 9,
-          "menuItemId": 18,
           "name": "Chicken 65",
-          "price": 250,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 250,
+          "total": 250
         },
         {
-          "id": 27,
-          "orderId": 9,
-          "menuItemId": 24,
           "name": "Chicken Seekh Kebab",
+          "quantity": 1,
           "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "total": 250
         },
         {
-          "id": 28,
-          "orderId": 9,
-          "menuItemId": 17,
           "name": "Hyderabadi Mutton biryani",
-          "price": 350,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 350,
+          "total": 350
         },
         {
-          "id": 29,
-          "orderId": 9,
-          "menuItemId": 32,
           "name": "Gulab Jamun",
-          "price": 100,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 100,
+          "total": 100
         }
       ],
       "invoiceId": 9,
@@ -5414,15 +5258,10 @@
       "createdAt": "2026-10-16T13:27:04",
       "items": [
         {
-          "id": 25,
-          "orderId": 8,
-          "menuItemId": 33,
           "name": "Gulab Jamun with Rabdi",
-          "price": 180,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 180,
+          "total": 180
         }
       ],
       "invoiceId": 8,
@@ -5471,26 +5310,16 @@
       "createdAt": "2026-10-16T13:25:26",
       "items": [
         {
-          "id": 23,
-          "orderId": 7,
-          "menuItemId": 34,
           "name": "Brownie with ice cream",
-          "price": 115,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 115,
+          "total": 115
         },
         {
-          "id": 24,
-          "orderId": 7,
-          "menuItemId": 21,
           "name": "Andhra Mutton Curry",
-          "price": 350,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 350,
+          "total": 350
         }
       ],
       "invoiceId": 7,
@@ -5539,48 +5368,28 @@
       "createdAt": "2026-10-16T13:09:50",
       "items": [
         {
-          "id": 16,
-          "orderId": 6,
-          "menuItemId": 35,
           "name": "Paneer Butter Masala",
+          "quantity": 1,
           "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "total": 250
         },
         {
-          "id": 17,
-          "orderId": 6,
-          "menuItemId": 34,
           "name": "Brownie with ice cream",
+          "quantity": 1,
           "price": 115,
-          "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "total": 115
         },
         {
-          "id": 18,
-          "orderId": 6,
-          "menuItemId": 33,
           "name": "Gulab Jamun with Rabdi",
-          "price": 180,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 180,
+          "total": 180
         },
         {
-          "id": 19,
-          "orderId": 6,
-          "menuItemId": 32,
           "name": "Gulab Jamun",
-          "price": 100,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 100,
+          "total": 100
         }
       ],
       "invoiceId": 6,
@@ -5629,26 +5438,16 @@
       "createdAt": "2026-10-16T12:20:42",
       "items": [
         {
-          "id": 14,
-          "orderId": 5,
-          "menuItemId": 34,
           "name": "Brownie with ice cream",
-          "price": 115,
           "quantity": 3,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 115,
+          "total": 345
         },
         {
-          "id": 15,
-          "orderId": 5,
-          "menuItemId": 33,
           "name": "Gulab Jamun with Rabdi",
-          "price": 180,
           "quantity": 1,
-          "notes": "",
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 180,
+          "total": 180
         }
       ],
       "invoiceId": 5,
@@ -5798,8 +5597,12 @@
           "paymentId": 6,
           "invoiceId": 5,
           "amount": 525,
+          "amountPaid": 525,
           "paymentMode": "UPI",
+          "paymentMethod": "upi",
           "transactionReference": "UPI-REF-99-TEST",
+          "txnReference": "UPI-REF-99-TEST",
+          "paymentStatus": "success",
           "paidAt": "2026-10-12T14:55:45"
         }
       ],
@@ -5847,15 +5650,10 @@
       "createdAt": "2026-10-12T14:55:37",
       "items": [
         {
-          "id": 13,
-          "orderId": 4,
-          "menuItemId": 1,
           "name": "Paneer Butter Masala",
-          "price": 260,
           "quantity": 1,
-          "notes": null,
-          "kotStatus": "queued",
-          "kotBatch": 1
+          "price": 260,
+          "total": 260
         }
       ],
       "invoiceId": 4,
@@ -5881,54 +5679,6 @@
       "dueAmount": 0
     },
     {
-      "tableId": 1,
-      "tableName": "Table 1",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "01:26 PM",
-          "kotStatus": "received"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "01:26 PM",
-          "kotStatus": "received"
-        }
-      ],
-      "subtotal": 760,
-      "discountAmount": 0,
-      "taxAmount": 38,
-      "serviceChargeAmount": 38,
-      "tipAmount": 0,
-      "grandTotal": 836,
-      "paymentMethod": "cash",
-      "cashTendered": 836,
-      "changeDue": 0,
-      "settledAt": "01:30 PM",
-      "date": "12 Oct 2026",
-      "invoiceNo": "INV-214149",
-      "cookingStartedAt": "01:26 PM",
-      "completedAt": "01:30 PM",
-      "completedDuration": "04m 00s",
-      "orderTime": "01:26 PM",
-      "orderTimestamp": 1791791781189,
-      "total": 836,
-      "totalAmount": 836,
-      "paidAmount": 836,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
       "id": 3,
       "tableId": 12,
       "tableName": "Table-12",
@@ -5952,24 +5702,30 @@
       "items": [
         {
           "id": 11,
+          "kotId": null,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 3,
           "menuItemId": 1,
           "name": "Hyderabadi Chicken Dum Biryani",
           "price": 320,
           "quantity": 2,
           "notes": null,
-          "kotStatus": "queued",
+          "kotStatus": "ready",
           "kotBatch": 1
         },
         {
           "id": 12,
+          "kotId": null,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 3,
           "menuItemId": 5,
           "name": "Paneer Butter Masala",
           "price": 260,
           "quantity": 1,
           "notes": null,
-          "kotStatus": "queued",
+          "kotStatus": "ready",
           "kotBatch": 1
         }
       ],
@@ -6010,16 +5766,19 @@
       "serviceChargeAmount": 94,
       "tipAmount": 0,
       "grandTotal": 2068,
-      "paymentMethod": "CASH",
-      "invoiceNo": "INV-BLR-2026-0002",
-      "settledAt": "2026-10-09T20:46:00",
+      "paymentMethod": "Cash",
+      "invoiceNo": "INV-002",
+      "settledAt": "2026-10-12T07:40:39",
       "createdAt": "2026-10-12T07:40:39",
       "items": [
         {
           "id": 5,
+          "kotId": 2,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 2,
           "menuItemId": 1,
-          "name": "Item",
+          "name": "",
           "price": 520,
           "quantity": 1,
           "notes": null,
@@ -6028,9 +5787,12 @@
         },
         {
           "id": 6,
+          "kotId": 2,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 2,
           "menuItemId": 1,
-          "name": "Item",
+          "name": "",
           "price": 460,
           "quantity": 1,
           "notes": null,
@@ -6039,31 +5801,37 @@
         },
         {
           "id": 9,
+          "kotId": null,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 2,
           "menuItemId": 1,
           "name": "Hyderabadi Chicken Dum Biryani",
           "price": 320,
           "quantity": 2,
           "notes": null,
-          "kotStatus": "queued",
+          "kotStatus": "ready",
           "kotBatch": 1
         },
         {
           "id": 10,
+          "kotId": null,
+          "botId": null,
+          "isBarItem": false,
           "orderId": 2,
           "menuItemId": 5,
           "name": "Paneer Butter Masala",
           "price": 260,
           "quantity": 1,
           "notes": null,
-          "kotStatus": "queued",
+          "kotStatus": "ready",
           "kotBatch": 1
         }
       ],
       "invoiceId": 2,
       "orderId": 2,
-      "invoiceNumber": "INV-BLR-2026-0002",
-      "taxableAmount": 980,
+      "invoiceNumber": "INV-002",
+      "taxableAmount": 1880,
       "totalAmount": 2068,
       "paidAmount": 2068,
       "amountPaid": 0,
@@ -6071,7 +5839,7 @@
       "payments": [],
       "server": "Staff",
       "date": "2026-10-12T07:40:39",
-      "orderTime": "2026-10-09T20:46:00",
+      "orderTime": "2026-10-12T07:40:39",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 2068,
@@ -6082,95 +5850,8 @@
       "kitchenKotNumber": null,
       "barBotNumber": null
     },
->>>>>>> 85adac018d9cb6e201ed2b0923817afd5b535b4b
     {
-      "staffId": 1,
       "id": 1,
-<<<<<<< HEAD
-      "fullName": "Rajesh K.",
-      "name": "Rajesh K.",
-      "roleTitle": "Senior Captain",
-      "role": "Senior Captain",
-      "phone": "+91 98450 11223",
-      "shift": "Morning Shift (10 AM - 4 PM)",
-      "isActive": true,
-      "assignedTablesCount": 3,
-      "avatarInitial": "R",
-      "createdAt": "2026-10-09T04:27:02.068846"
-    },
-    {
-      "staffId": 2,
-      "id": 2,
-      "fullName": "Vikram S.",
-      "name": "Vikram S.",
-      "roleTitle": "Head Waiter",
-      "role": "Head Waiter",
-      "phone": "+91 98450 44556",
-      "shift": "Evening Shift (5 PM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 1,
-      "avatarInitial": "V",
-      "createdAt": "2026-10-09T04:27:02.069079"
-    },
-    {
-      "staffId": 3,
-      "id": 3,
-      "fullName": "Ananya R.",
-      "name": "Ananya R.",
-      "roleTitle": "Stewardess",
-      "role": "Stewardess",
-      "phone": "+91 98450 77889",
-      "shift": "Full Day (11 AM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 3,
-      "avatarInitial": "A",
-      "createdAt": "2026-10-09T04:27:02.06908"
-    },
-    {
-      "staffId": 4,
-      "id": 4,
-      "fullName": "Pooja M.",
-      "name": "Pooja M.",
-      "roleTitle": "Captain",
-      "role": "Captain",
-      "phone": "+91 98450 99001",
-      "shift": "Morning Shift (10 AM - 4 PM)",
-      "isActive": true,
-      "assignedTablesCount": 1,
-      "avatarInitial": "P",
-      "createdAt": "2026-10-09T04:27:02.06908"
-    },
-    {
-      "staffId": 5,
-      "id": 5,
-      "fullName": "Suresh N.",
-      "name": "Suresh N.",
-      "roleTitle": "Server / Waiter",
-      "role": "Server / Waiter",
-      "phone": "+91 98450 33445",
-      "shift": "Evening Shift (5 PM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 3,
-      "avatarInitial": "S",
-      "createdAt": "2026-10-09T04:27:02.06908"
-    },
-    {
-      "staffId": 6,
-      "id": 6,
-      "fullName": "Karan D.",
-      "name": "Karan D.",
-      "roleTitle": "VIP Lounge Captain",
-      "role": "VIP Lounge Captain",
-      "phone": "+91 98450 66778",
-      "shift": "Evening Shift (5 PM - 11 PM)",
-      "isActive": true,
-      "assignedTablesCount": 4,
-      "avatarInitial": "K",
-      "createdAt": "2026-10-09T04:27:02.069081"
-    }
-  ],
-  "gourmet_pos_salary_payments_v1": [],
-=======
       "orderType": "DineIn",
       "tableId": 3,
       "tableName": "Table-3",
@@ -6314,348 +5995,6 @@
       "updatedAt": "2026-10-12T14:43:32"
     },
     {
-      "tableId": 21,
-      "tableName": "Table 21",
-      "section": "Main Hall",
-      "server": "SHYAM",
-      "items": [
-        {
-          "id": "custom-1791450343762",
-          "name": "EGG BIRIYANI",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:37 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 250,
-      "discountAmount": 0,
-      "taxAmount": 12.5,
-      "serviceChargeAmount": 12.5,
-      "tipAmount": 0,
-      "grandTotal": 275,
-      "paymentMethod": "cash",
-      "cashTendered": 275,
-      "changeDue": 0,
-      "settledAt": "02:39 PM",
-      "date": "08 Oct 2026",
-      "invoiceNo": "INV-214148",
-      "cookingStartedAt": "02:38 PM",
-      "completedAt": "02:38 PM",
-      "completedDuration": "01m 46s",
-      "orderTime": "02:37 PM",
-      "orderTimestamp": 1791450462818,
-      "total": 275,
-      "totalAmount": 275,
-      "paidAmount": 275,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 20,
-      "tableName": "Table 20",
-      "section": "Main Hall",
-      "server": "A V SURESH REDDY",
-      "items": [
-        {
-          "id": "custom-1791018497290",
-          "name": "panner biriyani",
-          "price": 245,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:42 PM",
-          "kotStatus": "received"
-        }
-      ],
-      "subtotal": 245,
-      "discountAmount": 0,
-      "taxAmount": 12.25,
-      "serviceChargeAmount": 12.25,
-      "tipAmount": 0,
-      "grandTotal": 270,
-      "paymentMethod": "upi",
-      "cashTendered": 270,
-      "changeDue": 0,
-      "settledAt": "02:52 PM",
-      "date": "03 Oct 2026",
-      "invoiceNo": "INV-205227",
-      "cookingStartedAt": "02:42 PM",
-      "completedAt": "02:52 PM",
-      "completedDuration": "10m 00s",
-      "orderTime": "02:42 PM",
-      "orderTimestamp": 1791018722417,
-      "total": 270,
-      "totalAmount": 270,
-      "paidAmount": 270,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 2,
-      "tableName": "Table 2",
-      "section": "Main Hall",
-      "server": "A V SURESH REDDY",
-      "items": [
-        {
-          "id": "bir-8",
-          "name": "Egg Dum Biryani (Double Egg)",
-          "price": 220,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "05:58 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "custom-1790678725402",
-          "name": "AVSR SPL",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "10:38 AM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 470,
-      "discountAmount": 23.5,
-      "taxAmount": 22.325000000000003,
-      "serviceChargeAmount": 22.325000000000003,
-      "tipAmount": 0,
-      "grandTotal": 491,
-      "paymentMethod": "cash",
-      "cashTendered": 491,
-      "changeDue": 0,
-      "settledAt": "01:59 PM",
-      "date": "03 Oct 2026",
-      "invoiceNo": "INV-22530",
-      "cookingStartedAt": "06:40 PM",
-      "completedAt": "10:40 AM",
-      "completedDuration": "16h 42m 09s",
-      "orderTime": "05:58 PM",
-      "orderTimestamp": 1790831278175,
-      "total": 491,
-      "totalAmount": 491,
-      "paidAmount": 491,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 1,
-      "tableName": "Table 1",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "st-5",
-          "name": "Apollo Fish Fry",
-          "price": 340,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:23 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "st-3",
-          "name": "Chilli Chicken Dry",
-          "price": 280,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:23 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 620,
-      "discountAmount": 0,
-      "taxAmount": 31,
-      "serviceChargeAmount": 31,
-      "tipAmount": 0,
-      "grandTotal": 682,
-      "paymentMethod": "upi",
-      "cashTendered": 682,
-      "changeDue": 0,
-      "settledAt": "01:59 PM",
-      "date": "03 Oct 2026",
-      "invoiceNo": "INV-17200",
-      "cookingStartedAt": "12:19 PM",
-      "completedAt": "03:01 PM",
-      "completedDuration": "16m 11s",
-      "orderTime": "12:23 PM",
-      "orderTimestamp": 1790750977884,
-      "total": 682,
-      "totalAmount": 682,
-      "paidAmount": 682,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 1,
-      "tableName": "Table 1",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 2
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 2
-        }
-      ],
-      "subtotal": 1160,
-      "discountAmount": 0,
-      "taxAmount": 58,
-      "serviceChargeAmount": 58,
-      "tipAmount": 50,
-      "grandTotal": 1326,
-      "paymentMethod": "upi",
-      "settledAt": "01:10 PM",
-      "date": "01 Oct 2026",
-      "invoiceNo": "INV-1048",
-      "total": 1326,
-      "totalAmount": 1326,
-      "paidAmount": 1326,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 1,
-      "tableName": "Table 1",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:19 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 440,
-      "discountAmount": 0,
-      "taxAmount": 22,
-      "serviceChargeAmount": 22,
-      "tipAmount": 0,
-      "grandTotal": 484,
-      "paymentMethod": "upi",
-      "cashTendered": 484,
-      "changeDue": 0,
-      "settledAt": "12:54 PM",
-      "invoiceNo": "INV-10317",
-      "cookingStartedAt": "12:19 PM",
-      "completedAt": "12:19 PM",
-      "completedDuration": "00m 59s",
-      "orderTime": "12:19 PM",
-      "orderTimestamp": 1790750977884,
-      "total": 484,
-      "totalAmount": 484,
-      "paidAmount": 484,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 4,
-      "tableName": "Table 4",
-      "section": "Main Hall",
-      "server": "Pooja M.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:06 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "custom-1790679317565",
-          "name": "PALAK PANEER",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:06 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 570,
-      "discountAmount": 0,
-      "taxAmount": 28.5,
-      "serviceChargeAmount": 28.5,
-      "tipAmount": 0,
-      "grandTotal": 627,
-      "paymentMethod": "upi",
-      "cashTendered": 627,
-      "changeDue": 0,
-      "settledAt": "12:19 PM",
-      "invoiceNo": "INV-41123",
-      "cookingStartedAt": "12:07 PM",
-      "completedAt": "12:07 PM",
-      "completedDuration": "01m 40s",
-      "orderTime": "12:06 PM",
-      "orderTimestamp": 1790750204522,
-      "total": 627,
-      "totalAmount": 627,
-      "paidAmount": 627,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 2,
-      "tableName": "Table 2",
-      "section": "Main Hall",
-      "server": "Vikram S.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:21 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "custom-1790678725402",
-          "name": "AVSR SPL",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:21 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 570,
-      "discountAmount": 0,
-      "taxAmount": 28.5,
-      "serviceChargeAmount": 28.5,
-      "tipAmount": 0,
-      "grandTotal": 627,
-      "paymentMethod": "upi",
-      "cashTendered": 627,
-      "changeDue": 0,
-      "settledAt": "05:28 PM",
-      "invoiceNo": "INV-21631",
-      "total": 627,
-      "totalAmount": 627,
-      "paidAmount": 627,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
       "id": "ord_61",
       "invoiceId": "ord_61",
       "orderId": "ord_61",
@@ -6676,13 +6015,7 @@
       "totalAmount": 627,
       "paidAmount": 627,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 627,
-          "paymentMode": "upi",
-          "paidAt": "05:28 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -6733,13 +6066,7 @@
       "totalAmount": 627,
       "paidAmount": 627,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 627,
-          "paymentMode": "upi",
-          "paidAt": "05:28 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -6770,39 +6097,6 @@
       "Status": "Settled"
     },
     {
-      "tableId": 1,
-      "tableName": "Table 1",
-      "section": "Main Hall",
-      "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "custom-1790678725402",
-          "name": "AVSR SPL",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:16 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 250,
-      "discountAmount": 0,
-      "taxAmount": 12.5,
-      "serviceChargeAmount": 12.5,
-      "tipAmount": 0,
-      "grandTotal": 275,
-      "paymentMethod": "upi",
-      "cashTendered": 275,
-      "changeDue": 0,
-      "settledAt": "04:54 PM",
-      "invoiceNo": "INV-19096",
-      "total": 275,
-      "totalAmount": 275,
-      "paidAmount": 275,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
       "id": "ord_62",
       "invoiceId": "ord_62",
       "orderId": "ord_62",
@@ -6823,13 +6117,7 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 275,
-          "paymentMode": "upi",
-          "paidAt": "04:54 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1790678725402",
@@ -6871,13 +6159,7 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 275,
-          "paymentMode": "upi",
-          "paidAt": "04:54 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1790678725402",
@@ -6919,13 +6201,7 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 275,
-          "paymentMode": "upi",
-          "paidAt": "04:54 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1790678725402",
@@ -6944,39 +6220,6 @@
       "isPaid": true,
       "serviceCharge": 0,
       "total": 275,
-      "Status": "Settled"
-    },
-    {
-      "tableId": 14,
-      "tableName": "Table 14",
-      "section": "VIP Lounge",
-      "server": "Karan D.",
-      "items": [
-        {
-          "id": "custom-1790678725402",
-          "name": "AVSR SPL",
-          "price": 250,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:28 PM",
-          "kotStatus": "cooking"
-        }
-      ],
-      "subtotal": 250,
-      "discountAmount": 0,
-      "taxAmount": 12.5,
-      "serviceChargeAmount": 12.5,
-      "tipAmount": 0,
-      "grandTotal": 275,
-      "paymentMethod": "upi",
-      "cashTendered": 275,
-      "changeDue": 0,
-      "settledAt": "04:29 PM",
-      "invoiceNo": "INV-149449",
-      "total": 275,
-      "totalAmount": 275,
-      "paidAmount": 275,
-      "status": "Settled",
       "Status": "Settled"
     },
     {
@@ -7000,13 +6243,7 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 275,
-          "paymentMode": "upi",
-          "paidAt": "04:29 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1790678725402",
@@ -7048,13 +6285,7 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 275,
-          "paymentMode": "upi",
-          "paidAt": "04:29 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1790678725402",
@@ -7076,172 +6307,129 @@
       "Status": "Settled"
     },
     {
-      "tableId": 14,
+      "id": "ord_84",
+      "invoiceId": "ord_84",
+      "orderId": "ord_84",
+      "invoiceNumber": "INV-205227",
+      "invoiceNo": "INV-205227",
       "tableName": "Table 14",
-      "section": "VIP Lounge",
+      "serverName": "A V SURESH REDDY",
       "server": "Karan D.",
+      "status": "Settled",
+      "subtotal": 245,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 245,
+      "taxAmount": 12.25,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 270,
+      "totalAmount": 270,
+      "paidAmount": 270,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 2,
-          "notes": "",
-          "timeAdded": "03:03 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 2,
-          "notes": "",
-          "timeAdded": "03:04 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-7",
-          "name": "Spicy Prawns Biryani",
-          "price": 460,
+          "id": "custom-1791018497290",
+          "name": "panner biriyani",
+          "price": 245,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "03:09 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "tk-1",
-          "name": "Tandoori Chicken (Half / Full)",
-          "price": 290,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:13 PM",
-          "kotStatus": "ready"
+          "timeAdded": "02:42 PM",
+          "kotStatus": "received"
         }
       ],
-      "subtotal": 2170,
-      "discountAmount": 0,
-      "taxAmount": 108.5,
-      "serviceChargeAmount": 108.5,
-      "tipAmount": 0,
-      "grandTotal": 2387,
-      "paymentMethod": "upi",
-      "cashTendered": 2387,
-      "changeDue": 0,
+      "createdAt": "04:10 PM",
       "settledAt": "04:10 PM",
-      "invoiceNo": "INV-146167",
-      "total": 2387,
-      "totalAmount": 2387,
-      "paidAmount": 2387,
-      "status": "Settled",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 270,
       "Status": "Settled"
     },
     {
-      "tableId": 15,
+      "id": "ord_85",
+      "invoiceId": "ord_85",
+      "orderId": "ord_85",
+      "invoiceNumber": "INV-22530",
+      "invoiceNo": "INV-22530",
       "tableName": "Table 15",
-      "section": "VIP Lounge",
+      "serverName": "A V SURESH REDDY",
       "server": "Karan D.",
+      "status": "Settled",
+      "subtotal": 470,
+      "discountAmount": 23.5,
+      "discountPercent": 5,
+      "taxableAmount": 446.5,
+      "taxAmount": 22.325000000000003,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 491,
+      "totalAmount": 491,
+      "paidAmount": 491,
+      "paymentMethod": "cash",
+      "payments": [],
       "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
         {
           "id": "bir-8",
           "name": "Egg Dum Biryani (Double Egg)",
           "price": 220,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 980,
-      "discountAmount": 0,
-      "taxAmount": 49,
-      "serviceChargeAmount": 49,
-      "tipAmount": 0,
-      "grandTotal": 1078,
-      "paymentMethod": "upi",
-      "cashTendered": 1078,
-      "changeDue": 0,
-      "settledAt": "04:10 PM",
-      "invoiceNo": "INV-151290",
-      "total": 1078,
-      "totalAmount": 1078,
-      "paidAmount": 1078,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 10,
-      "tableName": "Table 10",
-      "section": "Garden Terrace",
-      "server": "Suresh N.",
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:07 PM",
+          "timeAdded": "05:58 PM",
           "kotStatus": "ready"
         },
         {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
+          "id": "custom-1790678725402",
+          "name": "AVSR SPL",
+          "price": 250,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "04:07 PM",
+          "timeAdded": "10:38 AM",
           "kotStatus": "ready"
         }
       ],
-      "subtotal": 760,
-      "discountAmount": 0,
-      "taxAmount": 38,
-      "serviceChargeAmount": 38,
-      "tipAmount": 0,
-      "grandTotal": 836,
-      "paymentMethod": "upi",
-      "cashTendered": 836,
-      "changeDue": 0,
+      "createdAt": "04:10 PM",
       "settledAt": "04:10 PM",
-      "invoiceNo": "INV-100152",
-      "total": 836,
-      "totalAmount": 836,
-      "paidAmount": 836,
-      "status": "Settled",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 491,
       "Status": "Settled"
     },
     {
-      "tableId": 9,
-      "tableName": "Table 9",
-      "section": "Garden Terrace",
+      "id": "ord_86",
+      "invoiceId": "ord_86",
+      "orderId": "ord_86",
+      "invoiceNumber": "INV-17200",
+      "invoiceNo": "INV-17200",
+      "tableName": "Table 10",
+      "serverName": "Rajesh K.",
       "server": "Suresh N.",
+      "status": "Settled",
+      "subtotal": 620,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 620,
+      "taxAmount": 31,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 682,
+      "totalAmount": 682,
+      "paidAmount": 682,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 2,
+          "id": "st-5",
+          "name": "Apollo Fish Fry",
+          "price": 340,
+          "quantity": 1,
           "notes": "",
-          "timeAdded": "12:45 PM",
-          "kotStatus": "served"
+          "timeAdded": "12:23 PM",
+          "kotStatus": "ready"
         },
         {
           "id": "st-3",
@@ -7249,34 +6437,305 @@
           "price": 280,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "12:47 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "ds-1",
-          "name": "Gulab Jamun with Rabdi (2 Pcs)",
-          "price": 150,
-          "quantity": 3,
-          "notes": "",
-          "timeAdded": "01:10 PM",
-          "kotStatus": "served"
+          "timeAdded": "12:23 PM",
+          "kotStatus": "ready"
         }
       ],
-      "subtotal": 1430,
-      "discountAmount": 143,
-      "taxAmount": 64.35000000000001,
-      "serviceChargeAmount": 64.35000000000001,
-      "tipAmount": 0,
-      "grandTotal": 1416,
-      "paymentMethod": "upi",
-      "cashTendered": 1416,
-      "changeDue": 0,
+      "createdAt": "04:10 PM",
       "settledAt": "04:10 PM",
-      "invoiceNo": "INV-97380",
-      "total": 1416,
-      "totalAmount": 1416,
-      "paidAmount": 1416,
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 682,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_87",
+      "invoiceId": "ord_87",
+      "orderId": "ord_87",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 9",
+      "serverName": "Rajesh K.",
+      "server": "Suresh N.",
       "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 10,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "04:10 PM",
+      "settledAt": "04:10 PM",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_88",
+      "invoiceId": "ord_88",
+      "orderId": "ord_88",
+      "invoiceNumber": "INV-10317",
+      "invoiceNo": "INV-10317",
+      "tableName": "Table 15",
+      "serverName": "Rajesh K.",
+      "server": "Karan D.",
+      "status": "Settled",
+      "subtotal": 440,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 440,
+      "taxAmount": 22,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 484,
+      "totalAmount": 484,
+      "paidAmount": 484,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:19 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "04:10 PM",
+      "settledAt": "04:10 PM",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 484,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_89",
+      "invoiceId": "ord_89",
+      "orderId": "ord_89",
+      "invoiceNumber": "INV-41123",
+      "invoiceNo": "INV-41123",
+      "tableName": "Table 10",
+      "serverName": "Pooja M.",
+      "server": "Suresh N.",
+      "status": "Settled",
+      "subtotal": 570,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 570,
+      "taxAmount": 28.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 627,
+      "totalAmount": 627,
+      "paidAmount": 627,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:06 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "custom-1790679317565",
+          "name": "PALAK PANEER",
+          "price": 250,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "12:06 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "04:10 PM",
+      "settledAt": "04:10 PM",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 627,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_90",
+      "invoiceId": "ord_90",
+      "orderId": "ord_90",
+      "invoiceNumber": "INV-21631",
+      "invoiceNo": "INV-21631",
+      "tableName": "Table 9",
+      "serverName": "Vikram S.",
+      "server": "Suresh N.",
+      "status": "Settled",
+      "subtotal": 570,
+      "discountAmount": 0,
+      "discountPercent": 10,
+      "taxableAmount": 570,
+      "taxAmount": 28.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 627,
+      "totalAmount": 627,
+      "paidAmount": 627,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:21 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "custom-1790678725402",
+          "name": "AVSR SPL",
+          "price": 250,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:21 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "04:10 PM",
+      "settledAt": "04:10 PM",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 627,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_97",
+      "invoiceId": "ord_97",
+      "orderId": "ord_97",
+      "invoiceNumber": "INV-149449",
+      "invoiceNo": "INV-149449",
+      "tableName": "Table 15",
+      "serverName": "Karan D.",
+      "server": "Karan D.",
+      "status": "Settled",
+      "subtotal": 250,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 250,
+      "taxAmount": 12.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 275,
+      "totalAmount": 275,
+      "paidAmount": 275,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "custom-1790678725402",
+          "name": "AVSR SPL",
+          "price": 250,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:28 PM",
+          "kotStatus": "cooking"
+        }
+      ],
+      "createdAt": "04:10 PM",
+      "settledAt": "04:10 PM",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 275,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_102",
+      "invoiceId": "ord_102",
+      "orderId": "ord_102",
+      "invoiceNumber": "INV-100152",
+      "invoiceNo": "INV-100152",
+      "tableName": "Table 9",
+      "serverName": "Suresh N.",
+      "server": "Suresh N.",
+      "status": "Settled",
+      "subtotal": 760,
+      "discountAmount": 0,
+      "discountPercent": 10,
+      "taxableAmount": 760,
+      "taxAmount": 38,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 836,
+      "totalAmount": 836,
+      "paidAmount": 836,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:07 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "04:07 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "04:10 PM",
+      "settledAt": "04:10 PM",
+      "date": "04:10 PM",
+      "orderTime": "04:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 836,
       "Status": "Settled"
     },
     {
@@ -7300,13 +6759,7 @@
       "totalAmount": 2387,
       "paidAmount": 2387,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 2387,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-4",
@@ -7375,13 +6828,7 @@
       "totalAmount": 1078,
       "paidAmount": 1078,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1078,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -7441,13 +6888,7 @@
       "totalAmount": 836,
       "paidAmount": 836,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 836,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -7498,466 +6939,7 @@
       "totalAmount": 1416,
       "paidAmount": 1416,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1416,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 2,
-          "notes": "",
-          "timeAdded": "12:45 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "st-3",
-          "name": "Chilli Chicken Dry",
-          "price": 280,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:47 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "ds-1",
-          "name": "Gulab Jamun with Rabdi (2 Pcs)",
-          "price": 150,
-          "quantity": 3,
-          "notes": "",
-          "timeAdded": "01:10 PM",
-          "kotStatus": "served"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1416,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_84",
-      "invoiceId": "ord_84",
-      "orderId": "ord_84",
-      "invoiceNumber": "INV-146167",
-      "invoiceNo": "INV-146167",
-      "tableName": "Table 14",
-      "serverName": "Karan D.",
-      "server": "Karan D.",
-      "status": "Settled",
-      "subtotal": 2170,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 2170,
-      "taxAmount": 108.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 2387,
-      "totalAmount": 2387,
-      "paidAmount": 2387,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 2387,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 2,
-          "notes": "",
-          "timeAdded": "03:03 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 2,
-          "notes": "",
-          "timeAdded": "03:04 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-7",
-          "name": "Spicy Prawns Biryani",
-          "price": 460,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:09 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "tk-1",
-          "name": "Tandoori Chicken (Half / Full)",
-          "price": 290,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:13 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 2387,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_85",
-      "invoiceId": "ord_85",
-      "orderId": "ord_85",
-      "invoiceNumber": "INV-151290",
-      "invoiceNo": "INV-151290",
-      "tableName": "Table 15",
-      "serverName": "Karan D.",
-      "server": "Karan D.",
-      "status": "Settled",
-      "subtotal": 980,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 980,
-      "taxAmount": 49,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1078,
-      "totalAmount": 1078,
-      "paidAmount": 1078,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1078,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-8",
-          "name": "Egg Dum Biryani (Double Egg)",
-          "price": 220,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1078,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_86",
-      "invoiceId": "ord_86",
-      "orderId": "ord_86",
-      "invoiceNumber": "INV-100152",
-      "invoiceNo": "INV-100152",
-      "tableName": "Table 10",
-      "serverName": "Suresh N.",
-      "server": "Suresh N.",
-      "status": "Settled",
-      "subtotal": 760,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 760,
-      "taxAmount": 38,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 836,
-      "totalAmount": 836,
-      "paidAmount": 836,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 836,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:07 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:07 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 836,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_87",
-      "invoiceId": "ord_87",
-      "orderId": "ord_87",
-      "invoiceNumber": "INV-97380",
-      "invoiceNo": "INV-97380",
-      "tableName": "Table 9",
-      "serverName": "Suresh N.",
-      "server": "Suresh N.",
-      "status": "Settled",
-      "subtotal": 1430,
-      "discountAmount": 143,
-      "discountPercent": 10,
-      "taxableAmount": 1287,
-      "taxAmount": 64.35000000000001,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1416,
-      "totalAmount": 1416,
-      "paidAmount": 1416,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1416,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 2,
-          "notes": "",
-          "timeAdded": "12:45 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "st-3",
-          "name": "Chilli Chicken Dry",
-          "price": 280,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:47 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "ds-1",
-          "name": "Gulab Jamun with Rabdi (2 Pcs)",
-          "price": 150,
-          "quantity": 3,
-          "notes": "",
-          "timeAdded": "01:10 PM",
-          "kotStatus": "served"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1416,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_88",
-      "invoiceId": "ord_88",
-      "orderId": "ord_88",
-      "invoiceNumber": "INV-151290",
-      "invoiceNo": "INV-151290",
-      "tableName": "Table 15",
-      "serverName": "Karan D.",
-      "server": "Karan D.",
-      "status": "Settled",
-      "subtotal": 980,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 980,
-      "taxAmount": 49,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1078,
-      "totalAmount": 1078,
-      "paidAmount": 1078,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1078,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-8",
-          "name": "Egg Dum Biryani (Double Egg)",
-          "price": 220,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1078,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_89",
-      "invoiceId": "ord_89",
-      "orderId": "ord_89",
-      "invoiceNumber": "INV-100152",
-      "invoiceNo": "INV-100152",
-      "tableName": "Table 10",
-      "serverName": "Suresh N.",
-      "server": "Suresh N.",
-      "status": "Settled",
-      "subtotal": 760,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 760,
-      "taxAmount": 38,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 836,
-      "totalAmount": 836,
-      "paidAmount": 836,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 836,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:07 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "04:07 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 836,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_90",
-      "invoiceId": "ord_90",
-      "orderId": "ord_90",
-      "invoiceNumber": "INV-97380",
-      "invoiceNo": "INV-97380",
-      "tableName": "Table 9",
-      "serverName": "Suresh N.",
-      "server": "Suresh N.",
-      "status": "Settled",
-      "subtotal": 1430,
-      "discountAmount": 143,
-      "discountPercent": 10,
-      "taxableAmount": 1287,
-      "taxAmount": 64.35000000000001,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1416,
-      "totalAmount": 1416,
-      "paidAmount": 1416,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1416,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -8017,13 +6999,7 @@
       "totalAmount": 1416,
       "paidAmount": 1416,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1416,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -8083,13 +7059,7 @@
       "totalAmount": 2387,
       "paidAmount": 2387,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 2387,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-4",
@@ -8138,193 +7108,138 @@
       "Status": "Settled"
     },
     {
-      "id": "ord_97",
-      "invoiceId": "ord_97",
-      "orderId": "ord_97",
-      "invoiceNumber": "INV-151290",
-      "invoiceNo": "INV-151290",
-      "tableName": "Table 15",
-      "serverName": "Karan D.",
-      "server": "Karan D.",
+      "id": "ord_93",
+      "invoiceId": "ord_93",
+      "orderId": "ord_93",
+      "invoiceNumber": "INV-19096",
+      "invoiceNo": "INV-19096",
+      "tableName": "Table 2",
+      "serverName": "Rajesh K.",
+      "server": "Vikram S.",
       "status": "Settled",
-      "subtotal": 980,
+      "subtotal": 250,
       "discountAmount": 0,
       "discountPercent": 0,
-      "taxableAmount": 980,
-      "taxAmount": 49,
+      "taxableAmount": 250,
+      "taxAmount": 12.5,
       "serviceChargeAmount": 0,
       "tipAmount": 0,
-      "grandTotal": 1078,
-      "totalAmount": 1078,
-      "paidAmount": 1078,
+      "grandTotal": 275,
+      "totalAmount": 275,
+      "paidAmount": 275,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1078,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
+          "id": "custom-1790678725402",
+          "name": "AVSR SPL",
+          "price": 250,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-8",
-          "name": "Egg Dum Biryani (Double Egg)",
-          "price": 220,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:18 PM",
+          "timeAdded": "04:16 PM",
           "kotStatus": "ready"
         }
       ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
+      "createdAt": "04:09 PM",
+      "settledAt": "04:09 PM",
+      "date": "04:09 PM",
+      "orderTime": "04:09 PM",
       "isPaid": true,
       "serviceCharge": 0,
-      "total": 1078,
+      "total": 275,
       "Status": "Settled"
     },
     {
-      "id": "ord_102",
-      "invoiceId": "ord_102",
-      "orderId": "ord_102",
-      "invoiceNumber": "INV-97380",
-      "invoiceNo": "INV-97380",
-      "tableName": "Table 9",
-      "serverName": "Suresh N.",
-      "server": "Suresh N.",
+      "id": "ord_100",
+      "invoiceId": "ord_100",
+      "orderId": "ord_100",
+      "invoiceNumber": "INV-146167",
+      "invoiceNo": "INV-146167",
+      "tableName": "Table 2",
+      "serverName": "Karan D.",
+      "server": "Vikram S.",
       "status": "Settled",
-      "subtotal": 1430,
-      "discountAmount": 143,
-      "discountPercent": 10,
-      "taxableAmount": 1287,
-      "taxAmount": 64.35000000000001,
+      "subtotal": 2170,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 2170,
+      "taxAmount": 108.5,
       "serviceChargeAmount": 0,
       "tipAmount": 0,
-      "grandTotal": 1416,
-      "totalAmount": 1416,
-      "paidAmount": 1416,
+      "grandTotal": 2387,
+      "totalAmount": 2387,
+      "paidAmount": 2387,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1416,
-          "paymentMode": "upi",
-          "paidAt": "04:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
+        {
+          "id": "bir-4",
+          "name": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 2,
+          "notes": "",
+          "timeAdded": "03:03 PM",
+          "kotStatus": "ready"
+        },
         {
           "id": "bir-3",
           "name": "Special Boneless Chicken Biryani",
           "price": 350,
           "quantity": 2,
           "notes": "",
-          "timeAdded": "12:45 PM",
-          "kotStatus": "served"
+          "timeAdded": "03:04 PM",
+          "kotStatus": "ready"
         },
         {
-          "id": "st-3",
-          "name": "Chilli Chicken Dry",
-          "price": 280,
+          "id": "bir-7",
+          "name": "Spicy Prawns Biryani",
+          "price": 460,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "12:47 PM",
-          "kotStatus": "served"
+          "timeAdded": "03:09 PM",
+          "kotStatus": "ready"
         },
         {
-          "id": "ds-1",
-          "name": "Gulab Jamun with Rabdi (2 Pcs)",
-          "price": 150,
-          "quantity": 3,
+          "id": "tk-1",
+          "name": "Tandoori Chicken (Half / Full)",
+          "price": 290,
+          "quantity": 1,
           "notes": "",
-          "timeAdded": "01:10 PM",
-          "kotStatus": "served"
+          "timeAdded": "03:13 PM",
+          "kotStatus": "ready"
         }
       ],
-      "createdAt": "04:10 PM",
-      "settledAt": "04:10 PM",
-      "date": "04:10 PM",
-      "orderTime": "04:10 PM",
+      "createdAt": "04:09 PM",
+      "settledAt": "04:09 PM",
+      "date": "04:09 PM",
+      "orderTime": "04:09 PM",
       "isPaid": true,
       "serviceCharge": 0,
-      "total": 1416,
+      "total": 2387,
       "Status": "Settled"
     },
     {
-      "tableId": 3,
-      "tableName": "Table 3",
-      "section": "Main Hall",
+      "id": "ord_120",
+      "invoiceId": "ord_120",
+      "orderId": "ord_120",
+      "invoiceNumber": "INV-29822",
+      "invoiceNo": "INV-29822",
+      "tableName": "Table 1",
+      "serverName": "Vikram S.",
       "server": "Rajesh K.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:50 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:50 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:50 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "subtotal": 1120,
-      "discountAmount": 0,
-      "taxAmount": 56,
-      "serviceChargeAmount": 56,
-      "tipAmount": 0,
-      "grandTotal": 1232,
-      "paymentMethod": "upi",
-      "cashTendered": 1232,
-      "changeDue": 0,
-      "settledAt": "04:09 PM",
-      "invoiceNo": "INV-32627",
-      "total": 1232,
-      "totalAmount": 1232,
-      "paidAmount": 1232,
       "status": "Settled",
-      "Status": "Settled"
-    },
-    {
-      "tableId": 2,
-      "tableName": "Table 2",
-      "section": "Main Hall",
-      "server": "Vikram S.",
+      "subtotal": 710,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 710,
+      "taxAmount": 35.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 781,
+      "totalAmount": 781,
+      "paidAmount": 781,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -8345,28 +7260,37 @@
           "kotStatus": "ready"
         }
       ],
-      "subtotal": 710,
-      "discountAmount": 0,
-      "taxAmount": 35.5,
-      "serviceChargeAmount": 35.5,
-      "tipAmount": 0,
-      "grandTotal": 781,
-      "paymentMethod": "upi",
-      "cashTendered": 781,
-      "changeDue": 0,
+      "createdAt": "04:09 PM",
       "settledAt": "04:09 PM",
-      "invoiceNo": "INV-29822",
+      "date": "04:09 PM",
+      "orderTime": "04:09 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
       "total": 781,
-      "totalAmount": 781,
-      "paidAmount": 781,
-      "status": "Settled",
       "Status": "Settled"
     },
     {
-      "tableId": 1,
+      "id": "ord_121",
+      "invoiceId": "ord_121",
+      "orderId": "ord_121",
+      "invoiceNumber": "INV-16245",
+      "invoiceNo": "INV-16245",
       "tableName": "Table 1",
-      "section": "Main Hall",
+      "serverName": "Rajesh K.",
       "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 440,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 440,
+      "taxAmount": 22,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 484,
+      "totalAmount": 484,
+      "paidAmount": 484,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -8378,21 +7302,13 @@
           "kotStatus": "ready"
         }
       ],
-      "subtotal": 440,
-      "discountAmount": 0,
-      "taxAmount": 22,
-      "serviceChargeAmount": 22,
-      "tipAmount": 0,
-      "grandTotal": 484,
-      "paymentMethod": "upi",
-      "cashTendered": 484,
-      "changeDue": 0,
+      "createdAt": "04:09 PM",
       "settledAt": "04:09 PM",
-      "invoiceNo": "INV-16245",
+      "date": "04:09 PM",
+      "orderTime": "04:09 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
       "total": 484,
-      "totalAmount": 484,
-      "paidAmount": 484,
-      "status": "Settled",
       "Status": "Settled"
     },
     {
@@ -8416,13 +7332,7 @@
       "totalAmount": 1232,
       "paidAmount": 1232,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1232,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -8482,13 +7392,7 @@
       "totalAmount": 781,
       "paidAmount": 781,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 781,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -8539,13 +7443,7 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -8587,13 +7485,7 @@
       "totalAmount": 1232,
       "paidAmount": 1232,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1232,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -8633,63 +7525,6 @@
       "Status": "Settled"
     },
     {
-      "id": "ord_93",
-      "invoiceId": "ord_93",
-      "orderId": "ord_93",
-      "invoiceNumber": "INV-29822",
-      "invoiceNo": "INV-29822",
-      "tableName": "Table 2",
-      "serverName": "Vikram S.",
-      "server": "Vikram S.",
-      "status": "Settled",
-      "subtotal": 710,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 710,
-      "taxAmount": 35.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 781,
-      "totalAmount": 781,
-      "paidAmount": 781,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 781,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:23 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:23 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:09 PM",
-      "settledAt": "04:09 PM",
-      "date": "04:09 PM",
-      "orderTime": "04:09 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 781,
-      "Status": "Settled"
-    },
-    {
       "id": "ord_94",
       "invoiceId": "ord_94",
       "orderId": "ord_94",
@@ -8710,13 +7545,7 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -8758,13 +7587,7 @@
       "totalAmount": 1232,
       "paidAmount": 1232,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1232,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -8804,63 +7627,6 @@
       "Status": "Settled"
     },
     {
-      "id": "ord_100",
-      "invoiceId": "ord_100",
-      "orderId": "ord_100",
-      "invoiceNumber": "INV-29822",
-      "invoiceNo": "INV-29822",
-      "tableName": "Table 2",
-      "serverName": "Vikram S.",
-      "server": "Vikram S.",
-      "status": "Settled",
-      "subtotal": 710,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 710,
-      "taxAmount": 35.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 781,
-      "totalAmount": 781,
-      "paidAmount": 781,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 781,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-3",
-          "name": "Special Boneless Chicken Biryani",
-          "price": 350,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:23 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "bir-4",
-          "name": "Chicken 65 Biryani",
-          "price": 360,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:23 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:09 PM",
-      "settledAt": "04:09 PM",
-      "date": "04:09 PM",
-      "orderTime": "04:09 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 781,
-      "Status": "Settled"
-    },
-    {
       "id": "ord_104",
       "invoiceId": "ord_104",
       "orderId": "ord_104",
@@ -8881,13 +7647,7 @@
       "totalAmount": 781,
       "paidAmount": 781,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 781,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -8938,13 +7698,7 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -8986,13 +7740,7 @@
       "totalAmount": 781,
       "paidAmount": 781,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 781,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -9043,13 +7791,7 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -9091,13 +7833,7 @@
       "totalAmount": 781,
       "paidAmount": 781,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 781,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-3",
@@ -9128,153 +7864,6 @@
       "Status": "Settled"
     },
     {
-      "id": "ord_120",
-      "invoiceId": "ord_120",
-      "orderId": "ord_120",
-      "invoiceNumber": "INV-16245",
-      "invoiceNo": "INV-16245",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 440,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 440,
-      "taxAmount": 22,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 484,
-      "totalAmount": 484,
-      "paidAmount": 484,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:49 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:09 PM",
-      "settledAt": "04:09 PM",
-      "date": "04:09 PM",
-      "orderTime": "04:09 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 484,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_121",
-      "invoiceId": "ord_121",
-      "orderId": "ord_121",
-      "invoiceNumber": "INV-16245",
-      "invoiceNo": "INV-16245",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 440,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 440,
-      "taxAmount": 22,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 484,
-      "totalAmount": 484,
-      "paidAmount": 484,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "04:09 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "03:49 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "04:09 PM",
-      "settledAt": "04:09 PM",
-      "date": "04:09 PM",
-      "orderTime": "04:09 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 484,
-      "Status": "Settled"
-    },
-    {
-      "tableId": 2,
-      "tableName": "Table 2",
-      "section": "Main Hall",
-      "server": "Vikram S.",
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 2,
-          "notes": "Extra salan & raita",
-          "timeAdded": "01:15 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1,
-          "notes": "Spicy with extra curry leaves",
-          "timeAdded": "01:16 PM",
-          "kotStatus": "served"
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 3,
-          "notes": "",
-          "timeAdded": "01:17 PM",
-          "kotStatus": "served"
-        }
-      ],
-      "subtotal": 1290,
-      "discountAmount": 0,
-      "taxAmount": 64.5,
-      "serviceChargeAmount": 64.5,
-      "tipAmount": 0,
-      "grandTotal": 1419,
-      "paymentMethod": "upi",
-      "cashTendered": 1419,
-      "changeDue": 0,
-      "settledAt": "03:16 PM",
-      "invoiceNo": "INV-24376",
-      "total": 1419,
-      "totalAmount": 1419,
-      "paidAmount": 1419,
-      "status": "Settled",
-      "Status": "Settled"
-    },
-    {
       "id": "ord_71",
       "invoiceId": "ord_71",
       "orderId": "ord_71",
@@ -9295,13 +7884,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9361,13 +7944,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9427,13 +8004,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9493,13 +8064,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9559,13 +8124,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9625,13 +8184,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9691,13 +8244,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9757,13 +8304,7 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1419,
-          "paymentMode": "upi",
-          "paidAt": "03:16 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -9823,13 +8364,7 @@
       "totalAmount": 270,
       "paidAmount": 270,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 270,
-          "paymentMode": "upi",
-          "paidAt": "02:52 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1791018497290",
@@ -9851,54 +8386,63 @@
       "Status": "Settled"
     },
     {
-      "tableId": 5,
+      "id": "ord_101",
+      "invoiceId": "ord_101",
+      "orderId": "ord_101",
+      "invoiceNumber": "INV-151290",
+      "invoiceNo": "INV-151290",
       "tableName": "Table 5",
-      "section": "Window Side",
+      "serverName": "Karan D.",
       "server": "Ananya R.",
+      "status": "Settled",
+      "subtotal": 980,
+      "discountAmount": 0,
+      "discountPercent": 5,
+      "taxableAmount": 980,
+      "taxAmount": 49,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1078,
+      "totalAmount": 1078,
+      "paidAmount": 1078,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
           "name": "Royal Mutton Dum Biryani",
           "price": 440,
           "quantity": 1,
-          "notes": "Double salan, tender pieces",
-          "timeAdded": "01:30 PM",
-          "kotStatus": "cooking"
+          "notes": "",
+          "timeAdded": "02:18 PM",
+          "kotStatus": "ready"
         },
         {
           "id": "bir-1",
           "name": "Hyderabadi Chicken Dum Biryani",
           "price": 320,
           "quantity": 1,
-          "notes": "Less spicy for child",
-          "timeAdded": "01:30 PM",
-          "kotStatus": "cooking"
+          "notes": "",
+          "timeAdded": "02:18 PM",
+          "kotStatus": "ready"
         },
         {
-          "id": "tk-1",
-          "name": "Tandoori Chicken (Half / Full)",
-          "price": 290,
+          "id": "bir-8",
+          "name": "Egg Dum Biryani (Double Egg)",
+          "price": 220,
           "quantity": 1,
-          "notes": "Well done",
-          "timeAdded": "01:32 PM",
-          "kotStatus": "served"
+          "notes": "",
+          "timeAdded": "02:18 PM",
+          "kotStatus": "ready"
         }
       ],
-      "subtotal": 1050,
-      "discountAmount": 52.5,
-      "taxAmount": 49.875,
-      "serviceChargeAmount": 49.875,
-      "tipAmount": 0,
-      "grandTotal": 1097,
-      "paymentMethod": "upi",
-      "cashTendered": 1097,
-      "changeDue": 0,
+      "createdAt": "02:49 PM",
       "settledAt": "02:49 PM",
-      "invoiceNo": "INV-58151",
-      "total": 1097,
-      "totalAmount": 1097,
-      "paidAmount": 1097,
-      "status": "Settled",
+      "date": "02:49 PM",
+      "orderTime": "02:49 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1078,
       "Status": "Settled"
     },
     {
@@ -9922,79 +8466,7 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-2",
-          "name": "Royal Mutton Dum Biryani",
-          "price": 440,
-          "quantity": 1,
-          "notes": "Double salan, tender pieces",
-          "timeAdded": "01:30 PM",
-          "kotStatus": "cooking"
-        },
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 1,
-          "notes": "Less spicy for child",
-          "timeAdded": "01:30 PM",
-          "kotStatus": "cooking"
-        },
-        {
-          "id": "tk-1",
-          "name": "Tandoori Chicken (Half / Full)",
-          "price": 290,
-          "quantity": 1,
-          "notes": "Well done",
-          "timeAdded": "01:32 PM",
-          "kotStatus": "served"
-        }
-      ],
-      "createdAt": "02:49 PM",
-      "settledAt": "02:49 PM",
-      "date": "02:49 PM",
-      "orderTime": "02:49 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1097,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_101",
-      "invoiceId": "ord_101",
-      "orderId": "ord_101",
-      "invoiceNumber": "INV-58151",
-      "invoiceNo": "INV-58151",
-      "tableName": "Table 5",
-      "serverName": "Ananya R.",
-      "server": "Ananya R.",
-      "status": "Settled",
-      "subtotal": 1050,
-      "discountAmount": 52.5,
-      "discountPercent": 5,
-      "taxableAmount": 997.5,
-      "taxAmount": 49.875,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1097,
-      "totalAmount": 1097,
-      "paidAmount": 1097,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -10054,13 +8526,7 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -10120,13 +8586,7 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -10186,13 +8646,7 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -10252,13 +8706,7 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -10318,13 +8766,7 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1097,
-          "paymentMode": "upi",
-          "paidAt": "02:49 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -10364,45 +8806,63 @@
       "Status": "Settled"
     },
     {
-      "tableId": 1,
+      "id": "ord_103",
+      "invoiceId": "ord_103",
+      "orderId": "ord_103",
+      "invoiceNumber": "INV-97380",
+      "invoiceNo": "INV-97380",
       "tableName": "Table 1",
-      "section": "Main Hall",
+      "serverName": "Suresh N.",
       "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1430,
+      "discountAmount": 143,
+      "discountPercent": 10,
+      "taxableAmount": 1287,
+      "taxAmount": 64.35000000000001,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1416,
+      "totalAmount": 1416,
+      "paidAmount": 1416,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
-          "id": "mc-2",
-          "name": "Kadai Chicken Masala",
-          "price": 320,
-          "quantity": 1,
+          "id": "bir-3",
+          "name": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 2,
           "notes": "",
-          "timeAdded": "02:45 PM",
-          "kotStatus": "new"
+          "timeAdded": "12:45 PM",
+          "kotStatus": "served"
         },
         {
-          "id": "mc-3",
-          "name": "Shahi Paneer Butter Masala",
-          "price": 270,
+          "id": "st-3",
+          "name": "Chilli Chicken Dry",
+          "price": 280,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "02:45 PM",
-          "kotStatus": "new"
+          "timeAdded": "12:47 PM",
+          "kotStatus": "served"
+        },
+        {
+          "id": "ds-1",
+          "name": "Gulab Jamun with Rabdi (2 Pcs)",
+          "price": 150,
+          "quantity": 3,
+          "notes": "",
+          "timeAdded": "01:10 PM",
+          "kotStatus": "served"
         }
       ],
-      "subtotal": 590,
-      "discountAmount": 0,
-      "taxAmount": 29.5,
-      "serviceChargeAmount": 29.5,
-      "tipAmount": 0,
-      "grandTotal": 649,
-      "paymentMethod": "upi",
-      "cashTendered": 649,
-      "changeDue": 0,
+      "createdAt": "02:45 PM",
       "settledAt": "02:45 PM",
-      "invoiceNo": "INV-19715",
-      "total": 649,
-      "totalAmount": 649,
-      "paidAmount": 649,
-      "status": "Settled",
+      "date": "02:45 PM",
+      "orderTime": "02:45 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1416,
       "Status": "Settled"
     },
     {
@@ -10426,70 +8886,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "mc-2",
-          "name": "Kadai Chicken Masala",
-          "price": 320,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:45 PM",
-          "kotStatus": "new"
-        },
-        {
-          "id": "mc-3",
-          "name": "Shahi Paneer Butter Masala",
-          "price": 270,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:45 PM",
-          "kotStatus": "new"
-        }
-      ],
-      "createdAt": "02:45 PM",
-      "settledAt": "02:45 PM",
-      "date": "02:45 PM",
-      "orderTime": "02:45 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 649,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_103",
-      "invoiceId": "ord_103",
-      "orderId": "ord_103",
-      "invoiceNumber": "INV-19715",
-      "invoiceNo": "INV-19715",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 590,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 590,
-      "taxAmount": 29.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 649,
-      "totalAmount": 649,
-      "paidAmount": 649,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10540,13 +8937,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10597,13 +8988,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10654,13 +9039,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10711,13 +9090,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10768,13 +9141,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10825,13 +9192,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10882,13 +9243,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10939,13 +9294,7 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 649,
-          "paymentMode": "upi",
-          "paidAt": "02:45 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "mc-2",
@@ -10996,13 +9345,7 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "paymentMethod": "cash",
-      "payments": [
-        {
-          "amount": 275,
-          "paymentMode": "cash",
-          "paidAt": "02:39 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "custom-1791450343762",
@@ -11024,36 +9367,174 @@
       "Status": "Settled"
     },
     {
-      "tableId": 3,
+      "id": "ord_119",
+      "invoiceId": "ord_119",
+      "orderId": "ord_119",
+      "invoiceNumber": "INV-32627",
+      "invoiceNo": "INV-32627",
       "tableName": "Table 3",
-      "section": "Main Hall",
+      "serverName": "Rajesh K.",
       "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1120,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1120,
+      "taxAmount": 56,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1232,
+      "totalAmount": 1232,
+      "paidAmount": 1232,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:50 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:50 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "bir-4",
+          "name": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:50 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "02:17 PM",
+      "settledAt": "02:17 PM",
+      "date": "02:17 PM",
+      "orderTime": "02:17 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1232,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_137",
+      "invoiceId": "ord_137",
+      "orderId": "ord_137",
+      "invoiceNumber": "INV-24376",
+      "invoiceNo": "INV-24376",
+      "tableName": "Table 3",
+      "serverName": "Vikram S.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1290,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1290,
+      "taxAmount": 64.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1419,
+      "totalAmount": 1419,
+      "paidAmount": 1419,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2,
+          "notes": "Extra salan & raita",
+          "timeAdded": "01:15 PM",
+          "kotStatus": "served"
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1,
+          "notes": "Spicy with extra curry leaves",
+          "timeAdded": "01:16 PM",
+          "kotStatus": "served"
+        },
         {
           "id": "dr-1",
           "name": "Royal Mango Lassi",
           "price": 130,
+          "quantity": 3,
+          "notes": "",
+          "timeAdded": "01:17 PM",
+          "kotStatus": "served"
+        }
+      ],
+      "createdAt": "02:17 PM",
+      "settledAt": "02:17 PM",
+      "date": "02:17 PM",
+      "orderTime": "02:17 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1419,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_155",
+      "invoiceId": "ord_155",
+      "orderId": "ord_155",
+      "invoiceNumber": "INV-19715",
+      "invoiceNo": "INV-19715",
+      "tableName": "Table 3",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 590,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 590,
+      "taxAmount": 29.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 649,
+      "totalAmount": 649,
+      "paidAmount": 649,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "mc-2",
+          "name": "Kadai Chicken Masala",
+          "price": 320,
           "quantity": 1,
           "notes": "",
-          "timeAdded": "02:17 PM",
+          "timeAdded": "02:45 PM",
+          "kotStatus": "new"
+        },
+        {
+          "id": "mc-3",
+          "name": "Shahi Paneer Butter Masala",
+          "price": 270,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "02:45 PM",
           "kotStatus": "new"
         }
       ],
-      "subtotal": 130,
-      "discountAmount": 0,
-      "taxAmount": 6.5,
-      "serviceChargeAmount": 6.5,
-      "tipAmount": 0,
-      "grandTotal": 143,
-      "paymentMethod": "upi",
-      "cashTendered": 143,
-      "changeDue": 0,
+      "createdAt": "02:17 PM",
       "settledAt": "02:17 PM",
-      "invoiceNo": "INV-34455",
-      "total": 143,
-      "totalAmount": 143,
-      "paidAmount": 143,
-      "status": "Settled",
+      "date": "02:17 PM",
+      "orderTime": "02:17 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 649,
       "Status": "Settled"
     },
     {
@@ -11077,13 +9558,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11125,61 +9600,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:17 PM",
-          "kotStatus": "new"
-        }
-      ],
-      "createdAt": "02:17 PM",
-      "settledAt": "02:17 PM",
-      "date": "02:17 PM",
-      "orderTime": "02:17 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 143,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_119",
-      "invoiceId": "ord_119",
-      "orderId": "ord_119",
-      "invoiceNumber": "INV-34455",
-      "invoiceNo": "INV-34455",
-      "tableName": "Table 3",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 130,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 130,
-      "taxAmount": 6.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 143,
-      "totalAmount": 143,
-      "paidAmount": 143,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11221,13 +9642,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11269,13 +9684,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11317,61 +9726,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:17 PM",
-          "kotStatus": "new"
-        }
-      ],
-      "createdAt": "02:17 PM",
-      "settledAt": "02:17 PM",
-      "date": "02:17 PM",
-      "orderTime": "02:17 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 143,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_137",
-      "invoiceId": "ord_137",
-      "orderId": "ord_137",
-      "invoiceNumber": "INV-34455",
-      "invoiceNo": "INV-34455",
-      "tableName": "Table 3",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 130,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 130,
-      "taxAmount": 6.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 143,
-      "totalAmount": 143,
-      "paidAmount": 143,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11413,13 +9768,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11461,13 +9810,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11509,13 +9852,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11557,13 +9894,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11605,61 +9936,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "02:17 PM",
-          "kotStatus": "new"
-        }
-      ],
-      "createdAt": "02:17 PM",
-      "settledAt": "02:17 PM",
-      "date": "02:17 PM",
-      "orderTime": "02:17 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 143,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_155",
-      "invoiceId": "ord_155",
-      "orderId": "ord_155",
-      "invoiceNumber": "INV-34455",
-      "invoiceNo": "INV-34455",
-      "tableName": "Table 3",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 130,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 130,
-      "taxAmount": 6.5,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 143,
-      "totalAmount": 143,
-      "paidAmount": 143,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11701,13 +9978,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11749,13 +10020,7 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 143,
-          "paymentMode": "upi",
-          "paidAt": "02:17 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "dr-1",
@@ -11774,6 +10039,48 @@
       "isPaid": true,
       "serviceCharge": 0,
       "total": 143,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_83",
+      "invoiceId": "ord_83",
+      "orderId": "ord_83",
+      "invoiceNumber": "INV-214148",
+      "invoiceNo": "INV-214148",
+      "tableName": "Table 1",
+      "serverName": "SHYAM",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 250,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 250,
+      "taxAmount": 12.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 275,
+      "totalAmount": 275,
+      "paidAmount": 275,
+      "paymentMethod": "cash",
+      "payments": [],
+      "items": [
+        {
+          "id": "custom-1791450343762",
+          "name": "EGG BIRIYANI",
+          "price": 250,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "02:37 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "01:59 PM",
+      "settledAt": "01:59 PM",
+      "date": "01:59 PM",
+      "orderTime": "01:59 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 275,
       "Status": "Settled"
     },
     {
@@ -11797,13 +10104,7 @@
       "totalAmount": 491,
       "paidAmount": 491,
       "paymentMethod": "cash",
-      "payments": [
-        {
-          "amount": 491,
-          "paymentMode": "cash",
-          "paidAt": "01:59 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-8",
@@ -11854,70 +10155,7 @@
       "totalAmount": 682,
       "paidAmount": 682,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 682,
-          "paymentMode": "upi",
-          "paidAt": "01:59 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "st-5",
-          "name": "Apollo Fish Fry",
-          "price": 340,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:23 PM",
-          "kotStatus": "ready"
-        },
-        {
-          "id": "st-3",
-          "name": "Chilli Chicken Dry",
-          "price": 280,
-          "quantity": 1,
-          "notes": "",
-          "timeAdded": "12:23 PM",
-          "kotStatus": "ready"
-        }
-      ],
-      "createdAt": "01:59 PM",
-      "settledAt": "01:59 PM",
-      "date": "01:59 PM",
-      "orderTime": "01:59 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 682,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_83",
-      "invoiceId": "ord_83",
-      "orderId": "ord_83",
-      "invoiceNumber": "INV-17200",
-      "invoiceNo": "INV-17200",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 620,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 620,
-      "taxAmount": 31,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 682,
-      "totalAmount": 682,
-      "paidAmount": 682,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 682,
-          "paymentMode": "upi",
-          "paidAt": "01:59 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "st-5",
@@ -11968,13 +10206,7 @@
       "totalAmount": 836,
       "paidAmount": 836,
       "paymentMethod": "cash",
-      "payments": [
-        {
-          "amount": 836,
-          "paymentMode": "cash",
-          "paidAt": "01:30 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12005,10 +10237,180 @@
       "Status": "Settled"
     },
     {
-      "tableId": 1,
+      "id": "ord_79",
+      "invoiceId": "ord_79",
+      "orderId": "ord_79",
+      "invoiceNumber": "INV-214149",
+      "invoiceNo": "INV-214149",
       "tableName": "Table 1",
-      "section": "Main Hall",
+      "serverName": "Rajesh K.",
       "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 760,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 760,
+      "taxAmount": 38,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 836,
+      "totalAmount": 836,
+      "paidAmount": 836,
+      "paymentMethod": "cash",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "01:26 PM",
+          "kotStatus": "received"
+        },
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "01:26 PM",
+          "kotStatus": "received"
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 836,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_147",
+      "invoiceId": "ord_147",
+      "orderId": "ord_147",
+      "invoiceNumber": "INV-58151",
+      "invoiceNo": "INV-58151",
+      "tableName": "Table 1",
+      "serverName": "Ananya R.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1050,
+      "discountAmount": 52.5,
+      "discountPercent": 5,
+      "taxableAmount": 997.5,
+      "taxAmount": 49.875,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1097,
+      "totalAmount": 1097,
+      "paidAmount": 1097,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "Double salan, tender pieces",
+          "timeAdded": "01:30 PM",
+          "kotStatus": "cooking"
+        },
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "Less spicy for child",
+          "timeAdded": "01:30 PM",
+          "kotStatus": "cooking"
+        },
+        {
+          "id": "tk-1",
+          "name": "Tandoori Chicken (Half / Full)",
+          "price": 290,
+          "quantity": 1,
+          "notes": "Well done",
+          "timeAdded": "01:32 PM",
+          "kotStatus": "served"
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1097,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_167",
+      "invoiceId": "ord_167",
+      "orderId": "ord_167",
+      "invoiceNumber": "INV-34455",
+      "invoiceNo": "INV-34455",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 130,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 130,
+      "taxAmount": 6.5,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 143,
+      "totalAmount": 143,
+      "paidAmount": 143,
+      "paymentMethod": "upi",
+      "payments": [],
+      "items": [
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "02:17 PM",
+          "kotStatus": "new"
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 143,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_187",
+      "invoiceId": "ord_187",
+      "orderId": "ord_187",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12029,19 +10431,13 @@
           "quantity": 2
         }
       ],
-      "subtotal": 1160,
-      "discountAmount": 0,
-      "taxAmount": 58,
-      "serviceChargeAmount": 58,
-      "tipAmount": 50,
-      "grandTotal": 1326,
-      "paymentMethod": "upi",
+      "createdAt": "01:10 PM",
       "settledAt": "01:10 PM",
-      "invoiceNo": "INV-1048",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
       "total": 1326,
-      "totalAmount": 1326,
-      "paidAmount": 1326,
-      "status": "Settled",
       "Status": "Settled"
     },
     {
@@ -12065,13 +10461,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12122,13 +10512,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12179,13 +10563,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12236,13 +10614,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12293,13 +10665,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12350,13 +10716,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12407,70 +10767,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 2
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 2
-        }
-      ],
-      "createdAt": "01:10 PM",
-      "settledAt": "01:10 PM",
-      "date": "01:10 PM",
-      "orderTime": "01:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1326,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_147",
-      "invoiceId": "ord_147",
-      "orderId": "ord_147",
-      "invoiceNumber": "INV-1048",
-      "invoiceNo": "INV-1048",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 1160,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 1160,
-      "taxAmount": 58,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1326,
-      "totalAmount": 1326,
-      "paidAmount": 1326,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12521,13 +10818,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12578,13 +10869,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12635,13 +10920,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12692,13 +10971,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12749,13 +11022,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12806,13 +11073,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -12863,127 +11124,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 2
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 2
-        }
-      ],
-      "createdAt": "01:10 PM",
-      "settledAt": "01:10 PM",
-      "date": "01:10 PM",
-      "orderTime": "01:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1326,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_79",
-      "invoiceId": "ord_79",
-      "orderId": "ord_79",
-      "invoiceNumber": "INV-1048",
-      "invoiceNo": "INV-1048",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 1160,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 1160,
-      "taxAmount": 58,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1326,
-      "totalAmount": 1326,
-      "paidAmount": 1326,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 2
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 2
-        }
-      ],
-      "createdAt": "01:10 PM",
-      "settledAt": "01:10 PM",
-      "date": "01:10 PM",
-      "orderTime": "01:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1326,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_167",
-      "invoiceId": "ord_167",
-      "orderId": "ord_167",
-      "invoiceNumber": "INV-1048",
-      "invoiceNo": "INV-1048",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 1160,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 1160,
-      "taxAmount": 58,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1326,
-      "totalAmount": 1326,
-      "paidAmount": 1326,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13034,13 +11175,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13091,13 +11226,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13148,13 +11277,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13205,13 +11328,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13262,13 +11379,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13319,70 +11430,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
-      "items": [
-        {
-          "id": "bir-1",
-          "name": "Hyderabadi Chicken Dum Biryani",
-          "price": 320,
-          "quantity": 2
-        },
-        {
-          "id": "st-1",
-          "name": "Crispy Chicken 65",
-          "price": 260,
-          "quantity": 1
-        },
-        {
-          "id": "dr-1",
-          "name": "Royal Mango Lassi",
-          "price": 130,
-          "quantity": 2
-        }
-      ],
-      "createdAt": "01:10 PM",
-      "settledAt": "01:10 PM",
-      "date": "01:10 PM",
-      "orderTime": "01:10 PM",
-      "isPaid": true,
-      "serviceCharge": 0,
-      "total": 1326,
-      "Status": "Settled"
-    },
-    {
-      "id": "ord_187",
-      "invoiceId": "ord_187",
-      "orderId": "ord_187",
-      "invoiceNumber": "INV-1048",
-      "invoiceNo": "INV-1048",
-      "tableName": "Table 1",
-      "serverName": "Rajesh K.",
-      "server": "Rajesh K.",
-      "status": "Settled",
-      "subtotal": 1160,
-      "discountAmount": 0,
-      "discountPercent": 0,
-      "taxableAmount": 1160,
-      "taxAmount": 58,
-      "serviceChargeAmount": 0,
-      "tipAmount": 0,
-      "grandTotal": 1326,
-      "totalAmount": 1326,
-      "paidAmount": 1326,
-      "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13433,13 +11481,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13490,13 +11532,7 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 1326,
-          "paymentMode": "upi",
-          "paidAt": "01:10 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13547,13 +11583,7 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "12:54 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -13595,13 +11625,7 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 484,
-          "paymentMode": "upi",
-          "paidAt": "12:54 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-2",
@@ -13643,13 +11667,7 @@
       "totalAmount": 627,
       "paidAmount": 627,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 627,
-          "paymentMode": "upi",
-          "paidAt": "12:19 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13700,13 +11718,7 @@
       "totalAmount": 627,
       "paidAmount": 627,
       "paymentMethod": "upi",
-      "payments": [
-        {
-          "amount": 627,
-          "paymentMode": "upi",
-          "paidAt": "12:19 PM"
-        }
-      ],
+      "payments": [],
       "items": [
         {
           "id": "bir-1",
@@ -13805,6 +11817,6 @@
       "status": "active"
     }
   ],
->>>>>>> 85adac018d9cb6e201ed2b0923817afd5b535b4b
-  "gourmet_pos_tables_v2_inr": []
+  "gourmet_pos_tables_v2_inr": [],
+  "gourmet_pos_salary_payments_v1": []
 }
