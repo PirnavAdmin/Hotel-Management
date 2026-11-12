@@ -16,7 +16,6 @@ import {
   Phone,
   ShieldCheck,
   ShoppingBag,
-  ShoppingCart,
   Utensils,
   UserRound,
   Users,
@@ -43,6 +42,7 @@ import {
   Sandwich,
   Soup,
   Wheat,
+  Coffee,
   IceCream,
   Heart,
   ChevronDown,
@@ -66,9 +66,12 @@ import {
   setReservationCustomerToken,
 } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
+import { apiCustomerLogout, getCustomerRefreshToken, setCustomerRefreshToken } from "../api/customerAuthApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
+import { CustomerOrdersPage } from "../customer/CustomerOrdersPage";
+import { CustomerProfilePage } from "../customer/CustomerProfilePage";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import {
   cleanNotificationText,
@@ -82,6 +85,7 @@ const CUSTOMER_SESSION_KEY = "bhanu_bistro_customer_v1";
 
 const getInitialCustomer = () => {
   try {
+    if (!getReservationCustomerToken()) return null;
     const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
@@ -117,12 +121,13 @@ const getActivePaymentQr = () => {
 
 export const TAKEAWAY_CATEGORIES = [
   { id: "all", label: "All Items", icon: Utensils },
-  { id: "breads", label: "breads", icon: Wheat },
+  { id: "breads", label: "Breads", icon: Wheat },
   { id: "biryani", label: "Biryani", icon: Flame },
   { id: "curries", label: "Curries", icon: Soup },
   { id: "starters", label: "Starters", icon: Sparkles },
   { id: "tandoor", label: "Tandoor", icon: Flame },
   { id: "fastfood", label: "Fast Food", icon: Sandwich },
+  { id: "beverages", label: "Beverages", icon: Coffee },
   { id: "desserts", label: "Desserts", icon: IceCream },
 ];
 
@@ -429,12 +434,12 @@ const getAvailableTables = (tables, guests) => {
     const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
     return ["vacant", "available"].includes(status) && cap >= guests;
   });
-  return filtered;
+  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
 };
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
+};
 
 const getFormattedPickupDate = () => {
   const d = new Date();
@@ -472,7 +477,9 @@ export function CustomerLandingPage({
   restaurantLogo = "",
   menuItems = [],
   menuLoading = false,
+  tables = [],
   onHotelLogin,
+  onAdminLogin,
   kitchenNotifications = [],
   onClearNotifications,
 }) {
@@ -496,17 +503,26 @@ export function CustomerLandingPage({
 
   const [activeScreen, setActiveScreen] = useState(() => {
     const hash = window.location.hash;
+    const path = window.location.pathname;
     const user = getInitialCustomer();
     if (hash === "#auth") return "auth";
-    if (hash === "#menu") return user ? "menu" : "auth";
+    if (hash === "#menu" || path === "/menu") return user ? "menu" : "auth";
     if (hash === "#cart") return user ? "cart" : "auth";
     if (hash === "#checkout") return user ? "checkout" : "auth";
     if (hash === "#payment") return user ? "payment" : "auth";
-    if (hash === "#reserve") return user ? "reservation" : "auth";
+    if (hash === "#orders" || hash === "#my-orders" || path === "/my-orders") return user ? "orders" : "auth";
+    if (hash === "#profile" || path === "/profile") return user ? "profile" : "auth";
+    if (hash === "#reserve" || hash === "#my-reservations" || path === "/reserve" || path === "/my-reservations") {
+      if (hash === "#my-reservations" || path === "/my-reservations") {
+        setReservationInitialStep(6);
+      }
+      return user ? "reservation" : "auth";
+    }
     return "home";
   });
 
   // --- Menu Filters & Category State (Matches POS Screen Template) ---
+  const [orderMode, setOrderMode] = useState("kitchen"); // "kitchen" | "bar"
   const [dietaryFilter, setDietaryFilter] = useState("all"); // "all" | "veg" | "non-veg" | "special"
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -609,28 +625,6 @@ export function CustomerLandingPage({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isNotifOpen]);
 
-  const effectiveNotifications = useMemo(() => {
-    if (Array.isArray(kitchenNotifications) && kitchenNotifications.length > 0) {
-      return kitchenNotifications;
-    }
-    try {
-      const raw = localStorage.getItem("avsr_kitchen_notifications");
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
-  }, [kitchenNotifications]);
-
-  const handleClearAllNotifs = () => {
-    if (typeof onClearNotifications === "function") {
-      onClearNotifications();
-    }
-    try {
-      localStorage.removeItem("avsr_kitchen_notifications");
-    } catch (e) {}
-    setIsNotifOpen(false);
-  };
-
   // Sync hash with browser history
   useEffect(() => {
     const handleHistoryNavigation = () => {
@@ -658,6 +652,25 @@ export function CustomerLandingPage({
         if (user) setActiveScreen("payment");
         else {
           setIntendedDestination("payment");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#orders" || hash === "#my-orders") {
+        if (user) setActiveScreen("orders");
+        else {
+          setIntendedDestination("orders");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#profile") {
+        if (user) setActiveScreen("profile");
+        else {
+          setIntendedDestination("profile");
+          setActiveScreen("auth");
+        }
+      } else if (hash === "#my-reservations") {
+        setReservationInitialStep(6);
+        if (user) setActiveScreen("reservation");
+        else {
+          setIntendedDestination("reservation");
           setActiveScreen("auth");
         }
       } else if (hash === "#reserve") {
@@ -698,6 +711,10 @@ export function CustomerLandingPage({
         ? "#home"
         : screen === "auth"
         ? "#auth"
+        : targetScreen === "orders" || targetScreen === "my-orders"
+        ? "#my-orders"
+        : targetScreen === "profile"
+        ? "#profile"
         : `#${screen}`;
     window.history.pushState(null, "", hash);
     setActiveScreen(targetScreen);
@@ -720,8 +737,11 @@ export function CustomerLandingPage({
   // Auth Success Callback
   const handleLoginSuccess = (user, destination) => {
     setCustomerUser(user);
+    if (user?.token) setReservationCustomerToken(user.token);
+    if (user?.refreshToken) setCustomerRefreshToken(user.refreshToken, user.rememberMe);
     try {
-      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
+      const { token, refreshToken, ...profile } = user || {};
+      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(profile));
     } catch (e) {}
     if (user?.name) setCustomerName(user.name);
     if (user?.phone) setCustomerPhone(user.phone);
@@ -735,6 +755,12 @@ export function CustomerLandingPage({
 
   // Logout Handler
   const handleLogout = () => {
+    const accessToken = getReservationCustomerToken();
+    const refreshToken = customerUser?.refreshToken || getCustomerRefreshToken();
+    if (accessToken || refreshToken) apiCustomerLogout(refreshToken, false, accessToken);
+    setCustomerRefreshToken("");
+    setReservationCustomerToken("");
+    setReservationCheckoutToken("");
     setCustomerUser(null);
     try {
       localStorage.removeItem(CUSTOMER_SESSION_KEY);
@@ -763,14 +789,21 @@ export function CustomerLandingPage({
   );
   const activeCategoryLabel = activeCategoryObj.label;
 
-  // Filtered food items by category, dietary type, and search.
+  // Filtered menu items by station, category, dietary type, and search (Exact POS Template Logic)
   const visibleMenuItems = useMemo(() => {
     return combinedMenuItems.filter((item) => {
       const isBarItem =
         item.station === "bar" ||
         String(item.category || "").toLowerCase().includes("bev") ||
         String(item.category || "").toLowerCase().includes("drink");
-      if (isBarItem) return false;
+
+      // 1. Station filter (Kitchen vs Bar)
+      if (orderMode === "kitchen" && isBarItem && selectedCategory !== "beverages") {
+        return false;
+      }
+      if (orderMode === "bar" && !isBarItem) {
+        return false;
+      }
 
       // 2. Category filter
       const cat = String(item.category || "").toLowerCase();
@@ -781,6 +814,7 @@ export function CustomerLandingPage({
       else if (selectedCategory === "fastfood") matchesCat = cat.includes("fast") || cat.includes("burger") || cat.includes("pizza") || cat.includes("fries");
       else if (selectedCategory === "curries") matchesCat = cat.includes("curry") || cat.includes("curries") || cat.includes("main");
       else if (selectedCategory === "breads") matchesCat = cat.includes("bread") || cat.includes("naan") || cat.includes("roti");
+      else if (selectedCategory === "beverages") matchesCat = isBarItem;
       else if (selectedCategory === "desserts") matchesCat = cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice") || cat.includes("cake") || cat.includes("brownie") || cat.includes("jamun");
       else if (selectedCategory !== "all") matchesCat = cat.includes(selectedCategory.toLowerCase());
 
@@ -803,7 +837,7 @@ export function CustomerLandingPage({
 
       return true;
     });
-  }, [combinedMenuItems, selectedCategory, dietaryFilter, searchQuery]);
+  }, [combinedMenuItems, orderMode, selectedCategory, dietaryFilter, searchQuery]);
 
   // Cart calculations matching screenshot financial breakdown:
   // Subtotal ₹640 + Packaging Charge ₹20 + GST (5%) ₹33 = Total Amount ₹693
@@ -1235,7 +1269,11 @@ export function CustomerLandingPage({
   return (
     <div className={`customer-site customer-screen-${activeScreen}`}>
       {/* ── Global Header ─────────────────────────────────── */}
-      {activeScreen !== "reservation" && activeScreen !== "auth" && (
+      {activeScreen !== "reservation" &&
+        activeScreen !== "auth" &&
+        activeScreen !== "orders" &&
+        activeScreen !== "my-orders" &&
+        activeScreen !== "profile" && (
         <header className={`customer-header ${activeScreen === "menu" ? "is-takeaway-header" : ""}`}>
           <a
             className="customer-brand"
@@ -1262,7 +1300,7 @@ export function CustomerLandingPage({
           {/* Center Pill: Takeaway Only (Matches Mockup) */}
           {activeScreen === "menu" && (
             <div className="takeaway-header-center-pill">
-              <ShoppingBag size={16} />
+              <ShoppingBag size={15} color="#f59e0b" />
               <span>Takeaway Only</span>
             </div>
           )}
@@ -1403,6 +1441,8 @@ export function CustomerLandingPage({
                 onClick={() => {
                   if (typeof onHotelLogin === "function") {
                     onHotelLogin();
+                  } else if (typeof onAdminLogin === "function") {
+                    onAdminLogin();
                   } else {
                     window.location.href = "/admin";
                   }
@@ -1445,15 +1485,12 @@ export function CustomerLandingPage({
                       className="customer-profile-menu-item"
                       onClick={() => {
                         setShowProfileDropdown(false);
-                        if (placedOrder) {
-                          navigateScreen("tracking");
-                        } else {
-                          requireAuth("menu");
-                        }
+                        navigateScreen("orders");
                       }}
                     >
-                      <ShoppingBag size={15} />
-                      <span>📋 My Orders</span>
+                      <ShoppingBag size={17} color="#d4c5b9" />
+                      <span style={{ fontSize: "15px" }}>📋</span>
+                      <span>My Orders</span>
                     </button>
 
                     <button
@@ -1465,8 +1502,9 @@ export function CustomerLandingPage({
                         navigateScreen("reservation");
                       }}
                     >
-                      <CalendarDays size={15} />
-                      <span>📅 My Reservations</span>
+                      <CalendarDays size={17} color="#d4c5b9" />
+                      <span style={{ fontSize: "15px" }}>📅</span>
+                      <span>My Reservations</span>
                     </button>
 
                     <button
@@ -1474,11 +1512,12 @@ export function CustomerLandingPage({
                       className="customer-profile-menu-item"
                       onClick={() => {
                         setShowProfileDropdown(false);
-                        setShowProfileModal(true);
+                        navigateScreen("profile");
                       }}
                     >
-                      <User size={15} />
-                      <span>👤 My Profile</span>
+                      <User size={17} color="#d4c5b9" />
+                      <span style={{ fontSize: "15px" }}>👤</span>
+                      <span>My Profile</span>
                     </button>
 
                     <div className="customer-profile-dropdown-divider" />
@@ -1533,7 +1572,7 @@ export function CustomerLandingPage({
               <article className="customer-action-card takeaway-action">
                 <div className="customer-action-copy">
                   <span className="customer-action-icon takeaway-icon">
-                    <ShoppingBag size={24} />
+                    <ShoppingBag size={20} />
                   </span>
                   <h2>Order Takeaway Online</h2>
                   <p>Browse our menu, place your order and pick it up at your convenience.</p>
@@ -1542,7 +1581,7 @@ export function CustomerLandingPage({
                     type="button"
                     onClick={() => requireAuth("menu")}
                   >
-                    Order Takeaway <ArrowRight size={18} />
+                    Order Takeaway <ArrowRight size={15} />
                   </button>
                 </div>
               </article>
@@ -1550,7 +1589,7 @@ export function CustomerLandingPage({
               <article className="customer-action-card reservation-action">
                 <div className="customer-action-copy">
                   <span className="customer-action-icon reservation-icon">
-                    <CalendarDays size={24} />
+                    <CalendarDays size={20} />
                   </span>
                   <h2>Reserve a Table</h2>
                   <p>Book your table in advance and enjoy a great dining experience.</p>
@@ -1559,7 +1598,7 @@ export function CustomerLandingPage({
                     type="button"
                     onClick={() => requireAuth("reservation")}
                   >
-                    Reserve Table <ArrowRight size={18} />
+                    Reserve Table <ArrowRight size={15} />
                   </button>
                 </div>
               </article>
@@ -1682,7 +1721,11 @@ export function CustomerLandingPage({
                         key={cat.id}
                         type="button"
                         className={`pos-takeaway-cat-btn ${isSelected ? "is-selected" : ""}`}
-                        onClick={() => setSelectedCategory(cat.id)}
+                        onClick={() => {
+                          setSelectedCategory(cat.id);
+                          if (cat.id === "beverages") setOrderMode("bar");
+                          else if (orderMode === "bar" && cat.id !== "all") setOrderMode("kitchen");
+                        }}
                       >
                         <IconComp size={16} className="pos-cat-icon" />
                         <span className="pos-cat-label">{cat.label}</span>
@@ -1696,12 +1739,42 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
+                  {/* Station Toggle: Kitchen / Food vs Bar / Beverages */}
+                  <div className="pos-station-group">
+                    <button
+                      type="button"
+                      className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
+                      onClick={() => {
+                        setOrderMode("kitchen");
+                        if (selectedCategory === "beverages") setSelectedCategory("all");
+                      }}
+                    >
+                      <ChefHat size={14} />
+                      <span>Kitchen / Food</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`pos-station-btn ${orderMode === "bar" ? "is-active" : ""}`}
+                      onClick={() => {
+                        setOrderMode("bar");
+                        setSelectedCategory("all");
+                      }}
+                    >
+                      <Coffee size={14} />
+                      <span>Bar / Beverages</span>
+                    </button>
+                  </div>
+
                   {/* Search Input */}
                   <div className="pos-search-box">
                     <Search size={15} className="pos-search-icon" />
                     <input
                       type="text"
-                      placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
+                      placeholder={
+                        orderMode === "bar"
+                          ? "Search drinks, lassi, soda, mocktails..."
+                          : "Search Biryani, Chicken 65, Naan, Desserts..."
+                      }
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -1715,6 +1788,23 @@ export function CustomerLandingPage({
                         <X size={14} />
                       </button>
                     )}
+                  </div>
+
+                  {/* Categories Filter Dropdown (Matches Template Controls) */}
+                  <div className="pos-category-select-wrapper">
+                    <Utensils size={14} className="pos-category-select-icon" />
+                    <select
+                      className="pos-category-select"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      aria-label="Filter by category"
+                    >
+                      {TAKEAWAY_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Dietary Filter Buttons: Veg, Non-Veg, Specials */}
@@ -1746,6 +1836,25 @@ export function CustomerLandingPage({
                   </div>
                 </div>
 
+                {/* Horizontal Quick Category Filter Strip */}
+                <div className="pos-takeaway-category-strip">
+                  {TAKEAWAY_CATEGORIES.map((cat) => {
+                    const IconComp = cat.icon || Utensils;
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`pos-category-strip-btn ${isSelected ? "is-active" : ""}`}
+                        onClick={() => setSelectedCategory(cat.id)}
+                      >
+                        <IconComp size={13} />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* Compact POS Menu Grid */}
                 <div className="pos-takeaway-grid">
                   {visibleMenuItems.length === 0 ? (
@@ -1760,6 +1869,7 @@ export function CustomerLandingPage({
                           setSelectedCategory("all");
                           setSearchQuery("");
                           setDietaryFilter("all");
+                          setOrderMode("kitchen");
                         }}
                       >
                         Show All Dishes
@@ -2648,8 +2758,89 @@ export function CustomerLandingPage({
               initialStep={reservationInitialStep}
               customerUser={customerUser}
               onLogout={handleLogout}
+              onNavigate={(route) => {
+                if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                  setReservationInitialStep(6);
+                  navigateScreen("reservation");
+                } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                  navigateScreen("orders");
+                } else if (route === "/profile" || route === "profile") {
+                  navigateScreen("profile");
+                } else if (route === "/" || route === "home") {
+                  navigateScreen("home");
+                } else if (route === "/menu" || route === "menu") {
+                  navigateScreen("menu");
+                } else {
+                  navigateScreen(route.replace(/^\//, ""));
+                }
+              }}
+              onOpenProfile={() => navigateScreen("profile")}
+              onOpenOrders={() => navigateScreen("orders")}
             />
           </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* DEDICATED MY ORDERS SCREEN                                */}
+        {/* ========================================================= */}
+        {(activeScreen === "orders" || activeScreen === "my-orders") && (
+          <CustomerOrdersPage
+            customerUser={customerUser}
+            placedOrder={placedOrder}
+            onNavigate={(route) => {
+              if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                setReservationInitialStep(6);
+                navigateScreen("reservation");
+              } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                navigateScreen("orders");
+              } else if (route === "/profile" || route === "profile") {
+                navigateScreen("profile");
+              } else if (route === "/" || route === "home") {
+                navigateScreen("home");
+              } else if (route === "/menu" || route === "menu") {
+                navigateScreen("menu");
+              } else {
+                navigateScreen(route.replace(/^\//, ""));
+              }
+            }}
+            onLogout={handleLogout}
+            restaurantName={restaurantName}
+            restaurantLogo={restaurantLogo}
+          />
+        )}
+
+        {/* ========================================================= */}
+        {/* DEDICATED MY PROFILE SCREEN                               */}
+        {/* ========================================================= */}
+        {activeScreen === "profile" && (
+          <CustomerProfilePage
+            customerUser={customerUser}
+            onUpdateUser={(updated) => {
+              setCustomerUser(updated);
+              try {
+                localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+              } catch (e) {}
+            }}
+            onNavigate={(route) => {
+              if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                setReservationInitialStep(6);
+                navigateScreen("reservation");
+              } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                navigateScreen("orders");
+              } else if (route === "/profile" || route === "profile") {
+                navigateScreen("profile");
+              } else if (route === "/" || route === "home") {
+                navigateScreen("home");
+              } else if (route === "/menu" || route === "menu") {
+                navigateScreen("menu");
+              } else {
+                navigateScreen(route.replace(/^\//, ""));
+              }
+            }}
+            onLogout={handleLogout}
+            restaurantName={restaurantName}
+            restaurantLogo={restaurantLogo}
+          />
         )}
       </main>
 

@@ -18,6 +18,7 @@ public class InventoryPurchase
     [MaxLength(150)]
     [Column("item_name")]
     public string ItemName { get; set; } = string.Empty;
+
     [Required]
     [MaxLength(50)]
     [Column("department")]

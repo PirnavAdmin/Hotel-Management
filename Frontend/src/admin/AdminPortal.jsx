@@ -69,10 +69,7 @@ import { AttendanceManagement } from "./modules/AttendanceManagement";
 import { PromotionsManagement } from "./modules/PromotionsManagement";
 import { SuppliersManagement } from "./modules/SuppliersManagement";
 import { RolesManagement } from "./modules/RolesManagement";
-import {
-  apiGetRestaurantSettings,
-  apiUpdateRestaurantSettings,
-} from "../api/settingsApi";
+import { apiGetRestaurantSettings, apiSaveRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
@@ -501,6 +498,7 @@ export function AdminPortal({
   inventory: propInventory = [],
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const isLight = currentTheme === "light-bistro";
 
   // Track Admin Portal Tab Navigation
   const prevTabRef = useRef(activeTab);

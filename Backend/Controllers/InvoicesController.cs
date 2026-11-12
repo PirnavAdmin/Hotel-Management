@@ -15,6 +15,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/invoices")]
+[Tags("Invoices", "Admin")]
 public class InvoicesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -198,9 +199,11 @@ public class InvoicesController : ControllerBase
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
-            if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(invoice.Status, "REFUNDED", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(invoice.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest(new { success = false, message = "Cannot record payment for a void invoice." });
+                return BadRequest(new { success = false, message = $"Cannot record payment for a {invoice.Status} invoice." });
             }
 
             var mode = string.IsNullOrWhiteSpace(request.PaymentMode) ? "CASH" : request.PaymentMode.Trim().ToUpper();
@@ -575,7 +578,7 @@ public class InvoicesController : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpDelete("{id:long}")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteInvoice(string id)
     {
         long numericId = 0;

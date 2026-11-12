@@ -79,7 +79,6 @@ public class AppDbContext : DbContext
     public DbSet<RestaurantSetting> RestaurantSettings { get; set; }
     public DbSet<Setting> Settings { get; set; }
 
-
     // Accounting & Audit
     public DbSet<ChartOfAccount> ChartOfAccounts { get; set; }
     public DbSet<JournalVoucher> JournalVouchers { get; set; }

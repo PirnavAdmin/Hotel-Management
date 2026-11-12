@@ -440,7 +440,9 @@ app.Use(async (context, next) =>
 
 
 
-app.UseMiddleware<LegacyApiRewriteMiddleware>();
+// Transparently rewrites legacy and unversioned frontend API request paths
+// to their canonical /api/v1/{module}/{resource} routes before endpoint routing
+app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
 app.UseRouting();
 
 app.UseStaticFiles();

@@ -6,11 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
-  CheckCircle, Mail,
+  CheckCircle, Mail, Phone, UserPlus, LogIn,
   RefreshCw, ArrowLeft,
   Settings, Printer, TrendingUp, Heart, Sparkles, KeyRound
 } from 'lucide-react';
-import { loginUser } from '../utils/auth';
+import { loginUser, registerUser } from '../utils/auth';
 import { apiForgotPassword, apiResetPassword } from '../api/authApi';
 
 /**
@@ -86,7 +86,7 @@ export function LoginPage({
 }) {
   const navigate = useNavigate();
   const [currentRole, setCurrentRole] = useState(role);
-  const [mode, setMode] = useState('login'); // 'login' | 'forgot'
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
 
   const handleBackToLanding = () => {
     try {
@@ -175,6 +175,16 @@ export function LoginPage({
   const [newPassword,        setNewPassword]        = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
+  // Register state (Admin only)
+  const [regName,          setRegName]          = useState('');
+  const [regUser,          setRegUser]          = useState('');
+  const [regMobile,        setRegMobile]        = useState('');
+  const [regEmail,         setRegEmail]         = useState('');
+  const [regPass,          setRegPass]          = useState('');
+  const [regConfirm,       setRegConfirm]       = useState('');
+  const [showRegPw,        setShowRegPw]        = useState(false);
+  const [showRegConfirm,   setShowRegConfirm]   = useState(false);
+
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -225,6 +235,11 @@ export function LoginPage({
 
   const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
 
+  const clearRegForm = () => {
+    setRegName(''); setRegUser(''); setRegMobile(''); setRegEmail('');
+    setRegPass(''); setRegConfirm(''); setShowRegPw(false); setShowRegConfirm(false);
+  };
+  const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); clearRegForm(); };
 
   // ── LOGIN ─────────────────────────────────────────────────
   const handleLogin = async (e) => {
@@ -251,6 +266,87 @@ export function LoginPage({
     } finally {
       loginRequestInFlight.current = false;
       setLoading(false);
+    }
+  };
+
+  // ── REGISTER (ADMIN ONLY) ─────────────────────────────────
+  const validateRegistration = () => {
+    const trimmedName = regName.trim();
+    const trimmedUser = regUser.trim();
+    const cleanMobile = regMobile.replace(/\D/g, '');
+    const trimmedEmail = regEmail.trim();
+
+    if (!trimmedName) return 'Full name is required.';
+    if (/\d/.test(trimmedName)) return 'Full name cannot contain numeric digits. Please enter a valid name.';
+    if (!/^[a-zA-Z\s'-.]{2,50}$/.test(trimmedName) || trimmedName.replace(/[^a-zA-Z]/g, '').length < 2) {
+      return 'Full name must contain alphabetic characters only (e.g. Suresh Reddy).';
+    }
+
+    if (!trimmedUser) return 'Username is required.';
+    if (/\s/.test(trimmedUser)) return 'Username cannot contain spaces.';
+    if (trimmedUser.length < 3 || trimmedUser.length > 20) return 'Username must be between 3 and 20 characters.';
+
+    if (!cleanMobile) return 'Mobile number is required.';
+    if (cleanMobile.length !== 10) return 'Please enter a valid 10-digit mobile number.';
+
+    if (!trimmedEmail) return 'Email address is required.';
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) return 'Please enter a valid email address.';
+
+    if (!regPass) return 'Password is required.';
+    if (regPass.length < 6) return 'Password must be at least 6 characters long.';
+    if (regPass !== regConfirm) return 'Passwords do not match.';
+
+    return null;
+  };
+
+  const handleRegister = async (e) => {
+    if (e) e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    const valErr = validateRegistration();
+    if (valErr) {
+      setError(valErr);
+      triggerShake();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const r = await registerUser({
+        Username: regUser.trim(),
+        Email: regEmail.trim(),
+        Phone: regMobile.replace(/\D/g, '').trim(),
+        FullName: regName.trim(),
+        Password: regPass.trim(),
+        ConfirmPassword: regConfirm.trim(),
+        Role: 'admin'
+      });
+      setLoading(false);
+
+      if (r.success) {
+        setSuccess(`🎉 Account created successfully! Logging you in as "${regName.trim()}"...`);
+        setTimeout(async () => {
+          const loginResult = await loginUser(regUser.trim(), regPass.trim(), 'admin');
+          if (loginResult.success) {
+            onLoginSuccess(loginResult.session, 'admin');
+          } else {
+            setSuccess('Account created successfully! Please sign in with your credentials.');
+            setMode('login');
+            setUsername(regUser.trim());
+            setPassword(regPass.trim());
+            clearRegForm();
+          }
+        }, 1000);
+      } else {
+        setError(r.error || 'Registration failed.');
+        triggerShake();
+      }
+    } catch (err) {
+      setLoading(false);
+      setError(err?.message || 'Registration failed.');
+      triggerShake();
     }
   };
 
@@ -504,6 +600,7 @@ export function LoginPage({
             type="button"
             onClick={() => {
               setCurrentRole(t.id);
+              if (t.id !== 'admin' && mode === 'register') setMode('login');
               setUsername('');
               setPassword('');
               setError('');
@@ -535,7 +632,7 @@ export function LoginPage({
       <div className="bhanu-form-content">
         <div className="bhanu-form-heading">
           <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em', textAlign: 'center' }}>
-            {mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
+            {mode === 'register' ? 'Create Hotel Account' : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
           </h1>
           {mode === 'forgot' && (
             <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600, textAlign: 'center' }}>
@@ -545,6 +642,24 @@ export function LoginPage({
         </div>
 
         {/* Tab toggle — Admin only */}
+        {currentRole === 'admin' && mode !== 'forgot' && (
+          <div className="bhanu-mode-tabs">
+            {[
+              { key: 'login',    label: 'Sign In',  icon: <LogIn size={13} /> },
+              { key: 'register', label: 'Register', icon: <UserPlus size={13} /> }
+            ].map(t => (
+              <button
+                key={t.key}
+                type="button"
+                aria-pressed={mode === t.key}
+                onClick={() => { setMode(t.key); clearAll(); }}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {/* ── LOGIN FORM ── */}
         {mode === 'login' && (
           <form
@@ -643,7 +758,161 @@ export function LoginPage({
               <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
             </div>
 
+            {currentRole === 'admin' && (
+              <div style={{ textAlign: 'center', marginTop: '0.65rem' }}>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Don't have an account? </span>
+                <button
+                  type="button"
+                  onClick={() => { setMode('register'); clearAll(); }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-amber-light, #f59e0b)',
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Register Now
+                </button>
+              </div>
+            )}
+          </form>
+        )}
 
+        {/* ── REGISTER FORM (ADMIN ONLY) ── */}
+        {mode === 'register' && currentRole === 'admin' && (
+          <form
+            onSubmit={handleRegister}
+            autoComplete="off"
+            style={{
+              padding: '0.55rem 1rem 0.65rem',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+              overflowY: 'auto'
+            }}
+          >
+            {error   && <Err msg={error} />}
+            {success && <Suc msg={success} />}
+
+            <div className="bhanu-registration-grid">
+              {/* Full Name */}
+              <Fld label="Full Name *" icon={<User size={13} color="#475569" />} mb="0">
+                <input
+                  type="text"
+                  placeholder="e.g. Suresh Reddy"
+                  value={regName}
+                  onChange={e => { setRegName(e.target.value); setError(''); }}
+                  style={inp(regName)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regName ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Username */}
+              <Fld label="Username *" icon={<User size={13} color="#475569" />} mb="0">
+                <input
+                  type="text"
+                  placeholder="Choose username"
+                  value={regUser}
+                  onChange={e => { setRegUser(e.target.value); setError(''); }}
+                  style={inp(regUser)}
+                  autoComplete="username"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regUser ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Mobile */}
+              <Fld label="Mobile Number *" icon={<Phone size={13} color="#475569" />} mb="0">
+                <input
+                  type="tel"
+                  placeholder="10-digit mobile"
+                  maxLength={10}
+                  value={regMobile}
+                  onChange={e => { setRegMobile(e.target.value.replace(/\D/g, '')); setError(''); }}
+                  style={inp(regMobile)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regMobile ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Email */}
+              <Fld label="Email *" icon={<Mail size={13} color="#475569" />} mb="0">
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={regEmail}
+                  onChange={e => { setRegEmail(e.target.value); setError(''); }}
+                  style={inp(regEmail)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Password */}
+              <Fld label="Password *" icon={<Lock size={13} color="#475569" />} mb="0">
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type={showRegPw ? 'text' : 'password'}
+                    placeholder="Min 6 chars"
+                    value={regPass}
+                    onChange={e => { setRegPass(e.target.value); setError(''); }}
+                    style={inp(regPass, { paddingRight: '2.2rem' })}
+                    autoComplete="new-password"
+                    onFocus={e => e.target.style.borderColor = cfg.accent}
+                    onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                  />
+                  <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} />
+                </div>
+              </Fld>
+
+              {/* Confirm Password */}
+              <Fld label="Confirm Password *" icon={<Lock size={13} color="#475569" />} mb="0">
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type={showRegConfirm ? 'text' : 'password'}
+                    placeholder="Re-enter password"
+                    value={regConfirm}
+                    onChange={e => { setRegConfirm(e.target.value); setError(''); }}
+                    style={inp(regConfirm, {
+                      paddingRight: '2.2rem',
+                      borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
+                    })}
+                    autoComplete="new-password"
+                    onFocus={e => e.target.style.borderColor = regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : cfg.accent}
+                    onBlur={e => e.target.style.borderColor = regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'}
+                  />
+                  <PwEye show={showRegConfirm} toggle={() => setShowRegConfirm(p => !p)} />
+                </div>
+              </Fld>
+            </div>
+
+            <div style={{ marginTop: '0.35rem' }}>
+              <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Create Hotel Account" icon={<UserPlus size={15} />} />
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Already have an account? </span>
+              <button
+                type="button"
+                onClick={() => { setMode('login'); clearAll(); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-amber-light, #f59e0b)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Sign In
+              </button>
+            </div>
           </form>
         )}
 
