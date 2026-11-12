@@ -1,36 +1,25 @@
-# Visual Studio / VS Code
+# Visual Studio / IDE cache and user-specific files
 .vs/
-.vscode/*
-!.vscode/extensions.json
+**/.vs/
+*.rsuser
 *.suo
 *.user
-*.userosvsc
+*.userosscache
 *.sln.docstates
+*.vsidx
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# Build Results (.NET)
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
+# .NET build and NuGet restore outputs
+**/bin/
+**/obj/
+*.pdb
 
-# Node / Frontend
-node_modules/
-dist/
-dist-ssr/
-*.local
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Environment and Local runtime files
-!.env.example
-server-db.json
-Frontend/server-db.json
-*.backup
-
-# OS Files
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 .DS_Store
 Thumbs.db
 
