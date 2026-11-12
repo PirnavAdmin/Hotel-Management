@@ -500,6 +500,7 @@ export function AdminPortal({
 }) {
   const [activeTab, setActiveTab] = useState("overview");
   const isLight = currentTheme === "light-bistro";
+<<<<<<< HEAD
 
   const [internalToast, setInternalToast] = useState(null);
   const showToast = useCallback((msg) => {
@@ -513,6 +514,8 @@ export function AdminPortal({
     }, 3500);
     return () => clearTimeout(timer);
   }, [propShowToast]);
+=======
+>>>>>>> 85adac018d9cb6e201ed2b0923817afd5b535b4b
 
   // Track Admin Portal Tab Navigation
   const prevTabRef = useRef(activeTab);
@@ -5978,7 +5981,13 @@ export function AdminPortal({
 
                 {/* ================= TAB: RESERVATIONS ================= */}
                 {activeTab === "reservations" && (
-                  <ReservationsManagement isLight={isLight} showToast={showToast} />
+                  <ReservationsManagement
+                    isLight={isLight}
+                    showToast={showToast}
+                    tables={tables}
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                  />
                 )}
 
                 {/* ================= TAB: SUPPLIERS ================= */}
