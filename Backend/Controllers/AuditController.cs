@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,38 +53,38 @@ public class AuditController : ControllerBase
 
                 if (!string.IsNullOrWhiteSpace(action) && action != "all")
                 {
-                    whereClauses.Add("action = @act");
+                    whereClauses.Add("a.action = @act");
                     AddParam(cmd, "@act", action.Trim());
                 }
 
                 if (!string.IsNullOrWhiteSpace(tableName) && tableName != "all")
                 {
-                    whereClauses.Add("table_name = @tbl");
+                    whereClauses.Add("a.table_name = @tbl");
                     AddParam(cmd, "@tbl", tableName.Trim());
                 }
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    whereClauses.Add("(username LIKE @search OR record_id LIKE @search OR old_value LIKE @search OR new_value LIKE @search OR action LIKE @search)");
+                    whereClauses.Add("(COALESCE(u.user_name, '') LIKE @search OR CAST(COALESCE(a.record_id, '') AS CHAR) LIKE @search OR CAST(COALESCE(a.old_value, '') AS CHAR) LIKE @search OR CAST(COALESCE(a.new_value, '') AS CHAR) LIKE @search OR a.action LIKE @search)");
                     AddParam(cmd, "@search", $"%{search.Trim()}%");
                 }
 
                 if (!string.IsNullOrWhiteSpace(fromDate))
                 {
-                    whereClauses.Add("created_at >= @from");
+                    whereClauses.Add("a.created_at >= @from");
                     AddParam(cmd, "@from", fromDate.Trim());
                 }
 
                 if (!string.IsNullOrWhiteSpace(toDate))
                 {
-                    whereClauses.Add("created_at <= @to");
+                    whereClauses.Add("a.created_at <= @to");
                     AddParam(cmd, "@to", toDate.Trim() + " 23:59:59");
                 }
 
                 var whereSql = whereClauses.Count > 0 ? "WHERE " + string.Join(" AND ", whereClauses) : "";
 
                 // Count total
-                cmd.CommandText = $"SELECT COUNT(*) FROM `audit_logs` {whereSql};";
+                cmd.CommandText = $"SELECT COUNT(*) FROM `audit_logs` a LEFT JOIN `users` u ON a.user_id = u.user_id {whereSql};";
                 var countObj = await cmd.ExecuteScalarAsync();
                 totalCount = Convert.ToInt32(countObj ?? 0);
 
@@ -98,10 +99,10 @@ public class AuditController : ControllerBase
                 // Page query
                 int offset = Math.Max(0, (page - 1) * pageSize);
                 cmd.CommandText = $@"
-                    SELECT log_id, user_id, username, action, table_name, record_id, old_value, new_value, ip_address, severity, created_at
-                    FROM `audit_logs`
+                    SELECT a.log_id, a.user_id, COALESCE(NULLIF(u.user_name, ''), NULLIF(u.full_name, ''), 'System') AS username, a.action, a.table_name, CAST(a.record_id AS CHAR), CAST(a.old_value AS CHAR), CAST(a.new_value AS CHAR), a.ip_address, 'INFO' AS severity, a.created_at
+                    FROM `audit_logs` a LEFT JOIN `users` u ON a.user_id = u.user_id
                     {whereSql}
-                    ORDER BY created_at DESC, log_id DESC
+                    ORDER BY a.created_at DESC, a.log_id DESC
                     LIMIT @limit OFFSET @offset;";
 
                 AddParam(cmd, "@limit", pageSize);
@@ -164,18 +165,18 @@ public class AuditController : ControllerBase
                 await conn.OpenAsync();
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = @"
-                    INSERT INTO `audit_logs` (user_id, username, action, table_name, record_id, old_value, new_value, ip_address, severity, created_at)
-                    VALUES (@uid, @user, @act, @tbl, @rec, @old, @new, @ip, @sev, NOW());";
+                    INSERT INTO `audit_logs` (user_id, action, table_name, record_id, old_value, new_value, ip_address, created_at)
+                    VALUES (@uid, @act, @tbl, @rec, @old, @new, @ip, NOW());";
 
                 AddParam(cmd, "@uid", (object?)request.UserId ?? DBNull.Value);
-                AddParam(cmd, "@user", request.Username?.Trim() ?? "pirnav");
+                // username is resolved via users.user_name using user_id
                 AddParam(cmd, "@act", request.Action.Trim());
                 AddParam(cmd, "@tbl", request.TableName.Trim());
-                AddParam(cmd, "@rec", (object?)request.RecordId?.Trim() ?? DBNull.Value);
-                AddParam(cmd, "@old", (object?)request.OldValue ?? DBNull.Value);
-                AddParam(cmd, "@new", (object?)request.NewValue ?? DBNull.Value);
+                AddParam(cmd, "@rec", long.TryParse(request.RecordId?.Trim(), out var parsedRecId) ? (object)parsedRecId : DBNull.Value);
+                AddParam(cmd, "@old", ToJsonOrNull(request.OldValue));
+                AddParam(cmd, "@new", ToJsonOrNull(request.NewValue));
                 AddParam(cmd, "@ip", (object?)request.IpAddress?.Trim() ?? DBNull.Value);
-                AddParam(cmd, "@sev", request.Severity?.Trim() ?? "INFO");
+                // severity column is not present in audit_logs schema
 
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -255,9 +256,9 @@ public class AuditController : ControllerBase
                 await conn.OpenAsync();
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = @"
-                    SELECT log_id, created_at, username, action, table_name, record_id, severity, old_value, new_value, ip_address 
-                    FROM `audit_logs` 
-                    ORDER BY created_at DESC 
+                    SELECT a.log_id, a.created_at, COALESCE(NULLIF(u.user_name, ''), NULLIF(u.full_name, ''), 'System') AS username, a.action, a.table_name, CAST(a.record_id AS CHAR), 'INFO' AS severity, CAST(a.old_value AS CHAR), CAST(a.new_value AS CHAR), a.ip_address 
+                    FROM `audit_logs` a LEFT JOIN `users` u ON a.user_id = u.user_id 
+                    ORDER BY a.created_at DESC 
                     LIMIT 2000;";
 
                 using var reader = await cmd.ExecuteReaderAsync();
@@ -315,15 +316,15 @@ public class AuditController : ControllerBase
             {
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = @"
-                    INSERT INTO `audit_logs` (user_id, username, action, table_name, record_id, old_value, new_value, severity, ip_address, created_at)
-                    VALUES (1, @user, @act, @tbl, @rec, @old, @new, @sev, @ip, NOW());";
-                AddParam(cmd, "@user", user);
+                    INSERT INTO `audit_logs` (user_id, action, table_name, record_id, old_value, new_value, ip_address, created_at)
+                    VALUES (1, @act, @tbl, @rec, @old, @new, @ip, NOW());";
+                // user resolved via user_id join
                 AddParam(cmd, "@act", act);
                 AddParam(cmd, "@tbl", tbl);
-                AddParam(cmd, "@rec", rec);
-                AddParam(cmd, "@old", oldV);
-                AddParam(cmd, "@new", newV);
-                AddParam(cmd, "@sev", sev);
+                AddParam(cmd, "@rec", long.TryParse(rec, out var seedRecId) ? (object)seedRecId : DBNull.Value);
+                AddParam(cmd, "@old", ToJsonOrNull(oldV));
+                AddParam(cmd, "@new", ToJsonOrNull(newV));
+                // severity defaulted in API DTO
                 AddParam(cmd, "@ip", ip);
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -339,6 +340,25 @@ public class AuditController : ControllerBase
         if (string.IsNullOrEmpty(val)) return "\"\"";
         var cleaned = val.Replace("\"", "\"\"").Replace("\r", " ").Replace("\n", " ");
         return $"\"{cleaned}\"";
+    }
+
+    private static object ToJsonOrNull(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return DBNull.Value;
+        var trimmed = raw.Trim();
+        if (trimmed.StartsWith('{') || trimmed.StartsWith('['))
+        {
+            try
+            {
+                using var _ = JsonDocument.Parse(trimmed);
+                return trimmed;
+            }
+            catch (JsonException)
+            {
+                // Fall back to wrapping non-JSON text as a JSON string literal.
+            }
+        }
+        return JsonSerializer.Serialize(trimmed);
     }
 
     private static void AddParam(System.Data.Common.DbCommand cmd, string name, object? value)

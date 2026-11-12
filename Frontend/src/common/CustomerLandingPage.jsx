@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CheckCircle2,
   ChefHat,
-  ConciergeBell,
   Clock3,
   Clock,
   Circle,
@@ -16,6 +15,7 @@ import {
   Phone,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
   Utensils,
   UserRound,
   Users,
@@ -27,7 +27,6 @@ import {
   Smartphone,
   Check,
   Bell,
-  BellRing,
   MapPin,
   Tag,
   Star,
@@ -42,7 +41,6 @@ import {
   Sandwich,
   Soup,
   Wheat,
-  Coffee,
   IceCream,
   Heart,
   ChevronDown,
@@ -66,7 +64,6 @@ import {
   setReservationCustomerToken,
 } from "../api/reservationApi";
 import { apiCreatePaidTakeawayOrder, apiSendTakeawayOrderToKitchen } from "../api/orderApi";
-import { apiCustomerLogout, getCustomerRefreshToken, setCustomerRefreshToken } from "../api/customerAuthApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
@@ -85,7 +82,6 @@ const CUSTOMER_SESSION_KEY = "bhanu_bistro_customer_v1";
 
 const getInitialCustomer = () => {
   try {
-    if (!getReservationCustomerToken()) return null;
     const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
@@ -98,27 +94,6 @@ const formatPrice = (value) =>
     maximumFractionDigits: 2,
   })}`;
 
-const getActivePaymentQr = () => {
-  try {
-    const settings = JSON.parse(
-      localStorage.getItem("gourmet_pos_settings_v1") || "{}",
-    );
-    const paymentQrs = Array.isArray(settings.paymentQrs)
-      ? settings.paymentQrs.filter((qr) => qr?.image)
-      : [];
-
-    return (
-      paymentQrs.find((qr) => qr.id === settings.selectedQrId) ||
-      paymentQrs.find((qr) => qr.active) ||
-      paymentQrs[0] ||
-      null
-    );
-  } catch (error) {
-    console.error("Failed to load the configured takeaway UPI QR", error);
-    return null;
-  }
-};
-
 export const TAKEAWAY_CATEGORIES = [
   { id: "all", label: "All Items", icon: Utensils },
   { id: "breads", label: "Breads", icon: Wheat },
@@ -127,7 +102,6 @@ export const TAKEAWAY_CATEGORIES = [
   { id: "starters", label: "Starters", icon: Sparkles },
   { id: "tandoor", label: "Tandoor", icon: Flame },
   { id: "fastfood", label: "Fast Food", icon: Sandwich },
-  { id: "beverages", label: "Beverages", icon: Coffee },
   { id: "desserts", label: "Desserts", icon: IceCream },
 ];
 
@@ -434,12 +408,12 @@ const getAvailableTables = (tables, guests) => {
     const cap = Number(table.capacity ?? table.capacityChairs ?? 4);
     return ["vacant", "available"].includes(status) && cap >= guests;
   });
-  return filtered.length > 0 ? filtered : FALLBACK_TABLES;
+  return filtered;
 };
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
+}
 
 const getFormattedPickupDate = () => {
   const d = new Date();
@@ -477,9 +451,7 @@ export function CustomerLandingPage({
   restaurantLogo = "",
   menuItems = [],
   menuLoading = false,
-  tables = [],
   onHotelLogin,
-  onAdminLogin,
   kitchenNotifications = [],
   onClearNotifications,
 }) {
@@ -522,7 +494,6 @@ export function CustomerLandingPage({
   });
 
   // --- Menu Filters & Category State (Matches POS Screen Template) ---
-  const [orderMode, setOrderMode] = useState("kitchen"); // "kitchen" | "bar"
   const [dietaryFilter, setDietaryFilter] = useState("all"); // "all" | "veg" | "non-veg" | "special"
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -559,14 +530,7 @@ export function CustomerLandingPage({
 
   // --- Payment State ---
   const [paymentMethod, setPaymentMethod] = useState("upi"); // 'upi' | 'cash' (Matches POS Screen Payment Modes)
-  const [takeawayPaymentQr, setTakeawayPaymentQr] = useState(null);
   const [processingStage, setProcessingStage] = useState(1); // 1: Initiating, 2: Processing, 3: Confirming
-
-  useEffect(() => {
-    if (activeScreen === "payment" && paymentMethod === "upi") {
-      setTakeawayPaymentQr(getActivePaymentQr());
-    }
-  }, [activeScreen, paymentMethod]);
 
   // --- Placed Order & Tracking State ---
   const [placedOrder, setPlacedOrder] = useState(null);
@@ -612,13 +576,6 @@ export function CustomerLandingPage({
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
-  const effectiveNotifications = Array.isArray(kitchenNotifications)
-    ? kitchenNotifications
-    : [];
-  const handleClearAllNotifs = () => {
-    onClearNotifications?.();
-    setIsNotifOpen(false);
-  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -744,11 +701,8 @@ export function CustomerLandingPage({
   // Auth Success Callback
   const handleLoginSuccess = (user, destination) => {
     setCustomerUser(user);
-    if (user?.token) setReservationCustomerToken(user.token);
-    if (user?.refreshToken) setCustomerRefreshToken(user.refreshToken, user.rememberMe);
     try {
-      const { token, refreshToken, ...profile } = user || {};
-      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(profile));
+      localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(user));
     } catch (e) {}
     if (user?.name) setCustomerName(user.name);
     if (user?.phone) setCustomerPhone(user.phone);
@@ -762,12 +716,6 @@ export function CustomerLandingPage({
 
   // Logout Handler
   const handleLogout = () => {
-    const accessToken = getReservationCustomerToken();
-    const refreshToken = customerUser?.refreshToken || getCustomerRefreshToken();
-    if (accessToken || refreshToken) apiCustomerLogout(refreshToken, false, accessToken);
-    setCustomerRefreshToken("");
-    setReservationCustomerToken("");
-    setReservationCheckoutToken("");
     setCustomerUser(null);
     try {
       localStorage.removeItem(CUSTOMER_SESSION_KEY);
@@ -796,21 +744,14 @@ export function CustomerLandingPage({
   );
   const activeCategoryLabel = activeCategoryObj.label;
 
-  // Filtered menu items by station, category, dietary type, and search (Exact POS Template Logic)
+  // Filtered food items by category, dietary type, and search.
   const visibleMenuItems = useMemo(() => {
     return combinedMenuItems.filter((item) => {
       const isBarItem =
         item.station === "bar" ||
         String(item.category || "").toLowerCase().includes("bev") ||
         String(item.category || "").toLowerCase().includes("drink");
-
-      // 1. Station filter (Kitchen vs Bar)
-      if (orderMode === "kitchen" && isBarItem && selectedCategory !== "beverages") {
-        return false;
-      }
-      if (orderMode === "bar" && !isBarItem) {
-        return false;
-      }
+      if (isBarItem) return false;
 
       // 2. Category filter
       const cat = String(item.category || "").toLowerCase();
@@ -821,7 +762,6 @@ export function CustomerLandingPage({
       else if (selectedCategory === "fastfood") matchesCat = cat.includes("fast") || cat.includes("burger") || cat.includes("pizza") || cat.includes("fries");
       else if (selectedCategory === "curries") matchesCat = cat.includes("curry") || cat.includes("curries") || cat.includes("main");
       else if (selectedCategory === "breads") matchesCat = cat.includes("bread") || cat.includes("naan") || cat.includes("roti");
-      else if (selectedCategory === "beverages") matchesCat = isBarItem;
       else if (selectedCategory === "desserts") matchesCat = cat.includes("dessert") || cat.includes("sweet") || cat.includes("ice") || cat.includes("cake") || cat.includes("brownie") || cat.includes("jamun");
       else if (selectedCategory !== "all") matchesCat = cat.includes(selectedCategory.toLowerCase());
 
@@ -844,7 +784,7 @@ export function CustomerLandingPage({
 
       return true;
     });
-  }, [combinedMenuItems, orderMode, selectedCategory, dietaryFilter, searchQuery]);
+  }, [combinedMenuItems, selectedCategory, dietaryFilter, searchQuery]);
 
   // Cart calculations matching screenshot financial breakdown:
   // Subtotal ₹640 + Packaging Charge ₹20 + GST (5%) ₹33 = Total Amount ₹693
@@ -1313,103 +1253,19 @@ export function CustomerLandingPage({
           )}
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-            {/* Kitchen Cooking Status Notification Bell (Matches POS Header) */}
-            {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
-              <div className="takeaway-header-notif-wrap" ref={notifRef}>
-                <button
-                  type="button"
-                  className={`takeaway-header-notif-btn ${effectiveNotifications.length > 0 ? "has-alerts" : ""}`}
-                  aria-label={`Kitchen status updates${effectiveNotifications.length ? `, ${effectiveNotifications.length} updates` : ""}`}
-                  aria-expanded={isNotifOpen}
-                  aria-haspopup="true"
-                  title="Kitchen Cooking Status Updates"
-                  onClick={() => setIsNotifOpen((open) => !open)}
-                >
-                  {Array.isArray(effectiveNotifications) && effectiveNotifications.some(
-                    (n) => n.type === "cooking_completed"
-                  ) ? (
-                    <BellRing size={16} className="takeaway-bell-ring-active" />
-                  ) : (
-                    <Bell size={16} />
-                  )}
-                  {Array.isArray(effectiveNotifications) && effectiveNotifications.length > 0 && (
-                    <span className="takeaway-notif-badge">
-                      {effectiveNotifications.length > 9 ? "9+" : effectiveNotifications.length}
-                    </span>
-                  )}
-                </button>
-
-                {/* Notifications Dropdown Panel */}
-                {isNotifOpen && (
-                  <div className="takeaway-notif-panel" role="dialog" aria-label="Kitchen Status Notifications">
-                    <div className="takeaway-notif-header">
-                      <div className="takeaway-notif-header-title">
-                        <Bell size={14} color="#f59e0b" />
-                        <span>Kitchen Status Updates</span>
-                        {effectiveNotifications.length > 0 && (
-                          <span className="takeaway-notif-count-tag">
-                            {effectiveNotifications.length}
-                          </span>
-                        )}
-                      </div>
-                      {effectiveNotifications.length > 0 && (
-                        <button
-                          type="button"
-                          className="takeaway-notif-clear-btn"
-                          title="Clear all updates"
-                          onClick={handleClearAllNotifs}
-                        >
-                          <Trash2 size={12} />
-                          <span>Clear</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {effectiveNotifications.length === 0 ? (
-                      <div className="takeaway-notif-empty">
-                        <span style={{ fontSize: "1.4rem", display: "block", marginBottom: "4px" }}>📭</span>
-                        <p>No kitchen status updates yet.</p>
-                      </div>
-                    ) : (
-                      <div className="takeaway-notif-list">
-                        {effectiveNotifications.map((notification, index) => {
-                          const isCompleted = notification.type === "cooking_completed";
-                          return (
-                            <div
-                              key={notification.id || index}
-                              className={`takeaway-notif-item ${isCompleted ? "is-ready" : ""}`}
-                            >
-                              <div className={`takeaway-notif-icon-circle ${isCompleted ? "is-ready" : ""}`}>
-                                {isCompleted ? <CheckCircle2 size={13} /> : <Clock size={13} />}
-                              </div>
-                              <div className="takeaway-notif-item-body">
-                                <div className="takeaway-notif-item-top">
-                                  <strong>{getCleanAlertTitle(notification)}</strong>
-                                  <span>{getCleanAlertTimestamp(notification)}</span>
-                                </div>
-                                <p>{getCleanAlertMessage(notification)}</p>
-                                {notification.tableId && (
-                                  <small className="takeaway-notification-table">
-                                    <MapPin size={10} />
-                                    {cleanNotificationText(notification.tableName) || `Table ${notification.tableId}`}
-                                  </small>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
+            {/* User greeting pill in takeaway view */}
+            {activeScreen === "menu" && customerUser && (
+              <div className="takeaway-header-user-pill">
+                <UserRound size={15} />
+                <span>Hi, {(customerUser.name || "Priya").split(" ")[0]}</span>
               </div>
             )}
 
-            {/* Redesigned Modern Cart Pill Button */}
+            {/* Cart Icon / Dropdown in Header */}
             {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
               <button
                 type="button"
-                className={`takeaway-header-cart-btn ${cartCount > 0 ? "has-items" : ""}`}
+                className={activeScreen === "menu" ? "takeaway-header-cart-btn" : "customer-header-cart-btn"}
                 onClick={() => {
                   if (activeScreen === "menu") {
                     const el = document.getElementById("takeaway-order-sidebar");
@@ -1418,16 +1274,11 @@ export function CustomerLandingPage({
                     navigateScreen("menu");
                   }
                 }}
-                title={cartCount > 0 ? `Your Cart: ${cartCount} item${cartCount === 1 ? "" : "s"} (${formatPrice(totalAmount)})` : "Your Cart is Empty"}
+                title="Your Order"
               >
-                <div className="takeaway-cart-btn-icon-wrapper">
-                  <ConciergeBell size={17} />
-                  {cartCount > 0 && (
-                    <span className="takeaway-cart-count-badge">
-                      {cartCount > 9 ? "9+" : cartCount}
-                    </span>
-                  )}
-                </div>
+                <ShoppingBag size={17} />
+                <span className="takeaway-cart-count-bubble">{cartCount}</span>
+                {activeScreen === "menu" && <ChevronDown size={14} />}
               </button>
             )}
 
@@ -1439,8 +1290,6 @@ export function CustomerLandingPage({
                 onClick={() => {
                   if (typeof onHotelLogin === "function") {
                     onHotelLogin();
-                  } else if (typeof onAdminLogin === "function") {
-                    onAdminLogin();
                   } else {
                     window.location.href = "/admin";
                   }
@@ -1719,11 +1568,7 @@ export function CustomerLandingPage({
                         key={cat.id}
                         type="button"
                         className={`pos-takeaway-cat-btn ${isSelected ? "is-selected" : ""}`}
-                        onClick={() => {
-                          setSelectedCategory(cat.id);
-                          if (cat.id === "beverages") setOrderMode("bar");
-                          else if (orderMode === "bar" && cat.id !== "all") setOrderMode("kitchen");
-                        }}
+                        onClick={() => setSelectedCategory(cat.id)}
                       >
                         <IconComp size={16} className="pos-cat-icon" />
                         <span className="pos-cat-label">{cat.label}</span>
@@ -1737,31 +1582,12 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
-                  {/* Station Toggle */}
-                  <div className="pos-station-group">
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("kitchen");
-                        if (selectedCategory === "beverages") setSelectedCategory("all");
-                      }}
-                    >
-                      <ChefHat size={14} />
-                      <span>Kitchen / Food</span>
-                    </button>
-                  </div>
-
                   {/* Search Input */}
                   <div className="pos-search-box">
                     <Search size={15} className="pos-search-icon" />
                     <input
                       type="text"
-                      placeholder={
-                        orderMode === "bar"
-                          ? "Search drinks, lassi, soda, mocktails..."
-                          : "Search Biryani, Chicken 65, Naan, Desserts..."
-                      }
+                      placeholder="Search Biryani, Chicken 65, Naan, Desserts..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -1775,6 +1601,23 @@ export function CustomerLandingPage({
                         <X size={14} />
                       </button>
                     )}
+                  </div>
+
+                  {/* Categories Filter Dropdown (Matches Template Controls) */}
+                  <div className="pos-category-select-wrapper">
+                    <Utensils size={14} className="pos-category-select-icon" />
+                    <select
+                      className="pos-category-select"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      aria-label="Filter by category"
+                    >
+                      {TAKEAWAY_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Dietary Filter Buttons: Veg, Non-Veg, Specials */}
@@ -1806,6 +1649,25 @@ export function CustomerLandingPage({
                   </div>
                 </div>
 
+                {/* Horizontal Quick Category Filter Strip */}
+                <div className="pos-takeaway-category-strip">
+                  {TAKEAWAY_CATEGORIES.map((cat) => {
+                    const IconComp = cat.icon || Utensils;
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`pos-category-strip-btn ${isSelected ? "is-active" : ""}`}
+                        onClick={() => setSelectedCategory(cat.id)}
+                      >
+                        <IconComp size={13} />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* Compact POS Menu Grid */}
                 <div className="pos-takeaway-grid">
                   {visibleMenuItems.length === 0 ? (
@@ -1820,7 +1682,6 @@ export function CustomerLandingPage({
                           setSelectedCategory("all");
                           setSearchQuery("");
                           setDietaryFilter("all");
-                          setOrderMode("kitchen");
                         }}
                       >
                         Show All Dishes
@@ -2315,21 +2176,6 @@ export function CustomerLandingPage({
                         <span>UPI Fast Pay: <strong>{formatPrice(totalAmount)}</strong></span>
                       </div>
                       <p>Instant UPI payment confirmation with digital tax invoice receipt.</p>
-                    </div>
-                  )}
-
-                  {paymentMethod === "upi" && (
-                    <div className="customer-takeaway-upi-qr">
-                      {takeawayPaymentQr?.image ? (
-                        <img
-                          src={takeawayPaymentQr.image}
-                          alt={takeawayPaymentQr.label || "Scan to pay with UPI"}
-                        />
-                      ) : (
-                        <div role="status" className="customer-takeaway-upi-qr-empty">
-                          No UPI QR is configured. Add one in Admin Settings.
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

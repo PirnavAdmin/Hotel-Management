@@ -3,26 +3,22 @@ import {
   ChefHat,
   ArrowLeft,
   ShoppingBag,
-  Calendar,
-  User,
-  RotateCcw,
-  Check,
-  Bell,
   Clock,
+  MapPin,
+  CheckCircle,
+  FileText,
+  Utensils,
+  ArrowRight,
 } from "lucide-react";
 import { CustomerProfileDropdown } from "./CustomerProfileDropdown";
 
 /**
  * CustomerOrdersPage - Dedicated My Orders page (Route: /my-orders)
- * Matches Image 1 UI:
- * - 5 Portrait-oriented cards side-by-side
- * - Card header: ORD-XXXX + status indicator dot
- * - Date & Time with Calendar icon (e.g. 11 Nov, 08:15 PM)
- * - Customer name with User icon (e.g. Priya S.)
- * - Centered status pill badge (Preparing, Completed, Ready for Pickup, Pending)
- * - Summary row: Items count + Total Price
- * - Multiplier item list: 1 × Item Name
- * - Outlined Reorder pill button
+ * Displays:
+ * - Active / Recent takeaway orders
+ * - Order ID, Items, Total Price, Pickup Time
+ * - Status badges (Preparing, Ready, Completed)
+ * - Navigation back to home or takeaway menu
  */
 export function CustomerOrdersPage({
   customerUser,
@@ -32,139 +28,35 @@ export function CustomerOrdersPage({
   restaurantName = "Bhanu Bistro",
   restaurantLogo = "",
 }) {
-  const customerName = customerUser?.name
-    ? `${customerUser.name.split(" ")[0]} ${customerUser.name.split(" ")[1] ? customerUser.name.split(" ")[1][0] + "." : ""}`.trim()
-    : "Priya S.";
-
-  // Format date and time to match "11 Nov, 08:15 PM"
-  const formatOrderDateTime = (dateStr, timeStr) => {
-    if (!dateStr) return timeStr || "";
-    if (dateStr.includes("Nov") || dateStr.includes("Oct") || dateStr.includes("Dec")) {
-      return `${dateStr}, ${timeStr || ""}`.trim().replace(/,\s*$/, "");
-    }
-    try {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) {
-        const day = d.getDate();
-        const month = d.toLocaleString("en-US", { month: "short" });
-        return `${day < 10 ? "0" + day : day} ${month}, ${timeStr || ""}`.trim().replace(/,\s*$/, "");
-      }
-    } catch {}
-    return `${dateStr}${timeStr ? ", " + timeStr : ""}`;
-  };
-
-  // 5 Orders matching Image 1 mockup
-  const defaultOrders = [
-    {
-      orderNumber: "ORD-9421",
-      date: "11 Nov",
-      pickupTime: "08:15 PM",
-      customerName,
-      status: "Preparing",
-      paymentMethod: "UPI",
-      grandTotal: 580,
-      items: [
-        { id: "item-biryani-1", name: "Hyderabadi Chicken Dum Biryani", quantity: 1, price: 380 },
-        { id: "item-fastfood-1", name: "Crispy Corn Pepper Fry", quantity: 1, price: 200 },
-      ],
-    },
-    {
-      orderNumber: "ORD-8812",
-      date: "09 Nov",
-      pickupTime: "07:30 PM",
-      customerName,
-      status: "Completed",
-      paymentMethod: "CARD",
-      grandTotal: 450,
-      items: [
-        { id: "item-paneer-1", name: "Paneer Butter Masala", quantity: 1, price: 320 },
-        { id: "item-roti-1", name: "Butter Naan (2 pcs)", quantity: 1, price: 130 },
-      ],
-    },
-    {
-      orderNumber: "ORD-8799",
-      date: "08 Nov",
-      pickupTime: "06:45 PM",
-      customerName,
-      status: "Ready for Pickup",
-      paymentMethod: "UPI",
-      grandTotal: 760,
-      items: [
-        { id: "item-starter-1", name: "Chicken Tikka", quantity: 1, price: 340 },
-        { id: "item-bread-1", name: "Tandoori Roti", quantity: 1, price: 180 },
-        { id: "item-side-1", name: "Masala Fries", quantity: 1, price: 240 },
-      ],
-    },
-    {
-      orderNumber: "ORD-8765",
-      date: "07 Nov",
-      pickupTime: "06:10 PM",
-      customerName,
-      status: "Pending",
-      paymentMethod: "UPI",
-      grandTotal: 320,
-      items: [
-        { id: "item-paneer-1", name: "Paneer Butter Masala", quantity: 1, price: 320 },
-      ],
-    },
-    {
-      orderNumber: "ORD-8720",
-      date: "05 Nov",
-      pickupTime: "08:20 PM",
-      customerName,
-      status: "Completed",
-      paymentMethod: "CARD",
-      grandTotal: 1240,
-      items: [
-        { id: "item-biryani-6", name: "Veg Biryani", quantity: 1, price: 280 },
-        { id: "item-starter-2", name: "Paneer Tikka", quantity: 1, price: 320 },
-        { id: "item-bread-2", name: "Garlic Naan", quantity: 1, price: 240 },
-        { id: "item-dessert-1", name: "Chocolate Brownie", quantity: 1, price: 400 },
-      ],
-    },
-  ];
-
-  const orders = placedOrder ? [placedOrder, ...defaultOrders] : defaultOrders;
-
-  // Status badge config matching Image 1
-  const getStatusBadgeConfig = (status) => {
-    switch (status) {
-      case "Preparing":
-        return {
-          bg: "#eff6ff",
-          color: "#2563eb",
-          border: "#bfdbfe",
-          dot: "#3b82f6",
-          icon: ChefHat,
-        };
-      case "Completed":
-        return {
-          bg: "#f0fdf4",
-          color: "#166534",
-          border: "#bbf7d0",
-          dot: "#22c55e",
-          icon: Check,
-        };
-      case "Ready for Pickup":
-      case "Ready":
-        return {
-          bg: "#faf5ff",
-          color: "#9333ea",
-          border: "#e9d5ff",
-          dot: "#3b82f6",
-          icon: Bell,
-        };
-      case "Pending":
-      default:
-        return {
-          bg: "#fffbeb",
-          color: "#d97706",
-          border: "#fde68a",
-          dot: "#f59e0b",
-          icon: Clock,
-        };
-    }
-  };
+  // Dummy orders list if placedOrder is empty
+  const orders = placedOrder
+    ? [placedOrder]
+    : [
+        {
+          orderNumber: "ORD-9421",
+          date: "2026-11-11",
+          pickupTime: "08:15 PM",
+          status: "Preparing",
+          paymentMethod: "UPI",
+          grandTotal: 580,
+          items: [
+            { id: "item-biryani-1", name: "Hyderabadi Chicken Dum Biryani", quantity: 1, price: 380 },
+            { id: "item-fastfood-1", name: "Crispy Corn Pepper Fry", quantity: 1, price: 200 },
+          ],
+        },
+        {
+          orderNumber: "ORD-8812",
+          date: "2026-11-09",
+          pickupTime: "07:30 PM",
+          status: "Completed",
+          paymentMethod: "CARD",
+          grandTotal: 450,
+          items: [
+            { id: "item-paneer-1", name: "Paneer Butter Masala", quantity: 1, price: 320 },
+            { id: "item-roti-1", name: "Butter Naan (2 pcs)", quantity: 1, price: 130 },
+          ],
+        },
+      ];
 
   return (
     <div
@@ -180,7 +72,6 @@ export function CustomerOrdersPage({
         display: "flex",
         flexDirection: "column",
         color: "#f7efe8",
-        fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
       }}
     >
       {/* ── Header ────────────────────────────────────────────── */}
@@ -191,7 +82,7 @@ export function CustomerOrdersPage({
           alignItems: "center",
           padding: "10px 24px",
           minHeight: "56px",
-          background: "rgba(16, 9, 7, 0.94)",
+          background: "rgba(16, 9, 7, 0.92)",
           borderBottom: "1px solid rgba(245, 158, 11, 0.25)",
           backdropFilter: "blur(12px)",
           position: "sticky",
@@ -267,26 +158,25 @@ export function CustomerOrdersPage({
       <main
         style={{
           flex: 1,
-          maxWidth: "1360px",
+          maxWidth: "1160px",
           width: "100%",
           margin: "0 auto",
-          padding: "20px 20px 40px",
+          padding: "24px 20px 40px",
           boxSizing: "border-box",
         }}
       >
-        {/* Banner Strip (Matches Image 1 Header Card) */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "18px",
+            marginBottom: "20px",
             flexWrap: "wrap",
             gap: "14px",
-            background: "rgba(22, 12, 8, 0.88)",
-            border: "1.5px solid rgba(245, 158, 11, 0.35)",
+            background: "rgba(22, 12, 8, 0.78)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
             borderRadius: "16px",
-            padding: "14px 22px",
+            padding: "14px 20px",
             backdropFilter: "blur(14px)",
             boxShadow: "0 10px 30px rgba(0, 0, 0, 0.55)",
           }}
@@ -294,28 +184,31 @@ export function CustomerOrdersPage({
           <div>
             <h1
               style={{
-                fontSize: "22px",
+                fontFamily: "'Cinzel', Georgia, serif",
+                fontSize: "24px",
                 fontWeight: 800,
                 color: "#ffffff",
                 margin: "0 0 4px 0",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                letterSpacing: "0.2px",
+                textShadow: "0 2px 10px rgba(0, 0, 0, 0.6)",
+                letterSpacing: "0.5px",
               }}
             >
-              <span>📋</span> My Orders
+              <span style={{ color: "#f59e0b" }}>📋</span> My Orders
             </h1>
             <p
               style={{
-                fontSize: "12.5px",
+                fontSize: "13px",
                 color: "#fef3c7",
-                fontWeight: 500,
+                fontWeight: 600,
                 margin: 0,
+                textShadow: "0 1px 4px rgba(0, 0, 0, 0.8)",
                 lineHeight: 1.4,
               }}
             >
-              View and track your takeaway orders from {restaurantName}.
+              View and track your takeaway orders from Bhanu Bistro.
             </p>
           </div>
 
@@ -342,209 +235,147 @@ export function CustomerOrdersPage({
           </button>
         </div>
 
-        {/* Orders Cards Grid: Portrait-Oriented Cards (Exact Replica of Image 1) */}
+        {/* Orders List: Column-wise Grid Layout (Compact Size) */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(215px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "14px",
             alignItems: "stretch",
           }}
         >
-          {orders.map((ord, idx) => {
-            const badge = getStatusBadgeConfig(ord.status);
-            const StatusIcon = badge.icon;
-            const itemCount = (ord.items || []).reduce((acc, it) => acc + (it.quantity || 1), 0);
-            const formattedDate = formatOrderDateTime(ord.date, ord.pickupTime);
-
-            return (
-              <div
-                key={ord.orderNumber || idx}
-                style={{
-                  background: "#ffffff",
-                  borderRadius: "16px",
-                  padding: "16px 14px 14px",
-                  color: "#1c1109",
-                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.4)",
-                  border: "1.5px solid rgba(245, 158, 11, 0.45)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxSizing: "border-box",
-                  transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                }}
-              >
-                <div>
-                  {/* Top Row: Order ID + Status Dot */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "6px",
-                    }}
-                  >
+          {orders.map((ord, idx) => (
+            <div
+              key={ord.orderNumber || idx}
+              style={{
+                background: "#ffffff",
+                borderRadius: "12px",
+                padding: "12px 16px",
+                color: "#1a100b",
+                boxShadow: "0 8px 22px rgba(0,0,0,0.35)",
+                border: "1px solid rgba(245, 158, 11, 0.22)",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                boxSizing: "border-box",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderBottom: "1px solid #ebdcd1",
+                    paddingBottom: "8px",
+                    marginBottom: "10px",
+                    flexWrap: "wrap",
+                    gap: "6px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                     <span
                       style={{
+                        background: "#fff7ed",
                         color: "#ea580c",
-                        fontSize: "14px",
+                        border: "1px solid #fed7aa",
+                        padding: "2px 7px",
+                        borderRadius: "5px",
+                        fontSize: "11px",
                         fontWeight: 800,
-                        letterSpacing: "0.2px",
                       }}
                     >
                       {ord.orderNumber}
                     </span>
-                    <span
-                      style={{
-                        width: "7px",
-                        height: "7px",
-                        borderRadius: "50%",
-                        background: badge.dot,
-                        boxShadow: `0 0 6px ${badge.dot}`,
-                      }}
-                    />
+                    <span style={{ fontSize: "11px", color: "#6f6158" }}>
+                      📅 {ord.date} • 🕒 {ord.pickupTime}
+                    </span>
                   </div>
 
-                  {/* Date & Time Row */}
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      color: "#8c786a",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <Calendar size={12} color="#ea580c" />
-                    <span>{formattedDate}</span>
-                  </div>
-
-                  {/* Customer Name Row */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      color: "#4a3b32",
-                      fontSize: "11.5px",
-                      fontWeight: 600,
-                      marginBottom: "10px",
-                    }}
-                  >
-                    <User size={12} color="#8c786a" />
-                    <span>{ord.customerName || customerName}</span>
-                  </div>
-
-                  {/* Status Badge Pill (Centered / Full-Width matching Image 1) */}
-                  <div
-                    style={{
-                      width: "100%",
-                      padding: "5px 0",
-                      borderRadius: "20px",
-                      fontSize: "11px",
+                      background: ord.status === "Completed" ? "#f0fdf4" : "#eff6ff",
+                      color: ord.status === "Completed" ? "#166534" : "#1d4ed8",
+                      border: `1px solid ${ord.status === "Completed" ? "#bbf7d0" : "#bfdbfe"}`,
+                      padding: "2px 8px",
+                      borderRadius: "16px",
+                      fontSize: "10.5px",
                       fontWeight: 700,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                      background: badge.bg,
-                      color: badge.color,
-                      border: `1px solid ${badge.border}`,
-                      marginBottom: "12px",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <StatusIcon size={13} />
-                    <span>{ord.status}</span>
-                  </div>
-
-                  {/* Items Count & Total Price Row */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "baseline",
-                      marginBottom: "8px",
-                      borderBottom: "1px solid #f3ece4",
-                      paddingBottom: "8px",
-                    }}
-                  >
-                    <span style={{ fontSize: "11.5px", color: "#4a3b32", fontWeight: 700 }}>
-                      {itemCount} {itemCount === 1 ? "Item" : "Items"}
-                    </span>
-                    <span style={{ fontSize: "14px", color: "#ea580c", fontWeight: 800 }}>
-                      ₹{Number(ord.grandTotal || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  {/* Items List */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
                       gap: "4px",
-                      marginBottom: "14px",
                     }}
                   >
-                    {(ord.items || []).map((item, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "5px",
-                          fontSize: "11px",
-                          lineHeight: 1.35,
-                          color: "#2a1d15",
-                        }}
-                      >
-                        <span style={{ color: "#ea580c", fontWeight: 700, flexShrink: 0 }}>
-                          {item.quantity} ×
-                        </span>
-                        <span style={{ wordBreak: "break-word" }}>{item.name}</span>
-                      </div>
-                    ))}
+                    <span
+                      style={{
+                        width: "5px",
+                        height: "5px",
+                        borderRadius: "50%",
+                        background: ord.status === "Completed" ? "#22c55e" : "#3b82f6",
+                      }}
+                    />
+                    {ord.status || "Confirmed"}
                   </div>
                 </div>
 
-                {/* Bottom Reorder Button */}
-                <button
-                  type="button"
-                  onClick={() => onNavigate("/menu")}
-                  style={{
-                    width: "100%",
-                    height: "32px",
-                    borderRadius: "20px",
-                    border: "1.5px solid #ea580c",
-                    background: "#ffffff",
-                    color: "#ea580c",
-                    fontSize: "11.5px",
-                    fontWeight: 750,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    marginTop: "auto",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#fff7ed";
-                    e.currentTarget.style.borderColor = "#f97316";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "#ffffff";
-                    e.currentTarget.style.borderColor = "#ea580c";
-                  }}
-                >
-                  <RotateCcw size={12} strokeWidth={2.2} />
-                  <span>Reorder</span>
-                </button>
+                {/* Items */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "10px" }}>
+                  {(ord.items || []).map((item, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                      <span>
+                        <strong style={{ color: "#ea580c" }}>{item.quantity}x</strong> {item.name}
+                      </span>
+                      <strong style={{ color: "#1a100b" }}>₹{Number(item.price || 0) * (item.quantity || 1)}</strong>
+                    </div>
+                  ))}
+                </div>
               </div>
-            );
-          })}
+
+              {/* Total & Action */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  borderTop: "1px solid #ebdcd1",
+                  paddingTop: "8px",
+                  marginTop: "auto",
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: "11px", color: "#6f6158" }}>Payment: </span>
+                  <strong style={{ fontSize: "11px", color: "#166534" }}>{ord.paymentMethod || "UPI"} (Paid)</strong>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ textAlign: "right" }}>
+                    <small style={{ display: "block", fontSize: "9.5px", color: "#8c7b70" }}>Total Amount</small>
+                    <strong style={{ fontSize: "14px", color: "#ea580c", fontWeight: 800 }}>
+                      ₹{Number(ord.grandTotal || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </strong>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("/menu")}
+                    style={{
+                      background: "#faf7f4",
+                      border: "1.2px solid #ea580c",
+                      color: "#ea580c",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Reorder
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
     </div>

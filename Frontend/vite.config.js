@@ -5,7 +5,8 @@ import path from "path";
 import { fileURLToPath } from "node:url";
 let nodemailer = null;
 try {
-  nodemailer = require('nodemailer');
+  const nmMod = await import("nodemailer");
+  nodemailer = nmMod.default || nmMod;
 } catch {
   nodemailer = null;
 }
@@ -2300,7 +2301,6 @@ export default defineConfig(({ mode }) => {
   const env = {
     ...loadEnv(mode, WORKSPACE_ROOT, ""),
     ...loadEnv(mode, FRONTEND_ROOT, ""),
-    ...loadEnv(mode, process.cwd(), ""),
   };
 
   const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
@@ -2313,7 +2313,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||
     apiBase ||
-    "http://127.0.0.1:5000";
+    "http://127.0.0.1:5018";
 
   return {
     plugins: [react(), globalSyncPlugin(backendTarget)],
@@ -2344,7 +2344,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5000. Confirm it is running."
+                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running."
                 }));
               }
             });
@@ -2367,30 +2367,6 @@ export default defineConfig(({ mode }) => {
               }
             });
           },
-        },
-        "^/api": {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
-          configure: (proxy) => {
-            proxy.on("error", (err, req, res) => {
-              console.error("[Vite Proxy Error] Cannot reach backend on " + backendTarget + ": " + err.message);
-              if (res && !res.headersSent && typeof res.writeHead === "function") {
-                res.writeHead(503, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({
-                  success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
-                }));
-              }
-            });
-          },
-        },
-        "/uploads": {
-          target: backendTarget,
-          changeOrigin: true,
-          secure: false,
-          headers: { "ngrok-skip-browser-warning": "true" },
         },
         "/swagger": {
           target: backendTarget,

@@ -4711,6 +4711,9 @@ function BarTablesView({
       } else if (tableSortField === "capacity") {
         aVal = Number(a.capacity || 0);
         bVal = Number(b.capacity || 0);
+      } else if (tableSortField === "name") {
+        aVal = String(a.name || `Table ${a.id || ""}`).toLowerCase();
+        bVal = String(b.name || `Table ${b.id || ""}`).toLowerCase();
       } else if (tableSortField === "area") {
         aVal = String(a.section || a.area || "").toLowerCase();
         bVal = String(b.section || b.area || "").toLowerCase();

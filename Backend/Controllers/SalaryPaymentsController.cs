@@ -44,7 +44,7 @@ public class SalaryPaymentsController : ControllerBase
         }
 
         var payments = await query
-            .OrderByDescending(payment => payment.PaidOn)
+            .OrderByDescending(payment => payment.PaymentDate)
             .ThenByDescending(payment => payment.PaymentId)
             .ToListAsync();
 

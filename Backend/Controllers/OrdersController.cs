@@ -90,6 +90,7 @@ public class OrdersController : ControllerBase
         return Ok(new { success = true, message = "Takeaway order dispatched.", orderId = order.Id, fulfillmentStatus = order.FulfillmentStatus });
     }
 
+    [HttpGet("active")]
     [HttpGet]
     public async Task<IActionResult> GetActiveOrders()
     {
