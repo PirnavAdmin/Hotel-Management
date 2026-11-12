@@ -10,7 +10,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
 // Ensure default listening on port 5018
 builder.WebHost.UseUrls("http://localhost:5018", "http://0.0.0.0:5018");
 
@@ -40,10 +39,10 @@ catch (MySqlConnector.MySqlException ex) when (ex.Number == 1045) // Access Deni
     Console.WriteLine("[Database] Configured credentials failed (Error 1045: Access Denied). Attempting fallback credentials...");
     var fallbackCandidates = new[]
     {
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Vineetha@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=vikas@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=vikas@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=Mamatha@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
         "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=root;CharSet=utf8mb4;",
         "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=;CharSet=utf8mb4;"
     };
