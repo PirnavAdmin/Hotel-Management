@@ -20,9 +20,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import "./CustomerAuthFlow.css";
+import { apiCustomerForgotPassword, apiCustomerLogin, apiCustomerRegister, apiCustomerResendOtp, apiCustomerResetPassword, apiCustomerVerifyOtp } from "../api/customerAuthApi";
 
 /**
- * CustomerAuthFlow - 100% FRONTEND ONLY customer authentication flow
+ * CustomerAuthFlow - customer authentication screens backed by the customer auth API
  * Screens:
  * 1. Login (Customer)
  * 2. Create Account
@@ -56,8 +57,8 @@ export function CustomerAuthFlow({
   };
 
   // ── Screen 1: Login Form State ──────────────────────────────────────────
-  const [loginIdentifier, setLoginIdentifier] = useState("priya@example.com");
-  const [loginPassword, setLoginPassword] = useState("password123");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState("");
@@ -78,20 +79,21 @@ export function CustomerAuthFlow({
   };
 
   // ── Screen 2: Registration Form State ───────────────────────────────────
-  const [regFullName, setRegFullName] = useState("Priya Sharma");
-  const [regMobile, setRegMobile] = useState("+91 98765 43210");
-  const [regEmail, setRegEmail] = useState("priya@example.com");
-  const [regPassword, setRegPassword] = useState("Priya@123");
-  const [regConfirmPassword, setRegConfirmPassword] = useState("Priya@123");
+  const [regFullName, setRegFullName] = useState("");
+  const [regMobile, setRegMobile] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [regError, setRegError] = useState("");
 
   // ── Screen 3: OTP State ─────────────────────────────────────────────────
-  const [currentGeneratedOtp, setCurrentGeneratedOtp] = useState("247916");
-  const [otpDigits, setOtpDigits] = useState(["2", "4", "7", "9", "1", "6"]);
-  const [resendTimer, setResendTimer] = useState(58);
+  const [otpPurpose, setOtpPurpose] = useState("ACCOUNT_VERIFY");
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [resendTimer, setResendTimer] = useState(30);
   const [otpError, setOtpError] = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
   const otpInputRefs = [
     useRef(null),
     useRef(null),
@@ -102,7 +104,7 @@ export function CustomerAuthFlow({
   ];
 
   // ── Screen 4: Forgot Password State ─────────────────────────────────────
-  const [forgotIdentifier, setForgotIdentifier] = useState("priya@example.com");
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
   const [forgotSentMessage, setForgotSentMessage] = useState("");
   const [forgotError, setForgotError] = useState("");
 
@@ -116,10 +118,13 @@ export function CustomerAuthFlow({
 
   // ── Active Authenticated User Profile ───────────────────────────────────
   const [currentUserData, setCurrentUserData] = useState({
-    name: "Priya Sharma",
-    phone: "+91 98765 43210",
-    email: "priya@example.com",
+    name: "",
+    phone: "",
+    email: "",
   });
+  const [busy, setBusy] = useState(false);
+  const [resetToken, setResetToken] = useState("");
+  const registerInFlightRef = useRef(false);
 
   // Countdown for OTP resend
   useEffect(() => {
@@ -149,7 +154,7 @@ export function CustomerAuthFlow({
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   // Screen 1: Submit Login (Existing/already registered user - Direct Login without OTP!)
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
     setLoginError("");
 
@@ -162,30 +167,37 @@ export function CustomerAuthFlow({
       return;
     }
 
-    // Set authenticated user object (frontend dummy)
-    const isEmail = loginIdentifier.includes("@");
-    const user = {
-      name: "Priya Sharma",
-      email: isEmail ? loginIdentifier.trim() : "priya@example.com",
-      phone: !isEmail ? loginIdentifier.trim() : "+91 98765 43210",
-    };
-    setCurrentUserData(user);
-
-    // Existing / returning user logs in directly without OTP verification!
+    setBusy(true);
+    const result = await apiCustomerLogin(loginIdentifier.trim(), loginPassword, rememberMe);
+    setBusy(false);
+    if (!result.success) return setLoginError(result.error || "Unable to sign in. Please try again.");
+    const payload = result.data?.data || result.data;
+    const userData = payload?.user || payload?.customer || {};
+    const token = payload?.accessToken || payload?.token || payload?.jwt;
+    if (!token) return setLoginError("The server response did not include an access token.");
+    setCurrentUserData({
+      name: userData.fullName || userData.name || userData.customerName || loginIdentifier.trim(),
+      email: userData.email || (loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
+      phone: userData.mobile || userData.phone || (!loginIdentifier.includes("@") ? loginIdentifier.trim() : ""),
+      token,
+      refreshToken: payload?.refreshToken || "",
+      rememberMe,
+    });
     setActiveStep("success");
   };
 
   // Screen 2: Submit Register (New user signup - Generates dynamic auto-increment OTP!)
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (registerInFlightRef.current) return;
     setRegError("");
 
     if (!regFullName.trim()) {
       setRegError("Please enter your full name.");
       return;
     }
-    if (!regMobile.trim()) {
-      setRegError("Please enter your mobile number.");
+    if (!regMobile.trim() && !regEmail.trim()) {
+      setRegError("Please enter an email address or mobile number.");
       return;
     }
     if (!regPassword.trim()) {
@@ -252,7 +264,7 @@ export function CustomerAuthFlow({
     }
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     setOtpError("");
     const code = otpDigits.join("");
@@ -261,21 +273,42 @@ export function CustomerAuthFlow({
       return;
     }
 
-    // Success! Move to Screen 6: Login Success
+    setBusy(true);
+    const identifier = currentUserData.email || currentUserData.phone;
+    const result = await apiCustomerVerifyOtp(identifier, code, otpPurpose);
+    setBusy(false);
+    if (!result.success) return setOtpError(result.error || "OTP verification failed.");
+    const payload = result.data?.data || result.data;
+    if (otpPurpose === "PASSWORD_RESET") {
+      if (!payload?.resetToken) return setOtpError("The server response did not include a reset token.");
+      setResetToken(payload.resetToken);
+      setActiveStep("reset");
+      return;
+    }
+    const token = payload?.accessToken || payload?.token || payload?.jwt;
+    if (!token) return setOtpError("The server response did not include an access token.");
+    setCurrentUserData((user) => ({ ...user, token, refreshToken: payload?.refreshToken || "" }));
     setActiveStep("success");
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (resendTimer > 0) return;
-    const newOtp = getNextOtp();
-    setCurrentGeneratedOtp(newOtp);
-    setOtpDigits(newOtp.split(""));
-    setResendTimer(58);
+    setBusy(true);
+    const result = await apiCustomerResendOtp(currentUserData.email || currentUserData.phone, otpPurpose);
+    setBusy(false);
+    if (!result.success) {
+      if (result.status === 429) setResendTimer(result.retryAfterSeconds ?? 30);
+      return setOtpError(result.error || "Unable to resend the OTP.");
+    }
+    const response = result.data?.data || result.data;
+    setOtpDigits(["", "", "", "", "", ""]);
+    setResendTimer(30);
     setOtpError("");
+    setOtpMessage(response?.message || "OTP resend request was accepted. Check your inbox and Spam/Junk folder.");
   };
 
   // Screen 4: Send Reset Link
-  const handleForgotSubmit = (e) => {
+  const handleForgotSubmit = async (e) => {
     if (e) e.preventDefault();
     setForgotError("");
     if (!forgotIdentifier.trim()) {
@@ -295,7 +328,7 @@ export function CustomerAuthFlow({
   };
 
   // Screen 5: Submit New Password
-  const handleResetSubmit = (e) => {
+  const handleResetSubmit = async (e) => {
     if (e) e.preventDefault();
     setResetError("");
     if (!newPassword.trim()) {
@@ -456,7 +489,7 @@ export function CustomerAuthFlow({
                   </div>
 
                   {/* Sign In Button */}
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <LogIn size={18} />
                     <span>Sign In</span>
                   </button>
@@ -611,7 +644,7 @@ export function CustomerAuthFlow({
                   </div>
 
                   {/* Create Account Button */}
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <UserPlus size={18} />
                     <span>Create Account</span>
                   </button>
@@ -665,6 +698,13 @@ export function CustomerAuthFlow({
                   </div>
                 )}
 
+                {otpMessage && (
+                  <div className="customer-auth-banner-alert" role="status">
+                    <CheckCircle2 size={16} />
+                    <span>{otpMessage}</span>
+                  </div>
+                )}
+
                 <form className="customer-auth-form" onSubmit={handleVerifyOtp}>
                   {/* 6 Digit OTP Input Boxes */}
                   <div
@@ -697,6 +737,7 @@ export function CustomerAuthFlow({
                     ) : (
                       <button
                         type="button"
+                        disabled={busy}
                         className="customer-auth-resend-btn"
                         onClick={handleResendOtp}
                       >
@@ -706,7 +747,7 @@ export function CustomerAuthFlow({
                   </div>
 
                   {/* Verify & Continue Button */}
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <CheckCircle2 size={18} />
                     <span>Verify &amp; Continue</span>
                   </button>
@@ -773,7 +814,7 @@ export function CustomerAuthFlow({
                     </div>
                   </div>
 
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <Send size={17} />
                     <span>Send Reset Link</span>
                   </button>
@@ -879,7 +920,7 @@ export function CustomerAuthFlow({
                     </div>
                   </div>
 
-                  <button type="submit" className="customer-auth-primary-btn">
+                  <button type="submit" disabled={busy} className="customer-auth-primary-btn">
                     <RefreshCw size={17} />
                     <span>Reset Password</span>
                   </button>

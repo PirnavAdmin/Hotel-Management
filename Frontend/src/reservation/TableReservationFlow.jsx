@@ -30,6 +30,7 @@ import {
   getStoredReservationTables,
   saveStoredReservationTables,
 } from "../api/reservationApi";
+import { CustomerProfileDropdown } from "../customer/CustomerProfileDropdown";
 import "./TableReservationFlow.css";
 
 export function TableReservationFlow({
@@ -40,11 +41,77 @@ export function TableReservationFlow({
   onLogout,
   onAdminLogin,
   onHotelLogin,
+  onNavigate,
+  onOpenProfile,
+  onOpenOrders,
 }) {
   // Navigation: step 1 to 9, or "overview" for the 9-screen poster
   const [currentStep, setCurrentStep] = useState(initialStep || 1);
   const [viewMode, setViewMode] = useState("interactive"); // "interactive" | "poster"
   const [toast, setToast] = useState(null);
+
+  // Standalone profile & orders modal states
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [profileUserData, setProfileUserData] = useState(() => ({
+    name: customerUser?.name || "Priya Sharma",
+    phone: customerUser?.phone || "+91 98765 43210",
+    email: customerUser?.email || "priya@example.com",
+  }));
+
+  useEffect(() => {
+    if (customerUser) {
+      setProfileUserData({
+        name: customerUser.name || "Priya Sharma",
+        phone: customerUser.phone || "+91 98765 43210",
+        email: customerUser.email || "priya@example.com",
+      });
+    }
+  }, [customerUser]);
+
+  const handleDropdownNavigate = (route) => {
+    // When "My Reservations" is clicked, display Step 6 (1st image: My Reservations)
+    if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+      setCurrentStep(6);
+      setViewMode("interactive");
+      setShowProfileModal(false);
+      setShowOrdersModal(false);
+      return;
+    }
+
+    if (onNavigate) {
+      onNavigate(route);
+      return;
+    }
+
+    if (route === "/profile" || route === "profile") {
+      if (onOpenProfile) {
+        onOpenProfile();
+      } else {
+        setShowProfileModal(true);
+      }
+    } else if (route === "/my-orders" || route === "my-orders" || route === "orders") {
+      if (onOpenOrders) {
+        onOpenOrders();
+      } else {
+        setShowOrdersModal(true);
+      }
+    }
+  };
+
+  const handleDropdownLogout = () => {
+    if (onLogout) {
+      onLogout();
+    } else {
+      localStorage.removeItem("bhanu_customer_session");
+      localStorage.removeItem("customer_session");
+      if (onBackToPos) {
+        onBackToPos();
+      } else {
+        window.location.reload();
+      }
+    }
+  };
 
   useEffect(() => {
     if (initialStep) setCurrentStep(initialStep);
@@ -285,7 +352,7 @@ export function TableReservationFlow({
         backgroundPosition: "center top",
         backgroundAttachment: "fixed",
         color: "#f5ede6",
-        padding: "20px 16px 80px",
+        padding: "10px 16px 20px",
         fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
       }}
     >
@@ -328,42 +395,43 @@ export function TableReservationFlow({
       <div
         style={{
           maxWidth: "1480px",
-          margin: "0 auto 24px",
+          margin: "0 auto 22px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "14px 24px",
-          background: "rgba(23, 11, 7, 0.88)",
+          padding: "8px 20px",
+          minHeight: "52px",
+          background: "rgba(23, 11, 7, 0.92)",
           border: "1px solid rgba(245, 158, 11, 0.35)",
           backdropFilter: "blur(14px)",
-          borderRadius: "16px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+          borderRadius: "14px",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
           flexWrap: "wrap",
-          gap: "14px",
+          gap: "10px",
         }}
       >
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             style={{
-              width: "44px",
-              height: "44px",
+              width: "36px",
+              height: "36px",
               borderRadius: "50%",
               background: "linear-gradient(135deg, #f59e0b, #d97706, #b45309)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "2px solid #fbbf24",
-              boxShadow: "0 0 14px rgba(245, 158, 11, 0.4)",
+              border: "1.5px solid #fbbf24",
+              boxShadow: "0 0 10px rgba(245, 158, 11, 0.35)",
             }}
           >
-            <Compass size={24} color="#ffffff" />
+            <Compass size={20} color="#ffffff" />
           </div>
           <div>
             <div
               style={{
                 fontFamily: "'Cinzel', Georgia, serif",
-                fontSize: "19px",
+                fontSize: "16px",
                 fontWeight: 800,
                 color: "#ffffff",
                 lineHeight: "1.1",
@@ -373,9 +441,9 @@ export function TableReservationFlow({
             </div>
             <div
               style={{
-                fontSize: "10px",
+                fontSize: "9px",
                 textTransform: "uppercase",
-                letterSpacing: "2px",
+                letterSpacing: "1.5px",
                 color: "#f59e0b",
                 fontWeight: 700,
               }}
@@ -385,8 +453,8 @@ export function TableReservationFlow({
           </div>
         </div>
 
-        {/* Action Controls (Right side matching Reference UI) */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+{/* Action Controls (Profile Pill & Dropdown matching Screenshot 2) */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {(onHotelLogin || onAdminLogin) && (
             <button
               onClick={() => {
@@ -407,51 +475,41 @@ export function TableReservationFlow({
               Hotel Login
             </button>
           )}
-          <button
-            onClick={() => setCurrentStep(6)}
-            title="View My Reservations"
-            style={{
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(245, 158, 11, 0.4)",
-              color: "#f5ede6",
-              padding: "6px 14px",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "7px",
-            }}
-          >
-            <div
+          {onBackToPos && (
+            <button
+              type="button"
+              onClick={onBackToPos}
+              title={backLabel}
               style={{
-                width: "22px",
-                height: "22px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                display: "flex",
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                color: "#f5ede6",
+                padding: "5px 12px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#fff",
+                gap: "5px",
+                transition: "all 0.15s ease",
               }}
             >
-              {(customerUser?.name ||
-                bookingForm.fullName ||
-                "P")[0].toUpperCase()}
-            </div>
-            <span>
-              Hi,{" "}
-              {
-                (customerUser?.name || bookingForm.fullName || "Priya").split(
-                  " ",
-                )[0]
-              }
-            </span>
-            <ChevronDown size={14} color="#f59e0b" />
-          </button>
+              <ArrowLeft size={13} />
+              <span>{backLabel}</span>
+            </button>
+          )}
+
+          <CustomerProfileDropdown
+            customerUser={{
+              name: profileUserData.name || customerUser?.name || bookingForm.fullName || "Priya Sharma",
+              phone: profileUserData.phone || customerUser?.phone || (bookingForm.mobileNumber ? `+91 ${bookingForm.mobileNumber}` : "+91 98765 43210"),
+              email: profileUserData.email || customerUser?.email || bookingForm.email || "priya@example.com",
+            }}
+            onNavigate={handleDropdownNavigate}
+            onLogout={handleDropdownLogout}
+            currentRoute={currentStep === 6 ? "/my-reservations" : ""}
+          />
         </div>
       </div>
 
@@ -600,6 +658,208 @@ export function TableReservationFlow({
           />
         )}
       </div>
+
+      {/* ── Standalone Customer Profile Modal Fallback ── */}
+      {showProfileModal && (
+        <div
+          className="customer-profile-modal-overlay"
+          onClick={() => setShowProfileModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            className="customer-profile-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "440px",
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "28px",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.55)",
+              color: "#1a100b",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#1a100b" }}>
+                Customer Profile
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#665449" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px", padding: "12px", background: "#faf7f4", borderRadius: "12px" }}>
+              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #f59e0b, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", fontWeight: 800 }}>
+                {(profileUserData.name || "P")[0].toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: "16px", color: "#1a100b" }}>{profileUserData.name}</div>
+                <div style={{ fontSize: "13px", color: "#6f6158" }}>{profileUserData.phone}</div>
+                <div style={{ fontSize: "12px", color: "#ea580c" }}>{profileUserData.email}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13.5px" }}>
+              <div>
+                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Full Name</label>
+                <input
+                  type="text"
+                  value={profileUserData.name}
+                  onChange={(e) => setProfileUserData((p) => ({ ...p, name: e.target.value }))}
+                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Mobile Number</label>
+                <input
+                  type="text"
+                  value={profileUserData.phone}
+                  onChange={(e) => setProfileUserData((p) => ({ ...p, phone: e.target.value }))}
+                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Email Address</label>
+                <input
+                  type="text"
+                  value={profileUserData.email}
+                  onChange={(e) => setProfileUserData((p) => ({ ...p, email: e.target.value }))}
+                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.setItem("bhanu_customer_session", JSON.stringify(profileUserData));
+                    setBookingForm((prev) => ({
+                      ...prev,
+                      fullName: profileUserData.name,
+                      mobileNumber: profileUserData.phone.replace(/\D/g, "").slice(-10),
+                      email: profileUserData.email,
+                    }));
+                  } catch (e) {}
+                  setShowProfileModal(false);
+                  showToast("Profile updated successfully!", "success");
+                }}
+                style={{ flex: 1, height: "42px", background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}
+              >
+                Save &amp; Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Standalone Customer Orders Modal Fallback ── */}
+      {showOrdersModal && (
+        <div
+          className="customer-profile-modal-overlay"
+          onClick={() => setShowOrdersModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            className="customer-profile-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "520px",
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "26px",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.55)",
+              color: "#1a100b",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "20px" }}>📋</span>
+                <h3 style={{ margin: 0, fontSize: "19px", fontWeight: 800, color: "#1a100b" }}>
+                  My Orders
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOrdersModal(false)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#665449" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "360px", overflowY: "auto" }}>
+              <div style={{ padding: "14px", border: "1px solid #fed7aa", borderRadius: "12px", background: "#fffaf5" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span style={{ fontWeight: 800, color: "#ea580c" }}>ORD-9421</span>
+                  <span style={{ fontSize: "12px", background: "#ffedd5", color: "#c2410c", padding: "2px 8px", borderRadius: "12px", fontWeight: 700 }}>
+                    Preparing
+                  </span>
+                </div>
+                <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#292524" }}>
+                  Hyderabadi Chicken Dum Biryani x 1, Crispy Corn x 1
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", color: "#78716c", marginTop: "8px" }}>
+                  <span>Pickup: Today at 08:15 PM</span>
+                  <span style={{ fontWeight: 800, color: "#1c1917" }}>Total: ₹580.00</span>
+                </div>
+              </div>
+
+              <div style={{ padding: "14px", border: "1px solid #e7e5e4", borderRadius: "12px", background: "#fafaf9" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span style={{ fontWeight: 800, color: "#57534e" }}>ORD-8812</span>
+                  <span style={{ fontSize: "12px", background: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "12px", fontWeight: 700 }}>
+                    Completed
+                  </span>
+                </div>
+                <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#292524" }}>
+                  Paneer Butter Masala x 1, Butter Naan x 2
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", color: "#78716c", marginTop: "8px" }}>
+                  <span>2026-11-09 at 07:30 PM</span>
+                  <span style={{ fontWeight: 800, color: "#1c1917" }}>Total: ₹450.00</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "20px" }}>
+              <button
+                type="button"
+                onClick={() => setShowOrdersModal(false)}
+                style={{ width: "100%", height: "40px", background: "#f4eee7", color: "#4a3b32", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -612,40 +872,40 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-        gap: "40px",
+        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+        gap: "24px",
         alignItems: "center",
       }}
     >
-      {/* Left Column: Hero branding, Ambiance & 3 Perks (Matching Reference Poster Screen 1) */}
+      {/* Left Column: Hero branding, Ambiance & 3 Perks */}
       <div style={{ color: "#f5ede6" }}>
         <div
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "8px",
+            gap: "6px",
             color: "#f59e0b",
-            fontSize: "13px",
+            fontSize: "11px",
             fontWeight: 800,
             textTransform: "uppercase",
             letterSpacing: "1px",
-            marginBottom: "14px",
+            marginBottom: "8px",
             background: "rgba(245, 158, 11, 0.12)",
-            padding: "6px 14px",
-            borderRadius: "20px",
+            padding: "4px 10px",
+            borderRadius: "16px",
             border: "1px solid rgba(245, 158, 11, 0.3)",
           }}
         >
-          <Calendar size={18} color="#f59e0b" /> Table Reservation
+          <Calendar size={14} color="#f59e0b" /> Table Reservation
         </div>
 
         <h1
           style={{
             fontFamily: "'Cinzel', Georgia, serif",
-            fontSize: "44px",
+            fontSize: "28px",
             fontWeight: 800,
             color: "#ffffff",
-            margin: "0 0 14px",
+            margin: "0 0 6px",
             lineHeight: 1.15,
             letterSpacing: "0.5px",
           }}
@@ -655,27 +915,27 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
 
         <p
           style={{
-            fontSize: "15px",
+            fontSize: "12.5px",
             color: "#d4c5b9",
-            lineHeight: 1.6,
-            marginBottom: "24px",
-            maxWidth: "460px",
+            lineHeight: 1.45,
+            marginBottom: "12px",
+            maxWidth: "440px",
           }}
         >
           Book a table in advance and enjoy a great dining experience at Bhanu
           Bistro.
         </p>
 
-        {/* Dining Table Ambiance Preview (Candlelit table with glasses & flowers) */}
+        {/* Dining Table Ambiance Preview */}
         <div
           style={{
             width: "100%",
-            height: "190px",
-            borderRadius: "14px",
+            height: "115px",
+            borderRadius: "10px",
             overflow: "hidden",
-            marginBottom: "26px",
-            boxShadow: "0 16px 36px rgba(0,0,0,0.6)",
-            border: "1px solid rgba(245, 158, 11, 0.35)",
+            marginBottom: "12px",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.5)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
             position: "relative",
           }}
         >
@@ -694,12 +954,12 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           />
         </div>
 
-        {/* 3 Perks (Matching Reference Image) */}
+        {/* 3 Perks */}
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "12px",
+            gap: "8px",
             textAlign: "center",
           }}
         >
@@ -707,77 +967,71 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             style={{
               background: "rgba(255, 255, 255, 0.05)",
               border: "1px solid rgba(245, 158, 11, 0.22)",
-              borderRadius: "12px",
-              padding: "14px 8px",
+              borderRadius: "8px",
+              padding: "8px 4px",
               backdropFilter: "blur(6px)",
             }}
           >
             <CheckCircle2
-              size={22}
+              size={16}
               color="#f59e0b"
-              style={{ margin: "0 auto 6px" }}
+              style={{ margin: "0 auto 4px" }}
             />
             <div
               style={{
-                fontSize: "11.5px",
+                fontSize: "10px",
                 fontWeight: 700,
                 color: "#ffffff",
-                lineHeight: 1.35,
+                lineHeight: 1.25,
               }}
             >
-              Confirmed
-              <br />
-              Reservation
+              Confirmed<br />Reservation
             </div>
           </div>
           <div
             style={{
               background: "rgba(255, 255, 255, 0.05)",
               border: "1px solid rgba(245, 158, 11, 0.22)",
-              borderRadius: "12px",
-              padding: "14px 8px",
+              borderRadius: "8px",
+              padding: "8px 4px",
               backdropFilter: "blur(6px)",
             }}
           >
-            <Users size={22} color="#f59e0b" style={{ margin: "0 auto 6px" }} />
+            <Users size={16} color="#f59e0b" style={{ margin: "0 auto 4px" }} />
             <div
               style={{
-                fontSize: "11.5px",
+                fontSize: "10px",
                 fontWeight: 700,
                 color: "#ffffff",
-                lineHeight: 1.35,
+                lineHeight: 1.25,
               }}
             >
-              Perfect For
-              <br />
-              Families &amp; Groups
+              Perfect For<br />Groups
             </div>
           </div>
           <div
             style={{
               background: "rgba(255, 255, 255, 0.05)",
               border: "1px solid rgba(245, 158, 11, 0.22)",
-              borderRadius: "12px",
-              padding: "14px 8px",
+              borderRadius: "8px",
+              padding: "8px 4px",
               backdropFilter: "blur(6px)",
             }}
           >
             <Sparkles
-              size={22}
+              size={16}
               color="#f59e0b"
-              style={{ margin: "0 auto 6px" }}
+              style={{ margin: "0 auto 4px" }}
             />
             <div
               style={{
-                fontSize: "11.5px",
+                fontSize: "10px",
                 fontWeight: 700,
                 color: "#ffffff",
-                lineHeight: 1.35,
+                lineHeight: 1.25,
               }}
             >
-              Great
-              <br />
-              Dining Experience
+              Fine Dining<br />Experience
             </div>
           </div>
         </div>
@@ -788,9 +1042,9 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
         style={{
           background: "#ffffff",
           color: "#1f1610",
-          borderRadius: "18px",
-          padding: "28px 32px",
-          boxShadow: "0 18px 45px rgba(0,0,0,0.45)",
+          borderRadius: "14px",
+          padding: "16px 20px",
+          boxShadow: "0 14px 35px rgba(0,0,0,0.45)",
           border: "1px solid #e8ded6",
         }}
       >
@@ -798,14 +1052,14 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
-            marginBottom: "20px",
+            gap: "8px",
+            marginBottom: "10px",
           }}
         >
-          <Calendar size={24} color="#ea580c" />
+          <Calendar size={18} color="#ea580c" />
           <h2
             style={{
-              fontSize: "20px",
+              fontSize: "16px",
               fontWeight: 800,
               margin: 0,
               color: "#1f1610",
@@ -820,19 +1074,19 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-              marginBottom: "16px",
+              gap: "10px",
+              marginBottom: "8px",
             }}
           >
             {/* Date */}
             <div>
               <label
                 style={{
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: 700,
                   color: "#4b3f36",
                   display: "block",
-                  marginBottom: "6px",
+                  marginBottom: "3px",
                 }}
               >
                 Date *
@@ -843,20 +1097,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  height: "32px",
+                  padding: "0 8px",
                   border: errors.date
                     ? "1px solid #dc2626"
                     : "1px solid #d4c8bd",
-                  borderRadius: "8px",
-                  fontSize: "13px",
+                  borderRadius: "6px",
+                  fontSize: "11.5px",
                   background: "#faf7f2",
                   color: "#1f1610",
                   colorScheme: "light",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
               {errors.date && (
-                <span style={{ color: "#dc2626", fontSize: "10px" }}>
+                <span style={{ color: "#dc2626", fontSize: "9px" }}>
                   {errors.date}
                 </span>
               )}
@@ -866,11 +1122,11 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             <div>
               <label
                 style={{
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: 700,
                   color: "#4b3f36",
                   display: "block",
-                  marginBottom: "6px",
+                  marginBottom: "3px",
                 }}
               >
                 Time *
@@ -880,16 +1136,18 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  height: "32px",
+                  padding: "0 8px",
                   border: errors.time
                     ? "1px solid #dc2626"
                     : "1px solid #d4c8bd",
-                  borderRadius: "8px",
-                  fontSize: "13px",
+                  borderRadius: "6px",
+                  fontSize: "11.5px",
                   background: "#faf7f2",
                   color: "#1f1610",
                   colorScheme: "light",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               >
                 <option value="12:30 PM">12:30 PM (Lunch)</option>
@@ -908,19 +1166,19 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-              marginBottom: "16px",
+              gap: "10px",
+              marginBottom: "8px",
             }}
           >
             {/* Guests count */}
             <div>
               <label
                 style={{
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: 700,
                   color: "#4b3f36",
                   display: "block",
-                  marginBottom: "6px",
+                  marginBottom: "3px",
                 }}
               >
                 Guests *
@@ -931,9 +1189,11 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   alignItems: "center",
                   justifyContent: "space-between",
                   border: "1px solid #d4c8bd",
-                  borderRadius: "8px",
+                  borderRadius: "6px",
                   background: "#faf7f2",
-                  padding: "4px 8px",
+                  padding: "2px 6px",
+                  height: "32px",
+                  boxSizing: "border-box",
                 }}
               >
                 <button
@@ -942,15 +1202,19 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                     setForm({ ...form, guests: Math.max(1, form.guests - 1) })
                   }
                   style={{
-                    width: "28px",
-                    height: "28px",
+                    width: "22px",
+                    height: "22px",
                     border: "none",
                     background: "#eee4da",
                     color: "#1f1610",
-                    borderRadius: "6px",
+                    borderRadius: "4px",
                     fontWeight: 800,
-                    fontSize: "16px",
+                    fontSize: "13px",
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
                   }}
                 >
                   -
@@ -959,28 +1223,32 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "6px",
+                    gap: "4px",
                     fontWeight: 700,
-                    fontSize: "13px",
+                    fontSize: "11.5px",
                     color: "#1f1610",
                   }}
                 >
-                  <Users size={15} color="#ea580c" />
+                  <Users size={13} color="#ea580c" />
                   <span style={{ color: "#1f1610" }}>{form.guests} Guests</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, guests: form.guests + 1 })}
                   style={{
-                    width: "28px",
-                    height: "28px",
+                    width: "22px",
+                    height: "22px",
                     border: "none",
                     background: "#eee4da",
                     color: "#1f1610",
-                    borderRadius: "6px",
+                    borderRadius: "4px",
                     fontWeight: 800,
-                    fontSize: "16px",
+                    fontSize: "13px",
                     cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
                   }}
                 >
                   +
@@ -992,11 +1260,11 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             <div>
               <label
                 style={{
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: 700,
                   color: "#4b3f36",
                   display: "block",
-                  marginBottom: "6px",
+                  marginBottom: "3px",
                 }}
               >
                 Table Preference (Optional)
@@ -1008,14 +1276,16 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 }
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  height: "32px",
+                  padding: "0 8px",
                   border: "1px solid #d4c8bd",
-                  borderRadius: "8px",
-                  fontSize: "13px",
+                  borderRadius: "6px",
+                  fontSize: "11.5px",
                   background: "#faf7f2",
                   color: "#1f1610",
                   colorScheme: "light",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               >
                 <option value="Indoor">Indoor (Air Conditioned)</option>
@@ -1032,18 +1302,18 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-              marginBottom: "16px",
+              gap: "10px",
+              marginBottom: "8px",
             }}
           >
             <div>
               <label
                 style={{
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: 700,
                   color: "#4b3f36",
                   display: "block",
-                  marginBottom: "6px",
+                  marginBottom: "3px",
                 }}
               >
                 Full Name *
@@ -1055,20 +1325,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  height: "32px",
+                  padding: "0 8px",
                   border: errors.fullName
                     ? "1px solid #dc2626"
                     : "1px solid #d4c8bd",
-                  borderRadius: "8px",
-                  fontSize: "13px",
+                  borderRadius: "6px",
+                  fontSize: "11.5px",
                   background: "#faf7f2",
                   color: "#1f1610",
                   colorScheme: "light",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
               {errors.fullName && (
-                <span style={{ color: "#dc2626", fontSize: "10px" }}>
+                <span style={{ color: "#dc2626", fontSize: "9px" }}>
                   {errors.fullName}
                 </span>
               )}
@@ -1077,11 +1349,11 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             <div>
               <label
                 style={{
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: 700,
                   color: "#4b3f36",
                   display: "block",
-                  marginBottom: "6px",
+                  marginBottom: "3px",
                 }}
               >
                 Mobile Number *
@@ -1095,20 +1367,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                 }
                 style={{
                   width: "100%",
-                  padding: "10px 12px",
+                  height: "32px",
+                  padding: "0 8px",
                   border: errors.mobileNumber
                     ? "1px solid #dc2626"
                     : "1px solid #d4c8bd",
-                  borderRadius: "8px",
-                  fontSize: "13px",
+                  borderRadius: "6px",
+                  fontSize: "11.5px",
                   background: "#faf7f2",
                   color: "#1f1610",
                   colorScheme: "light",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
               {errors.mobileNumber && (
-                <span style={{ color: "#dc2626", fontSize: "10px" }}>
+                <span style={{ color: "#dc2626", fontSize: "9px" }}>
                   {errors.mobileNumber}
                 </span>
               )}
@@ -1116,14 +1390,14 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           </div>
 
           {/* Email */}
-          <div style={{ marginBottom: "16px" }}>
+          <div style={{ marginBottom: "8px" }}>
             <label
               style={{
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 700,
                 color: "#4b3f36",
                 display: "block",
-                marginBottom: "6px",
+                marginBottom: "3px",
               }}
             >
               Email (Optional)
@@ -1135,49 +1409,52 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               style={{
                 width: "100%",
-                padding: "10px 12px",
+                height: "32px",
+                padding: "0 8px",
                 border: "1px solid #d4c8bd",
-                borderRadius: "8px",
-                fontSize: "13px",
+                borderRadius: "6px",
+                fontSize: "11.5px",
                 background: "#faf7f2",
                 color: "#1f1610",
                 colorScheme: "light",
                 outline: "none",
+                boxSizing: "border-box",
               }}
             />
           </div>
 
           {/* Special Requests */}
-          <div style={{ marginBottom: "22px" }}>
+          <div style={{ marginBottom: "12px" }}>
             <label
               style={{
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 700,
                 color: "#4b3f36",
                 display: "block",
-                marginBottom: "6px",
+                marginBottom: "3px",
               }}
             >
               Special Requests (Optional)
             </label>
-            <textarea
-              rows={2}
-              placeholder="Birthday celebration, anniversary, high chair, dietary preferences, etc."
+            <input
+              type="text"
+              placeholder="Birthday celebration, window table preference, etc."
               value={form.specialRequests}
               onChange={(e) =>
                 setForm({ ...form, specialRequests: e.target.value })
               }
               style={{
                 width: "100%",
-                padding: "10px 12px",
+                height: "32px",
+                padding: "0 8px",
                 border: "1px solid #d4c8bd",
-                borderRadius: "8px",
-                fontSize: "12.5px",
+                borderRadius: "6px",
+                fontSize: "11.5px",
                 background: "#faf7f2",
                 color: "#1f1610",
                 colorScheme: "light",
                 outline: "none",
-                resize: "vertical",
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -1187,22 +1464,22 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             type="submit"
             style={{
               width: "100%",
+              height: "36px",
               background: "linear-gradient(135deg, #f97316, #ea580c)",
               color: "#ffffff",
               border: "none",
-              borderRadius: "10px",
-              padding: "12px 0",
-              fontSize: "15px",
+              borderRadius: "8px",
+              fontSize: "13px",
               fontWeight: 800,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: "8px",
-              boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
+              gap: "6px",
+              boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
             }}
           >
-            <Calendar size={18} />
+            <Calendar size={15} />
             Book Table
           </button>
         </form>
@@ -1455,8 +1732,8 @@ function Step3Payment({
       style={{
         background: "#ffffff",
         color: "#1f1610",
-        borderRadius: "18px",
-        padding: "26px 30px",
+        borderRadius: "16px",
+        padding: "16px 24px",
         boxShadow: "0 18px 45px rgba(0,0,0,0.45)",
         border: "1px solid #e8ded6",
       }}
@@ -1470,9 +1747,9 @@ function Step3Payment({
           gap: "12px",
           fontSize: "11px",
           fontWeight: 700,
-          marginBottom: "20px",
+          marginBottom: "12px",
           borderBottom: "1px solid #f2ece6",
-          paddingBottom: "12px",
+          paddingBottom: "8px",
         }}
       >
         <span style={{ color: "#166534" }}>✓ Book a Table</span>
@@ -1483,7 +1760,7 @@ function Step3Payment({
           style={{
             color: "#ea580c",
             background: "#fff5ee",
-            padding: "3px 8px",
+            padding: "2px 8px",
             borderRadius: "12px",
           }}
         >
@@ -1497,22 +1774,22 @@ function Step3Payment({
         style={{
           display: "grid",
           gridTemplateColumns: "1.1fr 1fr",
-          gap: "24px",
+          gap: "20px",
         }}
       >
         {/* Left: Reservation Details & Advance Breakdown */}
         <div>
           <h3
             style={{
-              fontSize: "16px",
+              fontSize: "15px",
               fontWeight: 800,
-              margin: "0 0 6px",
+              margin: "0 0 4px",
               color: "#1f1610",
             }}
           >
             Complete Your Booking
           </h3>
-          <p style={{ fontSize: "12px", color: "#786c62", margin: "0 0 16px" }}>
+          <p style={{ fontSize: "11.5px", color: "#786c62", margin: "0 0 10px" }}>
             Pay a small advance to confirm your table reservation.
           </p>
 
@@ -1521,17 +1798,17 @@ function Step3Payment({
               background: "#faf7f2",
               border: "1px solid #e7ded4",
               borderRadius: "10px",
-              padding: "14px",
-              marginBottom: "16px",
+              padding: "10px 12px",
+              marginBottom: "10px",
             }}
           >
             <div
               style={{
-                fontSize: "11px",
+                fontSize: "10.5px",
                 fontWeight: 800,
                 textTransform: "uppercase",
                 color: "#8c7f74",
-                marginBottom: "8px",
+                marginBottom: "6px",
               }}
             >
               Reservation Details
@@ -1540,8 +1817,8 @@ function Step3Payment({
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
-                gap: "10px",
-                fontSize: "12.5px",
+                gap: "8px",
+                fontSize: "12px",
               }}
             >
               <div>
@@ -1572,16 +1849,16 @@ function Step3Payment({
               background: "#fff9f5",
               border: "1px solid #fed7aa",
               borderRadius: "10px",
-              padding: "14px",
+              padding: "10px 12px",
             }}
           >
             <div
               style={{
-                fontSize: "11px",
+                fontSize: "10.5px",
                 fontWeight: 800,
                 textTransform: "uppercase",
                 color: "#ea580c",
-                marginBottom: "8px",
+                marginBottom: "6px",
               }}
             >
               Advance Payment
@@ -1590,8 +1867,8 @@ function Step3Payment({
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: "12.5px",
-                padding: "3px 0",
+                fontSize: "12px",
+                padding: "2px 0",
                 color: "#ea580c",
                 fontWeight: 700,
               }}
@@ -1603,10 +1880,10 @@ function Step3Payment({
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: "14px",
+                fontSize: "13.5px",
                 fontWeight: 800,
                 borderTop: "1px solid #fed7aa",
-                paddingTop: "6px",
+                paddingTop: "5px",
                 marginTop: "4px",
                 color: "#1f1610",
               }}
@@ -1621,9 +1898,9 @@ function Step3Payment({
         <div>
           <h3
             style={{
-              fontSize: "16px",
+              fontSize: "15px",
               fontWeight: 800,
-              margin: "0 0 14px",
+              margin: "0 0 10px",
               color: "#1f1610",
             }}
           >
@@ -1634,8 +1911,8 @@ function Step3Payment({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
-              marginBottom: "16px",
+              gap: "6px",
+              marginBottom: "10px",
             }}
           >
             {[
@@ -1667,8 +1944,8 @@ function Step3Payment({
                   display: "flex",
                   alignItems: "flex-start",
                   gap: "10px",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
+                  padding: "7px 11px",
+                  borderRadius: "9px",
                   border:
                     paymentMethod === m.id
                       ? "1.5px solid #ea580c"
@@ -1682,19 +1959,20 @@ function Step3Payment({
                   name="payment"
                   checked={paymentMethod === m.id}
                   onChange={() => setPaymentMethod(m.id)}
-                  style={{ accentColor: "#ea580c", marginTop: "3px" }}
+                  style={{ accentColor: "#ea580c", marginTop: "2px" }}
                 />
                 <div>
                   <div
                     style={{
-                      fontSize: "13px",
+                      fontSize: "12px",
                       fontWeight: 700,
                       color: "#1f1610",
+                      lineHeight: 1.25,
                     }}
                   >
                     {m.title}
                   </div>
-                  <div style={{ fontSize: "11px", color: "#786c62" }}>
+                  <div style={{ fontSize: "10.5px", color: "#786c62", lineHeight: 1.2 }}>
                     {m.desc}
                   </div>
                 </div>
@@ -1708,12 +1986,12 @@ function Step3Payment({
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              fontSize: "11px",
+              fontSize: "10.5px",
               color: "#6b5d52",
-              marginBottom: "16px",
+              marginBottom: "10px",
             }}
           >
-            <ShieldCheck size={16} color="#16a34a" />
+            <ShieldCheck size={14} color="#16a34a" />
             <span>Secure 256-Bit SSL Encrypted Payment Simulation</span>
           </div>
 
@@ -1725,9 +2003,9 @@ function Step3Payment({
               background: "linear-gradient(135deg, #f97316, #ea580c)",
               color: "#ffffff",
               border: "none",
-              borderRadius: "10px",
-              padding: "12px 0",
-              fontSize: "14.5px",
+              borderRadius: "9px",
+              padding: "10px 0",
+              fontSize: "13.5px",
               fontWeight: 800,
               cursor: "pointer",
               boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
@@ -1736,14 +2014,14 @@ function Step3Payment({
             Pay ₹100.00 & Confirm Booking
           </button>
 
-          <div style={{ textAlign: "center", marginTop: "10px" }}>
+          <div style={{ textAlign: "center", marginTop: "7px" }}>
             <button
               type="button"
               onClick={onBack}
               style={{
                 background: "none",
                 border: "none",
-                fontSize: "12px",
+                fontSize: "11.5px",
                 color: "#6b5d52",
                 cursor: "pointer",
                 textDecoration: "underline",

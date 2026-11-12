@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using HMS.DTOs;
+using HMS.Middleware;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +28,15 @@ public class TakeawayController : ControllerBase
     private (long? UserId, string? FullName, string? IpAddress) ExtractActorContext()
     {
         long? userId = null;
-        string? rawId = User.FindFirstValue("userId")
-            ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (long.TryParse(rawId, out var parsedId) && parsedId > 0)
+        if (!CustomerAdminIsolationMiddleware.IsCustomerPrincipal(User))
         {
-            userId = parsedId;
+            string? rawId = User.FindFirstValue("userId")
+                ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (long.TryParse(rawId, out var parsedId) && parsedId > 0)
+            {
+                userId = parsedId;
+            }
         }
 
         string? fullName = User.FindFirstValue("fullName")
@@ -41,6 +45,20 @@ public class TakeawayController : ControllerBase
 
         string? ipAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString();
         return (userId, fullName, ipAddress);
+    }
+
+    private (bool IsCustomer, long? CustomerId, string? Phone) ExtractCustomerContext()
+    {
+        if (!CustomerAdminIsolationMiddleware.IsCustomerPrincipal(User))
+        {
+            return (false, null, null);
+        }
+
+        long? customerId = long.TryParse(User.FindFirstValue("customerId"), out var parsedCid) && parsedCid > 0
+            ? parsedCid
+            : null;
+        string? phone = User.FindFirstValue("phone") ?? User.FindFirstValue(ClaimTypes.MobilePhone);
+        return (true, customerId, phone);
     }
 
     #region 1. Takeaway Menu Endpoints
@@ -296,6 +314,16 @@ public class TakeawayController : ControllerBase
 
         try
         {
+            var (isCustomer, customerId, _) = ExtractCustomerContext();
+            if (isCustomer)
+            {
+                if (!customerId.HasValue)
+                {
+                    return StatusCode(403, new { success = false, message = "Authenticated customer identity is required to place an order." });
+                }
+                request.CustomerId = customerId.Value;
+            }
+
             var (userId, fullName, ipAddress) = ExtractActorContext();
             var orderResult = await _takeawayService.CreateTakeawayOrderAsync(request, userId, fullName, ipAddress);
             return StatusCode(orderResult.AlreadyProcessed ? 200 : 201, orderResult);
@@ -487,6 +515,24 @@ public class TakeawayController : ControllerBase
     {
         try
         {
+            var (isCustomer, customerId, phone) = ExtractCustomerContext();
+            if (isCustomer)
+            {
+                if (!customerId.HasValue)
+                {
+                    return StatusCode(403, new { success = false, message = "You do not have permission to view this takeaway order." });
+                }
+                var (exists, allowed) = await _takeawayService.CanCustomerAccessOrderAsync(orderId, customerId.Value, phone);
+                if (!exists)
+                {
+                    return NotFound(new { success = false, message = $"Takeaway order {orderId} was not found." });
+                }
+                if (!allowed)
+                {
+                    return StatusCode(403, new { success = false, message = "You do not have permission to view another customer's takeaway order." });
+                }
+            }
+
             var orderDetail = await _takeawayService.GetTakeawayOrderDetailsAsync(orderId);
             if (orderDetail == null)
             {
@@ -525,6 +571,24 @@ public class TakeawayController : ControllerBase
 
         try
         {
+            var (isCustomer, customerId, phone) = ExtractCustomerContext();
+            if (isCustomer)
+            {
+                if (!customerId.HasValue)
+                {
+                    return StatusCode(403, new { success = false, message = "You do not have permission to record payment for this takeaway order." });
+                }
+                var (exists, allowed) = await _takeawayService.CanCustomerAccessOrderAsync(orderId, customerId.Value, phone);
+                if (!exists)
+                {
+                    return NotFound(new { success = false, message = $"Takeaway order {orderId} was not found." });
+                }
+                if (!allowed)
+                {
+                    return StatusCode(403, new { success = false, message = "You do not have permission to pay for another customer's takeaway order." });
+                }
+            }
+
             var result = await _takeawayService.RecordPaymentAsync(orderId, request, lookupByOrderId: true);
             if (result == null)
             {
@@ -575,6 +639,24 @@ public class TakeawayController : ControllerBase
 
         try
         {
+            var (isCustomer, customerId, phone) = ExtractCustomerContext();
+            if (isCustomer)
+            {
+                if (!customerId.HasValue)
+                {
+                    return StatusCode(403, new { success = false, message = "You do not have permission to record payment for this invoice." });
+                }
+                var (exists, allowed) = await _takeawayService.CanCustomerAccessInvoiceAsync(invoiceId, customerId.Value, phone);
+                if (!exists)
+                {
+                    return NotFound(new { success = false, message = $"Takeaway invoice {invoiceId} was not found." });
+                }
+                if (!allowed)
+                {
+                    return StatusCode(403, new { success = false, message = "You do not have permission to pay for another customer's invoice." });
+                }
+            }
+
             var result = await _takeawayService.RecordPaymentAsync(invoiceId, request, lookupByOrderId: false);
             if (result == null)
             {
