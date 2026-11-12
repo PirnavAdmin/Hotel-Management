@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChefHat,
+  ConciergeBell,
   Clock3,
   Clock,
   Circle,
@@ -26,6 +27,7 @@ import {
   Smartphone,
   Check,
   Bell,
+  BellRing,
   MapPin,
   Tag,
   Star,
@@ -95,6 +97,27 @@ const formatPrice = (value) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+
+const getActivePaymentQr = () => {
+  try {
+    const settings = JSON.parse(
+      localStorage.getItem("gourmet_pos_settings_v1") || "{}",
+    );
+    const paymentQrs = Array.isArray(settings.paymentQrs)
+      ? settings.paymentQrs.filter((qr) => qr?.image)
+      : [];
+
+    return (
+      paymentQrs.find((qr) => qr.id === settings.selectedQrId) ||
+      paymentQrs.find((qr) => qr.active) ||
+      paymentQrs[0] ||
+      null
+    );
+  } catch (error) {
+    console.error("Failed to load the configured takeaway UPI QR", error);
+    return null;
+  }
+};
 
 export const TAKEAWAY_CATEGORIES = [
   { id: "all", label: "All Items", icon: Utensils },
@@ -536,7 +559,14 @@ export function CustomerLandingPage({
 
   // --- Payment State ---
   const [paymentMethod, setPaymentMethod] = useState("upi"); // 'upi' | 'cash' (Matches POS Screen Payment Modes)
+  const [takeawayPaymentQr, setTakeawayPaymentQr] = useState(null);
   const [processingStage, setProcessingStage] = useState(1); // 1: Initiating, 2: Processing, 3: Confirming
+
+  useEffect(() => {
+    if (activeScreen === "payment" && paymentMethod === "upi") {
+      setTakeawayPaymentQr(getActivePaymentQr());
+    }
+  }, [activeScreen, paymentMethod]);
 
   // --- Placed Order & Tracking State ---
   const [placedOrder, setPlacedOrder] = useState(null);
@@ -594,6 +624,7 @@ export function CustomerLandingPage({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isNotifOpen]);
+
   // Sync hash with browser history
   useEffect(() => {
     const handleHistoryNavigation = () => {
@@ -1275,19 +1306,103 @@ export function CustomerLandingPage({
           )}
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-            {/* User greeting pill in takeaway view */}
-            {activeScreen === "menu" && customerUser && (
-              <div className="takeaway-header-user-pill">
-                <UserRound size={15} />
-                <span>Hi, {(customerUser.name || "Priya").split(" ")[0]}</span>
+            {/* Kitchen Cooking Status Notification Bell (Matches POS Header) */}
+            {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
+              <div className="takeaway-header-notif-wrap" ref={notifRef}>
+                <button
+                  type="button"
+                  className={`takeaway-header-notif-btn ${effectiveNotifications.length > 0 ? "has-alerts" : ""}`}
+                  aria-label={`Kitchen status updates${effectiveNotifications.length ? `, ${effectiveNotifications.length} updates` : ""}`}
+                  aria-expanded={isNotifOpen}
+                  aria-haspopup="true"
+                  title="Kitchen Cooking Status Updates"
+                  onClick={() => setIsNotifOpen((open) => !open)}
+                >
+                  {Array.isArray(effectiveNotifications) && effectiveNotifications.some(
+                    (n) => n.type === "cooking_completed"
+                  ) ? (
+                    <BellRing size={16} className="takeaway-bell-ring-active" />
+                  ) : (
+                    <Bell size={16} />
+                  )}
+                  {Array.isArray(effectiveNotifications) && effectiveNotifications.length > 0 && (
+                    <span className="takeaway-notif-badge">
+                      {effectiveNotifications.length > 9 ? "9+" : effectiveNotifications.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown Panel */}
+                {isNotifOpen && (
+                  <div className="takeaway-notif-panel" role="dialog" aria-label="Kitchen Status Notifications">
+                    <div className="takeaway-notif-header">
+                      <div className="takeaway-notif-header-title">
+                        <Bell size={14} color="#f59e0b" />
+                        <span>Kitchen Status Updates</span>
+                        {effectiveNotifications.length > 0 && (
+                          <span className="takeaway-notif-count-tag">
+                            {effectiveNotifications.length}
+                          </span>
+                        )}
+                      </div>
+                      {effectiveNotifications.length > 0 && (
+                        <button
+                          type="button"
+                          className="takeaway-notif-clear-btn"
+                          title="Clear all updates"
+                          onClick={handleClearAllNotifs}
+                        >
+                          <Trash2 size={12} />
+                          <span>Clear</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {effectiveNotifications.length === 0 ? (
+                      <div className="takeaway-notif-empty">
+                        <span style={{ fontSize: "1.4rem", display: "block", marginBottom: "4px" }}>📭</span>
+                        <p>No kitchen status updates yet.</p>
+                      </div>
+                    ) : (
+                      <div className="takeaway-notif-list">
+                        {effectiveNotifications.map((notification, index) => {
+                          const isCompleted = notification.type === "cooking_completed";
+                          return (
+                            <div
+                              key={notification.id || index}
+                              className={`takeaway-notif-item ${isCompleted ? "is-ready" : ""}`}
+                            >
+                              <div className={`takeaway-notif-icon-circle ${isCompleted ? "is-ready" : ""}`}>
+                                {isCompleted ? <CheckCircle2 size={13} /> : <Clock size={13} />}
+                              </div>
+                              <div className="takeaway-notif-item-body">
+                                <div className="takeaway-notif-item-top">
+                                  <strong>{getCleanAlertTitle(notification)}</strong>
+                                  <span>{getCleanAlertTimestamp(notification)}</span>
+                                </div>
+                                <p>{getCleanAlertMessage(notification)}</p>
+                                {notification.tableId && (
+                                  <small className="takeaway-notification-table">
+                                    <MapPin size={10} />
+                                    {cleanNotificationText(notification.tableName) || `Table ${notification.tableId}`}
+                                  </small>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Cart Icon / Dropdown in Header */}
+            {/* Redesigned Modern Cart Pill Button */}
             {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
               <button
                 type="button"
-                className={activeScreen === "menu" ? "takeaway-header-cart-btn" : "customer-header-cart-btn"}
+                className={`takeaway-header-cart-btn ${cartCount > 0 ? "has-items" : ""}`}
                 onClick={() => {
                   if (activeScreen === "menu") {
                     const el = document.getElementById("takeaway-order-sidebar");
@@ -1296,11 +1411,25 @@ export function CustomerLandingPage({
                     navigateScreen("menu");
                   }
                 }}
-                title="Your Order"
+                title={cartCount > 0 ? `Your Cart: ${cartCount} item${cartCount === 1 ? "" : "s"} (${formatPrice(totalAmount)})` : "Your Cart is Empty"}
               >
-                <ShoppingBag size={17} />
-                <span className="takeaway-cart-count-bubble">{cartCount}</span>
-                {activeScreen === "menu" && <ChevronDown size={14} />}
+                <div className="takeaway-cart-btn-icon-wrapper">
+                  <ConciergeBell size={17} />
+                  {cartCount > 0 && (
+                    <span className="takeaway-cart-count-badge">
+                      {cartCount > 9 ? "9+" : cartCount}
+                    </span>
+                  )}
+                </div>
+                <div className="takeaway-cart-btn-details">
+                  <span className="takeaway-cart-btn-label">Cart</span>
+                  {cartCount > 0 && (
+                    <>
+                      <span className="takeaway-cart-btn-dot">•</span>
+                      <span className="takeaway-cart-btn-total">{formatPrice(totalAmount)}</span>
+                    </>
+                  )}
+                </div>
               </button>
             )}
 
@@ -2235,6 +2364,21 @@ export function CustomerLandingPage({
                         <span>UPI Fast Pay: <strong>{formatPrice(totalAmount)}</strong></span>
                       </div>
                       <p>Instant UPI payment confirmation with digital tax invoice receipt.</p>
+                    </div>
+                  )}
+
+                  {paymentMethod === "upi" && (
+                    <div className="customer-takeaway-upi-qr">
+                      {takeawayPaymentQr?.image ? (
+                        <img
+                          src={takeawayPaymentQr.image}
+                          alt={takeawayPaymentQr.label || "Scan to pay with UPI"}
+                        />
+                      ) : (
+                        <div role="status" className="customer-takeaway-upi-qr-empty">
+                          No UPI QR is configured. Add one in Admin Settings.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

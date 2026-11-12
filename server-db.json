@@ -289,10 +289,31 @@
       "createdAt": "2026-11-06T05:02:36",
       "items": [
         {
+<<<<<<< HEAD
+          "id": 229,
+          "kotId": 73,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 87,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
           "menuItemId": 3,
           "dishName": "Special Boneless Chicken Biryani",
           "category": "Biryani",
           "price": 350,
+<<<<<<< HEAD
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "ready",
+          "kotBatch": 1
+        },
+        {
+          "id": 230,
+          "kotId": 73,
+          "botId": null,
+          "isBarItem": false,
+          "orderId": 87,
+=======
           "dietaryType": "Non-Veg",
           "isVeg": false,
           "drinkType": null,
@@ -359,10 +380,17 @@
           "quantity": 1
         },
         {
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
           "menuItemId": 4,
           "dishName": "Chicken 65 Biryani",
           "category": "Biryani",
           "price": 360,
+<<<<<<< HEAD
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "ready",
+          "kotBatch": 1
+=======
           "dietaryType": "Non-Veg",
           "isVeg": false,
           "drinkType": null,
@@ -427,6 +455,7 @@
           "description": "Crispy spicy Chicken 65 tossed with curry leaves layered over biryani",
           "image": "/assets/dishes/default.svg?v=20261015-v4",
           "quantity": 1
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
         }
       ],
       "orderId": 87,
@@ -580,7 +609,11 @@
       "id": 85,
       "orderType": "Takeaway",
       "tableId": 0,
+<<<<<<< HEAD
+      "tableName": "Takeaway",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
@@ -591,16 +624,23 @@
       "taxPercent": 5,
       "taxAmount": 18,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 18,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 378,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-082",
+<<<<<<< HEAD
+=======
       "invoiceId": 62,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261104055422705",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-04T11:24:22",
       "createdAt": "2026-11-04T11:24:22",
       "items": [
@@ -611,6 +651,10 @@
           "total": 360
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 85,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 85,
       "invoiceNumber": "INV-082",
       "taxableAmount": 360,
@@ -618,6 +662,9 @@
       "paidAmount": 378,
       "amountPaid": 378,
       "updatedAt": "2026-11-04T11:24:22",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 54,
@@ -629,19 +676,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-04T11:24:22",
       "orderTime": "2026-11-04T11:24:22",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 378,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261104055422705",
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 378,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 84,
       "orderType": "Takeaway",
       "tableId": 0,
+<<<<<<< HEAD
+      "tableName": "Takeaway",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Takeaway",
       "serverName": "Staff",
       "guests": 1,
@@ -652,16 +715,23 @@
       "taxPercent": 5,
       "taxAmount": 18,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 18,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 378,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-081",
+<<<<<<< HEAD
+=======
       "invoiceId": 61,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261104055330322",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-04T11:23:29",
       "createdAt": "2026-11-04T11:23:29",
       "items": [
@@ -672,6 +742,10 @@
           "total": 360
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 84,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 84,
       "invoiceNumber": "INV-081",
       "taxableAmount": 360,
@@ -679,6 +753,9 @@
       "paidAmount": 378,
       "amountPaid": 378,
       "updatedAt": "2026-11-04T11:23:29",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 53,
@@ -690,19 +767,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-04T11:23:29",
       "orderTime": "2026-11-04T11:23:29",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 378,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261104055330322",
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 378,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 83,
       "orderType": "DineIn",
       "tableId": 5,
+<<<<<<< HEAD
+      "tableName": "Table-5",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -713,16 +806,23 @@
       "taxPercent": 5,
       "taxAmount": 22,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 22,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 484,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-058",
+<<<<<<< HEAD
+=======
       "invoiceId": 60,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T15:19:56",
       "createdAt": "2026-11-03T15:19:56",
       "items": [
@@ -739,6 +839,10 @@
           "total": 120
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 83,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 83,
       "invoiceNumber": "INV-058",
       "taxableAmount": 440,
@@ -746,6 +850,9 @@
       "paidAmount": 484,
       "amountPaid": 484,
       "updatedAt": "2026-11-03T15:19:56",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 52,
@@ -757,19 +864,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T15:19:56",
       "orderTime": "2026-11-03T15:19:56",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 484,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 484,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 82,
       "orderType": "DineIn",
       "tableId": 2,
+<<<<<<< HEAD
+      "tableName": "Table-2",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -780,16 +903,23 @@
       "taxPercent": 5,
       "taxAmount": 39,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 39,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 858,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-057",
+<<<<<<< HEAD
+=======
       "invoiceId": 59,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T15:19:38",
       "createdAt": "2026-11-03T15:19:38",
       "items": [
@@ -812,6 +942,10 @@
           "total": 440
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 82,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 82,
       "invoiceNumber": "INV-057",
       "taxableAmount": 780,
@@ -819,6 +953,9 @@
       "paidAmount": 858,
       "amountPaid": 858,
       "updatedAt": "2026-11-03T15:19:38",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 51,
@@ -830,19 +967,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T15:19:38",
       "orderTime": "2026-11-03T15:19:38",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 858,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 858,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 81,
       "orderType": "DineIn",
       "tableId": 3,
+<<<<<<< HEAD
+      "tableName": "Table-3",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 3,
@@ -853,16 +1006,23 @@
       "taxPercent": 5,
       "taxAmount": 23,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 23,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 506,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-056",
+<<<<<<< HEAD
+=======
       "invoiceId": 58,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T15:18:03",
       "createdAt": "2026-11-03T15:18:03",
       "items": [
@@ -879,6 +1039,10 @@
           "total": 20
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 81,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 81,
       "invoiceNumber": "INV-056",
       "taxableAmount": 460,
@@ -886,6 +1050,9 @@
       "paidAmount": 506,
       "amountPaid": 506,
       "updatedAt": "2026-11-03T15:18:03",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 50,
@@ -897,19 +1064,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T15:18:03",
       "orderTime": "2026-11-03T15:18:03",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 506,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 506,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 79,
       "orderType": "DineIn",
       "tableId": 3,
+<<<<<<< HEAD
+      "tableName": "Table-3",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 3,
@@ -920,16 +1103,23 @@
       "taxPercent": 5,
       "taxAmount": 23,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 23,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 506,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-055",
+<<<<<<< HEAD
+=======
       "invoiceId": 56,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T14:05:23",
       "createdAt": "2026-11-03T14:05:23",
       "items": [
@@ -946,6 +1136,10 @@
           "total": 20
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 79,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 79,
       "invoiceNumber": "INV-055",
       "taxableAmount": 460,
@@ -953,6 +1147,9 @@
       "paidAmount": 506,
       "amountPaid": 506,
       "updatedAt": "2026-11-03T14:05:23",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 49,
@@ -964,19 +1161,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T14:05:23",
       "orderTime": "2026-11-03T14:05:23",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 506,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 506,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 78,
       "orderType": "DineIn",
       "tableId": 5,
+<<<<<<< HEAD
+      "tableName": "Table-5",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -987,16 +1200,23 @@
       "taxPercent": 5,
       "taxAmount": 22,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 22,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 484,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-054",
+<<<<<<< HEAD
+=======
       "invoiceId": 55,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T14:05:14",
       "createdAt": "2026-11-03T14:05:14",
       "items": [
@@ -1013,6 +1233,10 @@
           "total": 120
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 78,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 78,
       "invoiceNumber": "INV-054",
       "taxableAmount": 440,
@@ -1020,6 +1244,9 @@
       "paidAmount": 484,
       "amountPaid": 484,
       "updatedAt": "2026-11-03T14:05:14",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 48,
@@ -1031,19 +1258,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T14:05:14",
       "orderTime": "2026-11-03T14:05:14",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 484,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 484,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 59,
       "orderType": "DineIn",
       "tableId": 2,
+<<<<<<< HEAD
+      "tableName": "Table-2",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -1054,16 +1297,23 @@
       "taxPercent": 5,
       "taxAmount": 61.5,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 61.5,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 1353,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-053",
+<<<<<<< HEAD
+=======
       "invoiceId": 54,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103083413517",
       "barBotNumber": "BOT-20261103073846016",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T14:05:04",
       "createdAt": "2026-11-03T14:05:04",
       "items": [
@@ -1092,6 +1342,10 @@
           "total": 440
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 59,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 59,
       "invoiceNumber": "INV-053",
       "taxableAmount": 1230,
@@ -1099,6 +1353,9 @@
       "paidAmount": 1353,
       "amountPaid": 1353,
       "updatedAt": "2026-11-03T14:05:04",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 47,
@@ -1110,19 +1367,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T14:05:04",
       "orderTime": "2026-11-03T14:05:04",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 1353,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103083413517",
+      "barBotNumber": "BOT-20261103073846016",
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 1353,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 37,
       "orderType": "DineIn",
       "tableId": 3,
+<<<<<<< HEAD
+      "tableName": "Table-3",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 4,
@@ -1133,16 +1406,23 @@
       "taxPercent": 5,
       "taxAmount": 219.25,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 219.25,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 4823.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-052",
+<<<<<<< HEAD
+=======
       "invoiceId": 53,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103071142305",
       "barBotNumber": "BOT-20261103074740901",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T14:03:57",
       "createdAt": "2026-11-03T14:03:57",
       "items": [
@@ -1213,6 +1493,10 @@
           "total": 180
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 37,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 37,
       "invoiceNumber": "INV-052",
       "taxableAmount": 4385,
@@ -1220,6 +1504,9 @@
       "paidAmount": 4823.5,
       "amountPaid": 4823.5,
       "updatedAt": "2026-11-03T14:03:57",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 46,
@@ -1231,19 +1518,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T14:03:57",
       "orderTime": "2026-11-03T14:03:57",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 4823.5,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103071142305",
+      "barBotNumber": "BOT-20261103074740901",
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 4823.5,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 64,
       "orderType": "DineIn",
       "tableId": 5,
+<<<<<<< HEAD
+      "tableName": "Table-5",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -1254,16 +1557,23 @@
       "taxPercent": 5,
       "taxAmount": 22,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 22,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 484,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-051",
+<<<<<<< HEAD
+=======
       "invoiceId": 52,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103071917591",
       "barBotNumber": "BOT-20261103071917614",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T14:03:47",
       "createdAt": "2026-11-03T14:03:47",
       "items": [
@@ -1280,6 +1590,10 @@
           "total": 120
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 64,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 64,
       "invoiceNumber": "INV-051",
       "taxableAmount": 440,
@@ -1287,6 +1601,9 @@
       "paidAmount": 484,
       "amountPaid": 484,
       "updatedAt": "2026-11-03T14:03:47",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 45,
@@ -1298,19 +1615,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T14:03:47",
       "orderTime": "2026-11-03T14:03:47",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 484,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103071917591",
+      "barBotNumber": "BOT-20261103071917614",
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 484,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 75,
       "orderType": "DineIn",
       "tableId": 6,
+<<<<<<< HEAD
+      "tableName": "Table-6",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 2,
@@ -1321,16 +1654,23 @@
       "taxPercent": 5,
       "taxAmount": 63,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 63,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 1323,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261103-75",
+<<<<<<< HEAD
+=======
       "invoiceId": 51,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103074924517",
       "barBotNumber": "BOT-20261103074924536",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T13:19:46",
       "createdAt": "2026-11-03T13:19:46",
       "items": [
@@ -1359,6 +1699,10 @@
           "total": 350
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 75,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 75,
       "invoiceNumber": "INV-20261103-75",
       "taxableAmount": 1260,
@@ -1366,6 +1710,9 @@
       "paidAmount": 1323,
       "amountPaid": 1323,
       "updatedAt": "2026-11-03T13:19:46",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 44,
@@ -1377,19 +1724,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T13:19:46",
       "orderTime": "2026-11-03T13:19:46",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 1323,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103074924517",
+      "barBotNumber": "BOT-20261103074924536",
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 1323,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 72,
       "orderType": "DineIn",
       "tableId": 7,
+<<<<<<< HEAD
+      "tableName": "Table-7",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -1400,16 +1763,23 @@
       "taxPercent": 5,
       "taxAmount": 17.5,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 17.5,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 367.5,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261103-72",
+<<<<<<< HEAD
+=======
       "invoiceId": 50,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": "BOT-20261103074739447",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T13:19:00",
       "createdAt": "2026-11-03T13:19:00",
       "items": [
@@ -1420,6 +1790,10 @@
           "total": 350
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 72,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 72,
       "invoiceNumber": "INV-20261103-72",
       "taxableAmount": 350,
@@ -1427,6 +1801,9 @@
       "paidAmount": 367.5,
       "amountPaid": 367.5,
       "updatedAt": "2026-11-03T13:19:00",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 43,
@@ -1438,19 +1815,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T13:19:00",
       "orderTime": "2026-11-03T13:19:00",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 367.5,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": "BOT-20261103074739447",
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 367.5,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 71,
       "orderType": "DineIn",
       "tableId": 14,
+<<<<<<< HEAD
+      "tableName": "Table-14",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 2,
@@ -1461,16 +1854,23 @@
       "taxPercent": 5,
       "taxAmount": 14,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 14,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 294,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261103-71",
+<<<<<<< HEAD
+=======
       "invoiceId": 49,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103074739084",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T13:18:59",
       "createdAt": "2026-11-03T13:18:59",
       "items": [
@@ -1481,6 +1881,10 @@
           "total": 280
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 71,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 71,
       "invoiceNumber": "INV-20261103-71",
       "taxableAmount": 280,
@@ -1488,6 +1892,9 @@
       "paidAmount": 294,
       "amountPaid": 294,
       "updatedAt": "2026-11-03T13:18:59",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 42,
@@ -1499,19 +1906,35 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T13:18:59",
       "orderTime": "2026-11-03T13:18:59",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 294,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103074739084",
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 294,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 66,
       "orderType": "DineIn",
       "tableId": 57,
+<<<<<<< HEAD
+      "tableName": "Table 17",
+=======
       "tableName": "Table 1",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "section": "Main Hall",
       "serverName": "Staff",
       "guests": 1,
@@ -1522,16 +1945,23 @@
       "taxPercent": 5,
       "taxAmount": 16,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 16,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 336,
       "paymentMethod": "CASH",
       "invoiceNo": "TEST-DI-20261103072117",
+<<<<<<< HEAD
+=======
       "invoiceId": 48,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103072118999",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-03T12:51:19",
       "createdAt": "2026-11-03T12:51:19",
       "items": [
@@ -1542,6 +1972,10 @@
           "total": 320
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 66,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 66,
       "invoiceNumber": "TEST-DI-20261103072117",
       "taxableAmount": 320,
@@ -1549,6 +1983,9 @@
       "paidAmount": 336,
       "amountPaid": 336,
       "updatedAt": "2026-11-03T12:51:19",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "paymentId": 41,
@@ -1560,13 +1997,25 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-03T12:51:19",
       "orderTime": "2026-11-03T12:51:19",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 336,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103072118999",
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "serviceCharge": 0,
       "total": 336,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 45,
@@ -1588,11 +2037,14 @@
       "grandTotal": 720.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261102-45",
+<<<<<<< HEAD
+=======
       "invoiceId": 45,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102104056080",
       "barBotNumber": "BOT-20261102104056102",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T16:10:56",
       "createdAt": "2026-11-02T16:10:56",
       "items": [
@@ -1609,6 +2061,10 @@
           "total": 235
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 45,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 45,
       "invoiceNumber": "INV-20261102-45",
       "taxableAmount": 655,
@@ -1617,14 +2073,26 @@
       "amountPaid": 720.5,
       "updatedAt": "2026-11-02T16:10:56",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T16:10:56",
       "orderTime": "2026-11-02T16:10:56",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 720.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102104056080",
+      "barBotNumber": "BOT-20261102104056102",
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 33,
@@ -1646,11 +2114,14 @@
       "grandTotal": 633.6,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-E2E-1793612356050",
+<<<<<<< HEAD
+=======
       "invoiceId": 35,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T15:09:16",
       "createdAt": "2026-11-02T15:09:16",
       "items": [
@@ -1661,6 +2132,10 @@
           "total": 640
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 33,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 33,
       "invoiceNumber": "INV-E2E-1793612356050",
       "taxableAmount": 576,
@@ -1669,14 +2144,26 @@
       "amountPaid": 633.6,
       "updatedAt": "2026-11-02T15:09:16",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T15:09:16",
       "orderTime": "2026-11-02T15:09:16",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 633.6,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 31,
@@ -1698,11 +2185,14 @@
       "grandTotal": 633.6,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-E2E-1793612202957",
+<<<<<<< HEAD
+=======
       "invoiceId": 34,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T15:06:42",
       "createdAt": "2026-11-02T15:06:42",
       "items": [
@@ -1713,6 +2203,10 @@
           "total": 640
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 31,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 31,
       "invoiceNumber": "INV-E2E-1793612202957",
       "taxableAmount": 576,
@@ -1721,14 +2215,26 @@
       "amountPaid": 633.6,
       "updatedAt": "2026-11-02T15:06:43",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T15:06:42",
       "orderTime": "2026-11-02T15:06:42",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 633.6,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 30,
@@ -1750,11 +2256,14 @@
       "grandTotal": 495,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-TEST-1793611304594",
+<<<<<<< HEAD
+=======
       "invoiceId": 33,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T14:51:45",
       "createdAt": "2026-11-02T14:51:45",
       "items": [
@@ -1765,6 +2274,10 @@
           "total": 500
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 30,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 30,
       "invoiceNumber": "INV-TEST-1793611304594",
       "taxableAmount": 450,
@@ -1773,14 +2286,26 @@
       "amountPaid": 495,
       "updatedAt": "2026-11-02T14:51:45",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T14:51:45",
       "orderTime": "2026-11-02T14:51:45",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 495,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": "ord_1793695325119_vm2uu",
@@ -1800,6 +2325,9 @@
       "serviceChargeAmount": 0,
       "tipAmount": 0,
       "grandTotal": 830,
+<<<<<<< HEAD
+      "invoiceNo": "INV-053",
+=======
       "paymentMethod": "cash",
       "invoiceNo": "INV-053",
       "invoiceId": "ord_1793695325119_vm2uu",
@@ -1807,6 +2335,7 @@
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261103084205781",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "02:12 PM",
       "createdAt": "2026-11-03T08:42:06",
       "items": [
@@ -1964,6 +2493,15 @@
       "payments": [],
       "total": 830,
       "Status": "Settled",
+<<<<<<< HEAD
+      "invoiceId": "ord_1793695325119_vm2uu",
+      "paymentMethod": "cash",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261103084205781",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 1,
       "paymentMode": "cash",
       "PaymentMethod": "cash",
@@ -1998,11 +2536,14 @@
       "grandTotal": 378,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261102-115438814",
+<<<<<<< HEAD
+=======
       "invoiceId": 47,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102115438833",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T11:54:39",
       "createdAt": "2026-11-02T11:54:39",
       "items": [
@@ -2013,6 +2554,10 @@
           "total": 360
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 47,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 55,
       "invoiceNumber": "INV-20261102-115438814",
       "taxableAmount": 360,
@@ -2021,14 +2566,26 @@
       "amountPaid": 378,
       "updatedAt": "2026-11-02T11:54:39",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T11:54:39",
       "orderTime": "2026-11-02T11:54:39",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 378,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102115438833",
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 54,
@@ -2050,11 +2607,14 @@
       "grandTotal": 493.8,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261102-115438435",
+<<<<<<< HEAD
+=======
       "invoiceId": 54,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102115438672",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T11:54:39",
       "createdAt": "2026-11-02T11:54:39",
       "items": [
@@ -2071,6 +2631,10 @@
           "total": 120
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 54,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 54,
       "invoiceNumber": "INV-20261102-115438435",
       "taxableAmount": 456,
@@ -2079,13 +2643,43 @@
       "amountPaid": 493.8,
       "updatedAt": "2026-11-02T11:54:39",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T11:54:39",
       "orderTime": "2026-11-02T11:54:39",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 493.8,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102115438672",
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+      "invoiceId": 44,
+      "orderId": 52,
+      "invoiceNumber": "INV-20261102-115022347",
+      "subtotal": 360,
+      "taxableAmount": 360,
+      "taxAmount": 18,
+      "discountAmount": 0,
+      "totalAmount": 378,
+      "paidAmount": 378,
+      "amountPaid": 0,
+      "status": "Settled",
+      "createdAt": "2026-11-02T11:50:22",
+      "updatedAt": "2026-11-02T11:50:22",
+      "payments": [],
+      "tableName": "Table 1",
+      "serverName": "Staff",
+      "paymentMethod": "CASH",
+=======
       "Status": "Settled"
     },
     {
@@ -2110,6 +2704,7 @@
       "paidAmount": 378,
       "paymentMethod": "CASH",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "name": "Chicken 65 Biryani",
@@ -2118,6 +2713,22 @@
           "total": 360
         }
       ],
+<<<<<<< HEAD
+      "id": 52,
+      "invoiceNo": "INV-20261102-115022347",
+      "server": "Staff",
+      "date": "2026-11-02T11:50:22",
+      "settledAt": "2026-11-02T11:50:22",
+      "orderTime": "2026-11-02T11:50:22",
+      "isPaid": true,
+      "discountPercent": 0,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 378,
+      "total": 378,
+      "Status": "Settled"
+=======
       "createdAt": "2026-11-02T11:50:22",
       "settledAt": "2026-11-02T11:50:22",
       "date": "2026-11-02T11:50:22",
@@ -2128,6 +2739,7 @@
       "Status": "Settled",
       "amountPaid": 0,
       "updatedAt": "2026-11-02T11:50:22"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 48,
@@ -2147,6 +2759,9 @@
       "serviceChargeAmount": 16,
       "tipAmount": 0,
       "grandTotal": 352,
+<<<<<<< HEAD
+      "invoiceNo": "INV-048",
+=======
       "paymentMethod": "Cash",
       "invoiceNo": "INV-048",
       "invoiceId": 48,
@@ -2154,6 +2769,7 @@
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102110144020",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T11:01:44",
       "createdAt": "2026-11-02T11:01:44",
       "items": [
@@ -2186,7 +2802,17 @@
       "paidAmount": 352,
       "payments": [],
       "total": 352,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 48,
+      "paymentMethod": "Cash",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102110144020",
+      "barBotNumber": null
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 49,
@@ -2206,6 +2832,9 @@
       "serviceChargeAmount": 46.75,
       "tipAmount": 0,
       "grandTotal": 1028.5,
+<<<<<<< HEAD
+      "invoiceNo": "INV-049",
+=======
       "paymentMethod": "Cash",
       "invoiceNo": "INV-049",
       "invoiceId": 49,
@@ -2213,6 +2842,7 @@
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": "BOT-20261102110144196",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T11:01:44",
       "createdAt": "2026-11-02T11:01:44",
       "items": [
@@ -2261,7 +2891,17 @@
       "paidAmount": 1028.5,
       "payments": [],
       "total": 1028.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 49,
+      "paymentMethod": "Cash",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": "BOT-20261102110144196"
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 50,
@@ -2281,6 +2921,9 @@
       "serviceChargeAmount": 77.75,
       "tipAmount": 0,
       "grandTotal": 1710.5,
+<<<<<<< HEAD
+      "invoiceNo": "INV-050",
+=======
       "paymentMethod": "Cash",
       "invoiceNo": "INV-050",
       "invoiceId": 50,
@@ -2288,6 +2931,7 @@
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102110144326",
       "barBotNumber": "BOT-20261102110144350",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T11:01:44",
       "createdAt": "2026-11-02T11:01:44",
       "items": [
@@ -2384,11 +3028,24 @@
       "paidAmount": 1710.5,
       "payments": [],
       "total": 1710.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 50,
+      "paymentMethod": "Cash",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102110144326",
+      "barBotNumber": "BOT-20261102110144350"
+    },
+    {
+      "id": 43,
+=======
       "Status": "Settled"
     },
     {
       "id": 43,
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 102,
       "tableName": "Takeaway / Direct",
       "section": "",
@@ -2406,7 +3063,11 @@
       "grandTotal": 1028.5,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-043",
+<<<<<<< HEAD
+      "orderType": "DineIn",
+=======
       "invoiceId": 43,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
@@ -2459,11 +3120,19 @@
       "paidAmount": 1028.5,
       "payments": [],
       "total": 1028.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 43
+    },
+    {
+      "id": 44,
+=======
       "Status": "Settled"
     },
     {
       "id": 44,
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 103,
       "tableName": "Takeaway / Direct",
       "section": "",
@@ -2481,7 +3150,11 @@
       "grandTotal": 1710.5,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-044",
+<<<<<<< HEAD
+      "orderType": "DineIn",
+=======
       "invoiceId": 44,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102104042657",
@@ -2582,11 +3255,19 @@
       "paidAmount": 1710.5,
       "payments": [],
       "total": 1710.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 44
+    },
+    {
+      "id": 42,
+=======
       "Status": "Settled"
     },
     {
       "id": 42,
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 101,
       "tableName": "Takeaway / Direct",
       "section": "",
@@ -2604,7 +3285,11 @@
       "grandTotal": 352,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-042",
+<<<<<<< HEAD
+      "orderType": "DineIn",
+=======
       "invoiceId": 42,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102104042422",
@@ -2641,6 +3326,32 @@
       "paidAmount": 352,
       "payments": [],
       "total": 352,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 42
+    },
+    {
+      "id": 1793595795525,
+      "tableId": 1,
+      "tableName": "Table-1",
+      "section": "VIP Lounge",
+      "serverName": "Rajesh K.",
+      "guests": 1,
+      "status": "Settled",
+      "subtotal": 760,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 38,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 38,
+      "tipAmount": 0,
+      "grandTotal": 798,
+      "paymentMethod": "upi",
+      "invoiceNo": "INV-001",
+      "settledAt": "10:33 AM",
+      "createdAt": "10:33 AM",
+=======
       "Status": "Settled"
     },
     {
@@ -2666,6 +3377,7 @@
       "paidAmount": 798,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "menuItemId": 1,
@@ -2686,20 +3398,36 @@
           "notes": ""
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 1793595795525,
+      "orderId": 1793595795525,
+      "invoiceNumber": "INV-001",
+      "taxableAmount": 760,
+      "totalAmount": 798,
+      "paidAmount": 798,
+      "amountPaid": 1672,
+      "updatedAt": "2026-10-30T18:01:54",
+      "payments": [],
+      "server": "Rajesh K.",
+=======
       "createdAt": "10:33 AM",
       "settledAt": "10:33 AM",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "date": "10:33 AM",
       "orderTime": "06:00 PM",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 798,
       "Status": "Settled",
+<<<<<<< HEAD
+=======
       "section": "VIP Lounge",
       "guests": 1,
       "taxPercent": 5,
       "serviceChargePercent": 5,
       "amountPaid": 1672,
       "updatedAt": "2026-10-30T18:01:54",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 6,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -2717,7 +3445,10 @@
     },
     {
       "id": 39,
+<<<<<<< HEAD
+=======
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 101,
       "tableName": "Takeaway / Direct",
       "section": "",
@@ -2735,7 +3466,11 @@
       "grandTotal": 704,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-039",
+<<<<<<< HEAD
+      "orderType": "DineIn",
+=======
       "invoiceId": 39,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102103632318",
@@ -2788,11 +3523,19 @@
       "paidAmount": 704,
       "payments": [],
       "total": 704,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 39
+    },
+    {
+      "id": 40,
+=======
       "Status": "Settled"
     },
     {
       "id": 40,
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 102,
       "tableName": "Takeaway / Direct",
       "section": "",
@@ -2810,7 +3553,11 @@
       "grandTotal": 2057,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-040",
+<<<<<<< HEAD
+      "orderType": "DineIn",
+=======
       "invoiceId": 40,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102102809403",
@@ -2895,11 +3642,19 @@
       "paidAmount": 2057,
       "payments": [],
       "total": 2057,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 40
+    },
+    {
+      "id": 41,
+=======
       "Status": "Settled"
     },
     {
       "id": 41,
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 103,
       "tableName": "Takeaway / Direct",
       "section": "",
@@ -2917,7 +3672,11 @@
       "grandTotal": 3421,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-041",
+<<<<<<< HEAD
+      "orderType": "DineIn",
+=======
       "invoiceId": 41,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102103632560",
@@ -3098,7 +3857,12 @@
       "paidAmount": 3421,
       "payments": [],
       "total": 3421,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 41
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 25,
@@ -3120,11 +3884,14 @@
       "grandTotal": 1672,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-001",
+<<<<<<< HEAD
+=======
       "invoiceId": 25,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261030123030078",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-30T18:01:54",
       "createdAt": "2026-10-30T18:01:54",
       "items": [
@@ -3173,6 +3940,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 25,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 25,
       "invoiceNumber": "INV-001",
       "taxableAmount": 1520,
@@ -3181,7 +3952,10 @@
       "amountPaid": 1672,
       "updatedAt": "2026-10-30T18:01:54",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-30T18:01:54",
       "orderTime": "2026-10-30T18:01:54",
@@ -3189,6 +3963,13 @@
       "serviceCharge": 5,
       "total": 1672,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261030123030078",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 6,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -3200,6 +3981,10 @@
       "completedDuration": "01m 28s",
       "orderTimestamp": 1793363419689,
       "backendOrderId": 25,
+<<<<<<< HEAD
+      "billingSessionId": "25",
+      "dueAmount": 0
+=======
       "billingSessionId": "25"
     },
     {
@@ -3278,6 +4063,7 @@
       "barBotNumber": "BOT-20261102102346040",
       "tableId": 2,
       "invoiceId": "ord_1793602272680_tcyif"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 46,
@@ -3299,11 +4085,14 @@
       "grandTotal": 781,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-008",
+<<<<<<< HEAD
+=======
       "invoiceId": 46,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102105241683",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T16:23:03",
       "createdAt": "2026-11-02T16:23:03",
       "items": [
@@ -3320,6 +4109,10 @@
           "total": 360
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 46,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 46,
       "invoiceNumber": "INV-008",
       "taxableAmount": 710,
@@ -3328,7 +4121,10 @@
       "amountPaid": 781,
       "updatedAt": "2026-11-02T16:23:03",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T16:23:03",
       "orderTime": "2026-11-02T16:23:03",
@@ -3336,6 +4132,13 @@
       "serviceCharge": 5,
       "total": 781,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102105241683",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 6,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -3347,7 +4150,12 @@
       "completedDuration": "00m 52s",
       "orderTimestamp": 1793616756306,
       "backendOrderId": 46,
+<<<<<<< HEAD
+      "billingSessionId": "46",
+      "dueAmount": 0
+=======
       "billingSessionId": "46"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 36,
@@ -3364,16 +4172,23 @@
       "taxPercent": 5,
       "taxAmount": 68.5,
       "serviceChargePercent": 5,
+<<<<<<< HEAD
+      "serviceChargeAmount": 68.5,
+=======
       "serviceChargeAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tipAmount": 0,
       "grandTotal": 1507,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-007",
+<<<<<<< HEAD
+=======
       "invoiceId": 36,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102102017582",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T15:50:18",
       "createdAt": "2026-11-02T15:50:18",
       "items": [
@@ -3408,6 +4223,10 @@
           "total": 470
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 36,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 36,
       "invoiceNumber": "INV-007",
       "taxableAmount": 1370,
@@ -3415,6 +4234,9 @@
       "paidAmount": 1507,
       "amountPaid": 1507,
       "updatedAt": "2026-11-02T15:50:18",
+<<<<<<< HEAD
+      "payments": [],
+=======
       "payments": [
         {
           "amount": 1507,
@@ -3423,13 +4245,24 @@
         }
       ],
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T15:50:18",
       "orderTime": "2026-11-02T15:50:18",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 1507,
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102102017582",
+      "barBotNumber": null,
+=======
       "serviceCharge": 0,
       "total": 1507,
       "Status": "Settled",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 5,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -3441,7 +4274,12 @@
       "completedDuration": "22m 58s",
       "orderTimestamp": 1793613429358,
       "backendOrderId": 36,
+<<<<<<< HEAD
+      "billingSessionId": "36",
+      "dueAmount": 0
+=======
       "billingSessionId": "36"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": "ord_1793613335048_ykigs",
@@ -3463,6 +4301,10 @@
       "grandTotal": 1854,
       "paymentMethod": "upi",
       "invoiceNo": "INV-005",
+<<<<<<< HEAD
+      "settledAt": "03:25 PM",
+      "createdAt": "03:25 PM",
+=======
       "invoiceId": "ord_1793613335048_ykigs",
       "customerName": null,
       "customerPhone": null,
@@ -3470,6 +4312,7 @@
       "barBotNumber": null,
       "settledAt": "03:25 PM",
       "createdAt": "2026-11-02T09:54:39",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": 1,
@@ -3584,10 +4427,18 @@
           "kotPendingServer": false
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": "ord_1793613335048_ykigs",
+      "orderId": "ord_1793613335048_ykigs",
+      "invoiceNumber": "INV-005",
+      "server": "Staff",
+      "date": "03:25 PM",
+=======
       "orderId": 35,
       "invoiceNumber": "INV-035",
       "server": "Staff",
       "date": "02 Nov 2026",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderTime": "03:24 PM",
       "isPaid": true,
       "taxableAmount": 1885,
@@ -3597,6 +4448,13 @@
       "payments": [],
       "total": 1854,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102095439511",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 4,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -3611,6 +4469,8 @@
       "billingSessionId": "35"
     },
     {
+<<<<<<< HEAD
+=======
       "id": 28,
       "tableName": "Table-2",
       "section": "Main Hall",
@@ -3675,6 +4535,7 @@
       "tableId": 2
     },
     {
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "id": 47,
       "tableName": "Table-2",
       "section": "Main Hall",
@@ -3696,8 +4557,12 @@
       "createdAt": "2026-11-02T10:59:43",
       "items": [
         {
+<<<<<<< HEAD
+          "id": 128,
+=======
           "id": 0,
           "kotId": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
           "orderId": 47,
           "menuItemId": 2,
           "name": "Royal Mutton Dum Biryani",
@@ -3706,14 +4571,22 @@
           "notes": "",
           "kotStatus": "served",
           "kotBatch": 1,
+<<<<<<< HEAD
+          "kotId": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
           "botId": null,
           "isBarItem": false,
           "department": "Kitchen",
           "category": null
         },
         {
+<<<<<<< HEAD
+          "id": 129,
+=======
           "id": 0,
           "kotId": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
           "orderId": 47,
           "menuItemId": 3,
           "name": "Special Boneless Chicken Biryani",
@@ -3722,6 +4595,10 @@
           "notes": "",
           "kotStatus": "served",
           "kotBatch": 1,
+<<<<<<< HEAD
+          "kotId": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
           "botId": null,
           "isBarItem": false,
           "department": "Kitchen",
@@ -3765,6 +4642,160 @@
       "invoiceId": 47
     },
     {
+<<<<<<< HEAD
+      "id": 38,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Settled",
+      "subtotal": 935,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 46.75,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 46.75,
+      "tipAmount": 0,
+      "grandTotal": 1028.5,
+      "paymentMethod": "Cash",
+      "invoiceNo": "INV-038",
+      "settledAt": "2026-11-02T10:23:46",
+      "createdAt": "2026-11-02T10:23:46",
+      "items": [
+        {
+          "id": 93,
+          "orderId": 38,
+          "menuItemId": 1,
+          "name": "Mojito",
+          "price": 235,
+          "quantity": 1,
+          "notes": "Extra mint",
+          "kotStatus": "served",
+          "kotBatch": 1,
+          "kotId": 14,
+          "botId": null,
+          "isBarItem": false,
+          "department": "Kitchen",
+          "category": null
+        },
+        {
+          "id": 94,
+          "orderId": 38,
+          "menuItemId": 7,
+          "name": "Vikas Vodka",
+          "price": 700,
+          "quantity": 1,
+          "notes": "On the rocks",
+          "kotStatus": "served",
+          "kotBatch": 1,
+          "kotId": null,
+          "botId": 1,
+          "isBarItem": true,
+          "department": "Bar",
+          "category": null
+        }
+      ],
+      "total": 1028.5,
+      "totalAmount": 1028.5,
+      "paidAmount": 1028.5,
+      "Status": "Settled",
+      "orderId": 38,
+      "invoiceNumber": "INV-038",
+      "server": "Staff",
+      "taxableAmount": 935,
+      "payments": [],
+      "date": "2026-11-02T10:23:46",
+      "orderTime": "2026-11-02T10:23:46",
+      "isPaid": true,
+      "serviceCharge": 5,
+      "capacity": 5,
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledDate": "2026-11-01",
+      "cookingStartedAt": "03:53 PM",
+      "completedAt": "03:53 PM",
+      "completedDuration": "5h 30m 01s",
+      "orderTimestamp": 1793353277058,
+      "backendOrderId": 38,
+      "billingSessionId": "38",
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102102346012",
+      "barBotNumber": "BOT-20261102102346040",
+      "tableId": 2,
+      "invoiceId": 38
+    },
+    {
+      "id": 28,
+      "tableId": 2,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "serverName": "Staff",
+      "guests": 2,
+      "status": "Settled",
+      "subtotal": 880,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 44,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 44,
+      "tipAmount": 0,
+      "grandTotal": 968,
+      "paymentMethod": "UPI",
+      "invoiceNo": "INV-005",
+      "settledAt": "2026-11-02T12:21:17",
+      "createdAt": "2026-11-02T12:21:17",
+      "items": [
+        {
+          "name": "Royal Mutton Dum Biryani",
+          "quantity": 2,
+          "price": 440,
+          "total": 880
+        }
+      ],
+      "total": 968,
+      "totalAmount": 968,
+      "paidAmount": 968,
+      "Status": "Settled",
+      "invoiceId": 28,
+      "orderId": 28,
+      "invoiceNumber": "INV-005",
+      "server": "Staff",
+      "taxableAmount": 880,
+      "payments": [],
+      "date": "2026-11-02T12:21:17",
+      "orderTime": "2026-11-02T12:21:17",
+      "isPaid": true,
+      "serviceCharge": 5,
+      "capacity": 4,
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "cashTendered": 869,
+      "changeDue": 0,
+      "settledDate": "2026-11-01",
+      "cookingStartedAt": "03:53 PM",
+      "completedAt": "03:53 PM",
+      "completedDuration": "5h 30m 01s",
+      "orderTimestamp": 1793353277058,
+      "backendOrderId": 28,
+      "billingSessionId": "28",
+      "amountPaid": 968,
+      "updatedAt": "2026-11-02T12:21:17",
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "id": 29,
       "orderType": "DineIn",
       "tableId": 5,
@@ -3784,11 +4815,14 @@
       "grandTotal": 1248.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-006",
+<<<<<<< HEAD
+=======
       "invoiceId": 29,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102070130052",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T15:50:07",
       "createdAt": "2026-11-02T15:50:07",
       "items": [
@@ -3811,6 +4845,10 @@
           "total": 235
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 29,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 29,
       "invoiceNumber": "INV-006",
       "taxableAmount": 1135,
@@ -3819,7 +4857,10 @@
       "amountPaid": 1248.5,
       "updatedAt": "2026-11-02T15:50:07",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T15:50:07",
       "orderTime": "2026-11-02T15:50:07",
@@ -3827,6 +4868,13 @@
       "serviceCharge": 5,
       "total": 1248.5,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102070130052",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 2,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -3838,6 +4886,19 @@
       "completedDuration": "1h 30m 54s",
       "orderTimestamp": 1793609395495,
       "backendOrderId": 29,
+<<<<<<< HEAD
+      "billingSessionId": "29",
+      "dueAmount": 0
+    },
+    {
+      "tableId": "TAKEAWAY",
+      "tableName": "Takeaway",
+      "section": "Takeaway",
+      "server": "pirnav",
+      "guests": 1,
+      "capacity": 1,
+      "orderTime": "12:45 PM",
+=======
       "billingSessionId": "29"
     },
     {
@@ -3863,6 +4924,7 @@
       "paidAmount": 714,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": "1",
@@ -3971,6 +5033,28 @@
           "quantity": 1
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 680,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxAmount": 34,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 714,
+      "paymentMethod": "upi",
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "status": "Settled",
+      "cashTendered": 714,
+      "changeDue": 0,
+      "settledAt": "12:45 PM",
+      "date": "12:45 PM",
+      "settledDate": "2026-11-01",
+      "invoiceNo": "INV-004",
+      "id": "ord_1793603732168_dygfu",
+      "Status": "Settled",
+=======
       "createdAt": "12:45 PM",
       "settledAt": "12:45 PM",
       "date": "12:45 PM",
@@ -3987,11 +5071,48 @@
       "cashTendered": 714,
       "changeDue": 0,
       "settledDate": "2026-11-01",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "cookingStartedAt": "12:45 PM",
       "completedAt": "12:45 PM",
       "completedDuration": "",
       "orderTimestamp": 1793603732168,
       "backendOrderId": null,
+<<<<<<< HEAD
+      "billingSessionId": "local:TAKEAWAY:1793603732168",
+      "total": 714,
+      "totalAmount": 714,
+      "paidAmount": 714,
+      "invoiceId": "ord_1793603732168_dygfu",
+      "orderId": "ord_1793603732168_dygfu",
+      "invoiceNumber": "INV-004",
+      "serverName": "pirnav",
+      "taxableAmount": 680,
+      "payments": [],
+      "createdAt": "12:45 PM",
+      "isPaid": true
+    },
+    {
+      "id": "ord_1793602272680_tcyif",
+      "tableId": 2,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "serverName": "Rajesh K.",
+      "guests": 2,
+      "status": "Settled",
+      "subtotal": 790,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxPercent": 5,
+      "taxAmount": 39.5,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 39.5,
+      "tipAmount": 0,
+      "grandTotal": 869,
+      "paymentMethod": "upi",
+      "invoiceNo": "INV-005",
+      "settledAt": "12:21 PM",
+      "createdAt": "12:21 PM",
+=======
       "billingSessionId": "local:TAKEAWAY:1793603732168"
     },
     {
@@ -4017,6 +5138,7 @@
       "paidAmount": 869,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": "bir-2",
@@ -4041,6 +5163,22 @@
           "kotPendingServer": false
         }
       ],
+<<<<<<< HEAD
+      "total": 869,
+      "totalAmount": 869,
+      "paidAmount": 869,
+      "Status": "Settled",
+      "invoiceId": "ord_1793602272680_tcyif",
+      "orderId": "ord_1793602272680_tcyif",
+      "invoiceNumber": "INV-005",
+      "server": "Rajesh K.",
+      "taxableAmount": 980,
+      "payments": [],
+      "date": "12:21 PM",
+      "orderTime": "03:11 PM",
+      "isPaid": true,
+      "serviceCharge": 5,
+=======
       "createdAt": "2026-10-26T04:38:09",
       "settledAt": "12:21 PM",
       "date": "02 Nov 2026",
@@ -4053,6 +5191,7 @@
       "guests": 2,
       "taxPercent": 5,
       "serviceChargePercent": 5,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 4,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -4086,11 +5225,14 @@
       "grandTotal": 1677.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-003",
+<<<<<<< HEAD
+=======
       "invoiceId": 27,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102055635415",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T11:26:52",
       "createdAt": "2026-11-02T11:26:52",
       "items": [
@@ -4131,6 +5273,10 @@
           "total": 360
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 27,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 27,
       "invoiceNumber": "INV-003",
       "taxableAmount": 1525,
@@ -4139,7 +5285,10 @@
       "amountPaid": 1677.5,
       "updatedAt": "2026-11-02T11:26:52",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T11:26:52",
       "orderTime": "2026-11-02T11:26:52",
@@ -4147,6 +5296,13 @@
       "serviceCharge": 5,
       "total": 1677.5,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102055635415",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 4,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -4158,7 +5314,12 @@
       "completedDuration": "00m 42s",
       "orderTimestamp": 1793598980155,
       "backendOrderId": 27,
+<<<<<<< HEAD
+      "billingSessionId": "27",
+      "dueAmount": 0
+=======
       "billingSessionId": "27"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 26,
@@ -4180,15 +5341,54 @@
       "grandTotal": 1001,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-002",
+<<<<<<< HEAD
+=======
       "invoiceId": 26,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261102051040175",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-11-02T10:41:02",
       "createdAt": "2026-11-02T10:41:02",
       "items": [
         {
+<<<<<<< HEAD
+          "id": 60,
+          "orderId": 26,
+          "menuItemId": 11,
+          "name": "beers",
+          "price": 120,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
+        },
+        {
+          "id": 61,
+          "orderId": 26,
+          "menuItemId": 2,
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
+        },
+        {
+          "id": 62,
+          "orderId": 26,
+          "menuItemId": 3,
+          "name": "Special Boneless Chicken Biryani",
+          "price": 350,
+          "quantity": 1,
+          "notes": "",
+          "kotStatus": "served",
+          "kotBatch": 1
+        }
+      ],
+      "invoiceId": 26,
+=======
           "name": "beers",
           "quantity": 1,
           "price": 120,
@@ -4207,6 +5407,7 @@
           "total": 350
         }
       ],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 26,
       "invoiceNumber": "INV-002",
       "taxableAmount": 910,
@@ -4215,7 +5416,10 @@
       "amountPaid": 1001,
       "updatedAt": "2026-11-02T10:41:02",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-11-02T10:41:02",
       "orderTime": "2026-11-02T10:41:02",
@@ -4223,6 +5427,13 @@
       "serviceCharge": 5,
       "total": 1001,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261102051040175",
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "capacity": 2,
       "paymentMode": "upi",
       "PaymentMethod": "upi",
@@ -4234,7 +5445,12 @@
       "completedDuration": "00m 52s",
       "orderTimestamp": 1793596228781,
       "backendOrderId": 26,
+<<<<<<< HEAD
+      "billingSessionId": "26",
+      "dueAmount": 0
+=======
       "billingSessionId": "26"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 24,
@@ -4256,11 +5472,14 @@
       "grandTotal": 583,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261029-24",
+<<<<<<< HEAD
+=======
       "invoiceId": 24,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-29T11:55:51",
       "createdAt": "2026-10-29T11:55:51",
       "items": [
@@ -4287,6 +5506,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 24,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 24,
       "invoiceNumber": "INV-20261029-24",
       "taxableAmount": 530,
@@ -4295,14 +5518,26 @@
       "amountPaid": 583,
       "updatedAt": "2026-10-29T11:55:51",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-29T11:55:51",
       "orderTime": "2026-10-29T11:55:51",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 583,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 23,
@@ -4324,11 +5559,14 @@
       "grandTotal": 495,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261029-23",
+<<<<<<< HEAD
+=======
       "invoiceId": 23,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-29T11:55:45",
       "createdAt": "2026-10-29T11:55:45",
       "items": [
@@ -4344,6 +5582,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 23,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 23,
       "invoiceNumber": "INV-20261029-23",
       "taxableAmount": 450,
@@ -4352,14 +5594,26 @@
       "amountPaid": 495,
       "updatedAt": "2026-10-29T11:55:45",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-29T11:55:45",
       "orderTime": "2026-10-29T11:55:45",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 495,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 22,
@@ -4381,11 +5635,14 @@
       "grandTotal": 1188,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261029-22",
+<<<<<<< HEAD
+=======
       "invoiceId": 22,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-29T11:55:43",
       "createdAt": "2026-10-29T11:55:43",
       "items": [
@@ -4401,6 +5658,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 22,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 22,
       "invoiceNumber": "INV-20261029-22",
       "taxableAmount": 1080,
@@ -4409,14 +5670,26 @@
       "amountPaid": 1188,
       "updatedAt": "2026-10-29T11:55:43",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-29T11:55:43",
       "orderTime": "2026-10-29T11:55:43",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 1188,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 21,
@@ -4438,11 +5711,14 @@
       "grandTotal": 704,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261027-21",
+<<<<<<< HEAD
+=======
       "invoiceId": 21,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": "KOT-20261027115645182",
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-27T17:26:57",
       "createdAt": "2026-10-27T17:26:57",
       "items": [
@@ -4458,6 +5734,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 21,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 21,
       "invoiceNumber": "INV-20261027-21",
       "taxableAmount": 640,
@@ -4466,13 +5746,33 @@
       "amountPaid": 672,
       "updatedAt": "2026-10-27T17:26:57",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-27T17:26:57",
       "orderTime": "2026-10-27T17:26:57",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 704,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": "KOT-20261027115645182",
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+      "tableId": 4,
+      "tableName": "Table-4",
+      "section": "Main Hall",
+      "server": "Karan D.",
+      "guests": 3,
+      "capacity": 6,
+      "orderTime": "03:21 PM",
+=======
       "Status": "Settled"
     },
     {
@@ -4498,6 +5798,7 @@
       "paidAmount": 616,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": 41,
@@ -4520,6 +5821,28 @@
           "kotSent": true
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 560,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxAmount": 28,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 28,
+      "tipAmount": 0,
+      "grandTotal": 616,
+      "paymentMethod": "upi",
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "status": "Settled",
+      "cashTendered": 616,
+      "changeDue": 0,
+      "settledAt": "05:56 PM",
+      "date": "05:56 PM",
+      "settledDate": "2026-10-26",
+      "invoiceNo": "INV-001",
+      "id": "ord_1793103961347_7rds2",
+      "Status": "Settled",
+=======
       "createdAt": "05:56 PM",
       "settledAt": "05:56 PM",
       "date": "05:56 PM",
@@ -4536,11 +5859,35 @@
       "cashTendered": 616,
       "changeDue": 0,
       "settledDate": "2026-10-26",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "cookingStartedAt": "05:59 PM",
       "completedAt": "05:59 PM",
       "completedDuration": "00m 00s",
       "orderTimestamp": 1793008279686,
       "backendOrderId": null,
+<<<<<<< HEAD
+      "billingSessionId": "local:4:1793008279686",
+      "total": 616,
+      "totalAmount": 616,
+      "paidAmount": 616,
+      "invoiceId": "ord_1793103961347_7rds2",
+      "orderId": "ord_1793103961347_7rds2",
+      "invoiceNumber": "INV-001",
+      "serverName": "Karan D.",
+      "taxableAmount": 560,
+      "payments": [],
+      "createdAt": "05:56 PM",
+      "isPaid": true
+    },
+    {
+      "tableId": 1,
+      "tableName": "Table-1",
+      "section": "VIP Lounge",
+      "server": "Rajesh K.",
+      "guests": 5,
+      "capacity": 6,
+      "orderTime": "03:29 PM",
+=======
       "billingSessionId": "local:4:1793008279686"
     },
     {
@@ -4566,6 +5913,7 @@
       "paidAmount": 1529,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": "bir-2",
@@ -4608,6 +5956,43 @@
           "kotSent": true
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 1390,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxAmount": 69.5,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 69.5,
+      "tipAmount": 0,
+      "grandTotal": 1529,
+      "paymentMethod": "upi",
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "status": "Settled",
+      "cashTendered": 1529,
+      "changeDue": 0,
+      "settledAt": "05:26 PM",
+      "date": "05:26 PM",
+      "settledDate": "2026-10-25",
+      "invoiceNo": "INV-217",
+      "id": "ord_1793015785655_6n7io",
+      "Status": "Settled",
+      "cookingStartedAt": "03:32 PM",
+      "completedAt": "03:32 PM",
+      "completedDuration": "00m 00s",
+      "orderTimestamp": 1793008793087,
+      "total": 1529,
+      "totalAmount": 1529,
+      "paidAmount": 1529,
+      "invoiceId": "ord_1793015785655_6n7io",
+      "orderId": "ord_1793015785655_6n7io",
+      "invoiceNumber": "INV-217",
+      "serverName": "Rajesh K.",
+      "taxableAmount": 1390,
+      "payments": [],
+      "createdAt": "05:26 PM",
+      "isPaid": true
+=======
       "createdAt": "05:26 PM",
       "settledAt": "05:26 PM",
       "date": "05:26 PM",
@@ -4628,6 +6013,7 @@
       "completedAt": "03:32 PM",
       "completedDuration": "00m 00s",
       "orderTimestamp": 1793008793087
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 20,
@@ -4649,11 +6035,14 @@
       "grandTotal": 308,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-029",
+<<<<<<< HEAD
+=======
       "invoiceId": 20,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-23T07:56:00",
       "createdAt": "2026-10-23T07:56:00",
       "items": [
@@ -4669,6 +6058,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 20,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 20,
       "invoiceNumber": "INV-029",
       "taxableAmount": 280,
@@ -4677,14 +6070,26 @@
       "amountPaid": 456.5,
       "updatedAt": "2026-10-22T10:48:50",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-23T07:56:00",
       "orderTime": "2026-10-23T07:56:00",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 308,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 19,
@@ -4706,11 +6111,14 @@
       "grandTotal": 583,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-030",
+<<<<<<< HEAD
+=======
       "invoiceId": 19,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-23T07:54:34",
       "createdAt": "2026-10-23T07:54:34",
       "items": [
@@ -4737,6 +6145,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 19,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 19,
       "invoiceNumber": "INV-030",
       "taxableAmount": 530,
@@ -4745,14 +6157,26 @@
       "amountPaid": 275,
       "updatedAt": "2026-10-22T10:04:46",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-23T07:54:34",
       "orderTime": "2026-10-23T07:54:34",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 583,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 18,
@@ -4774,11 +6198,14 @@
       "grandTotal": 308,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-031",
+<<<<<<< HEAD
+=======
       "invoiceId": 18,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-23T07:54:08",
       "createdAt": "2026-10-23T07:54:08",
       "items": [
@@ -4794,6 +6221,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 18,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 18,
       "invoiceNumber": "INV-031",
       "taxableAmount": 280,
@@ -4802,14 +6233,26 @@
       "amountPaid": 709.5,
       "updatedAt": "2026-10-21T16:56:42",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-23T07:54:08",
       "orderTime": "2026-10-23T07:54:08",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 308,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 17,
@@ -4831,11 +6274,14 @@
       "grandTotal": 401.5,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-032",
+<<<<<<< HEAD
+=======
       "invoiceId": 17,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-23T07:49:53",
       "createdAt": "2026-10-23T07:49:53",
       "items": [
@@ -4862,6 +6308,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 17,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 17,
       "invoiceNumber": "INV-032",
       "taxableAmount": 365,
@@ -4870,13 +6320,33 @@
       "amountPaid": 946,
       "updatedAt": "2026-10-21T16:33:33",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-23T07:49:53",
       "orderTime": "2026-10-23T07:49:53",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 401.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+      "tableId": 2,
+      "tableName": "Table 2",
+      "section": "Main Hall",
+      "server": "Staff",
+      "guests": 3,
+      "capacity": 6,
+      "orderTime": "10:55 AM",
+=======
       "Status": "Settled"
     },
     {
@@ -4902,6 +6372,7 @@
       "paidAmount": 891,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": "bir-3",
@@ -4922,6 +6393,43 @@
           "kotStatus": "ready"
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 810,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxAmount": 40.5,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 40.5,
+      "tipAmount": 0,
+      "grandTotal": 891,
+      "paymentMethod": "upi",
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "status": "Settled",
+      "cashTendered": 891,
+      "changeDue": 0,
+      "settledAt": "10:59 AM",
+      "date": "10:59 AM",
+      "settledDate": "2026-10-22",
+      "invoiceNo": "INV-001",
+      "id": "ord_1792733381905_rykfc",
+      "Status": "Settled",
+      "cookingStartedAt": "10:58 AM",
+      "completedAt": "10:59 AM",
+      "completedDuration": "01m 00s",
+      "orderTimestamp": 1792733111586,
+      "total": 891,
+      "totalAmount": 891,
+      "paidAmount": 891,
+      "invoiceId": "ord_1792733381905_rykfc",
+      "orderId": "ord_1792733381905_rykfc",
+      "invoiceNumber": "INV-001",
+      "serverName": "Staff",
+      "taxableAmount": 810,
+      "payments": [],
+      "createdAt": "10:59 AM",
+      "isPaid": true
+=======
       "createdAt": "10:59 AM",
       "settledAt": "10:59 AM",
       "date": "10:59 AM",
@@ -4942,6 +6450,7 @@
       "completedAt": "10:59 AM",
       "completedDuration": "01m 00s",
       "orderTimestamp": 1792733111586
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 16,
@@ -4963,11 +6472,14 @@
       "grandTotal": 352,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261021-16",
+<<<<<<< HEAD
+=======
       "invoiceId": 16,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-21T11:03:29",
       "createdAt": "2026-10-21T11:03:29",
       "items": [
@@ -4983,22 +6495,41 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 16,
+      "orderId": 16,
+      "invoiceNumber": "INV-20261021-16",
+      "taxableAmount": 320,
+=======
       "orderId": 16,
       "invoiceNumber": "INV-20261021-16",
       "taxableAmount": 288,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "totalAmount": 352,
       "paidAmount": 352,
       "amountPaid": 316.8,
       "updatedAt": "2026-10-21T10:29:16",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-21T11:03:29",
       "orderTime": "2026-10-21T11:03:29",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 352,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 15,
@@ -5020,11 +6551,14 @@
       "grandTotal": 599.5,
       "paymentMethod": "WALLET",
       "invoiceNo": "INV-20261021-15",
+<<<<<<< HEAD
+=======
       "invoiceId": 15,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-21T10:59:49",
       "createdAt": "2026-10-21T10:59:49",
       "items": [
@@ -5062,22 +6596,41 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 15,
+      "orderId": 15,
+      "invoiceNumber": "INV-20261021-15",
+      "taxableAmount": 545,
+=======
       "orderId": 15,
       "invoiceNumber": "INV-20261021-15",
       "taxableAmount": 490.5,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "totalAmount": 599.5,
       "paidAmount": 599.5,
       "amountPaid": 539.55,
       "updatedAt": "2026-10-21T10:29:44",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-21T10:59:49",
       "orderTime": "2026-10-21T10:59:49",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 599.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 14,
@@ -5099,11 +6652,14 @@
       "grandTotal": 550,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261021-14",
+<<<<<<< HEAD
+=======
       "invoiceId": 14,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-21T10:48:02",
       "createdAt": "2026-10-21T10:48:02",
       "items": [
@@ -5119,6 +6675,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 14,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 14,
       "invoiceNumber": "INV-20261021-14",
       "taxableAmount": 500,
@@ -5127,13 +6687,33 @@
       "amountPaid": 550,
       "updatedAt": "2026-10-21T10:48:02",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-21T10:48:02",
       "orderTime": "2026-10-21T10:48:02",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 550,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+      "tableId": 2,
+      "tableName": "Table-2",
+      "section": "Main Hall",
+      "server": "Rajesh K.",
+      "guests": 10,
+      "capacity": 10,
+      "orderTime": "10:48 AM",
+=======
       "Status": "Settled"
     },
     {
@@ -5159,6 +6739,7 @@
       "paidAmount": 457,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": 29,
@@ -5188,6 +6769,43 @@
           "kotStatus": "cooking"
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 415,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxAmount": 20.75,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 20.75,
+      "tipAmount": 0,
+      "grandTotal": 457,
+      "paymentMethod": "upi",
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "status": "Settled",
+      "cashTendered": 457,
+      "changeDue": 0,
+      "settledAt": "10:48 AM",
+      "date": "10:48 AM",
+      "settledDate": "2026-10-21",
+      "invoiceNo": "INV-002",
+      "id": "ord_1792646329649_nyvky",
+      "Status": "Settled",
+      "cookingStartedAt": "10:48 AM",
+      "completedAt": "10:48 AM",
+      "completedDuration": "00m 00s",
+      "orderTimestamp": 1792646302091,
+      "total": 457,
+      "totalAmount": 457,
+      "paidAmount": 457,
+      "invoiceId": "ord_1792646329649_nyvky",
+      "orderId": "ord_1792646329649_nyvky",
+      "invoiceNumber": "INV-002",
+      "serverName": "Rajesh K.",
+      "taxableAmount": 415,
+      "payments": [],
+      "createdAt": "10:48 AM",
+      "isPaid": true
+=======
       "createdAt": "10:48 AM",
       "settledAt": "10:48 AM",
       "date": "10:48 AM",
@@ -5208,6 +6826,7 @@
       "completedAt": "10:48 AM",
       "completedDuration": "00m 00s",
       "orderTimestamp": 1792646302091
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 13,
@@ -5229,11 +6848,14 @@
       "grandTotal": 704,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261021-13",
+<<<<<<< HEAD
+=======
       "invoiceId": 13,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-21T10:42:39",
       "createdAt": "2026-10-21T10:42:39",
       "items": [
@@ -5249,21 +6871,48 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 13,
+      "orderId": 13,
+      "invoiceNumber": "INV-20261021-13",
+      "taxableAmount": 640,
+=======
       "orderId": 13,
       "invoiceNumber": "INV-20261021-13",
       "taxableAmount": 576,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "totalAmount": 704,
       "paidAmount": 704,
       "amountPaid": 633.6,
       "updatedAt": "2026-10-21T09:36:36",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-21T10:42:39",
       "orderTime": "2026-10-21T10:42:39",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 704,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+      "tableId": 3,
+      "tableName": "Table-3",
+      "section": "Main Hall",
+      "server": "Vikram S.",
+      "guests": 12,
+      "capacity": 12,
+      "orderTime": "10:03 AM",
+=======
       "Status": "Settled"
     },
     {
@@ -5289,6 +6938,7 @@
       "paidAmount": 275,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": 35,
@@ -5300,6 +6950,43 @@
           "kotStatus": "cooking"
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 250,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "taxAmount": 12.5,
+      "serviceCharge": 0,
+      "serviceChargeAmount": 12.5,
+      "tipAmount": 0,
+      "grandTotal": 275,
+      "paymentMethod": "upi",
+      "paymentMode": "upi",
+      "PaymentMethod": "upi",
+      "status": "Settled",
+      "cashTendered": 275,
+      "changeDue": 0,
+      "settledAt": "10:04 AM",
+      "date": "10:04 AM",
+      "settledDate": "2026-10-21",
+      "invoiceNo": "INV-001",
+      "id": "ord_1792643685156_vf3nw",
+      "Status": "Settled",
+      "cookingStartedAt": "10:04 AM",
+      "completedAt": "10:04 AM",
+      "completedDuration": "01m 00s",
+      "orderTimestamp": 1792643631123,
+      "total": 275,
+      "totalAmount": 275,
+      "paidAmount": 275,
+      "invoiceId": "ord_1792643685156_vf3nw",
+      "orderId": "ord_1792643685156_vf3nw",
+      "invoiceNumber": "INV-001",
+      "serverName": "Vikram S.",
+      "taxableAmount": 250,
+      "payments": [],
+      "createdAt": "10:04 AM",
+      "isPaid": true
+=======
       "createdAt": "10:04 AM",
       "settledAt": "10:04 AM",
       "date": "10:04 AM",
@@ -5320,6 +7007,7 @@
       "completedAt": "10:04 AM",
       "completedDuration": "01m 00s",
       "orderTimestamp": 1792643631123
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 12,
@@ -5341,11 +7029,14 @@
       "grandTotal": 550,
       "paymentMethod": "CARD",
       "invoiceNo": "INV-20261019-12",
+<<<<<<< HEAD
+=======
       "invoiceId": 12,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-19T14:42:36",
       "createdAt": "2026-10-19T14:42:36",
       "items": [
@@ -5383,6 +7074,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 12,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 12,
       "invoiceNumber": "INV-20261019-12",
       "taxableAmount": 500,
@@ -5391,14 +7086,26 @@
       "amountPaid": 550,
       "updatedAt": "2026-10-19T14:42:36",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-19T14:42:36",
       "orderTime": "2026-10-19T14:42:36",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 550,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 11,
@@ -5420,11 +7127,14 @@
       "grandTotal": 324.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261019-11",
+<<<<<<< HEAD
+=======
       "invoiceId": 11,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-19T10:12:40",
       "createdAt": "2026-10-19T10:12:40",
       "items": [
@@ -5451,6 +7161,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 11,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 11,
       "invoiceNumber": "INV-20261019-11",
       "taxableAmount": 295,
@@ -5459,14 +7173,26 @@
       "amountPaid": 324.5,
       "updatedAt": "2026-10-19T10:12:40",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-19T10:12:40",
       "orderTime": "2026-10-19T10:12:40",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 324.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 10,
@@ -5488,11 +7214,14 @@
       "grandTotal": 275,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261019-10",
+<<<<<<< HEAD
+=======
       "invoiceId": 10,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-19T09:48:34",
       "createdAt": "2026-10-19T09:48:34",
       "items": [
@@ -5508,6 +7237,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 10,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 10,
       "invoiceNumber": "INV-20261019-10",
       "taxableAmount": 250,
@@ -5516,14 +7249,26 @@
       "amountPaid": 275,
       "updatedAt": "2026-10-19T09:48:34",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-19T09:48:34",
       "orderTime": "2026-10-19T09:48:34",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 275,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 9,
@@ -5545,11 +7290,14 @@
       "grandTotal": 1045,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261016-9",
+<<<<<<< HEAD
+=======
       "invoiceId": 9,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-16T13:34:13",
       "createdAt": "2026-10-16T13:34:13",
       "items": [
@@ -5598,6 +7346,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 9,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 9,
       "invoiceNumber": "INV-20261016-9",
       "taxableAmount": 950,
@@ -5606,14 +7358,26 @@
       "amountPaid": 1045,
       "updatedAt": "2026-10-16T13:34:13",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-16T13:34:13",
       "orderTime": "2026-10-16T13:34:13",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 1045,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 8,
@@ -5635,11 +7399,14 @@
       "grandTotal": 198,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261016-8",
+<<<<<<< HEAD
+=======
       "invoiceId": 8,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-16T13:27:04",
       "createdAt": "2026-10-16T13:27:04",
       "items": [
@@ -5655,6 +7422,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 8,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 8,
       "invoiceNumber": "INV-20261016-8",
       "taxableAmount": 180,
@@ -5663,14 +7434,26 @@
       "amountPaid": 198,
       "updatedAt": "2026-10-16T13:27:04",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-16T13:27:04",
       "orderTime": "2026-10-16T13:27:04",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 198,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 7,
@@ -5692,11 +7475,14 @@
       "grandTotal": 511.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261016-7",
+<<<<<<< HEAD
+=======
       "invoiceId": 7,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-16T13:25:26",
       "createdAt": "2026-10-16T13:25:26",
       "items": [
@@ -5723,6 +7509,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 7,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 7,
       "invoiceNumber": "INV-20261016-7",
       "taxableAmount": 465,
@@ -5731,14 +7521,26 @@
       "amountPaid": 511.5,
       "updatedAt": "2026-10-16T13:25:26",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-16T13:25:26",
       "orderTime": "2026-10-16T13:25:26",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 511.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 6,
@@ -5760,11 +7562,14 @@
       "grandTotal": 709.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261016-6",
+<<<<<<< HEAD
+=======
       "invoiceId": 6,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-16T13:09:50",
       "createdAt": "2026-10-16T13:09:50",
       "items": [
@@ -5813,6 +7618,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 6,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 6,
       "invoiceNumber": "INV-20261016-6",
       "taxableAmount": 645,
@@ -5821,14 +7630,26 @@
       "amountPaid": 709.5,
       "updatedAt": "2026-10-16T13:09:50",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-16T13:09:50",
       "orderTime": "2026-10-16T13:09:50",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 709.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 5,
@@ -5850,11 +7671,14 @@
       "grandTotal": 577.5,
       "paymentMethod": "UPI",
       "invoiceNo": "INV-20261016-5",
+<<<<<<< HEAD
+=======
       "invoiceId": 5,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-16T12:20:42",
       "createdAt": "2026-10-16T12:20:42",
       "items": [
@@ -5881,6 +7705,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 5,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 5,
       "invoiceNumber": "INV-20261016-5",
       "taxableAmount": 525,
@@ -5889,13 +7717,33 @@
       "amountPaid": 577.5,
       "updatedAt": "2026-10-16T12:20:42",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-16T12:20:42",
       "orderTime": "2026-10-16T12:20:42",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 577.5,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+    },
+    {
+      "tableId": 7,
+      "tableName": "Table 7",
+      "section": "Main Hall",
+      "server": "Staff",
+      "guests": 4,
+      "capacity": 4,
+      "orderTime": "13:44",
+=======
       "Status": "Settled"
     },
     {
@@ -5921,6 +7769,7 @@
       "paidAmount": 127,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": 34,
@@ -5932,6 +7781,10 @@
           "kotStatus": "received"
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 115,
+      "discountAmount": 0,
+=======
       "createdAt": "13:44",
       "settledAt": "13:44",
       "date": "13:44",
@@ -5966,14 +7819,54 @@
       "discountAmount": 0,
       "discountPercent": 0,
       "taxableAmount": 115,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "taxAmount": 5.75,
       "serviceChargeAmount": 5.75,
       "tipAmount": 0,
       "grandTotal": 127,
+<<<<<<< HEAD
+      "paymentMethod": "upi",
+      "cashTendered": 127,
+      "changeDue": 0,
+      "settledAt": "13:44",
+      "date": "13:44",
+      "settledDate": "2026-10-15",
+      "invoiceNo": "INV-001",
+      "id": "ord_1792138482863_s5h9i",
+      "cookingStartedAt": "13:44",
+      "completedAt": "13:44",
+      "completedDuration": "00m 00s",
+      "orderTimestamp": 1792138472562,
+      "total": 127,
+      "totalAmount": 127,
+      "paidAmount": 127,
+      "status": "Settled",
+      "Status": "Settled",
+      "invoiceId": "ord_1792138482863_s5h9i",
+      "orderId": "ord_1792138482863_s5h9i",
+      "invoiceNumber": "INV-001",
+      "serverName": "Staff",
+      "discountPercent": 0,
+      "taxableAmount": 115,
+      "payments": [],
+      "createdAt": "13:44",
+      "isPaid": true,
+      "serviceCharge": 0
+    },
+    {
+      "tableId": 7,
+      "tableName": "Table 7",
+      "section": "Main Hall",
+      "server": "Staff",
+      "guests": 4,
+      "capacity": 4,
+      "orderTime": "13:48",
+=======
       "totalAmount": 127,
       "paidAmount": 127,
       "paymentMethod": "upi",
       "payments": [],
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "items": [
         {
           "id": 34,
@@ -5985,6 +7878,41 @@
           "kotStatus": "received"
         }
       ],
+<<<<<<< HEAD
+      "subtotal": 115,
+      "discountAmount": 0,
+      "taxAmount": 5.75,
+      "serviceChargeAmount": 5.75,
+      "tipAmount": 0,
+      "grandTotal": 127,
+      "paymentMethod": "upi",
+      "cashTendered": 127,
+      "changeDue": 0,
+      "settledAt": "13:48",
+      "date": "13:48",
+      "settledDate": "2026-10-15",
+      "invoiceNo": "INV-002",
+      "id": "ord_1792138728011_jqa9i",
+      "cookingStartedAt": "13:48",
+      "completedAt": "13:48",
+      "completedDuration": "00m 00s",
+      "orderTimestamp": 1792138472562,
+      "total": 127,
+      "totalAmount": 127,
+      "paidAmount": 127,
+      "status": "Settled",
+      "Status": "Settled",
+      "invoiceId": "ord_1792138728011_jqa9i",
+      "orderId": "ord_1792138728011_jqa9i",
+      "invoiceNumber": "INV-002",
+      "serverName": "Staff",
+      "discountPercent": 0,
+      "taxableAmount": 115,
+      "payments": [],
+      "createdAt": "13:48",
+      "isPaid": true,
+      "serviceCharge": 0
+=======
       "createdAt": "13:48",
       "settledAt": "13:48",
       "date": "13:48",
@@ -6003,6 +7931,7 @@
       "completedAt": "13:48",
       "completedDuration": "00m 00s",
       "orderTimestamp": 1792138472562
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "invoiceId": 99,
@@ -6019,7 +7948,10 @@
       "createdAt": "2026-10-12T14:55:45",
       "updatedAt": "2026-10-15T17:33:43",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableName": "Table 1",
       "serverName": "Staff",
       "paymentMethod": "UPI",
@@ -6037,7 +7969,12 @@
       "tipAmount": 0,
       "grandTotal": 525,
       "total": 525,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 4,
@@ -6059,11 +7996,14 @@
       "grandTotal": 286,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-20261012-4",
+<<<<<<< HEAD
+=======
       "invoiceId": 4,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-12T14:55:37",
       "createdAt": "2026-10-12T14:55:37",
       "items": [
@@ -6079,6 +8019,10 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 4,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 4,
       "invoiceNumber": "INV-20261012-4",
       "taxableAmount": 260,
@@ -6087,14 +8031,26 @@
       "amountPaid": 286,
       "updatedAt": "2026-10-12T14:55:37",
       "payments": [],
+<<<<<<< HEAD
+=======
       "dueAmount": 0,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-12T14:55:37",
       "orderTime": "2026-10-12T14:55:37",
       "isPaid": true,
       "serviceCharge": 5,
       "total": 286,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+      "dueAmount": 0
+=======
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "tableId": 1,
@@ -6146,7 +8102,10 @@
     },
     {
       "id": 3,
+<<<<<<< HEAD
+=======
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 12,
       "tableName": "Table-12",
       "section": "Main Hall",
@@ -6164,11 +8123,14 @@
       "grandTotal": 990,
       "paymentMethod": "Cash",
       "invoiceNo": "INV-003",
+<<<<<<< HEAD
+=======
       "invoiceId": 3,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-12T07:42:54",
       "createdAt": "2026-10-12T07:42:54",
       "items": [
@@ -6207,11 +8169,24 @@
       "paidAmount": 990,
       "payments": [],
       "total": 990,
+<<<<<<< HEAD
+      "Status": "Settled",
+      "invoiceId": 3,
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null
+    },
+    {
+      "id": 2,
+=======
       "Status": "Settled"
     },
     {
       "id": 2,
       "orderType": "DineIn",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 11,
       "tableName": "Table-11",
       "section": "Main Hall",
@@ -6222,6 +8197,15 @@
       "discountPercent": 0,
       "discountAmount": 0,
       "taxPercent": 5,
+<<<<<<< HEAD
+      "taxAmount": 49,
+      "serviceChargePercent": 5,
+      "serviceChargeAmount": 94,
+      "tipAmount": 0,
+      "grandTotal": 1069,
+      "paymentMethod": "CASH",
+      "invoiceNo": "INV-BLR-2026-0002",
+=======
       "taxAmount": 94,
       "serviceChargePercent": 5,
       "serviceChargeAmount": 94,
@@ -6234,10 +8218,46 @@
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-09T20:46:00",
       "createdAt": "2026-10-12T07:40:39",
       "items": [
         {
+<<<<<<< HEAD
+          "name": "Item",
+          "quantity": 1,
+          "price": 520,
+          "total": 520
+        },
+        {
+          "name": "Item",
+          "quantity": 1,
+          "price": 460,
+          "total": 460
+        },
+        {
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "quantity": 2,
+          "price": 320,
+          "total": 640
+        },
+        {
+          "name": "Paneer Butter Masala",
+          "quantity": 1,
+          "price": 260,
+          "total": 260
+        }
+      ],
+      "invoiceId": 2,
+      "orderId": 2,
+      "invoiceNumber": "INV-BLR-2026-0002",
+      "taxableAmount": 980,
+      "totalAmount": 1069,
+      "paidAmount": 1069,
+      "amountPaid": 0,
+      "updatedAt": "2026-10-09T15:20:23",
+      "payments": [],
+=======
           "id": 5,
           "orderId": 2,
           "menuItemId": 1,
@@ -6284,10 +8304,21 @@
       ],
       "orderId": 2,
       "invoiceNumber": "INV-BLR-2026-0002",
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "server": "Staff",
       "date": "2026-10-12T07:40:39",
       "orderTime": "2026-10-09T20:46:00",
       "isPaid": true,
+<<<<<<< HEAD
+      "serviceCharge": 5,
+      "total": 1069,
+      "Status": "Settled",
+      "orderType": "DineIn",
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null
+=======
       "taxableAmount": 980,
       "serviceCharge": 5,
       "totalAmount": 2068,
@@ -6297,6 +8328,7 @@
       "Status": "Settled",
       "amountPaid": 0,
       "updatedAt": "2026-10-09T15:20:23"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     },
     {
       "id": 1,
@@ -6318,11 +8350,14 @@
       "grandTotal": 2678.5,
       "paymentMethod": "CASH",
       "invoiceNo": "INV-BLR-2026-0001",
+<<<<<<< HEAD
+=======
       "invoiceId": 1,
       "customerName": null,
       "customerPhone": null,
       "kitchenKotNumber": null,
       "barBotNumber": null,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "settledAt": "2026-10-09T20:32:00",
       "createdAt": "2026-10-09T20:32:00",
       "items": [
@@ -6426,19 +8461,34 @@
           "kotBatch": 1
         }
       ],
+<<<<<<< HEAD
+      "invoiceId": 1,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "orderId": 1,
       "invoiceNumber": "INV-BLR-2026-0001",
       "server": "Staff",
       "date": "2026-10-09T20:32:00",
       "orderTime": "2026-10-09T20:32:00",
       "isPaid": true,
+<<<<<<< HEAD
+      "taxableAmount": 2435,
+=======
       "taxableAmount": 1179,
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "serviceCharge": 5,
       "totalAmount": 2678.5,
       "paidAmount": 2678.5,
       "payments": [],
       "total": 2678.5,
       "Status": "Settled",
+<<<<<<< HEAD
+      "customerName": null,
+      "customerPhone": null,
+      "kitchenKotNumber": null,
+      "barBotNumber": null,
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "amountPaid": 0,
       "updatedAt": "2026-10-12T14:43:32"
     },
@@ -7157,6 +9207,8 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
+=======
       "id": "ord_82",
       "invoiceId": "ord_82",
       "orderId": "ord_82",
@@ -7205,6 +9257,7 @@
       "Status": "Settled"
     },
     {
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 14,
       "tableName": "Table 14",
       "section": "VIP Lounge",
@@ -8525,6 +10578,8 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
+=======
       "id": "ord_68",
       "invoiceId": "ord_68",
       "orderId": "ord_68",
@@ -8591,6 +10646,7 @@
       "Status": "Settled"
     },
     {
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "id": "ord_69",
       "invoiceId": "ord_69",
       "orderId": "ord_69",
@@ -9305,6 +11361,8 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
+=======
       "id": "ord_121",
       "invoiceId": "ord_121",
       "orderId": "ord_121",
@@ -9353,6 +11411,7 @@
       "Status": "Settled"
     },
     {
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 2,
       "tableName": "Table 2",
       "section": "Main Hall",
@@ -12029,6 +14088,294 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
+      "id": "ord_48",
+      "invoiceId": "ord_48",
+      "orderId": "ord_48",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_68",
+      "invoiceId": "ord_68",
+      "orderId": "ord_68",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_79",
+      "invoiceId": "ord_79",
+      "orderId": "ord_79",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_77",
+      "invoiceId": "ord_77",
+      "orderId": "ord_77",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+      "id": "ord_82",
+      "invoiceId": "ord_82",
+      "orderId": "ord_82",
+      "invoiceNumber": "INV-1048",
+      "invoiceNo": "INV-1048",
+      "tableName": "Table 1",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1160,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1160,
+      "taxAmount": 58,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1326,
+      "totalAmount": 1326,
+      "paidAmount": 1326,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1326,
+          "paymentMode": "upi",
+          "paidAt": "01:10 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 2
+        },
+        {
+          "id": "st-1",
+          "name": "Crispy Chicken 65",
+          "price": 260,
+          "quantity": 1
+        },
+        {
+          "id": "dr-1",
+          "name": "Royal Mango Lassi",
+          "price": 130,
+          "quantity": 2
+        }
+      ],
+      "createdAt": "01:10 PM",
+      "settledAt": "01:10 PM",
+      "date": "01:10 PM",
+      "orderTime": "01:10 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1326,
+      "Status": "Settled"
+    },
+    {
+=======
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "tableId": 1,
       "tableName": "Table 1",
       "section": "Main Hall",
@@ -12867,6 +15214,8 @@
       "Status": "Settled"
     },
     {
+<<<<<<< HEAD
+=======
       "id": "ord_48",
       "invoiceId": "ord_48",
       "orderId": "ord_48",
@@ -12981,6 +15330,7 @@
       "Status": "Settled"
     },
     {
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
       "id": "ord_167",
       "invoiceId": "ord_167",
       "orderId": "ord_167",
@@ -13588,6 +15938,8 @@
       "serviceCharge": 0,
       "total": 627,
       "Status": "Settled"
+<<<<<<< HEAD
+=======
     },
     {
       "id": "ord_77",
@@ -13645,6 +15997,7 @@
       "serviceCharge": 0,
       "total": 627,
       "Status": "Settled"
+>>>>>>> 14b6d610ab5eb394938ef6d8376d9823b3c19c78
     }
   ]
 }

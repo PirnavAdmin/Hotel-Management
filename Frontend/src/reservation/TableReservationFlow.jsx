@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import QRCode from "qrcode";
 import {
   Calendar,
   Clock,
@@ -151,7 +152,20 @@ export function TableReservationFlow({
   const [selectedTable, setSelectedTable] = useState(null);
   const [tableFilter, setTableFilter] = useState("all"); // "all" | "indoor" | "outdoor"
   const [paymentMethod, setPaymentMethod] = useState("upi");
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState("");
   const [confirmedReservation, setConfirmedReservation] = useState(null);
+
+  useEffect(() => {
+    const upiString = `upi://pay?pa=priya@oksbi&pn=Priya%20Sharma&am=100.00&cu=INR&tn=Table%20Reservation%20Advance`;
+
+    QRCode.toDataURL(upiString, {
+      width: 640,
+      margin: 2,
+      color: { dark: "#000000", light: "#ffffff" },
+    })
+      .then((url) => setUpiQrDataUrl(url))
+      .catch(() => setUpiQrDataUrl(""));
+  }, []);
 
   // Reservation management (Step 6, 7, 8)
   const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" | "past"
@@ -561,6 +575,7 @@ export function TableReservationFlow({
                 selectedTable={selectedTable}
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
+                upiQrDataUrl={upiQrDataUrl}
                 onBack={() => setCurrentStep(2)}
                 onPayNow={() => setCurrentStep(4)}
               />
@@ -1724,6 +1739,7 @@ function Step3Payment({
   selectedTable,
   paymentMethod,
   setPaymentMethod,
+  upiQrDataUrl,
   onBack,
   onPayNow,
 }) {
@@ -1911,8 +1927,8 @@ function Step3Payment({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "6px",
-              marginBottom: "10px",
+              gap: "8px",
+              marginBottom: "16px",
             }}
           >
             {[
@@ -1944,8 +1960,8 @@ function Step3Payment({
                   display: "flex",
                   alignItems: "flex-start",
                   gap: "10px",
-                  padding: "7px 11px",
-                  borderRadius: "9px",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
                   border:
                     paymentMethod === m.id
                       ? "1.5px solid #ea580c"
@@ -1959,20 +1975,19 @@ function Step3Payment({
                   name="payment"
                   checked={paymentMethod === m.id}
                   onChange={() => setPaymentMethod(m.id)}
-                  style={{ accentColor: "#ea580c", marginTop: "2px" }}
+                  style={{ accentColor: "#ea580c", marginTop: "3px" }}
                 />
                 <div>
                   <div
                     style={{
-                      fontSize: "12px",
+                      fontSize: "13px",
                       fontWeight: 700,
                       color: "#1f1610",
-                      lineHeight: 1.25,
                     }}
                   >
-                    {m.title}
+                    QR
                   </div>
-                  <div style={{ fontSize: "10.5px", color: "#786c62", lineHeight: 1.2 }}>
+                  <div style={{ fontSize: "11px", color: "#786c62" }}>
                     {m.desc}
                   </div>
                 </div>
@@ -1980,18 +1995,18 @@ function Step3Payment({
             ))}
           </div>
 
-          {/* Secure badge */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "6px",
               fontSize: "10.5px",
               color: "#6b5d52",
-              marginBottom: "10px",
+              marginBottom: "16px",
             }}
           >
-            <ShieldCheck size={14} color="#16a34a" />
+            <ShieldCheck size={16} color="#16a34a" />
             <span>Secure 256-Bit SSL Encrypted Payment Simulation</span>
           </div>
 
