@@ -498,6 +498,7 @@ export function AdminPortal({
   inventory: propInventory = [],
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const isLight = currentTheme === "light-bistro";
 
   // Track Admin Portal Tab Navigation
   const prevTabRef = useRef(activeTab);
