@@ -2,7 +2,7 @@ import { SearchableSelect } from "../common/SearchableSelect";
 import "../common/MenuCatalogLayout.css";
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList } from "lucide-react";
+import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircle2, Clock, Send, ChefHat } from "lucide-react";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import {
   apiCancelTakeawayOrder,
@@ -280,6 +280,174 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: ".5rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: 10, padding: ".6rem .8rem" }}><ShoppingBag size={18}/><strong>{count} items</strong><span style={{ color: "var(--accent-amber-light)" }}>₹{total.toFixed(2)}</span></div>
       </div>
+
+      {/* ── Active Takeaway Orders & Kitchen Cooking Status Banner ── */}
+      {takeawayOrders.length > 0 && (
+        <div
+          style={{
+            marginBottom: "1.25rem",
+            padding: "1rem 1.25rem",
+            background: "var(--bg-secondary)",
+            border: "1.5px solid var(--border-subtle)",
+            borderRadius: "12px",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  background: takeawayOrders.some((o) => (o.items || []).every((i) => ["ready", "served", "completed"].includes(String(i.kotStatus || "").toLowerCase())))
+                    ? "#10b981"
+                    : "#f59e0b",
+                }}
+              />
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+                Active Takeaway Orders ({takeawayOrders.length})
+              </h3>
+              <span style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                Live orders from KOT — When kitchen finishes cooking, review items and handover to user
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={refreshTakeawayOrders}
+              className="takeaway-secondary-button"
+              style={{ fontSize: "0.75rem", padding: "0.3rem 0.65rem" }}
+            >
+              ↻ Refresh
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))",
+              gap: "0.85rem",
+            }}
+          >
+            {takeawayOrders.map((order) => {
+              const orderId = order.id ?? order.orderId ?? order.Id;
+              const orderNumber = order.orderNumber ?? orderId;
+              const orderItems = Array.isArray(order.items) ? order.items : [];
+              const allReady = orderItems.length > 0 && orderItems.every((item) =>
+                ["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase())
+              );
+              const isCooking = orderItems.some((item) => String(item.kotStatus || "").toLowerCase() === "cooking");
+              const orderTotal = order.grandTotal ?? order.totalAmount ?? order.total ?? order.amount;
+              const statusBg = allReady ? "rgba(16, 185, 129, 0.15)" : isCooking ? "rgba(245, 158, 11, 0.15)" : "rgba(59, 130, 246, 0.15)";
+              const statusColor = allReady ? "#10b981" : isCooking ? "#f59e0b" : "#3b82f6";
+              const statusBorder = allReady ? "rgba(16, 185, 129, 0.4)" : isCooking ? "rgba(245, 158, 11, 0.4)" : "rgba(59, 130, 246, 0.4)";
+
+              return (
+                <div
+                  key={orderId}
+                  style={{
+                    padding: "0.85rem",
+                    borderRadius: "10px",
+                    border: `1.5px solid ${allReady ? "#10b981" : "var(--border-subtle)"}`,
+                    background: allReady ? "rgba(16, 185, 129, 0.04)" : "var(--bg-tertiary)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.55rem",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <strong style={{ fontSize: "0.95rem" }}>Order #{orderNumber}</strong>
+                      {order.customerName && (
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                          👤 {order.customerName} {order.customerPhone ? `(${order.customerPhone})` : ""}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        padding: "0.22rem 0.55rem",
+                        borderRadius: "999px",
+                        background: statusBg,
+                        color: statusColor,
+                        border: `1px solid ${statusBorder}`,
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.3rem",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {allReady ? <CheckCircle2 size={12} /> : isCooking ? <ChefHat size={12} /> : <Clock size={12} />}
+                      {allReady ? "Cooking Done" : isCooking ? "Cooking" : "Kitchen Queue"}
+                    </span>
+                  </div>
+
+                  {/* Items list with individual dish statuses */}
+                  <div style={{ background: "var(--bg-secondary)", padding: "0.5rem 0.65rem", borderRadius: "7px", fontSize: "0.8rem", border: "1px solid var(--border-subtle)" }}>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "0.25rem", textTransform: "uppercase" }}>
+                      Dishes ({orderItems.length}):
+                    </div>
+                    {orderItems.map((item, idx) => {
+                      const itemReady = ["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase());
+                      return (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.15rem 0" }}>
+                          <span style={{ fontWeight: 550 }}>{item.name || item.dishName} × {item.quantity || item.qty}</span>
+                          <span style={{ fontSize: "0.7rem", fontWeight: 700, color: itemReady ? "#10b981" : "#f59e0b" }}>
+                            {itemReady ? "Ready ✓" : "In Prep"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Price & Secondary Actions */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.1rem" }}>
+                    <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
+                      Total: <strong style={{ color: "var(--text-main)", fontSize: "0.95rem" }}>₹{Number(orderTotal || 0).toFixed(2)}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleShowReceipt(orderId)}
+                      className="takeaway-secondary-button"
+                      style={{ padding: "0.3rem 0.55rem", fontSize: "0.75rem" }}
+                    >
+                      Receipt
+                    </button>
+                  </div>
+
+                  {/* Handover & Send to User Button */}
+                  <button
+                    type="button"
+                    disabled={!allReady || dispatchingOrderId === orderId}
+                    onClick={() => handleDispatch(orderId)}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      borderRadius: "7px",
+                      border: "none",
+                      background: allReady ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "var(--bg-secondary)",
+                      color: allReady ? "#ffffff" : "var(--text-muted)",
+                      fontWeight: 800,
+                      fontSize: "0.82rem",
+                      cursor: allReady ? "pointer" : "not-allowed",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+                      boxShadow: allReady ? "0 2px 8px rgba(16, 185, 129, 0.35)" : "none",
+                    }}
+                  >
+                    {dispatchingOrderId === orderId ? "Dispatching…" : allReady ? "Handover & Send to User ✓" : "Awaiting Cooking Completion in KOT"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="takeaway-menu-filters">
         <label className="takeaway-menu-search"><Search size={16} aria-hidden="true"/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search Menu Items" aria-label="Search menu items"/></label>
         <div className="takeaway-menu-category"><SearchableSelect aria-label="Filter menu by category" value={category} onChange={(e) => setCategory(e.target.value)} style={{ minWidth: 0 }}><option value="all">All Categories</option>{categories.map((name) => <option key={name} value={name}>{name}</option>)}</SearchableSelect></div>

@@ -3072,8 +3072,6 @@ export function AdminTakeaway({
                   </div>
                 </div>
 
-<<<<<<< HEAD
-=======
                 {/* Payment Method */}
                 <div>
                   <label
@@ -3092,21 +3090,21 @@ export function AdminTakeaway({
                       <button
                         key={mode}
                         type="button"
-                        onClick={() => setNewPaymentMethod(mode)}
+                        onClick={() => setNewPaymentMethod && setNewPaymentMethod(mode)}
                         style={{
                           flex: 1,
                           height: "36px",
                           borderRadius: "8px",
                           border:
-                            newPaymentMethod === mode
+                            typeof newPaymentMethod !== "undefined" && newPaymentMethod === mode
                               ? "1px solid #ea580c"
                               : "1px solid var(--border-card)",
                           background:
-                            newPaymentMethod === mode
+                            typeof newPaymentMethod !== "undefined" && newPaymentMethod === mode
                               ? "rgba(234, 88, 12, 0.1)"
                               : "var(--bg-main)",
                           color:
-                            newPaymentMethod === mode
+                            typeof newPaymentMethod !== "undefined" && newPaymentMethod === mode
                               ? "#ea580c"
                               : "var(--text-main)",
                           fontSize: "0.82rem",
@@ -3119,7 +3117,6 @@ export function AdminTakeaway({
                     ))}
                   </div>
                 </div>
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
 
                 {/* Bill Totals */}
                 <div

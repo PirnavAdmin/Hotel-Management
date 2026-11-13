@@ -4095,16 +4095,6 @@ export function App() {
                   }}
                 />
               )}
-              {activeView === "takeaway-flow" && (
-                <TakeawayOrderFlowView onBack={() => setActiveView("takeaway")} />
-              )}
-              {activeView === "reservation" && (
-                <TableReservationFlow
-                  onBackToPos={() => setActiveView("tables")}
-                  onHotelLogin={handleHotelLogin}
-                  onAdminLogin={handleHotelLogin}
-                />
-              )}
               {activeView === "order" && (
                 <TableDetailView
                   table={currentTable}

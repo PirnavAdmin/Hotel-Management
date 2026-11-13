@@ -655,6 +655,48 @@ export function CustomerLandingPage({
     return () => window.clearTimeout(timer);
   }, [reservationOtpCooldown]);
 
+  // Live polling for placed takeaway order status updates from Kitchen / POS
+  useEffect(() => {
+    const orderId = placedOrder?.id ?? placedOrder?.orderId;
+    if (!orderId) return undefined;
+
+    let isMounted = true;
+    const pollStatus = async () => {
+      try {
+        const result = await apiGetCustomerTakeawayOrder(orderId);
+        if (!isMounted) return;
+        const resp = result?.data?.data ?? result?.data;
+        if (resp) {
+          const status = String(resp.fulfillmentStatus || resp.status || "").toLowerCase();
+          const items = Array.isArray(resp.items) ? resp.items : [];
+          const allReady = items.length > 0 && items.every((i) =>
+            ["ready", "served", "completed"].includes(String(i.kotStatus || "").toLowerCase())
+          );
+
+          if (status === "pickedup" || status === "completed" || status === "served") {
+            setTrackingStage(4);
+          } else if (status === "ready" || allReady) {
+            setTrackingStage(3);
+            if (activeScreen === "tracking") {
+              setActiveScreen("ready");
+            }
+          } else if (status === "preparing" || status === "cooking") {
+            setTrackingStage(2);
+          }
+        }
+      } catch {
+        // network or server transient error
+      }
+    };
+
+    pollStatus();
+    const interval = setInterval(pollStatus, 4000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [placedOrder?.id, placedOrder?.orderId, activeScreen]);
+
   const changeQuantity = (item, delta) => {
     if (delta > 0 && item?.isAvailable === false) return;
     setCart((current) => {
