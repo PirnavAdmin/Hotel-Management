@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChefHat, Lock, User, Eye, EyeOff,
   Utensils, MonitorCheck, ShieldCheck,
-  CheckCircle, Mail, Phone, UserPlus, LogIn,
+  CheckCircle, Mail, Phone, UserPlus,
   RefreshCw, ArrowLeft,
   Settings, Printer, TrendingUp, Heart, Sparkles, KeyRound
 } from 'lucide-react';
@@ -592,41 +592,50 @@ export function LoginPage({
         {[
           { id: 'pos', label: 'POS', icon: <MonitorCheck size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
           { id: 'kot', label: 'Kitchen', icon: <ChefHat size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
-          { id: 'admin', label: 'Admin', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
-        ].map(t => (
-          <button
-            aria-pressed={currentRole === t.id}
-            key={t.id}
-            type="button"
-            onClick={() => {
-              setCurrentRole(t.id);
-              if (t.id !== 'admin' && mode === 'register') setMode('login');
-              setUsername('');
-              setPassword('');
-              setError('');
-              setSuccess('');
-            }}
-            style={{
-              padding: '0.42rem 0.35rem',
-              borderRadius: '8px',
-              fontSize: '0.75rem',
-              fontWeight: currentRole === t.id ? 800 : 600,
-              background: currentRole === t.id ? 'var(--primary-gradient)' : 'transparent',
-              color: currentRole === t.id ? '#ffffff' : '#94a3b8',
-              border: currentRole === t.id ? `1.5px solid ${t.accent}` : 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.3rem',
-              transition: 'all 0.2s ease',
-              boxShadow: currentRole === t.id ? t.shadow : 'none'
-            }}
-          >
-            <span>{t.icon}</span>
-            <span>{t.label}</span>
-          </button>
-        ))}
+          { id: 'admin', label: 'Admin', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' },
+          { id: 'register', label: 'Register', icon: <UserPlus size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' }
+        ].map(t => {
+          const isActive = t.id === 'register' ? mode === 'register' : (mode !== 'register' && currentRole === t.id);
+          return (
+            <button
+              aria-pressed={isActive}
+              key={t.id}
+              type="button"
+              onClick={() => {
+                if (t.id === 'register') {
+                  setMode('register');
+                  clearAll();
+                } else {
+                  setMode('login');
+                  setCurrentRole(t.id);
+                  setUsername('');
+                  setPassword('');
+                  setError('');
+                  setSuccess('');
+                }
+              }}
+              style={{
+                padding: '0.42rem 0.35rem',
+                borderRadius: '8px',
+                fontSize: '0.75rem',
+                fontWeight: isActive ? 800 : 600,
+                background: isActive ? 'var(--primary-gradient)' : 'transparent',
+                color: isActive ? '#ffffff' : '#94a3b8',
+                border: isActive ? `1.5px solid ${t.accent}` : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.3rem',
+                transition: 'all 0.2s ease',
+                boxShadow: isActive ? t.shadow : 'none'
+              }}
+            >
+              <span>{t.icon}</span>
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="bhanu-form-content">
@@ -641,25 +650,6 @@ export function LoginPage({
           )}
         </div>
 
-        {/* Tab toggle — Admin only */}
-        {currentRole === 'admin' && mode !== 'forgot' && (
-          <div className="bhanu-mode-tabs">
-            {[
-              { key: 'login',    label: 'Sign In',  icon: <LogIn size={13} /> },
-              { key: 'register', label: 'Register', icon: <UserPlus size={13} /> }
-            ].map(t => (
-              <button
-                key={t.key}
-                type="button"
-                aria-pressed={mode === t.key}
-                onClick={() => { setMode(t.key); clearAll(); }}
-              >
-                {t.icon}
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
         {/* ── LOGIN FORM ── */}
         {mode === 'login' && (
           <form
@@ -758,31 +748,29 @@ export function LoginPage({
               <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
             </div>
 
-            {currentRole === 'admin' && (
-              <div style={{ textAlign: 'center', marginTop: '0.65rem' }}>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Don't have an account? </span>
-                <button
-                  type="button"
-                  onClick={() => { setMode('register'); clearAll(); }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--accent-amber-light, #f59e0b)',
-                    fontSize: '0.74rem',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
-                  }}
-                >
-                  Register Now
-                </button>
-              </div>
-            )}
+            <div style={{ textAlign: 'center', marginTop: '0.65rem' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Don't have an account? </span>
+              <button
+                type="button"
+                onClick={() => { setMode('register'); clearAll(); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-amber-light, #f59e0b)',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Register Now
+              </button>
+            </div>
           </form>
         )}
 
-        {/* ── REGISTER FORM (ADMIN ONLY) ── */}
-        {mode === 'register' && currentRole === 'admin' && (
+        {/* ── REGISTER FORM ── */}
+        {mode === 'register' && (
           <form
             onSubmit={handleRegister}
             autoComplete="off"

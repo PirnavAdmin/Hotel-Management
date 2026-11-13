@@ -1008,6 +1008,8 @@ export function AdminPortal({
       localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
     } catch {}
     window.dispatchEvent(new Event("restaurant-settings-updated"));
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settings }));
     setRestaurantSettings(settings);
   };
 

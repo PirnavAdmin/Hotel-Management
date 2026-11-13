@@ -43,9 +43,37 @@ export function Header({
   onClearNotifications = null,
   onSelectTable = null,
   restaurantName = "Restaurant",
+  restaurantLogo = "",
 }) {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const getStoredLogo = () => {
+    try {
+      const s = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+      return s.logo || "";
+    } catch {
+      return "";
+    }
+  };
+  const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+
+  useEffect(() => {
+    if (restaurantLogo) setLiveLogo(restaurantLogo);
+    else setLiveLogo(getStoredLogo());
+  }, [restaurantLogo]);
+
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setLiveLogo(getStoredLogo() || restaurantLogo);
+    };
+    window.addEventListener("storage", handleSettingsUpdate);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    };
+  }, [restaurantLogo]);
 
   const isUserRoute =
     location.pathname === "/" || location.pathname === "/user";
@@ -202,17 +230,27 @@ export function Header({
         >
           <div
             style={{
-              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              background: liveLogo ? "var(--bg-secondary)" : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
               width: "40px",
               height: "40px",
               borderRadius: "11px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 14px rgba(245, 158, 11, 0.4)",
+              boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.2)" : "0 4px 14px rgba(245, 158, 11, 0.4)",
+              overflow: "hidden",
+              border: liveLogo ? "1px solid var(--border-subtle)" : "none",
             }}
           >
-            <UtensilsCrossed size={20} color="#ffffff" />
+            {liveLogo ? (
+              <img
+                src={liveLogo}
+                alt={restaurantName || "Logo"}
+                style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2px" }}
+              />
+            ) : (
+              <UtensilsCrossed size={20} color="#ffffff" />
+            )}
           </div>
           <div>
             <div

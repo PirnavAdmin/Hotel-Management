@@ -81,10 +81,33 @@ export function KitchenKOTView({
   activeStation,
   onStationChange,
   menuItems = [],
+  takeawayOrders = [],
 }) {
   const currentStation = activeStation || station;
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
   const isBarStation = currentStation === "bar";
+
+  const getStoredSettings = () => {
+    try {
+      return JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+    } catch {
+      return {};
+    }
+  };
+  const [liveSettings, setLiveSettings] = useState(getStoredSettings);
+
+  useEffect(() => {
+    const handleSettingsUpdate = () => setLiveSettings(getStoredSettings());
+    window.addEventListener("storage", handleSettingsUpdate);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    };
+  }, []);
+
+  const effectiveLogo = restaurantLogo || liveSettings.logo || "";
+  const effectiveRestaurantName = restaurantName !== "Restaurant" ? restaurantName : (liveSettings.restaurantName || "Restaurant");
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);
@@ -388,26 +411,207 @@ export function KitchenKOTView({
 
   // One visual card per persisted order batch. Table ID remains the floor-filter key;
   // the server order ID and batch are retained for Kitchen mutations.
+  const [localTakeawayOrders, setLocalTakeawayOrders] = useState(() => {
+    try {
+      const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const handleTakeawayUpdate = () => {
+      try {
+        const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+        setLocalTakeawayOrders(raw ? JSON.parse(raw) : []);
+      } catch {}
+    };
+    window.addEventListener("avsr-takeaway-updated", handleTakeawayUpdate);
+    window.addEventListener("avsr-kot-updated", handleTakeawayUpdate);
+    window.addEventListener("avsr-tables-updated", handleTakeawayUpdate);
+    window.addEventListener("storage", handleTakeawayUpdate);
+    return () => {
+      window.removeEventListener("avsr-takeaway-updated", handleTakeawayUpdate);
+      window.removeEventListener("avsr-kot-updated", handleTakeawayUpdate);
+      window.removeEventListener("avsr-tables-updated", handleTakeawayUpdate);
+      window.removeEventListener("storage", handleTakeawayUpdate);
+    };
+  }, []);
+
+  const updateLocalTakeawayItemStatus = (ticketKey, itemId, status) => {
+    try {
+      const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+      const list = raw ? JSON.parse(raw) : [];
+      const updated = list.map((ord) => {
+        const orderKey = `takeaway-${ord.id || ord.orderId || ord.invoiceNo}`;
+        if (orderKey === ticketKey || String(ord.id) === String(ticketKey).replace(/^takeaway-/, "")) {
+          return {
+            ...ord,
+            items: (ord.items || []).map((it) => {
+              if (!itemId || String(it.id) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+                return { ...it, kotStatus: status };
+              }
+              return it;
+            }),
+          };
+        }
+        return ord;
+      });
+      localStorage.setItem("gourmet_pos_takeaway_orders", JSON.stringify(updated));
+      setLocalTakeawayOrders(updated);
+      window.dispatchEvent(new CustomEvent("avsr-takeaway-updated"));
+      window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
+    } catch {}
+  };
+
+  // Safe time parser that handles HH:MM AM/PM, ISO, epoch, and clock strings
+  const parseSafeTime = (timeVal) => {
+    if (!timeVal) return Date.now();
+    if (typeof timeVal === "number" && timeVal > 0) return timeVal;
+    const parsed = Date.parse(timeVal);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    const m = String(timeVal).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (m) {
+      const d = new Date();
+      let h = parseInt(m[1], 10);
+      const min = parseInt(m[2], 10);
+      const s = m[3] ? parseInt(m[3], 10) : 0;
+      if (m[4]) {
+        h %= 12;
+        if (m[4].toUpperCase() === "PM") h += 12;
+      }
+      d.setHours(h, min, s, 0);
+      return d.getTime();
+    }
+    return Date.now();
+  };
+
   const getTicketTimeValue = (ticket) => {
     if (Number(ticket?.orderTimestamp) > 0) return Number(ticket.orderTimestamp);
     const value = ticket?.orderTime || ticket?.createdAt || ticket?.orderReceivedAt;
     if (!value) return 0;
-    const parsed = Date.parse(value);
-    return Number.isFinite(parsed) ? parsed : parseTimeToSeconds(value);
+    return parseSafeTime(value);
   };
 
-  const activeTickets = persistedKitchenTickets.map((ticket) => {
+  // 1. DINE-IN TABLES: Gather active tickets from POS floor tables
+  const tableTickets = (Array.isArray(tables) ? tables : [])
+    .filter((table) => {
+      if (!table || !Array.isArray(table.items) || table.items.length === 0) return false;
+      return table.items.some((item) => {
+        if (!item || item.status === "cancelled" || item.kotStatus === "cancelled") return false;
+        const status = String(item.kotStatus || item.status || "").toLowerCase();
+        const isSent = Boolean(item.kotSent || table.kotSent || ["received", "cooking", "ready"].includes(status));
+        return isSent && !["served", "completed"].includes(status);
+      });
+    })
+    .map((table) => {
+      const activeStationItems = (table.items || [])
+        .filter((item) => {
+          if (!item || item.status === "cancelled" || item.kotStatus === "cancelled") return false;
+          const isDrink = isDrinkItem(item, menuLookup);
+          const status = String(item.kotStatus || item.status || "").toLowerCase();
+          const isSent = Boolean(item.kotSent || table.kotSent || ["received", "cooking", "ready"].includes(status));
+          return (isBarStation ? isDrink : !isDrink) && isSent && !["served", "completed"].includes(status);
+        })
+        .map((item, idx) => ({
+          ...item,
+          id: item.id ?? item.orderItemId ?? `item-${table.id}-${idx}`,
+          menuItemId: item.menuItemId ?? item.id,
+          name: item.name || item.dishName || "Order Item",
+          kotStatus: String(item.kotStatus || (item.kotSent ? "received" : "queued")).toLowerCase(),
+          kotBatch: Number(item.kotBatch) || Number(table.kotBatch) || 1,
+        }));
+
+      if (activeStationItems.length === 0) return null;
+
+      const orderTime = table.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return {
+        id: table.id,
+        backendTableId: table.backendTableId ?? table.tableId ?? table.id,
+        backendOrderId: table.backendOrderId ?? table.activeOrderId ?? table.id,
+        orderType: "DineIn",
+        kotBatch: Number(table.kotBatch) || 1,
+        name: table.name || table.tableName || `Table ${table.id}`,
+        section: table.section || "Main Hall",
+        server: table.server || table.serverName || "Server",
+        orderTime,
+        priority: table.priority || "normal",
+        uniqueKey: `table-${table.id}`,
+        isPaid: Boolean(table.isPaid),
+        ticketType: "active",
+        items: activeStationItems,
+        orderTimestamp: parseSafeTime(table.orderTimestamp || table.orderTime),
+      };
+    })
+    .filter(Boolean);
+
+  // 2. TAKEAWAY ORDERS: Gather active tickets from takeaway orders
+  const combinedTakeaway = [
+    ...(Array.isArray(takeawayOrders) ? takeawayOrders : []),
+    ...(Array.isArray(localTakeawayOrders) ? localTakeawayOrders : []),
+    ...(Array.isArray(pastOrders) ? pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway")) : [])
+  ];
+
+  const seenTakeawayKeys = new Set();
+  const uniqueTakeawayOrders = [];
+  for (const ord of combinedTakeaway) {
+    if (!ord) continue;
+    const key = String(ord.invoiceNo || ord.id || ord.orderId || "");
+    if (!key || seenTakeawayKeys.has(key)) continue;
+    seenTakeawayKeys.add(key);
+    uniqueTakeawayOrders.push(ord);
+  }
+
+  const takeawayTickets = uniqueTakeawayOrders
+    .map((order) => {
+      const items = Array.isArray(order.items) ? order.items : [];
+      const activeStationItems = items
+        .filter((item) => {
+          if (!item || item.status === "cancelled" || item.kotStatus === "cancelled") return false;
+          const isDrink = isDrinkItem(item, menuLookup);
+          const status = String(item.kotStatus || "").toLowerCase();
+          return (isBarStation ? isDrink : !isDrink) && !["served", "completed"].includes(status);
+        })
+        .map((item, idx) => ({
+          ...item,
+          id: item.id ?? item.orderItemId ?? `takeaway-item-${order.id || order.invoiceNo}-${idx}`,
+          menuItemId: item.menuItemId ?? item.id,
+          name: item.name || item.dishName || "Order Item",
+          kotStatus: String(item.kotStatus || "received").toLowerCase(),
+          kotBatch: 1,
+        }));
+
+      if (activeStationItems.length === 0) return null;
+
+      const orderTime = order.orderTime || order.settledAt || order.date || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const orderId = order.id || order.orderId || order.invoiceNo;
+      return {
+        id: `takeaway-${orderId}`,
+        backendTableId: 0,
+        backendOrderId: orderId,
+        orderType: "Takeaway",
+        kotBatch: 1,
+        name: `Takeaway #${order.invoiceNo || orderId}`,
+        section: "Takeaway",
+        server: order.server || order.serverName || "Takeaway Counter",
+        orderTime,
+        priority: "urgent",
+        uniqueKey: `takeaway-${orderId}`,
+        isPaid: true,
+        ticketType: "active",
+        items: activeStationItems,
+        orderTimestamp: parseSafeTime(order.orderTimestamp || order.settledAt || order.date),
+      };
+    })
+    .filter(Boolean);
+
+  // 3. API TICKETS: Map persisted API kitchen tickets
+  const apiTickets = (Array.isArray(persistedKitchenTickets) ? persistedKitchenTickets : []).map((ticket) => {
     const orderId = ticket.orderId ?? ticket.ticketId;
     const backendTableId = ticket.tableId ?? orderId;
     const ticketName = ticket.tableName || ticket.TableName || "";
     const orderTime = ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt;
-    const parsedOrderTime = orderTime ? Date.parse(orderTime) : NaN;
-    if (
-      !Number.isFinite(parsedOrderTime) ||
-      getBusinessDayKey(new Date(parsedOrderTime)) !== getBusinessDayKey(currentTime)
-    ) {
-      return null;
-    }
     const localTable = tables.find((table) => {
       const idMatches = [table.backendTableId, table.tableId, table.id]
         .filter((id) => id !== undefined && id !== null)
@@ -430,7 +634,7 @@ export function KitchenKOTView({
       name: localTable?.name || ticketName || `Table ${tableId}`,
       section: ticket.section || ticket.sectionArea || "Main Hall",
       server: ticket.serverName || "Server",
-      orderTime,
+      orderTime: orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       priority: ticket.priority || "normal",
       uniqueKey: `active-${orderId}-${batch}`,
       isPaid: false,
@@ -450,15 +654,28 @@ export function KitchenKOTView({
         kotStatus: String(item.kotStatus || item.itemStatus || "queued").toLowerCase(),
         kotBatch: Number(item.kotBatch) || batch,
       })),
+      orderTimestamp: parseSafeTime(orderTime),
     };
   }).filter((ticket) => {
     if (!ticket || ticket.items.length === 0) return false;
-    // Never invent/render a table card for an API order whose table no longer
-    // exists in the restaurant's configured floor plan. Takeaway has no table.
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway";
     return isTakeaway || tables.length === 0 ||
       tables.some((table) => String(table.id) === String(ticket.id));
   });
+
+  // Merge tickets: Table tickets + Takeaway tickets + API tickets (deduplicated)
+  const mergedActiveMap = new Map();
+  tableTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
+  takeawayTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
+  apiTickets.forEach((t) => {
+    const key = String(t.uniqueKey);
+    const tableKey = `table-${t.id}`;
+    if (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey)) {
+      mergedActiveMap.set(key, t);
+    }
+  });
+
+  const activeTickets = Array.from(mergedActiveMap.values());
 
   // Combined List: Only Active Orders from POS
   const allKitchenTickets = activeTickets.sort((a, b) => {
@@ -586,19 +803,29 @@ export function KitchenKOTView({
     const ticket = findKitchenTicket(ticketKey);
     if (!ticket) return;
 
-    const result = itemId
-      ? await apiUpdateKitchenItemStatus(itemId, "cooking")
-      : await apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch);
-    if (!result?.success) {
-      reportKitchenActionError(result, "Start cooking");
-      return;
-    }
+    const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
     const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
-    const localTableId = tables.find((table) =>
-      String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
-    )?.id ?? ticket.id;
-    onUpdateItemKotStatus?.(localTableId, "cooking", targetItem?.menuItemId ?? null);
-    await refreshKitchenTicketsRef.current?.();
+
+    if (isTakeaway) {
+      updateLocalTakeawayItemStatus(ticketKey, itemId, "cooking");
+      onUpdateItemKotStatus?.(ticketKey, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    } else {
+      const localTableId = tables.find((table) =>
+        String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
+      )?.id ?? ticket.id;
+      onUpdateItemKotStatus?.(localTableId, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    }
+
+    if (ticket.backendOrderId && !String(ticketKey).startsWith("takeaway-")) {
+      try {
+        if (itemId && !String(itemId).startsWith("item-")) {
+          apiUpdateKitchenItemStatus(itemId, "cooking").catch(() => {});
+        } else {
+          apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch).catch(() => {});
+        }
+      } catch {}
+    }
+    refreshKitchenTicketsRef.current?.();
   };
 
   const handleCompletePreparation = async (ticketKey, itemId = null) => {
@@ -635,19 +862,32 @@ export function KitchenKOTView({
           : {}),
       }));
     }
-    const result = itemId
-      ? await apiUpdateKitchenItemStatus(itemId, "ready")
-      : await apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch);
-    if (!result?.success) {
-      reportKitchenActionError(result, "Complete preparation");
-      return;
-    }
+
+    const isTakeaway = String(currentTable.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
     const targetItem = itemId && currentTable.items.find((item) => String(item.id) === String(itemId));
-    const localTableId = tables.find((table) =>
-      String(table.backendTableId ?? table.id) === String(currentTable.backendTableId),
-    )?.id ?? currentTable.id;
-    onCompleteTableKot?.(localTableId, targetItem?.menuItemId ?? null, durationStr, nowTimeStr);
-    await refreshKitchenTicketsRef.current?.();
+
+    if (isTakeaway) {
+      updateLocalTakeawayItemStatus(ticketKey, itemId, "ready");
+      onUpdateItemKotStatus?.(ticketKey, "ready", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+      onCompleteTableKot?.(ticketKey, targetItem?.menuItemId ?? targetItem?.id ?? itemId, durationStr, nowTimeStr);
+    } else {
+      const localTableId = tables.find((table) =>
+        String(table.backendTableId ?? table.id) === String(currentTable.backendTableId),
+      )?.id ?? currentTable.id;
+      onCompleteTableKot?.(localTableId, targetItem?.menuItemId ?? targetItem?.id ?? itemId, durationStr, nowTimeStr);
+      onUpdateItemKotStatus?.(localTableId, "ready", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    }
+
+    if (currentTable.backendOrderId && !String(ticketKey).startsWith("takeaway-")) {
+      try {
+        if (itemId && !String(itemId).startsWith("item-")) {
+          apiUpdateKitchenItemStatus(itemId, "ready").catch(() => {});
+        } else {
+          apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch).catch(() => {});
+        }
+      } catch {}
+    }
+    refreshKitchenTicketsRef.current?.();
   };
 
   const handleResetToReceived = async (ticketKey, itemId = null) => {
@@ -660,21 +900,29 @@ export function KitchenKOTView({
       delete copy[`table-${ticket.id}`];
       return copy;
     });
-    const targetItems = itemId
-      ? ticket.items.filter((item) => String(item.id) === String(itemId))
-      : ticket.items.filter((item) => !isItemCompleted(item));
-    const results = await Promise.all(targetItems.map((item) => apiUpdateKitchenItemStatus(item.id, "queued")));
-    const failed = results.find((result) => !result?.success);
-    if (failed) {
-      reportKitchenActionError(failed, "Reset item to received");
-      return;
+
+    const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
+    const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
+
+    if (isTakeaway) {
+      updateLocalTakeawayItemStatus(ticketKey, itemId, "received");
+      onUpdateItemKotStatus?.(ticketKey, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    } else {
+      const localTableId = tables.find((table) =>
+        String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
+      )?.id ?? ticket.id;
+      onUpdateItemKotStatus?.(localTableId, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     }
-    const targetItem = itemId && targetItems[0];
-    const localTableId = tables.find((table) =>
-      String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
-    )?.id ?? ticket.id;
-    onUpdateItemKotStatus?.(localTableId, "received", targetItem?.menuItemId ?? null);
-    await refreshKitchenTicketsRef.current?.();
+
+    if (ticket.backendOrderId && !String(ticketKey).startsWith("takeaway-")) {
+      try {
+        const targetItems = itemId
+          ? ticket.items.filter((item) => String(item.id) === String(itemId))
+          : ticket.items.filter((item) => !isItemCompleted(item));
+        Promise.all(targetItems.map((item) => apiUpdateKitchenItemStatus(item.id, "queued"))).catch(() => {});
+      } catch {}
+    }
+    refreshKitchenTicketsRef.current?.();
   };
 
   // Toggle single dish status: Received -> Cooking -> Prepared
@@ -1012,11 +1260,11 @@ export function KitchenKOTView({
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
             >
-              {restaurantLogo ? (
+              {effectiveLogo ? (
                 <img
-                  src={restaurantLogo}
-                  alt={`${restaurantName || "Restaurant"} logo`}
-                  style={{ width: 54, height: 54, objectFit: "contain", borderRadius: 10 }}
+                  src={effectiveLogo}
+                  alt={`${effectiveRestaurantName || "Restaurant"} logo`}
+                  style={{ width: 54, height: 54, objectFit: "contain", borderRadius: 10, background: "var(--bg-secondary)", padding: "2px" }}
                 />
               ) : (
               <div

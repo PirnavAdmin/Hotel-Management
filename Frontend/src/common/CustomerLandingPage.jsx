@@ -173,6 +173,29 @@ export function CustomerLandingPage({
   kitchenNotifications = [],
   onClearNotifications,
 }) {
+  const getStoredLogo = () => {
+    try {
+      const s = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+      return s.logo || "";
+    } catch {
+      return "";
+    }
+  };
+  const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+
+  useEffect(() => {
+    setLiveLogo(restaurantLogo || getStoredLogo());
+  }, [restaurantLogo]);
+
+  useEffect(() => {
+    const handleSettingsUpdate = () => setLiveLogo(getStoredLogo() || restaurantLogo);
+    window.addEventListener("storage", handleSettingsUpdate);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    };
+  }, [restaurantLogo]);
   // --- Cart & Navigation State ---
   const [cart, setCart] = useState({});
   // Customer Authentication & Profile State (Frontend-Only)
@@ -1398,10 +1421,10 @@ export function CustomerLandingPage({
                 navigateScreen("home");
               }}
             >
-              {restaurantLogo ? (
+              {liveLogo ? (
                 <img
                   className="customer-brand-logo"
-                  src={restaurantLogo}
+                  src={liveLogo}
                   alt=""
                 />
               ) : (

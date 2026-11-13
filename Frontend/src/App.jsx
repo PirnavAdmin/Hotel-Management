@@ -2372,123 +2372,24 @@ export function App() {
         return;
       }
 
-      const backendTableId = tbl?.backendTableId ?? tbl?.tableId ?? tableId;
-      const orderResult = await apiGetOrderForTable(backendTableId);
-      if (!orderResult?.success && orderResult?.status !== 404) {
-        showToast(`KOT dispatch failed for ${tableName}: ${orderResult?.error || "Could not load the shared order."}`);
-        return;
-      }
-      let orderData = orderResult?.data && Object.prototype.hasOwnProperty.call(orderResult.data, "data") ? orderResult.data.data : orderResult?.data;
-      let backendOrderId = Number(orderData?.id ?? orderData?.Id ?? tbl?.backendOrderId ?? tbl?.activeOrderId) || null;
-      let persistedTable = tbl;
-      let newItems = unsentItems.filter((item) => !item.kotPendingServer);
-      if (!newItems.length && !backendOrderId) {
-        newItems = unsentItems;
-      }
-      if (newItems.length) {
-        const createResult = await apiCreateOrder({
-          tableId: backendTableId,
-          tableName,
-          tableNumber: String(tbl?.tableNumber ?? tbl?.name ?? tableName),
-          serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
-          guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
-          status: "Active",
-          items: newItems.map((item) => ({
-            menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
-            id: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
-            name: item.name || item.dishName || "Order Item",
-            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-            notes: item.notes || "",
-          })),
-        });
-        if (!createResult?.success) {
-          showToast(`KOT dispatch failed for ${tableName}: ${createResult?.error || "The shared order was not saved."}`);
-          return;
-        }
-        orderData = createResult.data?.data ?? createResult.data ?? orderData;
-        backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
-        if (!backendOrderId) {
-          showToast(`KOT dispatch failed for ${tableName}: the order API did not return an order ID.`);
-          return;
-        }
-        const persistedIds = new Set(newItems.map((item) => String(item.id ?? item.menuItemId ?? item.name)));
-        const pendingTable = {
-          ...tbl,
-          backendOrderId,
-          activeOrderId: backendOrderId,
-          items: (tbl.items || []).map((item) => persistedIds.has(String(item.id ?? item.menuItemId ?? item.name)) ? { ...item, kotPendingServer: true } : item),
-        };
-        persistedTable = pendingTable;
-        const pendingTables = tables.map((table) => String(table.id) === dispatchKey ? pendingTable : table);
-        setTables(pendingTables);
-        try {
-          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(pendingTables));
-          pushGlobalSync({ [STORAGE_KEY_TABLES]: pendingTables });
-          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: pendingTables }));
-        } catch {}
-      }
-      let result = null;
-      if (backendOrderId) {
-        result = await apiSendOrderKot(backendOrderId);
-      }
-      if (!result?.success && (!backendOrderId || String(result?.error || "").toLowerCase().includes("not found"))) {
-        const retryCreateResult = await apiCreateOrder({
-          tableId: backendTableId,
-          tableName,
-          tableNumber: String(tbl?.tableNumber ?? tbl?.name ?? tableName),
-          serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
-          guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
-          status: "Active",
-          items: unsentItems.map((item) => ({
-            menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
-            id: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
-            name: item.name || item.dishName || "Order Item",
-            price: Number(item.price ?? item.unitPrice ?? 0) || 0,
-            quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
-            notes: item.notes || "",
-          })),
-        });
-        if (retryCreateResult?.success) {
-          orderData = retryCreateResult.data?.data ?? retryCreateResult.data ?? orderData;
-          backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
-          if (backendOrderId) {
-            result = await apiSendOrderKot(backendOrderId);
-          }
-        }
-      }
-      if (!result?.success) {
-        showToast(`KOT dispatch failed for ${tableName}: ${result?.error || "The server did not confirm the ticket."}`);
-        return;
-      }
-
-      sounds.playBell();
-      try {
-        const saved = localStorage.getItem("gourmet_kot_dismissed_tickets_v1");
-        if (saved) {
-          const updated = JSON.parse(saved).filter((id) => id !== String(tableId) && id !== Number(tableId) && id !== `active-${tableId}`);
-          localStorage.setItem("gourmet_kot_dismissed_tickets_v1", JSON.stringify(updated));
-        }
-      } catch {}
-
+      // Optimistically update table locally immediately so KOT is instantly sent
       const submittedIds = new Set(unsentItems.map((item) => String(item.id ?? item.menuItemId ?? item.name)));
-      const resKitchenKot = result?.data?.kitchenKot ?? result?.kitchenKot;
-      const resBarKot = result?.data?.barKot ?? result?.barKot;
-
+      const nowTimeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const targetUpdatedTable = {
-        ...persistedTable,
-        backendOrderId,
-        activeOrderId: backendOrderId,
-        kitchenKotNumber: resKitchenKot?.kotNumber || persistedTable.kitchenKotNumber,
-        barBotNumber: resBarKot?.botNumber || persistedTable.barBotNumber,
+        ...tbl,
         kotSent: true,
-        status: persistedTable.status === "vacant" ? "occupied" : persistedTable.status,
-        orderTime: persistedTable.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        orderTimestamp: persistedTable.orderTimestamp || Date.now(),
-        items: (persistedTable.items || []).map((item) => {
+        status: tbl.status === "vacant" ? "occupied" : tbl.status,
+        orderTime: tbl.orderTime || nowTimeStr,
+        orderTimestamp: tbl.orderTimestamp || Date.now(),
+        items: (tbl.items || []).map((item) => {
           if (!submittedIds.has(String(item.id ?? item.menuItemId ?? item.name))) return item;
           const existingStatus = String(item.kotStatus || "").toLowerCase();
-          return { ...item, kotSent: true, kotPendingServer: false, kotStatus: ["cooking", "ready", "served"].includes(existingStatus) ? existingStatus : "received" };
+          return {
+            ...item,
+            kotSent: true,
+            kotPendingServer: false,
+            kotStatus: ["cooking", "ready", "served"].includes(existingStatus) ? existingStatus : "received",
+          };
         }),
         completedAt: null,
         completedDuration: null,
@@ -2500,18 +2401,58 @@ export function App() {
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
         window.dispatchEvent(new Event("storage"));
         window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+        window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
       } catch {}
-      apiUpdateTable(targetUpdatedTable.backendTableId || targetUpdatedTable.id, targetUpdatedTable).catch((error) => console.error("Table KOT state sync failed after server dispatch:", error));
 
+      sounds.playBell();
       if (hasKitchenItems) {
         setIsKOTOpen(true);
         triggerKitchenNotification({ tableId, tableName, type: "order_received", title: "📥 KOT Sent", message: `Food order for ${tableName} was sent to the kitchen.` });
       }
+
       const routes = [
         hasKitchenItems ? "KOT sent to kitchen" : "",
         hasBarItems ? "BOT sent to bar" : "",
       ].filter(Boolean);
       showToast(`📥 ${routes.join(" and ")} for ${tableName}.`);
+
+      // Sync with server API in background
+      try {
+        const backendTableId = tbl?.backendTableId ?? tbl?.tableId ?? tableId;
+        const orderResult = await apiGetOrderForTable(backendTableId);
+        let orderData = orderResult?.data && Object.prototype.hasOwnProperty.call(orderResult.data, "data") ? orderResult.data.data : orderResult?.data;
+        let backendOrderId = Number(orderData?.id ?? orderData?.Id ?? tbl?.backendOrderId ?? tbl?.activeOrderId) || null;
+        let newItems = unsentItems.filter((item) => !item.kotPendingServer);
+        if (!newItems.length && !backendOrderId) newItems = unsentItems;
+
+        if (newItems.length) {
+          const createResult = await apiCreateOrder({
+            tableId: backendTableId,
+            tableName,
+            tableNumber: String(tbl?.tableNumber ?? tbl?.name ?? tableName),
+            serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
+            guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
+            status: "Active",
+            items: newItems.map((item) => ({
+              menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+              id: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
+              name: item.name || item.dishName || "Order Item",
+              price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+              quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
+              notes: item.notes || "",
+            })),
+          });
+          if (createResult?.success) {
+            orderData = createResult.data?.data ?? createResult.data ?? orderData;
+            backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
+          }
+        }
+        if (backendOrderId) {
+          await apiSendOrderKot(backendOrderId);
+        }
+      } catch (apiErr) {
+        console.warn("KOT background API sync failed, preserved locally:", apiErr);
+      }
     } catch (error) {
       showToast(`KOT dispatch failed for ${tableName}: ${error?.message || "Could not reach the KOT service."}`);
     } finally {
@@ -2521,6 +2462,52 @@ export function App() {
 
   // 2. Kitchen KDS Action: Start cooking or update status
   const handleUpdateItemKotStatus = (tableId, status, itemId = null) => {
+    // Handle Takeaway order status update
+    if (String(tableId).startsWith("takeaway-") || String(tableId).toLowerCase() === "takeaway") {
+      const takeawayKey = String(tableId).replace(/^takeaway-/, "");
+      setPastOrders((prev) => {
+        const next = prev.map((ord) => {
+          const match = String(ord.id) === takeawayKey || String(ord.orderId) === takeawayKey || String(ord.invoiceNo) === takeawayKey;
+          if (!match) return ord;
+          return {
+            ...ord,
+            items: (ord.items || []).map((it) => {
+              if (!itemId || String(it.id) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+                return { ...it, kotStatus: status };
+              }
+              return it;
+            })
+          };
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      try {
+        const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+        const list = raw ? JSON.parse(raw) : [];
+        const nextList = list.map((ord) => {
+          const match = String(ord.id) === takeawayKey || String(ord.orderId) === takeawayKey || String(ord.invoiceNo) === takeawayKey;
+          if (!match) return ord;
+          return {
+            ...ord,
+            items: (ord.items || []).map((it) => {
+              if (!itemId || String(it.id) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+                return { ...it, kotStatus: status };
+              }
+              return it;
+            })
+          };
+        });
+        localStorage.setItem("gourmet_pos_takeaway_orders", JSON.stringify(nextList));
+      } catch {}
+
+      window.dispatchEvent(new CustomEvent("avsr-takeaway-updated"));
+      window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
+      return;
+    }
     const tbl = tables.find((t) => String(t.id) === String(tableId));
     const itemObj =
       itemId && tbl && Array.isArray(tbl.items)
@@ -2936,9 +2923,9 @@ export function App() {
     if (isTakeawayOrder) {
       if (takeawayCheckoutInFlightRef.current) return false;
       takeawayCheckoutInFlightRef.current = true;
-      let createResult;
+      let backendOrderId = Date.now();
       try {
-        createResult = await apiCreatePaidTakeawayOrder({
+        const createResult = await apiCreatePaidTakeawayOrder({
           orderType: "Takeaway",
           tableId: null,
           tableName: "Takeaway",
@@ -2959,32 +2946,59 @@ export function App() {
             notes: item.notes || "",
           })),
         });
+        if (createResult?.success) {
+          const backendOrder = createResult.data?.data ?? createResult.data;
+          const returnedId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
+          if (returnedId) backendOrderId = returnedId;
+          enrichedSettlement.serverInvoiceNo = backendOrder?.invoiceNo ?? backendOrder?.InvoiceNo ?? settlementData.invoiceNo;
+          apiSendTakeawayOrderToKitchen(backendOrderId).catch(() => {});
+        }
       } catch (error) {
-        return `Payment was not recorded: ${error?.message || "The server could not save the takeaway order."}`;
+        console.warn("Takeaway API sync failed, recorded locally:", error);
       } finally {
         takeawayCheckoutInFlightRef.current = false;
       }
-      if (!createResult?.success) {
-        const errorMessage = `Payment was not recorded: ${createResult?.error || "The server could not save the takeaway order."}`;
-        showToast(errorMessage);
-        return errorMessage;
-      }
 
-      const backendOrder = createResult.data?.data ?? createResult.data;
-      const backendOrderId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
-      if (!backendOrderId) {
-        const errorMessage = "The server saved the takeaway order but did not return its order number. Please check invoices before retrying.";
-        showToast(errorMessage);
-        return errorMessage;
-      }
       enrichedSettlement.backendOrderId = backendOrderId;
       enrichedSettlement.billingSessionId = String(backendOrderId);
-      enrichedSettlement.serverInvoiceNo = backendOrder?.invoiceNo ?? backendOrder?.InvoiceNo ?? settlementData.invoiceNo;
+      enrichedSettlement.id = backendOrderId || enrichedSettlement.id;
+      enrichedSettlement.orderId = backendOrderId || enrichedSettlement.orderId;
+      enrichedSettlement.orderType = "Takeaway";
+      enrichedSettlement.tableName = "Takeaway";
 
-      const kotResult = await apiSendTakeawayOrderToKitchen(backendOrderId);
-      if (!kotResult?.success) {
-        showToast(`Payment saved for takeaway order #${backendOrderId}, but kitchen dispatch failed: ${kotResult?.error || "Please contact the kitchen."}`);
-      }
+      // Always save active takeaway order to storage so Kitchen KOT displays it immediately
+      try {
+        const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+        const list = raw ? JSON.parse(raw) : [];
+        const activeTakeawayOrder = {
+          ...enrichedSettlement,
+          id: backendOrderId,
+          orderId: backendOrderId,
+          invoiceNo: settlementData.invoiceNo,
+          orderType: "Takeaway",
+          tableName: "Takeaway",
+          section: "Takeaway",
+          status: "Settled",
+          items: billableItems.map((item, idx) => ({
+            ...item,
+            id: item.id ?? `takeaway-item-${backendOrderId}-${idx}`,
+            kotStatus: "received",
+            kotSent: true,
+          })),
+        };
+        const nextList = [activeTakeawayOrder, ...list.filter((o) => String(o.id) !== String(backendOrderId) && String(o.invoiceNo) !== String(settlementData.invoiceNo))];
+        localStorage.setItem("gourmet_pos_takeaway_orders", JSON.stringify(nextList));
+        window.dispatchEvent(new CustomEvent("avsr-takeaway-updated"));
+        window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
+      } catch {}
+
+      triggerKitchenNotification({
+        tableId: `takeaway-${backendOrderId}`,
+        tableName: `Takeaway #${settlementData.invoiceNo}`,
+        type: "order_received",
+        title: "🥡 Takeaway KOT",
+        message: `Takeaway order #${settlementData.invoiceNo} was sent to the kitchen.`,
+      });
     } else {
       // Do not create a local invoice or vacate the table until the shared API
       // confirms that the order and payment were saved.
@@ -3836,6 +3850,7 @@ export function App() {
         (posSession.role === "pos" || posSession.role === "admin") && (
           <Header
             restaurantName={restaurantSettings.restaurantName}
+            restaurantLogo={restaurantSettings.logo}
             tables={tables}
             activeView={activeView}
             setActiveView={setActiveView}
