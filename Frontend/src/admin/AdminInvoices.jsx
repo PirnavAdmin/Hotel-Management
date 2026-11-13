@@ -19,10 +19,11 @@ import {
   Utensils,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
+import { ReceiptModal } from "../user/ReceiptModal";
 import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
+  formatInvoiceNumber,
   normalizePaymentMethod,
   parseOrderToYMD,
 } from "../utils/orderDedupe";
@@ -268,7 +269,7 @@ export function AdminInvoices({
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
-      formatOrderNumber(order.invoiceNo || order.id || "").toLowerCase().includes(query) ||
+      formatInvoiceNumber(order).toLowerCase().includes(query) ||
       String(order.invoiceNo || "").toLowerCase().includes(query) ||
       String(order.id ?? "").toLowerCase().includes(query) ||
       String(order.tableName || "").toLowerCase().includes(query) ||
@@ -1219,7 +1220,7 @@ export function AdminInvoices({
                           fontSize: "0.76rem",
                         }}
                       >
-                        {formatOrderNumber(order.invoiceNo || order.id || order.orderId)}
+                        {formatInvoiceNumber(order)}
                       </span>
                     </td>
 
@@ -1603,7 +1604,7 @@ export function AdminInvoices({
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
                 <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                  {formatOrderNumber(editingInvoice.invoiceNo || editingInvoice.id)}
+                  {formatInvoiceNumber(editingInvoice)}
                 </div>
               </div>
               <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>

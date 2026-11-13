@@ -2,6 +2,7 @@ import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
 import {
   dedupeOrders,
+  formatInvoiceNumber,
   isSettledInvoiceRecord,
   isSettledSaleRecord,
   sortOrdersBySettlementTime,
@@ -124,20 +125,17 @@ export function normalizeInvoiceRecord(invoice, order = null) {
   const normalizedStatus = String(valueFrom(invoice, "status", "Status") || "").toLowerCase();
   const isVoidInvoice = normalizedStatus === "void" || normalizedStatus === "cancelled";
 
-  let invoiceNumber =
+  const rawInvoiceNumber =
     valueFrom(invoice, "invoiceNumber", "InvoiceNumber", "invoiceNo", "InvoiceNo") ??
     valueFrom(order, "invoiceNo", "InvoiceNo");
 
-  // Clean raw timestamp invoice numbers (e.g. INV-1793258326562 or Order #1793...)
-  if (!invoiceNumber || /^INV-\d{10,}$/i.test(String(invoiceNumber)) || /^Order\s*#\d{10,}$/i.test(String(invoiceNumber))) {
-    const rawId = valueFrom(order, "id", "orderId") ?? valueFrom(invoice, "id");
-    const num = parseInt(String(rawId).replace(/\D/g, ""), 10);
-    if (!isNaN(num) && num > 0 && num < 1000) {
-      invoiceNumber = `INV-${String(num).padStart(3, "0")}`;
-    } else {
-      invoiceNumber = rawId == null ? "" : `Order #${rawId}`;
-    }
-  }
+  const invoiceNumber = formatInvoiceNumber({
+    ...order,
+    ...invoice,
+    id: orderId ?? invoiceId,
+    invoiceNo: rawInvoiceNumber,
+    invoiceNumber: rawInvoiceNumber,
+  });
 
   return {
     ...order,
