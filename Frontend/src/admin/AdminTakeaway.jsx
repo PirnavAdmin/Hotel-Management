@@ -2409,34 +2409,6 @@ export function AdminTakeaway({
                   </div>
                 </div>
 
-                {/* Payment Method */}
-                <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
-                    Payment Mode
-                  </label>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    {["UPI", "Cash"].map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setNewPaymentMethod(mode)}
-                        style={{
-                          flex: 1,
-                          height: "36px",
-                          borderRadius: "8px",
-                          border: newPaymentMethod === mode ? "1px solid #ea580c" : "1px solid var(--border-card)",
-                          background: newPaymentMethod === mode ? "rgba(234, 88, 12, 0.1)" : "var(--bg-main)",
-                          color: newPaymentMethod === mode ? "#ea580c" : "var(--text-main)",
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 {/* Bill Totals */}
                 <div

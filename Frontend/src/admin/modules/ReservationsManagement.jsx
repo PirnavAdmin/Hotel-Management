@@ -1768,51 +1768,52 @@ export function ReservationsManagement({
           <table
             style={{
               width: "100%",
+              minWidth: "1180px",
               tableLayout: "fixed",
               borderCollapse: "separate",
               borderSpacing: 0,
               textAlign: "left",
-              fontSize: "0.73rem",
+              fontSize: "0.76rem",
             }}
           >
             <colgroup>
               <col style={{ width: "4%" }} />
-              <col style={{ width: "11%" }} />
+              <col style={{ width: "10%" }} />
               <col style={{ width: "14%" }} />
               <col style={{ width: "12%" }} />
-              <col style={{ width: "13%" }} />
+              <col style={{ width: "17%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "9%" }} />
               <col style={{ width: "8%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "13%" }} />
             </colgroup>
             <thead>
               <tr>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   #
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   RESERVATION ID
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   GUEST NAME
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   PHONE
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   TABLE
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   GUESTS
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   DATE & TIME
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   STATUS
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
                   ACTIONS
                 </th>
               </tr>
@@ -1860,12 +1861,12 @@ export function ReservationsManagement({
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       {/* Row Index */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem", whiteSpace: "nowrap", textAlign: "center" }}>
                         {pageStart + index + 1}
                       </td>
 
                       {/* Reservation ID */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             fontFamily: "monospace",
@@ -1878,19 +1879,19 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Guest Name */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "inline-flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}>
                           <div
                             style={{
-                              width: "20px",
-                              height: "20px",
+                              width: "22px",
+                              height: "22px",
                               borderRadius: "50%",
                               background: "rgba(249, 115, 22, 0.15)",
                               color: "#ea580c",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "0.65rem",
+                              fontSize: "0.68rem",
                               fontWeight: 800,
                               flexShrink: 0,
                             }}
@@ -1902,15 +1903,15 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Phone */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                          <Phone size={13} color="#94a3b8" />
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.74rem" }}>
+                          <Phone size={13} color="#94a3b8" style={{ flexShrink: 0 }} />
                           {r.phone || r.customerPhone || "—"}
                         </span>
                       </td>
 
                       {/* Table */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1918,38 +1919,57 @@ export function ReservationsManagement({
                             gap: "0.35rem",
                             background: "rgba(255, 255, 255, 0.04)",
                             border: "1px solid var(--border-card, #27272a)",
-                            padding: "0.15rem 0.45rem",
+                            padding: "0.2rem 0.55rem",
                             borderRadius: "6px",
-                            fontSize: "0.7rem",
+                            fontSize: "0.72rem",
                             whiteSpace: "nowrap",
+                            maxWidth: "100%",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
                           }}
                         >
                           <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
-                          {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
-                        </span>
-                      </td>
-
-                      {/* Guests Count */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                          <Users size={14} color="#f59e0b" />
-                          <strong>{r.guestsCount || r.guests || 2}</strong> Guests
-                        </span>
-                      </td>
-
-                      {/* Date & Time */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", whiteSpace: "nowrap" }}>
-                          <span>{r.reservationDate || r.date || "Today"}</span>
-                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted, #94a3b8)", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                            <Clock size={12} color="#ea580c" />
-                            {r.reservationTime || r.time || "07:30 PM"}
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
                           </span>
                         </span>
                       </td>
 
+                      {/* Guests Count */}
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                          <Users size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
+                          <span><strong style={{ fontWeight: 700 }}>{r.guestsCount || r.guests || 2}</strong> Guests</span>
+                        </span>
+                      </td>
+
+                      {/* Date & Time */}
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", whiteSpace: "nowrap" }}>
+                          <span style={{ fontWeight: 550, color: "var(--text-main, #f8fafc)" }}>
+                            {r.reservationDate || r.date || "Today"}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              color: "var(--text-muted, #94a3b8)",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                              background: "rgba(255, 255, 255, 0.04)",
+                              border: "1px solid var(--border-card, #27272a)",
+                              padding: "0.15rem 0.45rem",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            <Clock size={11} color="#ea580c" style={{ flexShrink: 0 }} />
+                            {r.reservationTime || r.time || "07:30 PM"}
+                          </span>
+                        </div>
+                      </td>
+
                       {/* Status Badge */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1970,8 +1990,8 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Actions: Eye Icon (Opens ReceiptModal Bill), Printer, More Menu */}
-                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
                           {/* Eye Icon -> Opens the 5th picture Invoice & Bill Print (ReceiptModal) */}
                           <button
                             type="button"
@@ -2063,10 +2083,10 @@ export function ReservationsManagement({
                                   position: "absolute",
                                   right: 0,
                                   top: "calc(100% + 5px)",
-                                  background: "#18181b",
-                                  border: "1px solid #27272a",
+                                  background: "var(--bg-card)",
+                                  border: "1px solid var(--border-card)",
                                   borderRadius: "10px",
-                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.75)",
+                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
                                   padding: "0.35rem",
                                   minWidth: "195px",
                                   zIndex: 100,
@@ -2313,7 +2333,7 @@ export function ReservationsManagement({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: "rgba(0, 0, 0, 0.6)",
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
@@ -2321,24 +2341,26 @@ export function ReservationsManagement({
             zIndex: 9999,
             padding: "1rem",
           }}
+          onClick={() => setIsNewBookingModalOpen(false)}
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "16px",
               width: "100%",
               maxWidth: "520px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
               overflow: "hidden",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div
               style={{
                 padding: "1.1rem 1.4rem",
                 background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
+                borderBottom: "1px solid var(--border-card)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -2347,10 +2369,10 @@ export function ReservationsManagement({
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
                     New Table Reservation
                   </h3>
-                  <small style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
                     Reserve a dining table at {restaurantName}
                   </small>
                 </div>
@@ -2361,7 +2383,7 @@ export function ReservationsManagement({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#94a3b8",
+                  color: "var(--text-muted)",
                   cursor: "pointer",
                   padding: "4px",
                 }}
@@ -2374,7 +2396,7 @@ export function ReservationsManagement({
             <form onSubmit={handleCreateReservation} style={{ padding: "1.25rem 1.4rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                     Guest Full Name *
                   </label>
                   <input
@@ -2386,10 +2408,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: "var(--text-main)",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2397,7 +2419,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                     Mobile Number *
                   </label>
                   <input
@@ -2409,10 +2431,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: "var(--text-main)",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2423,7 +2445,7 @@ export function ReservationsManagement({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                     Dining Table *
                   </label>
                   <select
@@ -2432,10 +2454,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: "var(--text-main)",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2450,7 +2472,7 @@ export function ReservationsManagement({
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                     Number of Guests
                   </label>
                   <input
@@ -2462,10 +2484,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: "var(--text-main)",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2476,7 +2498,7 @@ export function ReservationsManagement({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                     Reservation Date
                   </label>
                   <input
@@ -2486,10 +2508,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: "var(--text-main)",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2497,7 +2519,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                     Time Slot
                   </label>
                   <select
@@ -2506,10 +2528,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: "var(--text-main)",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2527,7 +2549,7 @@ export function ReservationsManagement({
               </div>
 
               <div style={{ marginBottom: "0.85rem" }}>
-                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                   Special Requests / Occasion (Optional)
                 </label>
                 <textarea
@@ -2538,10 +2560,10 @@ export function ReservationsManagement({
                   style={{
                     width: "100%",
                     padding: "0.55rem 0.75rem",
-                    background: "#27272a",
-                    border: "1px solid #3f3f46",
+                    background: "var(--bg-main)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
-                    color: "#f8fafc",
+                    color: "var(--text-main)",
                     fontSize: "0.84rem",
                     boxSizing: "border-box",
                     outline: "none",
@@ -2556,10 +2578,10 @@ export function ReservationsManagement({
                   onClick={() => setIsNewBookingModalOpen(false)}
                   style={{
                     padding: "0.6rem 1.15rem",
-                    background: "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid #3f3f46",
+                    background: "var(--bg-main)",
+                    border: "1px solid var(--border-card)",
                     borderRadius: "8px",
-                    color: "#f8fafc",
+                    color: "var(--text-main)",
                     cursor: "pointer",
                     fontSize: "0.84rem",
                     fontWeight: 500,
@@ -2596,7 +2618,7 @@ export function ReservationsManagement({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: "rgba(0, 0, 0, 0.6)",
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
@@ -2604,23 +2626,25 @@ export function ReservationsManagement({
             zIndex: 9999,
             padding: "1rem",
           }}
+          onClick={() => setViewingReservation(null)}
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "16px",
               width: "100%",
               maxWidth: "500px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
               overflow: "hidden",
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               style={{
                 padding: "1.1rem 1.4rem",
-                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
+                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)",
+                borderBottom: "1px solid var(--border-card)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -2628,14 +2652,14 @@ export function ReservationsManagement({
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
                   Reservation {viewingReservation.reservationId || viewingReservation.id}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingReservation(null)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "6px" }}
               >
                 <X size={18} />
               </button>
@@ -2648,33 +2672,33 @@ export function ReservationsManagement({
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "0.75rem",
-                  background: "rgba(255, 255, 255, 0.03)",
-                  padding: "0.4rem 0.45rem",
+                  background: "var(--bg-main)",
+                  padding: "0.85rem",
                   borderRadius: "10px",
-                  border: "1px solid #27272a",
+                  border: "1px solid var(--border-card)",
                 }}
               >
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Name</small>
-                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Name</small>
+                  <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.95rem" }}>
                     {viewingReservation.customerName || "Guest"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Contact Phone</small>
-                  <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Contact Phone</small>
+                  <div style={{ color: "var(--text-main)", fontSize: "0.9rem" }}>
                     {viewingReservation.phone || viewingReservation.customerPhone || "—"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Assigned Table</small>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Assigned Table</small>
                   <div style={{ fontWeight: 650, color: "#ea580c", fontSize: "0.9rem" }}>
                     {viewingReservation.tableName || `Table ${viewingReservation.tableId}`}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Count</small>
-                  <div style={{ fontWeight: 650, color: "#f8fafc", fontSize: "0.9rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Count</small>
+                  <div style={{ fontWeight: 650, color: "var(--text-main)", fontSize: "0.9rem" }}>
                     {viewingReservation.guestsCount || 2} Persons
                   </div>
                 </div>
@@ -2689,13 +2713,13 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Date & Time</small>
-                  <div style={{ color: "#f8fafc", fontWeight: 600 }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Date & Time</small>
+                  <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
                     {viewingReservation.reservationDate || viewingReservation.date} at {viewingReservation.reservationTime || viewingReservation.time}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Advance Paid</small>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Advance Paid</small>
                   <div style={{ color: "#10b981", fontWeight: 700 }}>
                     ₹ {Number(viewingReservation.advanceAmount || 100).toFixed(2)}
                   </div>
@@ -2704,14 +2728,14 @@ export function ReservationsManagement({
 
               {/* Special Requests */}
               <div>
-                <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Special Requests & Notes</small>
+                <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Special Requests & Notes</small>
                 <div
                   style={{
-                    background: "rgba(255, 255, 255, 0.03)",
+                    background: "var(--bg-main)",
                     padding: "0.6rem 0.85rem",
                     borderRadius: "8px",
-                    border: "1px solid #27272a",
-                    color: "#cbd5e1",
+                    border: "1px solid var(--border-card)",
+                    color: "var(--text-main)",
                     fontSize: "0.82rem",
                     marginTop: "0.25rem",
                   }}
@@ -2729,7 +2753,7 @@ export function ReservationsManagement({
                     setViewingReservation(null);
                     setPrintReceiptReservation(r);
                   }}
-                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.15)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.12)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
                 >
                   <ReceiptIcon size={14} />
                   <span>View / Print Bill</span>
@@ -2738,7 +2762,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "confirmed")}
-                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.35)", background: "rgba(16, 185, 129, 0.15)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Confirm Booking
                   </button>
@@ -2747,7 +2771,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "seated")}
-                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.35)", background: "rgba(59, 130, 246, 0.15)", color: "#2563eb", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Seat Guests
                   </button>
@@ -2756,7 +2780,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "completed")}
-                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(5, 150, 105, 0.2)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(5, 150, 105, 0.35)", background: "rgba(5, 150, 105, 0.15)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Complete Visit
                   </button>
