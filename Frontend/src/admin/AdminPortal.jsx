@@ -2995,6 +2995,7 @@ export function AdminPortal({
                 {/* ================= TAB: TAKEAWAY ORDERS ================= */}
                 {activeTab === "takeaway" && (
                   <AdminTakeaway
+                    isLight={isLight}
                     menuItems={menuItems}
                     restaurantName={restaurantName}
                     restaurantSettings={restaurantSettings}

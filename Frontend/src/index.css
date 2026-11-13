@@ -26,6 +26,9 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   --bg-card: #111c30;
   --bg-card-hover: rgba(26, 40, 68, 0.98);
   --bg-glass: rgba(17, 24, 39, 0.88);
+  --bg-main: #0b1220;
+  --bg-modal: #111c30;
+  --border-modal: #2b3a52;
 
   --border-subtle: rgba(245, 158, 11, 0.24);
   --border-card: #2b3a52;
@@ -88,6 +91,9 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
   --bg-glass: rgba(255, 255, 255, 0.92);
+  --bg-main: #ffffff;
+  --bg-modal: #ffffff;
+  --border-modal: #cbd5e1;
 
   --border-subtle: #e2e8f0;
   --border-card: #cbd5e1;
@@ -123,6 +129,25 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
 
 [data-theme="light-bistro"] {
   color-scheme: light;
+}
+
+[data-theme="light-bistro"] .modal-overlay,
+[data-theme="light-bistro"] [data-modal] {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
+
+[data-theme="light-bistro"] input,
+[data-theme="light-bistro"] select,
+[data-theme="light-bistro"] textarea {
+  background-color: var(--bg-main) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-card) !important;
+}
+
+[data-theme="light-bistro"] input::placeholder,
+[data-theme="light-bistro"] textarea::placeholder {
+  color: var(--text-dim) !important;
 }
 
 input,

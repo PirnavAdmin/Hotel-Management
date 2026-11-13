@@ -1346,10 +1346,10 @@ export function ReservationsManagement({
                                   position: "absolute",
                                   right: 0,
                                   top: "calc(100% + 5px)",
-                                  background: "#18181b",
-                                  border: "1px solid #27272a",
+                                  background: "var(--bg-card, #ffffff)",
+                                  border: "1px solid var(--border-card, #cbd5e1)",
                                   borderRadius: "10px",
-                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.75)",
+                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.25)",
                                   padding: "0.35rem",
                                   minWidth: "195px",
                                   zIndex: 100,
@@ -1460,7 +1460,7 @@ export function ReservationsManagement({
                                   </button>
                                 )}
 
-                                <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
+                                <div style={{ height: "1px", background: "var(--border-card, #cbd5e1)", margin: "0.2rem 0" }} />
 
                                 <button
                                   type="button"
@@ -1596,251 +1596,252 @@ export function ReservationsManagement({
             padding: "1rem",
           }}
         >
-          <div
-            style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
-              borderRadius: "16px",
-              width: "100%",
-              maxWidth: "520px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
-              overflow: "hidden",
-            }}
-          >
-            {/* Modal Header */}
             <div
               style={{
-                padding: "1.1rem 1.4rem",
-                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                background: "var(--bg-card, #ffffff)",
+                border: "1px solid var(--border-card, #cbd5e1)",
+                borderRadius: "16px",
+                width: "100%",
+                maxWidth: "520px",
+                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.25)",
+                overflow: "hidden",
+                color: "var(--text-main)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <Calendar size={20} color="#ea580c" />
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
-                    New Table Reservation
-                  </h3>
-                  <small style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
-                    Reserve a dining table at {restaurantName}
-                  </small>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsNewBookingModalOpen(false)}
+              {/* Modal Header */}
+              <div
                 style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                  padding: "4px",
+                  padding: "1.1rem 1.4rem",
+                  background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
+                  borderBottom: "1px solid var(--border-card)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleCreateReservation} style={{ padding: "1.25rem 1.4rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                    Guest Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ramesh Kumar"
-                    value={form.customerName}
-                    onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.84rem",
-                      boxSizing: "border-box",
-                      outline: "none",
-                    }}
-                  />
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <Calendar size={20} color="#ea580c" />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
+                      New Table Reservation
+                    </h3>
+                    <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                      Reserve a dining table at {restaurantName}
+                    </small>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                    Mobile Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="+91 98765 43210"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.84rem",
-                      boxSizing: "border-box",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                    Dining Table *
-                  </label>
-                  <select
-                    value={form.tableId}
-                    onChange={(e) => setForm({ ...form, tableId: Number(e.target.value) })}
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.84rem",
-                      boxSizing: "border-box",
-                      outline: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {tablesList.map((tbl) => (
-                      <option key={tbl.id || tbl.tableId} value={tbl.id || tbl.tableId}>
-                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.sectionArea || tbl.location || tbl.section || "Section unavailable"} • {tbl.capacity || tbl.seatingCapacity || "—"} Guests)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                    Number of Guests
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={form.guestsCount}
-                    onChange={(e) => setForm({ ...form, guestsCount: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.84rem",
-                      boxSizing: "border-box",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                    Reservation Date
-                  </label>
-                  <input
-                    type="date"
-                    value={form.reservationDate}
-                    onChange={(e) => setForm({ ...form, reservationDate: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.84rem",
-                      boxSizing: "border-box",
-                      outline: "none",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                    Time Slot
-                  </label>
-                  <select
-                    value={form.reservationTime}
-                    onChange={(e) => setForm({ ...form, reservationTime: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      fontSize: "0.84rem",
-                      boxSizing: "border-box",
-                      outline: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {[
-                      "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM",
-                      "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM", "09:00 PM", "09:30 PM"
-                    ].map((time) => (
-                      <option key={time} value={time}>{time}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "0.85rem" }}>
-                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
-                  Special Requests / Occasion (Optional)
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Birthday arrangement, quiet window corner, high chair required"
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "0.55rem 0.75rem",
-                    background: "#27272a",
-                    border: "1px solid #3f3f46",
-                    borderRadius: "8px",
-                    color: "#f8fafc",
-                    fontSize: "0.84rem",
-                    boxSizing: "border-box",
-                    outline: "none",
-                    resize: "vertical",
-                  }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setIsNewBookingModalOpen(false)}
                   style={{
-                    padding: "0.6rem 1.15rem",
-                    background: "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid #3f3f46",
-                    borderRadius: "8px",
-                    color: "#f8fafc",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--text-muted)",
                     cursor: "pointer",
-                    fontSize: "0.84rem",
-                    fontWeight: 500,
+                    padding: "4px",
                   }}
                 >
-                  Cancel
+                  <X size={18} />
                 </button>
+              </div>
+
+              {/* Modal Form */}
+              <form onSubmit={handleCreateReservation} style={{ padding: "1.25rem 1.4rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                      Guest Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Kumar"
+                      value={form.customerName}
+                      onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "0.55rem 0.75rem",
+                        background: "var(--bg-main)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                      Mobile Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="+91 98765 43210"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "0.55rem 0.75rem",
+                        background: "var(--bg-main)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                      Dining Table *
+                    </label>
+                    <select
+                      value={form.tableId}
+                      onChange={(e) => setForm({ ...form, tableId: Number(e.target.value) })}
+                      style={{
+                        width: "100%",
+                        padding: "0.55rem 0.75rem",
+                        background: "var(--bg-main)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        boxSizing: "border-box",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {tablesList.map((tbl) => (
+                        <option key={tbl.id || tbl.tableId} value={tbl.id || tbl.tableId}>
+                          {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.sectionArea || tbl.location || tbl.section || "Section unavailable"} • {tbl.capacity || tbl.seatingCapacity || "—"} Guests)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                      Number of Guests
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={form.guestsCount}
+                      onChange={(e) => setForm({ ...form, guestsCount: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "0.55rem 0.75rem",
+                        background: "var(--bg-main)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                      Reservation Date
+                    </label>
+                    <input
+                      type="date"
+                      value={form.reservationDate}
+                      onChange={(e) => setForm({ ...form, reservationDate: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "0.55rem 0.75rem",
+                        background: "var(--bg-main)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        boxSizing: "border-box",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                      Time Slot
+                    </label>
+                    <select
+                      value={form.reservationTime}
+                      onChange={(e) => setForm({ ...form, reservationTime: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "0.55rem 0.75rem",
+                        background: "var(--bg-main)",
+                        border: "1px solid var(--border-card)",
+                        borderRadius: "8px",
+                        color: "var(--text-main)",
+                        fontSize: "0.84rem",
+                        boxSizing: "border-box",
+                        outline: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {[
+                        "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM",
+                        "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM", "09:00 PM", "09:30 PM"
+                      ].map((time) => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "0.85rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                    Special Requests / Occasion (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Birthday arrangement, quiet window corner, high chair required"
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.75rem",
+                      background: "var(--bg-main)",
+                      border: "1px solid var(--border-card)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      fontSize: "0.84rem",
+                      boxSizing: "border-box",
+                      outline: "none",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.25rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsNewBookingModalOpen(false)}
+                    style={{
+                      padding: "0.6rem 1.15rem",
+                      background: "transparent",
+                      border: "1px solid var(--border-card)",
+                      borderRadius: "8px",
+                      color: "var(--text-main)",
+                      cursor: "pointer",
+                      fontSize: "0.84rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Cancel
+                  </button>
                 <button
                   type="submit"
                   disabled={saving}
@@ -1881,20 +1882,21 @@ export function ReservationsManagement({
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: "var(--bg-card, #ffffff)",
+              border: "1px solid var(--border-card, #cbd5e1)",
               borderRadius: "16px",
               width: "100%",
               maxWidth: "500px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.25)",
               overflow: "hidden",
+              color: "var(--text-main)",
             }}
           >
             <div
               style={{
                 padding: "1.1rem 1.4rem",
                 background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
+                borderBottom: "1px solid var(--border-card)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -1902,14 +1904,14 @@ export function ReservationsManagement({
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
                   Reservation {viewingReservation.reservationId || viewingReservation.id}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingReservation(null)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
               >
                 <X size={18} />
               </button>
@@ -1922,33 +1924,33 @@ export function ReservationsManagement({
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "0.75rem",
-                  background: "rgba(255, 255, 255, 0.03)",
-                  padding: "0.4rem 0.45rem",
+                  background: "var(--bg-main)",
+                  padding: "0.65rem 0.85rem",
                   borderRadius: "10px",
-                  border: "1px solid #27272a",
+                  border: "1px solid var(--border-card)",
                 }}
               >
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Name</small>
-                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Name</small>
+                  <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.95rem" }}>
                     {viewingReservation.customerName || "Guest"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Contact Phone</small>
-                  <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Contact Phone</small>
+                  <div style={{ color: "var(--text-main)", fontSize: "0.9rem" }}>
                     {viewingReservation.phone || viewingReservation.customerPhone || "—"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Assigned Table</small>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Assigned Table</small>
                   <div style={{ fontWeight: 650, color: "#ea580c", fontSize: "0.9rem" }}>
                     {viewingReservation.tableName || `Table ${viewingReservation.tableId}`}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Count</small>
-                  <div style={{ fontWeight: 650, color: "#f8fafc", fontSize: "0.9rem" }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Count</small>
+                  <div style={{ fontWeight: 650, color: "var(--text-main)", fontSize: "0.9rem" }}>
                     {viewingReservation.guestsCount || 2} Persons
                   </div>
                 </div>
@@ -1963,13 +1965,13 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Date & Time</small>
-                  <div style={{ color: "#f8fafc", fontWeight: 600 }}>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Date & Time</small>
+                  <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
                     {viewingReservation.reservationDate || viewingReservation.date} at {viewingReservation.reservationTime || viewingReservation.time}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Advance Paid</small>
+                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Advance Paid</small>
                   <div style={{ color: "#10b981", fontWeight: 700 }}>
                     ₹ {Number(viewingReservation.advanceAmount || 0).toFixed(2)}
                   </div>
@@ -1978,14 +1980,14 @@ export function ReservationsManagement({
 
               {/* Special Requests */}
               <div>
-                <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Special Requests & Notes</small>
+                <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Special Requests & Notes</small>
                 <div
                   style={{
-                    background: "rgba(255, 255, 255, 0.03)",
+                    background: "var(--bg-main)",
                     padding: "0.6rem 0.85rem",
                     borderRadius: "8px",
-                    border: "1px solid #27272a",
-                    color: "#cbd5e1",
+                    border: "1px solid var(--border-card)",
+                    color: "var(--text-main)",
                     fontSize: "0.82rem",
                     marginTop: "0.25rem",
                   }}
