@@ -1467,16 +1467,10 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                 style={{
                                   position: "absolute",
                                   right: 0,
-<<<<<<< HEAD
-                                  top: "calc(100% + 5px)",
-                                  background: "var(--bg-card)",
-                                  border: "1px solid var(--border-card)",
-=======
                                   top: actionMenuOpenAbove ? "auto" : "calc(100% + 5px)",
                                   bottom: actionMenuOpenAbove ? "calc(100% + 5px)" : "auto",
-                                  background: "#18181b",
-                                  border: "1px solid #27272a",
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
+                                  background: "var(--bg-card)",
+                                  border: "1px solid var(--border-card)",
                                   borderRadius: "10px",
                                   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
                                   padding: "0.35rem",

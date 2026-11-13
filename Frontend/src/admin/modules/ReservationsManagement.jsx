@@ -1828,7 +1828,6 @@ export function ReservationsManagement({
           <table
             style={{
               width: "100%",
-<<<<<<< HEAD
               minWidth: "1180px",
               tableLayout: "fixed",
               borderCollapse: "separate",
@@ -1875,34 +1874,6 @@ export function ReservationsManagement({
                   STATUS
                 </th>
                 <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
-=======
-              borderCollapse: "collapse",
-              textAlign: "left",
-              fontSize: "0.7rem",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  background: "var(--bg-secondary, #202024)",
-                  borderBottom: "1px solid var(--border-card, #27272a)",
-                  color: "var(--text-muted, #94a3b8)",
-                  fontSize: "0.64rem",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                <th style={{ padding: "0.4rem 0.45rem", width: "40px" }}>#</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>RESERVATION ID</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>GUEST NAME</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>PHONE</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>TABLE</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>GUESTS</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>DATE & TIME</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>STATUS</th>
-                <th style={{ padding: "0.4rem 0.45rem", textAlign: "right" }}>
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   ACTIONS
                 </th>
               </tr>
@@ -1957,34 +1928,12 @@ export function ReservationsManagement({
                       }
                     >
                       {/* Row Index */}
-<<<<<<< HEAD
                       <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem", whiteSpace: "nowrap", textAlign: "center" }}>
-=======
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          color: "var(--text-muted, #94a3b8)",
-                          fontSize: "0.72rem",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                         {pageStart + index + 1}
                       </td>
 
                       {/* Reservation ID */}
-<<<<<<< HEAD
                       <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
-=======
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          fontWeight: 700,
-                          color: "var(--text-main, #f8fafc)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                         <span
                           style={{
                             fontFamily: "monospace",
@@ -1997,27 +1946,8 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Guest Name */}
-<<<<<<< HEAD
                       <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "inline-flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}>
-=======
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontWeight: 650,
-                            color: "var(--text-main, #f8fafc)",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                           <div
                             style={{
                               width: "22px",
@@ -2040,44 +1970,15 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Phone */}
-<<<<<<< HEAD
                       <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.74rem" }}>
                           <Phone size={13} color="#94a3b8" style={{ flexShrink: 0 }} />
-=======
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          color: "var(--text-muted, #94a3b8)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                          }}
-                        >
-                          <Phone size={13} color="#94a3b8" />
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                           {r.phone || r.customerPhone || "—"}
                         </span>
                       </td>
 
                       {/* Table */}
-<<<<<<< HEAD
                       <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
-=======
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          fontWeight: 600,
-                          color: "var(--text-main, #f8fafc)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                         <span
                           style={{
                             display: "inline-flex",
@@ -2094,73 +1995,9 @@ export function ReservationsManagement({
                             textOverflow: "ellipsis",
                           }}
                         >
-<<<<<<< HEAD
                           <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                             {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
-=======
-                          <MapPin
-                            size={12}
-                            color="#ea580c"
-                            style={{ flexShrink: 0 }}
-                          />
-                          {r.tableName ||
-                            (r.tableNumber
-                              ? `Table #${r.tableNumber}`
-                              : `Table ${r.tableId}`)}
-                        </span>
-                      </td>
-
-                      {/* Guests Count */}
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          color: "var(--text-main, #f8fafc)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.35rem",
-                          }}
-                        >
-                          <Users size={14} color="#f59e0b" />
-                          <strong>{r.guestsCount || r.guests || 2}</strong>{" "}
-                          Guests
-                        </span>
-                      </td>
-
-                      {/* Date & Time */}
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          color: "var(--text-main, #f8fafc)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          <span>{r.reservationDate || r.date || "Today"}</span>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--text-muted, #94a3b8)",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                            }}
-                          >
-                            <Clock size={12} color="#ea580c" />
-                            {r.reservationTime || r.time || "07:30 PM"}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                           </span>
                         </span>
                       </td>
@@ -2199,16 +2036,7 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Status Badge */}
-<<<<<<< HEAD
                       <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
-=======
-                      <td
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                         <span
                           style={{
                             display: "inline-flex",
@@ -2229,26 +2057,8 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Actions: Eye Icon (Opens ReceiptModal Bill), Printer, More Menu */}
-<<<<<<< HEAD
                       <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
-=======
-                      <td
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          padding: "0.4rem 0.45rem",
-                          textAlign: "right",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                          }}
-                        >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                           {/* Eye Icon -> Opens the 5th picture Invoice & Bill Print (ReceiptModal) */}
                           <button
                             type="button"
@@ -2360,16 +2170,9 @@ export function ReservationsManagement({
                                 style={{
                                   position: "absolute",
                                   right: 0,
-<<<<<<< HEAD
                                   top: "calc(100% + 5px)",
                                   background: "var(--bg-card)",
                                   border: "1px solid var(--border-card)",
-=======
-                                  top: actionMenuOpenAbove ? "auto" : "calc(100% + 5px)",
-                                  bottom: actionMenuOpenAbove ? "calc(100% + 5px)" : "auto",
-                                  background: "#18181b",
-                                  border: "1px solid #27272a",
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                                   borderRadius: "10px",
                                   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
                                   padding: "0.35rem",
@@ -2717,14 +2520,8 @@ export function ReservationsManagement({
             <div
               style={{
                 padding: "1.1rem 1.4rem",
-<<<<<<< HEAD
                 background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
                 borderBottom: "1px solid var(--border-card)",
-=======
-                background:
-                  "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -2735,18 +2532,7 @@ export function ReservationsManagement({
               >
                 <Calendar size={20} color="#ea580c" />
                 <div>
-<<<<<<< HEAD
                   <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
-=======
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "1.05rem",
-                      fontWeight: 700,
-                      color: "#f8fafc",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     New Table Reservation
                   </h3>
                   <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
@@ -2783,19 +2569,7 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-<<<<<<< HEAD
                   <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      color: "#cbd5e1",
-                      marginBottom: "0.3rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     Guest Full Name *
                   </label>
                   <input
@@ -2820,19 +2594,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-<<<<<<< HEAD
                   <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      color: "#cbd5e1",
-                      marginBottom: "0.3rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     Mobile Number *
                   </label>
                   <input
@@ -2867,19 +2629,7 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-<<<<<<< HEAD
                   <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      color: "#cbd5e1",
-                      marginBottom: "0.3rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     Dining Table *
                   </label>
                   <select
@@ -2908,19 +2658,7 @@ export function ReservationsManagement({
                   </select>
                 </div>
                 <div>
-<<<<<<< HEAD
                   <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      color: "#cbd5e1",
-                      marginBottom: "0.3rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     Number of Guests
                   </label>
                   <input
@@ -2955,19 +2693,7 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-<<<<<<< HEAD
                   <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      color: "#cbd5e1",
-                      marginBottom: "0.3rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     Reservation Date
                   </label>
                   <input
@@ -2990,19 +2716,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-<<<<<<< HEAD
                   <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: "0.76rem",
-                      fontWeight: 600,
-                      color: "#cbd5e1",
-                      marginBottom: "0.3rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     Time Slot
                   </label>
                   <select
@@ -3044,19 +2758,7 @@ export function ReservationsManagement({
               </div>
 
               <div style={{ marginBottom: "0.85rem" }}>
-<<<<<<< HEAD
                 <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-=======
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.76rem",
-                    fontWeight: 600,
-                    color: "#cbd5e1",
-                    marginBottom: "0.3rem",
-                  }}
-                >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   Special Requests / Occasion (Optional)
                 </label>
                 <textarea
@@ -3158,14 +2860,8 @@ export function ReservationsManagement({
             <div
               style={{
                 padding: "1.1rem 1.4rem",
-<<<<<<< HEAD
                 background: "linear-gradient(135deg, rgba(234, 88, 12, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)",
                 borderBottom: "1px solid var(--border-card)",
-=======
-                background:
-                  "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -3175,36 +2871,14 @@ export function ReservationsManagement({
                 style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
               >
                 <Calendar size={20} color="#ea580c" />
-<<<<<<< HEAD
                 <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
                   Reservation {viewingReservation.reservationId || viewingReservation.id}
-=======
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: "1.05rem",
-                    fontWeight: 700,
-                    color: "#f8fafc",
-                  }}
-                >
-                  Reservation{" "}
-                  {viewingReservation.reservationId || viewingReservation.id}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingReservation(null)}
-<<<<<<< HEAD
                 style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "6px" }}
-=======
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                }}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
               >
                 <X size={18} />
               </button>
@@ -3231,26 +2905,12 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-<<<<<<< HEAD
                   <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Name</small>
                   <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.95rem" }}>
-=======
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                    Guest Name
-                  </small>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: "#f8fafc",
-                      fontSize: "0.95rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     {viewingReservation.customerName || "Guest"}
                   </div>
                 </div>
                 <div>
-<<<<<<< HEAD
                   <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Contact Phone</small>
                   <div style={{ color: "var(--text-main)", fontSize: "0.9rem" }}>
                     {viewingReservation.phone || viewingReservation.customerPhone || "—"}
@@ -3265,43 +2925,6 @@ export function ReservationsManagement({
                 <div>
                   <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Count</small>
                   <div style={{ fontWeight: 650, color: "var(--text-main)", fontSize: "0.9rem" }}>
-=======
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                    Contact Phone
-                  </small>
-                  <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
-                    {viewingReservation.phone ||
-                      viewingReservation.customerPhone ||
-                      "—"}
-                  </div>
-                </div>
-                <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                    Assigned Table
-                  </small>
-                  <div
-                    style={{
-                      fontWeight: 650,
-                      color: "#ea580c",
-                      fontSize: "0.9rem",
-                    }}
-                  >
-                    {viewingReservation.tableName ||
-                      `Table ${viewingReservation.tableId}`}
-                  </div>
-                </div>
-                <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                    Guest Count
-                  </small>
-                  <div
-                    style={{
-                      fontWeight: 650,
-                      color: "#f8fafc",
-                      fontSize: "0.9rem",
-                    }}
-                  >
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                     {viewingReservation.guestsCount || 2} Persons
                   </div>
                 </div>
@@ -3316,7 +2939,6 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-<<<<<<< HEAD
                   <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Date & Time</small>
                   <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
                     {viewingReservation.reservationDate || viewingReservation.date} at {viewingReservation.reservationTime || viewingReservation.time}
@@ -3324,23 +2946,6 @@ export function ReservationsManagement({
                 </div>
                 <div>
                   <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Advance Paid</small>
-=======
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                    Date & Time
-                  </small>
-                  <div style={{ color: "#f8fafc", fontWeight: 600 }}>
-                    {viewingReservation.reservationDate ||
-                      viewingReservation.date}{" "}
-                    at{" "}
-                    {viewingReservation.reservationTime ||
-                      viewingReservation.time}
-                  </div>
-                </div>
-                <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                    Advance Paid
-                  </small>
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   <div style={{ color: "#10b981", fontWeight: 700 }}>
                     ₹ {Number(viewingReservation.advanceAmount || 100).toFixed(2)}
                   </div>
@@ -3349,13 +2954,7 @@ export function ReservationsManagement({
 
               {/* Special Requests */}
               <div>
-<<<<<<< HEAD
                 <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Special Requests & Notes</small>
-=======
-                <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                  Special Requests & Notes
-                </small>
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                 <div
                   style={{
                     background: "var(--bg-main)",
@@ -3387,25 +2986,7 @@ export function ReservationsManagement({
                     setViewingReservation(null);
                     setPrintReceiptReservation(r);
                   }}
-<<<<<<< HEAD
                   style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.12)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
-=======
-                  style={{
-                    flex: 1,
-                    padding: "0.55rem",
-                    borderRadius: "8px",
-                    border: "1px solid #ea580c",
-                    background: "rgba(234, 88, 12, 0.15)",
-                    color: "#ea580c",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontSize: "0.8rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.4rem",
-                  }}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                 >
                   <ReceiptIcon size={14} />
                   <span>View / Print Bill</span>
@@ -3413,29 +2994,8 @@ export function ReservationsManagement({
                 {viewingReservation.status !== "confirmed" && (
                   <button
                     type="button"
-<<<<<<< HEAD
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "confirmed")}
                     style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.35)", background: "rgba(16, 185, 129, 0.15)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
-=======
-                    onClick={() =>
-                      handleStatusUpdate(
-                        viewingReservation.reservationId ||
-                          viewingReservation.id,
-                        "confirmed",
-                      )
-                    }
-                    style={{
-                      flex: 1,
-                      padding: "0.55rem",
-                      borderRadius: "8px",
-                      border: "none",
-                      background: "rgba(16, 185, 129, 0.2)",
-                      color: "#10b981",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                    }}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   >
                     Confirm Booking
                   </button>
@@ -3443,29 +3003,8 @@ export function ReservationsManagement({
                 {viewingReservation.status !== "seated" && (
                   <button
                     type="button"
-<<<<<<< HEAD
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "seated")}
                     style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.35)", background: "rgba(59, 130, 246, 0.15)", color: "#2563eb", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
-=======
-                    onClick={() =>
-                      handleStatusUpdate(
-                        viewingReservation.reservationId ||
-                          viewingReservation.id,
-                        "seated",
-                      )
-                    }
-                    style={{
-                      flex: 1,
-                      padding: "0.55rem",
-                      borderRadius: "8px",
-                      border: "none",
-                      background: "rgba(59, 130, 246, 0.2)",
-                      color: "#3b82f6",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                    }}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   >
                     Seat Guests
                   </button>
@@ -3473,29 +3012,8 @@ export function ReservationsManagement({
                 {viewingReservation.status !== "completed" && (
                   <button
                     type="button"
-<<<<<<< HEAD
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "completed")}
                     style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(5, 150, 105, 0.35)", background: "rgba(5, 150, 105, 0.15)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
-=======
-                    onClick={() =>
-                      handleStatusUpdate(
-                        viewingReservation.reservationId ||
-                          viewingReservation.id,
-                        "completed",
-                      )
-                    }
-                    style={{
-                      flex: 1,
-                      padding: "0.55rem",
-                      borderRadius: "8px",
-                      border: "none",
-                      background: "rgba(5, 150, 105, 0.2)",
-                      color: "#059669",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                    }}
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   >
                     Complete Visit
                   </button>

@@ -547,56 +547,15 @@ export function AdminTakeaway({
         apiGetAdminTakeawaySummary(),
       ]);
       if (!ordersResult?.success) throw new Error(ordersResult?.error || "Could not load takeaway orders.");
+      if (!summaryResult?.success) throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
       setOrders((Array.isArray(ordersResult.data) ? ordersResult.data : []).map(normalizeOrder));
-      if (summaryResult?.success) setSummary(summaryResult.data || null);
-      else throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
+      setSummary(summaryResult.data || null);
     } catch (error) {
       alert(error?.message || "Could not load takeaway orders.");
-
-      const backendOrders = [];
-      if (activeResult?.success && Array.isArray(activeResult.data)) {
-        activeResult.data.forEach((bo) => {
-          backendOrders.push({
-            id: String(bo.orderNumber || bo.id || `TK-${bo.id}`),
-            orderNumber: String(bo.orderNumber || bo.id || `TK-${bo.id}`),
-            customer: bo.customerName || bo.customer || "Walk-in Guest",
-            phone: bo.customerPhone || bo.phone || "—",
-            itemsCount: Array.isArray(bo.items)
-              ? bo.items.reduce((s, it) => s + (it.quantity || 1), 0)
-              : 1,
-            items: Array.isArray(bo.items) ? bo.items : [],
-            amount: Number(bo.totalAmount || bo.grandTotal || bo.amount || 0),
-            status: bo.status
-              ? bo.status.charAt(0).toUpperCase() +
-                bo.status.slice(1).toLowerCase()
-              : "Pending",
-            orderTime:
-              bo.orderTime ||
-              new Date(bo.date || Date.now()).toLocaleTimeString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-            date: bo.date || new Date().toISOString(),
-            paymentMethod: bo.paymentMethod || "UPI",
-            notes: bo.notes || "",
-          });
-        });
-      }
-
-      if (backendOrders.length > 0) {
-        setOrders((prev) => {
-          const ids = new Set(backendOrders.map((b) => b.id));
-          const preserved = prev.filter((p) => !ids.has(p.id));
-          return [...backendOrders, ...preserved];
-        });
-      }
-    } catch (err) {
-      console.warn("Could not sync live takeaway orders:", err);
     } finally {
       setIsRefreshing(false);
     }
   };
-
   useEffect(() => {
     handleRefresh();
   }, []);  // --- Filtering & Tab State ---
@@ -606,9 +565,6 @@ export function AdminTakeaway({
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState("all");
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [dateRangeLabel, setDateRangeLabel] = useState("All Dates");
-  const [dateRangeLabel, setDateRangeLabel] = useState(
-    "01 Oct 2026 – 14 Oct 2026",
-  );
   const [customDateRangeOpen, setCustomDateRangeOpen] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -661,31 +617,20 @@ export function AdminTakeaway({
   const receiptTableData = useMemo(() => {
     if (!printReceiptOrder) return null;
 
-    const items =
-      Array.isArray(printReceiptOrder.items) &&
-      printReceiptOrder.items.length > 0
-        ? printReceiptOrder.items.map((it) => ({
-            name: String(it?.name || it?.dishName || "Item").trim(),
-            quantity: Number(it?.quantity ?? it?.qty) || 1,
-            price: Number(it?.price ?? it?.unitPrice) || 0,
-          }))
-        : [];
-
-    const subtotal = Number(printReceiptOrder.subtotal ?? 0);
+    const items = Array.isArray(printReceiptOrder.items)
+      ? printReceiptOrder.items.map((it) => ({
+          name: String(it?.name || it?.dishName || "Item").trim(),
+          quantity: Number(it?.quantity ?? it?.qty) || 1,
+          price: Number(it?.price ?? it?.unitPrice) || 0,
+        }))
+      : [];
+    const subtotal = Number(
+      printReceiptOrder.subtotal ??
+      items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    );
     const taxAmount = Number(printReceiptOrder.taxAmount ?? printReceiptOrder.gstAmount ?? 0);
     const serviceChargeAmount = Number(printReceiptOrder.packagingCharge ?? printReceiptOrder.serviceCharge ?? 0);
     const grandTotal = Number(printReceiptOrder.totalAmount ?? printReceiptOrder.grandTotal ?? printReceiptOrder.amount ?? 0);
-        : [
-            {
-              name: "Takeaway Meal Package",
-              quantity: 1,
-              price: Number(printReceiptOrder.amount) || 0,
-            },
-          ];
-
-    const { subtotal, taxAmount, serviceChargeAmount, grandTotal } =
-      calculateTakeawayBill(items, printReceiptOrder.amount);
-
     const isCancelled = printReceiptOrder.status === "Cancelled";
 
     return {
@@ -922,23 +867,6 @@ export function AdminTakeaway({
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, [isNewOrderModalOpen, itemSearchQuery, itemCategoryFilter]);
 
-  const availableFoodItems = useMemo(() => {
-    return (menuItems || []).filter((item) => {
-      if (item.isAvailable === false) return false;
-      const query = itemSearchQuery.trim().toLowerCase();
-      const matchQuery =
-        !query ||
-        String(item.name || "")
-          .toLowerCase()
-          .includes(query);
-      const matchCat =
-        itemCategoryFilter === "all" ||
-        String(item.category || "").toLowerCase() ===
-          itemCategoryFilter.toLowerCase();
-      return matchQuery && matchCat;
-    });
-  }, [menuItems, itemSearchQuery, itemCategoryFilter]);
-
   const availableFoodItems = takeawayMenuItems.filter((item) => item.isAvailable !== false);
   const addCartItem = (dish) => {
     const id = dish.itemId ?? dish.menuItemId ?? dish.id;
@@ -994,31 +922,14 @@ export function AdminTakeaway({
   const cartGst = Number(cartCalculation?.taxAmount ?? cartCalculation?.gstAmount ?? 0);
   const cartServiceCharge = Number(cartCalculation?.packagingCharge || 0);
   const cartTotal = Number(cartCalculation?.finalAmount ?? cartCalculation?.totalAmount ?? 0);
-  const cartBill = calculateTakeawayBill(
-    cartItemsList.map((line) => ({
-      price: line.item.price,
-      quantity: line.quantity,
-    })),
-  );
-  const {
-    subtotal: cartSubtotal,
-    taxAmount: cartGst,
-    serviceChargeAmount: cartServiceCharge,
-    grandTotal: cartTotal,
-  } = cartBill;
 
   const handleCreateTakeawayOrder = async () => {
     if (!isValidIndianMobileNumber(newCustomerPhone)) {
       setCustomerPhoneError(newCustomerPhone.trim() ? "Enter a valid 10-digit Indian mobile number." : "Phone number is required.");
-      setCustomerPhoneError(
-        newCustomerPhone.trim()
-          ? "Enter a valid 10-digit Indian mobile number."
-          : "Phone number is required.",
-      );
       return;
     }
     setCustomerPhoneError("");
-    if (cartItemsList.length === 0) {
+    if (!cartItemsList.length) {
       alert("Please add at least one item to the takeaway order.");
       return;
     }
@@ -1030,65 +941,18 @@ export function AdminTakeaway({
     setOrderSaving(true);
     try {
       const payload = {
-        orderType: "TAKEAWAY",
-        customerName: newCustomerName.trim() || null,
+        customerName: newCustomerName.trim() || "Walk-in Guest",
         customerPhone: newCustomerPhone.trim(),
-
-    const nextNumber = 1069 + orders.length;
-    const newId = `TK-${nextNumber}`;
-    const now = new Date();
-    const timeFormatted =
-      now.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }) +
-      `, ${now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
-
-    const newOrder = {
-      id: newId,
-      orderNumber: newId,
-      customer: newCustomerName.trim() || "Walk-in Guest",
-      phone: newCustomerPhone.trim() || "—",
-      itemsCount: cartItemsList.reduce((s, it) => s + it.quantity, 0),
-      items: cartItemsList.map((line) => ({
-        name: line.item.name,
-        quantity: line.quantity,
-        price: Number(line.item.price) || 0,
-      })),
-      amount: cartTotal,
-      subtotal: cartSubtotal,
-      taxAmount: cartGst,
-      serviceChargeAmount: cartServiceCharge,
-      grandTotal: cartTotal,
-      status: "Pending",
-      orderTime: timeFormatted,
-      date: now.toISOString(),
-      paymentMethod: newPaymentMethod,
-      notes: newOrderNotes.trim(),
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-
-    try {
-      await apiCreatePaidTakeawayOrder({
-        orderNumber: newId,
-        orderType: "Takeaway",
-        tableName: "Takeaway",
-        customerName: newOrder.customer,
-        customerPhone: newOrder.phone,
-        subtotal: cartSubtotal,
-        taxAmount: cartGst,
-        serviceChargeAmount: cartServiceCharge,
-        totalAmount: cartTotal,
-        grandTotal: cartTotal,
         paymentMethod: newPaymentMethod,
         paymentStatus: "Paid",
         isPaid: true,
         paidAmount: cartTotal,
         notes: newOrderNotes.trim() || null,
-        items: cartItemsList.map(({ item, quantity }) => ({ itemId: Number(item.itemId ?? item.menuItemId ?? item.id), quantity })),
-        idempotencyKey: globalThis.crypto?.randomUUID?.() || `admin-takeaway-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        items: cartItemsList.map(({ item, quantity }) => ({
+          itemId: Number(item.itemId ?? item.menuItemId ?? item.id),
+          quantity: Number(quantity),
+        })),
+        idempotencyKey: globalThis.crypto?.randomUUID?.() || `admin-takeaway-${Date.now()}`,
       };
       const result = await apiCreateAdminTakeawayOrder(payload);
       if (!result?.success) throw new Error(result?.error || "Could not create takeaway order.");
@@ -1100,15 +964,16 @@ export function AdminTakeaway({
       setNewOrderCart({});
       setCartCalculation(null);
       await handleRefresh();
-      const detail = created.orderId ? await apiGetAdminTakeawayOrder(created.orderId) : null;
-      setSelectedOrderDetails(normalizeOrder(detail?.success ? detail.data : created));
+      if (created.orderId) {
+        const detail = await apiGetAdminTakeawayOrder(created.orderId);
+        if (detail?.success) setSelectedOrderDetails(normalizeOrder(detail.data));
+      }
     } catch (error) {
       alert(error?.message || "Could not create takeaway order.");
     } finally {
       setOrderSaving(false);
     }
-  };
-  // Status Badge Component
+  };  // Status Badge Component
   const renderStatusBadge = (status) => {
     switch (status) {
       case "Pending":
@@ -3242,8 +3107,6 @@ export function AdminTakeaway({
                   </div>
                 </div>
 
-<<<<<<< HEAD
-=======
                 {/* Payment Method */}
                 <div>
                   <label
@@ -3289,7 +3152,6 @@ export function AdminTakeaway({
                     ))}
                   </div>
                 </div>
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
 
                 {/* Bill Totals */}
                 <div
