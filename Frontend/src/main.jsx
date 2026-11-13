@@ -6,8 +6,10 @@ import App from './App.jsx'
 import { ErrorBoundary } from './common/ErrorBoundary.jsx'
 import { DialogProvider } from './common/DialogProvider.jsx'
 import { installGlobalFetchInterceptor, installGlobalEventSourceInterceptor, installGlobalErrorHandlers } from './utils/logger.js'
+import { installButtonLoading } from './utils/buttonLoading.js'
 
 // Initialize comprehensive centralized console logging and debugging
+installButtonLoading();
 installGlobalFetchInterceptor();
 installGlobalEventSourceInterceptor();
 installGlobalErrorHandlers();

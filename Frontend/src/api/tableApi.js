@@ -1,7 +1,7 @@
 import { apiClient } from './apiConfig';
 
-export async function apiGetTables() {
-  return await apiClient('/api/v1/tables');
+export async function apiGetTables(options = {}) {
+  return await apiClient('/api/v1/tables', options);
 }
 
 export async function apiCreateTable(tableData) {
