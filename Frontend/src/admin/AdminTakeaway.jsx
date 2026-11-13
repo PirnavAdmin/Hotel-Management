@@ -46,17 +46,24 @@ function calculateTakeawayBill(items, fallbackSubtotal = 0) {
       sum +
       (Number(item?.price ?? item?.unitPrice) || 0) *
         (Number(item?.quantity ?? item?.qty) || 1),
-    0
+    0,
   );
-  const subtotal = Math.round((subtotalFromItems || Number(fallbackSubtotal) || 0) * 100) / 100;
-  const taxAmount = Math.round((subtotal * TAKEAWAY_GST_RATE + Number.EPSILON) * 100) / 100;
-  const serviceChargeAmount = Math.round((subtotal * TAKEAWAY_SERVICE_CHARGE_RATE + Number.EPSILON) * 100) / 100;
+  const subtotal =
+    Math.round((subtotalFromItems || Number(fallbackSubtotal) || 0) * 100) /
+    100;
+  const taxAmount =
+    Math.round((subtotal * TAKEAWAY_GST_RATE + Number.EPSILON) * 100) / 100;
+  const serviceChargeAmount =
+    Math.round(
+      (subtotal * TAKEAWAY_SERVICE_CHARGE_RATE + Number.EPSILON) * 100,
+    ) / 100;
 
   return {
     subtotal,
     taxAmount,
     serviceChargeAmount,
-    grandTotal: Math.round((subtotal + taxAmount + serviceChargeAmount) * 100) / 100,
+    grandTotal:
+      Math.round((subtotal + taxAmount + serviceChargeAmount) * 100) / 100,
   };
 }
 
@@ -65,10 +72,13 @@ function getTakeawayOrderTotal(order) {
 }
 
 function isValidIndianMobileNumber(phone) {
-  const normalizedPhone = String(phone || "").trim().replace(/[\s()-]/g, "");
+  const normalizedPhone = String(phone || "")
+    .trim()
+    .replace(/[\s()-]/g, "");
   if (!/^\+?\d+$/.test(normalizedPhone)) return false;
   const digits = normalizedPhone.replace(/\D/g, "");
-  const mobileNumber = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  const mobileNumber =
+    digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
   return /^[6-9]\d{9}$/.test(mobileNumber);
 }
 
@@ -223,20 +233,83 @@ const SEED_TAKEAWAY_ORDERS = [
 function generateExpandedSeedOrders() {
   const list = [...SEED_TAKEAWAY_ORDERS];
   const names = [
-    "Arun K.", "Deepa M.", "Kiran B.", "Sanjay V.", "Meera S.", "Naveen P.",
-    "Swathi R.", "Pooja G.", "Harish T.", "Sneha L.", "Vijay C.", "Rohit K.",
-    "Bhavya S.", "Rajesh M.", "Snehal P.", "Girish D.", "Aishwarya K.", "Sunil R."
+    "Arun K.",
+    "Deepa M.",
+    "Kiran B.",
+    "Sanjay V.",
+    "Meera S.",
+    "Naveen P.",
+    "Swathi R.",
+    "Pooja G.",
+    "Harish T.",
+    "Sneha L.",
+    "Vijay C.",
+    "Rohit K.",
+    "Bhavya S.",
+    "Rajesh M.",
+    "Snehal P.",
+    "Girish D.",
+    "Aishwarya K.",
+    "Sunil R.",
   ];
 
   // 7 more pending orders to reach 8 total pending
   const pendingTemplates = [
-    { customer: "Sneha Reddy", phone: "+91 98451 22334", items: [{ name: "Veg Biryani", quantity: 2, price: 280 }], amount: 560, notes: "Pack extra raita" },
-    { customer: "Rahul V.", phone: "+91 98112 44556", items: [{ name: "Butter Chicken", quantity: 1, price: 390 }, { name: "Garlic Naan", quantity: 3, price: 75 }], amount: 615, notes: "" },
-    { customer: "Meenakshi S.", phone: "+91 97334 55667", items: [{ name: "Paneer Tikka", quantity: 2, price: 290 }], amount: 580, notes: "Green chutney extra" },
-    { customer: "Aditya Roy", phone: "+91 96221 88990", items: [{ name: "Chicken 65", quantity: 2, price: 310 }], amount: 620, notes: "Crispy fry" },
-    { customer: "Pooja Hegde", phone: "+91 95443 22110", items: [{ name: "Veg Hakka Noodles", quantity: 2, price: 240 }], amount: 480, notes: "" },
-    { customer: "Gautam Rao", phone: "+91 94332 11998", items: [{ name: "Tandoori Roti", quantity: 8, price: 35 }, { name: "Dal Makhani", quantity: 1, price: 280 }], amount: 560, notes: "" },
-    { customer: "Kavitha N.", phone: "+91 93221 00887", items: [{ name: "Chicken Dum Biryani", quantity: 2, price: 380 }], amount: 760, notes: "Urgent pickup" },
+    {
+      customer: "Sneha Reddy",
+      phone: "+91 98451 22334",
+      items: [{ name: "Veg Biryani", quantity: 2, price: 280 }],
+      amount: 560,
+      notes: "Pack extra raita",
+    },
+    {
+      customer: "Rahul V.",
+      phone: "+91 98112 44556",
+      items: [
+        { name: "Butter Chicken", quantity: 1, price: 390 },
+        { name: "Garlic Naan", quantity: 3, price: 75 },
+      ],
+      amount: 615,
+      notes: "",
+    },
+    {
+      customer: "Meenakshi S.",
+      phone: "+91 97334 55667",
+      items: [{ name: "Paneer Tikka", quantity: 2, price: 290 }],
+      amount: 580,
+      notes: "Green chutney extra",
+    },
+    {
+      customer: "Aditya Roy",
+      phone: "+91 96221 88990",
+      items: [{ name: "Chicken 65", quantity: 2, price: 310 }],
+      amount: 620,
+      notes: "Crispy fry",
+    },
+    {
+      customer: "Pooja Hegde",
+      phone: "+91 95443 22110",
+      items: [{ name: "Veg Hakka Noodles", quantity: 2, price: 240 }],
+      amount: 480,
+      notes: "",
+    },
+    {
+      customer: "Gautam Rao",
+      phone: "+91 94332 11998",
+      items: [
+        { name: "Tandoori Roti", quantity: 8, price: 35 },
+        { name: "Dal Makhani", quantity: 1, price: 280 },
+      ],
+      amount: 560,
+      notes: "",
+    },
+    {
+      customer: "Kavitha N.",
+      phone: "+91 93221 00887",
+      items: [{ name: "Chicken Dum Biryani", quantity: 2, price: 380 }],
+      amount: 760,
+      notes: "Urgent pickup",
+    },
   ];
 
   pendingTemplates.forEach((pt, i) => {
@@ -274,10 +347,33 @@ function generateExpandedSeedOrders() {
 
   // 4 more preparing orders to reach 5 total preparing
   const preparingTemplates = [
-    { customer: "Varun Verma", phone: "+91 98334 11223", items: [{ name: "Chicken Tikka", quantity: 2, price: 320 }], amount: 640 },
-    { customer: "Shweta K.", phone: "+91 97445 22334", items: [{ name: "Veg Pulao", quantity: 2, price: 250 }], amount: 500 },
-    { customer: "Murali B.", phone: "+91 96556 33445", items: [{ name: "Fish Curry", quantity: 1, price: 420 }, { name: "Steamed Rice", quantity: 2, price: 120 }], amount: 660 },
-    { customer: "Neha Sharma", phone: "+91 95667 44556", items: [{ name: "Paneer Kulcha", quantity: 4, price: 90 }], amount: 360 },
+    {
+      customer: "Varun Verma",
+      phone: "+91 98334 11223",
+      items: [{ name: "Chicken Tikka", quantity: 2, price: 320 }],
+      amount: 640,
+    },
+    {
+      customer: "Shweta K.",
+      phone: "+91 97445 22334",
+      items: [{ name: "Veg Pulao", quantity: 2, price: 250 }],
+      amount: 500,
+    },
+    {
+      customer: "Murali B.",
+      phone: "+91 96556 33445",
+      items: [
+        { name: "Fish Curry", quantity: 1, price: 420 },
+        { name: "Steamed Rice", quantity: 2, price: 120 },
+      ],
+      amount: 660,
+    },
+    {
+      customer: "Neha Sharma",
+      phone: "+91 95667 44556",
+      items: [{ name: "Paneer Kulcha", quantity: 4, price: 90 }],
+      amount: 360,
+    },
   ];
   preparingTemplates.forEach((pt, i) => {
     list.push({
@@ -298,8 +394,21 @@ function generateExpandedSeedOrders() {
 
   // 2 more ready orders to reach 3 total ready
   const readyTemplates = [
-    { customer: "Prashanth D.", phone: "+91 94778 55667", items: [{ name: "Chicken Biryani", quantity: 2, price: 380 }], amount: 760 },
-    { customer: "Deepika R.", phone: "+91 93889 66778", items: [{ name: "Paneer Butter Masala", quantity: 1, price: 320 }, { name: "Naan", quantity: 4, price: 50 }], amount: 520 },
+    {
+      customer: "Prashanth D.",
+      phone: "+91 94778 55667",
+      items: [{ name: "Chicken Biryani", quantity: 2, price: 380 }],
+      amount: 760,
+    },
+    {
+      customer: "Deepika R.",
+      phone: "+91 93889 66778",
+      items: [
+        { name: "Paneer Butter Masala", quantity: 1, price: 320 },
+        { name: "Naan", quantity: 4, price: 50 },
+      ],
+      amount: 520,
+    },
   ];
   readyTemplates.forEach((rt, i) => {
     list.push({
@@ -321,13 +430,16 @@ function generateExpandedSeedOrders() {
   // Generate completed orders to reach exact target 78 completed and ₹74,320.00 total sales
   const currentCompletedList = list.filter((o) => o.status === "Completed");
   const neededCompleted = 78 - currentCompletedList.length;
-  let remainingSales = 74320.0 - currentCompletedList.reduce((s, o) => s + o.amount, 0);
+  let remainingSales =
+    74320.0 - currentCompletedList.reduce((s, o) => s + o.amount, 0);
 
   for (let i = 1; i <= neededCompleted; i++) {
     const num = 1046 - i;
     const name = names[i % names.length];
     const isLast = i === neededCompleted;
-    const amount = isLast ? Math.max(200, Math.round(remainingSales)) : Math.round(remainingSales / (neededCompleted - i + 1));
+    const amount = isLast
+      ? Math.max(200, Math.round(remainingSales))
+      : Math.round(remainingSales / (neededCompleted - i + 1));
     remainingSales -= amount;
 
     const day = Math.max(1, 14 - Math.floor(i / 6));
@@ -343,8 +455,16 @@ function generateExpandedSeedOrders() {
       phone: `+91 98${String(10000000 + i * 2311).slice(0, 8)}`,
       itemsCount: 3,
       items: [
-        { name: "Special Dine Combo", quantity: 1, price: Math.round(amount * 0.6) },
-        { name: "Indian Bread / Rice", quantity: 2, price: Math.round((amount * 0.4) / 2) },
+        {
+          name: "Special Dine Combo",
+          quantity: 1,
+          price: Math.round(amount * 0.6),
+        },
+        {
+          name: "Indian Bread / Rice",
+          quantity: 2,
+          price: Math.round((amount * 0.4) / 2),
+        },
       ],
       amount: amount,
       status: "Completed",
@@ -376,7 +496,8 @@ export function AdminTakeaway({
       ...base,
       restaurantName: name,
       tagline: base.tagline?.trim() || "Fine Dining & POS Management",
-      address: base.address?.trim() || "Main Road, Near Tech Park, Hyderabad, India",
+      address:
+        base.address?.trim() || "Main Road, Near Tech Park, Hyderabad, India",
       phone: base.phone?.trim() || "+91 98450 12345",
       gstin: base.gstin?.trim() || "36AABCA1234F1Z5",
       logo: restaurantLogo || base.logo || "",
@@ -420,11 +541,21 @@ export function AdminTakeaway({
             orderNumber: String(bo.orderNumber || bo.id || `TK-${bo.id}`),
             customer: bo.customerName || bo.customer || "Walk-in Guest",
             phone: bo.customerPhone || bo.phone || "—",
-            itemsCount: Array.isArray(bo.items) ? bo.items.reduce((s, it) => s + (it.quantity || 1), 0) : 1,
+            itemsCount: Array.isArray(bo.items)
+              ? bo.items.reduce((s, it) => s + (it.quantity || 1), 0)
+              : 1,
             items: Array.isArray(bo.items) ? bo.items : [],
             amount: Number(bo.totalAmount || bo.grandTotal || bo.amount || 0),
-            status: bo.status ? bo.status.charAt(0).toUpperCase() + bo.status.slice(1).toLowerCase() : "Pending",
-            orderTime: bo.orderTime || new Date(bo.date || Date.now()).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+            status: bo.status
+              ? bo.status.charAt(0).toUpperCase() +
+                bo.status.slice(1).toLowerCase()
+              : "Pending",
+            orderTime:
+              bo.orderTime ||
+              new Date(bo.date || Date.now()).toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
             date: bo.date || new Date().toISOString(),
             paymentMethod: bo.paymentMethod || "UPI",
             notes: bo.notes || "",
@@ -452,7 +583,9 @@ export function AdminTakeaway({
   const [dateFilter, setDateFilter] = useState("all");
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState("all");
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-  const [dateRangeLabel, setDateRangeLabel] = useState("01 Oct 2026 – 14 Oct 2026");
+  const [dateRangeLabel, setDateRangeLabel] = useState(
+    "01 Oct 2026 – 14 Oct 2026",
+  );
   const [customDateRangeOpen, setCustomDateRangeOpen] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -471,7 +604,8 @@ export function AdminTakeaway({
     if (!printReceiptOrder) return null;
 
     const items =
-      Array.isArray(printReceiptOrder.items) && printReceiptOrder.items.length > 0
+      Array.isArray(printReceiptOrder.items) &&
+      printReceiptOrder.items.length > 0
         ? printReceiptOrder.items.map((it) => ({
             name: String(it?.name || it?.dishName || "Item").trim(),
             quantity: Number(it?.quantity ?? it?.qty) || 1,
@@ -485,16 +619,16 @@ export function AdminTakeaway({
             },
           ];
 
-    const { subtotal, taxAmount, serviceChargeAmount, grandTotal } = calculateTakeawayBill(
-      items,
-      printReceiptOrder.amount
-    );
+    const { subtotal, taxAmount, serviceChargeAmount, grandTotal } =
+      calculateTakeawayBill(items, printReceiptOrder.amount);
 
     const isCancelled = printReceiptOrder.status === "Cancelled";
 
     return {
       id: printReceiptOrder.id,
-      invoiceNo: formatOrderNumber(printReceiptOrder.orderNumber || printReceiptOrder.id),
+      invoiceNo: formatOrderNumber(
+        printReceiptOrder.orderNumber || printReceiptOrder.id,
+      ),
       name: "Takeaway",
       tableName: "Takeaway",
       section: "Takeaway",
@@ -565,7 +699,10 @@ export function AdminTakeaway({
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       // 1. Primary tab status filter
-      if (activeTabStatus !== "all" && order.status.toLowerCase() !== activeTabStatus.toLowerCase()) {
+      if (
+        activeTabStatus !== "all" &&
+        order.status.toLowerCase() !== activeTabStatus.toLowerCase()
+      ) {
         return false;
       }
 
@@ -580,9 +717,15 @@ export function AdminTakeaway({
       // 3. Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.trim().toLowerCase();
-        const idMatch = String(order.id || "").toLowerCase().includes(query);
-        const nameMatch = String(order.customer || "").toLowerCase().includes(query);
-        const phoneMatch = String(order.phone || "").toLowerCase().includes(query);
+        const idMatch = String(order.id || "")
+          .toLowerCase()
+          .includes(query);
+        const nameMatch = String(order.customer || "")
+          .toLowerCase()
+          .includes(query);
+        const phoneMatch = String(order.phone || "")
+          .toLowerCase()
+          .includes(query);
         if (!idMatch && !nameMatch && !phoneMatch) return false;
       }
 
@@ -590,7 +733,11 @@ export function AdminTakeaway({
       if (dateFilter !== "all") {
         const orderDate = new Date(order.date || Date.now());
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
 
         if (dateFilter === "today") {
           if (orderDate < today) return false;
@@ -607,13 +754,22 @@ export function AdminTakeaway({
           const startDate = new Date(`${appliedCustomStartDate}T00:00:00`);
           const endDateExclusive = new Date(`${appliedCustomEndDate}T00:00:00`);
           endDateExclusive.setDate(endDateExclusive.getDate() + 1);
-          if (orderDate < startDate || orderDate >= endDateExclusive) return false;
+          if (orderDate < startDate || orderDate >= endDateExclusive)
+            return false;
         }
       }
 
       return true;
     });
-  }, [orders, activeTabStatus, secondaryStatusFilter, searchQuery, dateFilter, appliedCustomStartDate, appliedCustomEndDate]);
+  }, [
+    orders,
+    activeTabStatus,
+    secondaryStatusFilter,
+    searchQuery,
+    dateFilter,
+    appliedCustomStartDate,
+    appliedCustomEndDate,
+  ]);
 
   // --- Pagination State ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -634,7 +790,9 @@ export function AdminTakeaway({
   // --- Order Status Updater ---
   const updateOrderStatus = async (orderId, newStatus) => {
     setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
+      prev.map((ord) =>
+        ord.id === orderId ? { ...ord, status: newStatus } : ord,
+      ),
     );
     if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
       setSelectedOrderDetails((prev) => ({ ...prev, status: newStatus }));
@@ -665,10 +823,15 @@ export function AdminTakeaway({
     return (menuItems || []).filter((item) => {
       if (item.isAvailable === false) return false;
       const query = itemSearchQuery.trim().toLowerCase();
-      const matchQuery = !query || String(item.name || "").toLowerCase().includes(query);
+      const matchQuery =
+        !query ||
+        String(item.name || "")
+          .toLowerCase()
+          .includes(query);
       const matchCat =
         itemCategoryFilter === "all" ||
-        String(item.category || "").toLowerCase() === itemCategoryFilter.toLowerCase();
+        String(item.category || "").toLowerCase() ===
+          itemCategoryFilter.toLowerCase();
       return matchQuery && matchCat;
     });
   }, [menuItems, itemSearchQuery, itemCategoryFilter]);
@@ -697,16 +860,24 @@ export function AdminTakeaway({
 
   const cartItemsList = Object.values(newOrderCart);
   const cartBill = calculateTakeawayBill(
-    cartItemsList.map((line) => ({ price: line.item.price, quantity: line.quantity }))
+    cartItemsList.map((line) => ({
+      price: line.item.price,
+      quantity: line.quantity,
+    })),
   );
-  const { subtotal: cartSubtotal, taxAmount: cartGst, serviceChargeAmount: cartServiceCharge, grandTotal: cartTotal } = cartBill;
+  const {
+    subtotal: cartSubtotal,
+    taxAmount: cartGst,
+    serviceChargeAmount: cartServiceCharge,
+    grandTotal: cartTotal,
+  } = cartBill;
 
   const handleCreateTakeawayOrder = async () => {
     if (!isValidIndianMobileNumber(newCustomerPhone)) {
       setCustomerPhoneError(
         newCustomerPhone.trim()
           ? "Enter a valid 10-digit Indian mobile number."
-          : "Phone number is required."
+          : "Phone number is required.",
       );
       return;
     }
@@ -721,11 +892,13 @@ export function AdminTakeaway({
     const nextNumber = 1069 + orders.length;
     const newId = `TK-${nextNumber}`;
     const now = new Date();
-    const timeFormatted = now.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }) + `, ${now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
+    const timeFormatted =
+      now.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }) +
+      `, ${now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
 
     const newOrder = {
       id: newId,
@@ -956,7 +1129,10 @@ export function AdminTakeaway({
         {/* Top Right Controls (Date Selector & + New Takeaway Button) */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {/* Date Selector Dropdown */}
-          <div className="date-filter-dropdown-container" style={{ position: "relative" }}>
+          <div
+            className="date-filter-dropdown-container"
+            style={{ position: "relative" }}
+          >
             <button
               type="button"
               onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
@@ -1020,8 +1196,14 @@ export function AdminTakeaway({
                       padding: "0.55rem 0.85rem",
                       borderRadius: "6px",
                       border: "none",
-                      background: dateFilter === preset.value ? "rgba(234, 88, 12, 0.12)" : "transparent",
-                      color: dateFilter === preset.value ? "#ea580c" : "var(--text-main)",
+                      background:
+                        dateFilter === preset.value
+                          ? "rgba(234, 88, 12, 0.12)"
+                          : "transparent",
+                      color:
+                        dateFilter === preset.value
+                          ? "#ea580c"
+                          : "var(--text-main)",
                       fontSize: "0.82rem",
                       fontWeight: dateFilter === preset.value ? 600 : 400,
                       cursor: "pointer",
@@ -1038,10 +1220,19 @@ export function AdminTakeaway({
                     padding: "0.55rem 0.85rem",
                     borderRadius: "6px",
                     border: "none",
-                    background: customDateRangeOpen || dateFilter === "custom" ? "rgba(234, 88, 12, 0.12)" : "transparent",
-                    color: customDateRangeOpen || dateFilter === "custom" ? "#ea580c" : "var(--text-main)",
+                    background:
+                      customDateRangeOpen || dateFilter === "custom"
+                        ? "rgba(234, 88, 12, 0.12)"
+                        : "transparent",
+                    color:
+                      customDateRangeOpen || dateFilter === "custom"
+                        ? "#ea580c"
+                        : "var(--text-main)",
                     fontSize: "0.82rem",
-                    fontWeight: customDateRangeOpen || dateFilter === "custom" ? 600 : 400,
+                    fontWeight:
+                      customDateRangeOpen || dateFilter === "custom"
+                        ? 600
+                        : 400,
                     cursor: "pointer",
                   }}
                 >
@@ -1057,14 +1248,24 @@ export function AdminTakeaway({
                       borderTop: "1px solid var(--border-card)",
                     }}
                   >
-                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.25rem",
+                        color: "var(--text-muted)",
+                        fontSize: "0.72rem",
+                      }}
+                    >
                       From
                       <input
                         aria-label="Start date"
                         type="date"
                         value={customStartDate}
                         max={customEndDate || undefined}
-                        onChange={(event) => setCustomStartDate(event.target.value)}
+                        onChange={(event) =>
+                          setCustomStartDate(event.target.value)
+                        }
                         style={{
                           width: "100%",
                           boxSizing: "border-box",
@@ -1076,14 +1277,24 @@ export function AdminTakeaway({
                         }}
                       />
                     </label>
-                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.25rem",
+                        color: "var(--text-muted)",
+                        fontSize: "0.72rem",
+                      }}
+                    >
                       To
                       <input
                         aria-label="End date"
                         type="date"
                         value={customEndDate}
                         min={customStartDate || undefined}
-                        onChange={(event) => setCustomEndDate(event.target.value)}
+                        onChange={(event) =>
+                          setCustomEndDate(event.target.value)
+                        }
                         style={{
                           width: "100%",
                           boxSizing: "border-box",
@@ -1097,18 +1308,27 @@ export function AdminTakeaway({
                     </label>
                     <button
                       type="button"
-                      disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
+                      disabled={
+                        !customStartDate ||
+                        !customEndDate ||
+                        customStartDate > customEndDate
+                      }
                       onClick={() => {
                         const formatDate = (date) =>
-                          new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          });
-                          setAppliedCustomStartDate(customStartDate);
-                          setAppliedCustomEndDate(customEndDate);
-                          setDateFilter("custom");
-                        setDateRangeLabel(`${formatDate(customStartDate)} – ${formatDate(customEndDate)}`);
+                          new Date(`${date}T00:00:00`).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          );
+                        setAppliedCustomStartDate(customStartDate);
+                        setAppliedCustomEndDate(customEndDate);
+                        setDateFilter("custom");
+                        setDateRangeLabel(
+                          `${formatDate(customStartDate)} – ${formatDate(customEndDate)}`,
+                        );
                         setDateDropdownOpen(false);
                         setCustomDateRangeOpen(false);
                       }}
@@ -1120,8 +1340,18 @@ export function AdminTakeaway({
                         color: "#fff",
                         fontSize: "0.8rem",
                         fontWeight: 600,
-                        cursor: !customStartDate || !customEndDate || customStartDate > customEndDate ? "not-allowed" : "pointer",
-                        opacity: !customStartDate || !customEndDate || customStartDate > customEndDate ? 0.55 : 1,
+                        cursor:
+                          !customStartDate ||
+                          !customEndDate ||
+                          customStartDate > customEndDate
+                            ? "not-allowed"
+                            : "pointer",
+                        opacity:
+                          !customStartDate ||
+                          !customEndDate ||
+                          customStartDate > customEndDate
+                            ? 0.55
+                            : 1,
                       }}
                     >
                       Apply date range
@@ -1152,8 +1382,12 @@ export function AdminTakeaway({
               boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
               transition: "transform 0.15s ease",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "translateY(-1px)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.transform = "translateY(0)")
+            }
           >
             <Plus size={16} strokeWidth={2.5} />
             <span>New Takeaway</span>
@@ -1179,7 +1413,8 @@ export function AdminTakeaway({
             display: "flex",
             alignItems: "center",
             gap: "0.7rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow:
+              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
             minWidth: 0,
           }}
         >
@@ -1235,7 +1470,8 @@ export function AdminTakeaway({
             display: "flex",
             alignItems: "center",
             gap: "0.7rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow:
+              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
             minWidth: 0,
           }}
         >
@@ -1276,7 +1512,11 @@ export function AdminTakeaway({
                 lineHeight: 1.1,
               }}
             >
-              ₹ {totalSalesAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₹{" "}
+              {totalSalesAmount.toLocaleString("en-IN", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
           </div>
         </div>
@@ -1291,7 +1531,8 @@ export function AdminTakeaway({
             display: "flex",
             alignItems: "center",
             gap: "0.7rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow:
+              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
             minWidth: 0,
           }}
         >
@@ -1347,7 +1588,8 @@ export function AdminTakeaway({
             display: "flex",
             alignItems: "center",
             gap: "0.7rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow:
+              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
             minWidth: 0,
           }}
         >
@@ -1405,22 +1647,72 @@ export function AdminTakeaway({
         }}
       >
         {[
-          { key: "all", label: "All Orders", count: tabCounts.all, icon: ShoppingBag },
-          { key: "Pending", label: "Pending", count: tabCounts.Pending, icon: Hourglass },
-          { key: "Preparing", label: "Preparing", count: tabCounts.Preparing, icon: ChefHat },
+          {
+            key: "all",
+            label: "All Orders",
+            count: tabCounts.all,
+            icon: ShoppingBag,
+          },
+          {
+            key: "Pending",
+            label: "Pending",
+            count: tabCounts.Pending,
+            icon: Hourglass,
+          },
+          {
+            key: "Preparing",
+            label: "Preparing",
+            count: tabCounts.Preparing,
+            icon: ChefHat,
+          },
           { key: "Ready", label: "Ready", count: tabCounts.Ready, icon: Bell },
-          { key: "Completed", label: "Completed", count: tabCounts.Completed, icon: CheckCircle2 },
-          { key: "Cancelled", label: "Cancelled", count: tabCounts.Cancelled, icon: XCircle },
+          {
+            key: "Completed",
+            label: "Completed",
+            count: tabCounts.Completed,
+            icon: CheckCircle2,
+          },
+          {
+            key: "Cancelled",
+            label: "Cancelled",
+            count: tabCounts.Cancelled,
+            icon: XCircle,
+          },
         ].map((tab) => {
-          const isActive = activeTabStatus.toLowerCase() === tab.key.toLowerCase();
+          const isActive =
+            activeTabStatus.toLowerCase() === tab.key.toLowerCase();
           const Icon = tab.icon;
           const tabColor = {
-            all: { text: "#ea580c", background: "rgba(234, 88, 12, 0.1)", border: "rgba(234, 88, 12, 0.3)" },
-            pending: { text: "#b45309", background: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.35)" },
-            preparing: { text: "#2563eb", background: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.3)" },
-            ready: { text: "#9333ea", background: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.3)" },
-            completed: { text: "#16a34a", background: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.3)" },
-            cancelled: { text: "#dc2626", background: "rgba(239, 68, 68, 0.1)", border: "rgba(239, 68, 68, 0.3)" },
+            all: {
+              text: "#ea580c",
+              background: "rgba(234, 88, 12, 0.1)",
+              border: "rgba(234, 88, 12, 0.3)",
+            },
+            pending: {
+              text: "#b45309",
+              background: "rgba(245, 158, 11, 0.1)",
+              border: "rgba(245, 158, 11, 0.35)",
+            },
+            preparing: {
+              text: "#2563eb",
+              background: "rgba(59, 130, 246, 0.1)",
+              border: "rgba(59, 130, 246, 0.3)",
+            },
+            ready: {
+              text: "#9333ea",
+              background: "rgba(168, 85, 247, 0.1)",
+              border: "rgba(168, 85, 247, 0.3)",
+            },
+            completed: {
+              text: "#16a34a",
+              background: "rgba(34, 197, 94, 0.1)",
+              border: "rgba(34, 197, 94, 0.3)",
+            },
+            cancelled: {
+              text: "#dc2626",
+              background: "rgba(239, 68, 68, 0.1)",
+              border: "rgba(239, 68, 68, 0.3)",
+            },
           }[tab.key.toLowerCase()];
           return (
             <button
@@ -1592,7 +1884,8 @@ export function AdminTakeaway({
           border: "1px solid var(--border-card)",
           borderRadius: "14px",
           overflow: "hidden",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+          boxShadow:
+            "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
         }}
       >
         <div className="takeaway-orders-scroll" style={{ overflowX: "auto" }}>
@@ -1619,31 +1912,131 @@ export function AdminTakeaway({
             </colgroup>
             <thead>
               <tr>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   #
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   ORDER ID
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   CUSTOMER
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   PHONE
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   ITEMS
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   AMOUNT
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   STATUS
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   ORDER TIME
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
+                <th
+                  style={{
+                    padding: "0.48rem 0.45rem",
+                    borderBottom: "1px solid var(--border-card)",
+                    color: "var(--text-muted)",
+                    fontSize: "0.66rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.025em",
+                    textAlign: "right",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   ACTIONS
                 </th>
               </tr>
@@ -1677,22 +2070,74 @@ export function AdminTakeaway({
                         transition: "background 0.15s ease",
                         cursor: "pointer",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(249, 115, 22, 0.03)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(249, 115, 22, 0.03)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
                     >
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          color: "var(--text-muted)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {rowNumber}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          fontWeight: 700,
+                          color: "var(--text-main)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {formatOrderNumber(order.orderNumber || order.id)}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          fontWeight: 600,
+                          color: "var(--text-main)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {order.customer}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          color: "var(--text-muted)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {order.phone}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         <span
                           style={{
                             display: "inline-flex",
@@ -1711,17 +2156,65 @@ export function AdminTakeaway({
                           {order.itemsCount} Items
                         </span>
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        ₹ {getTakeawayOrderTotal(order).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          fontWeight: 700,
+                          color: "var(--text-main)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        ₹{" "}
+                        {getTakeawayOrderTotal(order).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {renderStatusBadge(order.status)}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.76rem", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td
+                        style={{
+                          padding: "0.44rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          color: "var(--text-muted)",
+                          fontSize: "0.76rem",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {order.orderTime}
                       </td>
-                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                      <td
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          padding: "0.65rem 0.45rem",
+                          borderBottom: "1px solid var(--border-card)",
+                          textAlign: "right",
+                          verticalAlign: "middle",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                          }}
+                        >
                           {/* View bill & print invoice */}
                           <button
                             type="button"
@@ -1740,8 +2233,13 @@ export function AdminTakeaway({
                               justifyContent: "center",
                               transition: "background 0.15s ease",
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(100, 116, 139, 0.08)")}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background =
+                                "rgba(100, 116, 139, 0.08)")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background = "transparent")
+                            }
                           >
                             <Eye size={15} />
                           </button>
@@ -1764,14 +2262,22 @@ export function AdminTakeaway({
                               justifyContent: "center",
                               transition: "background 0.15s ease",
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(100, 116, 139, 0.08)")}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background =
+                                "rgba(100, 116, 139, 0.08)")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background = "transparent")
+                            }
                           >
                             <Printer size={15} />
                           </button>
 
                           {/* More Options / Status changer */}
-                          <div className="action-menu-container" style={{ position: "relative" }}>
+                          <div
+                            className="action-menu-container"
+                            style={{ position: "relative" }}
+                          >
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1780,15 +2286,21 @@ export function AdminTakeaway({
                                   setActionMenuOrderId(null);
                                   setActionMenuOpenAbove(false);
                                 } else {
-                                  const buttonRect = e.currentTarget.getBoundingClientRect();
-                                  const scrollAreaRect = e.currentTarget.closest(".takeaway-orders-scroll")?.getBoundingClientRect();
+                                  const buttonRect =
+                                    e.currentTarget.getBoundingClientRect();
+                                  const scrollAreaRect = e.currentTarget
+                                    .closest(".takeaway-orders-scroll")
+                                    ?.getBoundingClientRect();
                                   const menuHeight = 220;
                                   setActionMenuOpenAbove(
                                     Boolean(
                                       scrollAreaRect &&
-                                      scrollAreaRect.bottom - buttonRect.bottom < menuHeight &&
-                                      buttonRect.top - scrollAreaRect.top > menuHeight
-                                    )
+                                      scrollAreaRect.bottom -
+                                        buttonRect.bottom <
+                                        menuHeight &&
+                                      buttonRect.top - scrollAreaRect.top >
+                                        menuHeight,
+                                    ),
                                   );
                                   setActionMenuOrderId(order.id);
                                 }
@@ -1799,8 +2311,14 @@ export function AdminTakeaway({
                                 height: "32px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card)",
-                                background: actionMenuOrderId === order.id ? "rgba(234, 88, 12, 0.12)" : "transparent",
-                                color: actionMenuOrderId === order.id ? "#ea580c" : "var(--text-main)",
+                                background:
+                                  actionMenuOrderId === order.id
+                                    ? "rgba(234, 88, 12, 0.12)"
+                                    : "transparent",
+                                color:
+                                  actionMenuOrderId === order.id
+                                    ? "#ea580c"
+                                    : "var(--text-main)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -1815,8 +2333,12 @@ export function AdminTakeaway({
                                 style={{
                                   position: "absolute",
                                   right: 0,
-                                  top: actionMenuOpenAbove ? "auto" : "calc(100% + 4px)",
-                                  bottom: actionMenuOpenAbove ? "calc(100% + 4px)" : "auto",
+                                  top: actionMenuOpenAbove
+                                    ? "auto"
+                                    : "calc(100% + 4px)",
+                                  bottom: actionMenuOpenAbove
+                                    ? "calc(100% + 4px)"
+                                    : "auto",
                                   background: "var(--bg-card)",
                                   border: "1px solid var(--border-card)",
                                   borderRadius: "10px",
@@ -1833,7 +2355,9 @@ export function AdminTakeaway({
                                 {order.status === "Pending" && (
                                   <button
                                     type="button"
-                                    onClick={() => updateOrderStatus(order.id, "Preparing")}
+                                    onClick={() =>
+                                      updateOrderStatus(order.id, "Preparing")
+                                    }
                                     style={{
                                       textAlign: "left",
                                       padding: "0.5rem 0.75rem",
@@ -1852,10 +2376,13 @@ export function AdminTakeaway({
                                     <ChefHat size={14} /> Mark as Preparing
                                   </button>
                                 )}
-                                {(order.status === "Pending" || order.status === "Preparing") && (
+                                {(order.status === "Pending" ||
+                                  order.status === "Preparing") && (
                                   <button
                                     type="button"
-                                    onClick={() => updateOrderStatus(order.id, "Ready")}
+                                    onClick={() =>
+                                      updateOrderStatus(order.id, "Ready")
+                                    }
                                     style={{
                                       textAlign: "left",
                                       padding: "0.5rem 0.75rem",
@@ -1874,32 +2401,38 @@ export function AdminTakeaway({
                                     <Bell size={14} /> Mark as Ready
                                   </button>
                                 )}
-                                {order.status !== "Completed" && order.status !== "Cancelled" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => updateOrderStatus(order.id, "Completed")}
-                                    style={{
-                                      textAlign: "left",
-                                      padding: "0.5rem 0.75rem",
-                                      borderRadius: "6px",
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "#16a34a",
-                                      fontSize: "0.8rem",
-                                      fontWeight: 600,
-                                      cursor: "pointer",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "0.45rem",
-                                    }}
-                                  >
-                                    <CheckCircle2 size={14} /> Mark as Completed
-                                  </button>
-                                )}
+                                {order.status !== "Completed" &&
+                                  order.status !== "Cancelled" && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateOrderStatus(order.id, "Completed")
+                                      }
+                                      style={{
+                                        textAlign: "left",
+                                        padding: "0.5rem 0.75rem",
+                                        borderRadius: "6px",
+                                        border: "none",
+                                        background: "transparent",
+                                        color: "#16a34a",
+                                        fontSize: "0.8rem",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "0.45rem",
+                                      }}
+                                    >
+                                      <CheckCircle2 size={14} /> Mark as
+                                      Completed
+                                    </button>
+                                  )}
                                 {order.status !== "Cancelled" && (
                                   <button
                                     type="button"
-                                    onClick={() => updateOrderStatus(order.id, "Cancelled")}
+                                    onClick={() =>
+                                      updateOrderStatus(order.id, "Cancelled")
+                                    }
                                     style={{
                                       textAlign: "left",
                                       padding: "0.5rem 0.75rem",
@@ -1962,7 +2495,9 @@ export function AdminTakeaway({
           </div>
 
           {/* Pagination buttons */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}
+          >
             <button
               type="button"
               disabled={safePage <= 1}
@@ -1985,7 +2520,10 @@ export function AdminTakeaway({
             </button>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+              .filter(
+                (p) =>
+                  p === 1 || p === totalPages || Math.abs(p - safePage) <= 1,
+              )
               .reduce((acc, p, index, arr) => {
                 if (index > 0 && p - arr[index - 1] > 1) {
                   acc.push("...");
@@ -1996,7 +2534,13 @@ export function AdminTakeaway({
               .map((pageItem, pIdx) => {
                 if (pageItem === "...") {
                   return (
-                    <span key={`dots-${pIdx}`} style={{ padding: "0 0.35rem", color: "var(--text-muted)" }}>
+                    <span
+                      key={`dots-${pIdx}`}
+                      style={{
+                        padding: "0 0.35rem",
+                        color: "var(--text-muted)",
+                      }}
+                    >
                       ...
                     </span>
                   );
@@ -2011,7 +2555,9 @@ export function AdminTakeaway({
                       width: "34px",
                       height: "34px",
                       borderRadius: "8px",
-                      border: isSelected ? "none" : "1px solid var(--border-card)",
+                      border: isSelected
+                        ? "none"
+                        : "1px solid var(--border-card)",
                       background: isSelected
                         ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"
                         : "var(--bg-card)",
@@ -2022,7 +2568,9 @@ export function AdminTakeaway({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: isSelected ? "0 2px 6px rgba(234, 88, 12, 0.3)" : "none",
+                      boxShadow: isSelected
+                        ? "0 2px 6px rgba(234, 88, 12, 0.3)"
+                        : "none",
                     }}
                   >
                     {pageItem}
@@ -2040,7 +2588,10 @@ export function AdminTakeaway({
                 borderRadius: "8px",
                 border: "1px solid var(--border-card)",
                 background: "var(--bg-card)",
-                color: safePage >= totalPages ? "var(--text-muted)" : "var(--text-main)",
+                color:
+                  safePage >= totalPages
+                    ? "var(--text-muted)"
+                    : "var(--text-main)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -2093,7 +2644,13 @@ export function AdminTakeaway({
                 justifyContent: "space-between",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                }}
+              >
                 <div
                   style={{
                     width: "40px",
@@ -2109,10 +2666,23 @@ export function AdminTakeaway({
                   <Plus size={22} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  <h2
+                    style={{
+                      margin: 0,
+                      fontSize: "1.2rem",
+                      fontWeight: 700,
+                      color: "var(--text-main)",
+                    }}
+                  >
                     New Takeaway Order
                   </h2>
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "0.8rem",
+                      color: "var(--text-muted)",
+                    }}
+                  >
                     Create and dispatch a new customer pickup order
                   </p>
                 </div>
@@ -2143,8 +2713,19 @@ export function AdminTakeaway({
               }}
             >
               {/* Left Column: Menu Items Selection */}
-              <div style={{ padding: "1.4rem", borderRight: "1px solid var(--border-card)" }}>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "0.75rem" }}>
+              <div
+                style={{
+                  padding: "1.4rem",
+                  borderRight: "1px solid var(--border-card)",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "0.88rem",
+                    marginBottom: "0.75rem",
+                  }}
+                >
                   Select Dishes from Menu
                 </div>
 
@@ -2203,20 +2784,42 @@ export function AdminTakeaway({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          background: inCart > 0 ? "rgba(234, 88, 12, 0.06)" : "var(--bg-main)",
+                          background:
+                            inCart > 0
+                              ? "rgba(234, 88, 12, 0.06)"
+                              : "var(--bg-main)",
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: "0.84rem", color: "var(--text-main)" }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              fontSize: "0.84rem",
+                              color: "var(--text-main)",
+                            }}
+                          >
                             {dish.name}
                           </div>
-                          <div style={{ fontSize: "0.78rem", color: "#16a34a", fontWeight: 700, marginTop: "0.1rem" }}>
+                          <div
+                            style={{
+                              fontSize: "0.78rem",
+                              color: "#16a34a",
+                              fontWeight: 700,
+                              marginTop: "0.1rem",
+                            }}
+                          >
                             ₹ {Number(dish.price).toFixed(2)}
                           </div>
                         </div>
 
                         {inCart > 0 ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.45rem",
+                            }}
+                          >
                             <button
                               type="button"
                               onClick={() => removeCartItem(dish)}
@@ -2236,7 +2839,14 @@ export function AdminTakeaway({
                             >
                               -
                             </button>
-                            <span style={{ fontSize: "0.84rem", fontWeight: 700, minWidth: "18px", textAlign: "center" }}>
+                            <span
+                              style={{
+                                fontSize: "0.84rem",
+                                fontWeight: 700,
+                                minWidth: "18px",
+                                textAlign: "center",
+                              }}
+                            >
                               {inCart}
                             </span>
                             <button
@@ -2292,11 +2902,21 @@ export function AdminTakeaway({
                   gap: "0.95rem",
                 }}
               >
-                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>Customer & Order Info</div>
+                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+                  Customer & Order Info
+                </div>
 
                 {/* Customer Name */}
                 <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
+                  <label
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                      display: "block",
+                      marginBottom: "0.3rem",
+                    }}
+                  >
                     Customer Name *
                   </label>
                   <input
@@ -2321,7 +2941,15 @@ export function AdminTakeaway({
 
                 {/* Customer Phone */}
                 <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
+                  <label
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                      display: "block",
+                      marginBottom: "0.3rem",
+                    }}
+                  >
                     Phone Number *
                   </label>
                   <input
@@ -2331,18 +2959,28 @@ export function AdminTakeaway({
                     required
                     aria-label="Phone number (required)"
                     aria-invalid={Boolean(customerPhoneError)}
-                    aria-describedby={customerPhoneError ? "takeaway-phone-error" : undefined}
+                    aria-describedby={
+                      customerPhoneError ? "takeaway-phone-error" : undefined
+                    }
                     placeholder="e.g. +91 98450 11223"
                     value={newCustomerPhone}
                     onChange={(e) => {
                       setNewCustomerPhone(e.target.value);
-                      if (customerPhoneError && isValidIndianMobileNumber(e.target.value)) {
+                      if (
+                        customerPhoneError &&
+                        isValidIndianMobileNumber(e.target.value)
+                      ) {
                         setCustomerPhoneError("");
                       }
                     }}
                     onBlur={() => {
-                      if (newCustomerPhone.trim() && !isValidIndianMobileNumber(newCustomerPhone)) {
-                        setCustomerPhoneError("Enter a valid 10-digit Indian mobile number.");
+                      if (
+                        newCustomerPhone.trim() &&
+                        !isValidIndianMobileNumber(newCustomerPhone)
+                      ) {
+                        setCustomerPhoneError(
+                          "Enter a valid 10-digit Indian mobile number.",
+                        );
                       }
                     }}
                     style={{
@@ -2359,7 +2997,15 @@ export function AdminTakeaway({
                     }}
                   />
                   {customerPhoneError && (
-                    <div id="takeaway-phone-error" role="alert" style={{ marginTop: "0.3rem", color: "#dc2626", fontSize: "0.74rem" }}>
+                    <div
+                      id="takeaway-phone-error"
+                      role="alert"
+                      style={{
+                        marginTop: "0.3rem",
+                        color: "#dc2626",
+                        fontSize: "0.74rem",
+                      }}
+                    >
                       {customerPhoneError}
                     </div>
                   )}
@@ -2367,7 +3013,14 @@ export function AdminTakeaway({
 
                 {/* Selected Items summary */}
                 <div>
-                  <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
                     Selected Items ({cartItemsList.length})
                   </div>
                   <div
@@ -2384,7 +3037,14 @@ export function AdminTakeaway({
                     }}
                   >
                     {cartItemsList.length === 0 ? (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", textAlign: "center", padding: "0.6rem" }}>
+                      <div
+                        style={{
+                          fontSize: "0.8rem",
+                          color: "var(--text-muted)",
+                          textAlign: "center",
+                          padding: "0.6rem",
+                        }}
+                      >
                         No items added yet. Click + Add on the left.
                       </div>
                     ) : (
@@ -2401,7 +3061,10 @@ export function AdminTakeaway({
                             {line.item.name} × {line.quantity}
                           </span>
                           <span style={{ fontWeight: 700 }}>
-                            ₹ {((Number(line.item.price) || 0) * line.quantity).toFixed(2)}
+                            ₹{" "}
+                            {(
+                              (Number(line.item.price) || 0) * line.quantity
+                            ).toFixed(2)}
                           </span>
                         </div>
                       ))
@@ -2409,6 +3072,54 @@ export function AdminTakeaway({
                   </div>
                 </div>
 
+<<<<<<< HEAD
+=======
+                {/* Payment Method */}
+                <div>
+                  <label
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                      display: "block",
+                      marginBottom: "0.3rem",
+                    }}
+                  >
+                    Payment Mode
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {["UPI", "Cash"].map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setNewPaymentMethod(mode)}
+                        style={{
+                          flex: 1,
+                          height: "36px",
+                          borderRadius: "8px",
+                          border:
+                            newPaymentMethod === mode
+                              ? "1px solid #ea580c"
+                              : "1px solid var(--border-card)",
+                          background:
+                            newPaymentMethod === mode
+                              ? "rgba(234, 88, 12, 0.1)"
+                              : "var(--bg-main)",
+                          color:
+                            newPaymentMethod === mode
+                              ? "#ea580c"
+                              : "var(--text-main)",
+                          fontSize: "0.82rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {mode}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+>>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
 
                 {/* Bill Totals */}
                 <div
@@ -2423,17 +3134,41 @@ export function AdminTakeaway({
                     fontSize: "0.84rem",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      color: "var(--text-muted)",
+                    }}
+                  >
                     <span>Subtotal:</span>
-                    <span style={{ fontWeight: 600 }}>₹ {cartSubtotal.toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>
+                      ₹ {cartSubtotal.toFixed(2)}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      color: "var(--text-muted)",
+                    }}
+                  >
                     <span>GST (5%):</span>
-                    <span style={{ fontWeight: 600 }}>₹ {cartGst.toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>
+                      ₹ {cartGst.toFixed(2)}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      color: "var(--text-muted)",
+                    }}
+                  >
                     <span>Service Charge (5%):</span>
-                    <span style={{ fontWeight: 600 }}>₹ {cartServiceCharge.toFixed(2)}</span>
+                    <span style={{ fontWeight: 600 }}>
+                      ₹ {cartServiceCharge.toFixed(2)}
+                    </span>
                   </div>
                   <div
                     style={{
@@ -2487,7 +3222,8 @@ export function AdminTakeaway({
                   padding: "0.6rem 1.45rem",
                   borderRadius: "8px",
                   border: "none",
-                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  background:
+                    "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
                   color: "#fff",
                   fontSize: "0.84rem",
                   fontWeight: 600,
@@ -2543,15 +3279,35 @@ export function AdminTakeaway({
               }}
             >
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "var(--text-main)", lineHeight: 1.2 }}>
-                  Takeaway Order #{selectedOrderDetails.orderNumber || selectedOrderDetails.id}
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "1.2rem",
+                    fontWeight: 700,
+                    color: "var(--text-main)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Takeaway Order #
+                  {selectedOrderDetails.orderNumber || selectedOrderDetails.id}
                 </h3>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    fontSize: "0.82rem",
+                    color: "var(--text-muted)",
+                    marginTop: "0.2rem",
+                  }}
+                >
                   <Clock size={13} />
                   <span>{selectedOrderDetails.orderTime}</span>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -2595,7 +3351,18 @@ export function AdminTakeaway({
               </div>
             </div>
 
-            <div style={{ padding: "1.2rem 1.4rem", display: "flex", flexDirection: "column", gap: "0.95rem", overflowY: "auto", flex: "1 1 auto", minHeight: 0, maxHeight: "calc(85vh - 130px)" }}>
+            <div
+              style={{
+                padding: "1.2rem 1.4rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.95rem",
+                overflowY: "auto",
+                flex: "1 1 auto",
+                minHeight: 0,
+                maxHeight: "calc(85vh - 130px)",
+              }}
+            >
               {/* Customer and Order Summary Banner */}
               <div
                 style={{
@@ -2610,36 +3377,79 @@ export function AdminTakeaway({
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <div
+                    style={{
+                      fontSize: "0.76rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                    }}
+                  >
                     <User size={13} /> Customer
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "var(--text-main)", marginTop: "0.15rem" }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.92rem",
+                      color: "var(--text-main)",
+                      marginTop: "0.15rem",
+                    }}
+                  >
                     {selectedOrderDetails.customer}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                  <div
+                    style={{
+                      fontSize: "0.76rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                    }}
+                  >
                     <Phone size={13} /> Phone
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--text-main)", marginTop: "0.15rem" }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.88rem",
+                      color: "var(--text-main)",
+                      marginTop: "0.15rem",
+                    }}
+                  >
                     {selectedOrderDetails.phone}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", fontWeight: 600, marginBottom: "0.2rem" }}>
+                  <div
+                    style={{
+                      fontSize: "0.76rem",
+                      color: "var(--text-muted)",
+                      fontWeight: 600,
+                      marginBottom: "0.2rem",
+                    }}
+                  >
                     Status
                   </div>
-                  <div>
-                    {renderStatusBadge(selectedOrderDetails.status)}
-                  </div>
+                  <div>{renderStatusBadge(selectedOrderDetails.status)}</div>
                 </div>
               </div>
 
               {/* Items Ordered Table */}
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: "0.5rem" }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "0.88rem",
+                    marginBottom: "0.5rem",
+                  }}
+                >
                   Items Ordered
                 </div>
                 <div
@@ -2649,23 +3459,54 @@ export function AdminTakeaway({
                     overflow: "hidden",
                   }}
                 >
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "0.85rem",
+                    }}
+                  >
                     <tbody>
                       {(selectedOrderDetails.items || []).map((it, idx) => (
                         <tr
                           key={idx}
                           style={{
                             borderBottom:
-                              idx < (selectedOrderDetails.items?.length || 0) - 1
+                              idx <
+                              (selectedOrderDetails.items?.length || 0) - 1
                                 ? "1px solid var(--border-card)"
                                 : "none",
                           }}
                         >
-                          <td style={{ padding: "0.75rem 1rem", color: "var(--text-main)", fontWeight: 600 }}>
-                            {it.name} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>× {it.quantity}</span>
+                          <td
+                            style={{
+                              padding: "0.75rem 1rem",
+                              color: "var(--text-main)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {it.name}{" "}
+                            <span
+                              style={{
+                                color: "var(--text-muted)",
+                                fontWeight: 500,
+                              }}
+                            >
+                              × {it.quantity}
+                            </span>
                           </td>
-                          <td style={{ padding: "0.75rem 1rem", textAlign: "right", fontWeight: 700, color: "var(--text-main)" }}>
-                            ₹ {((Number(it.price) || 0) * (it.quantity || 1)).toFixed(2)}
+                          <td
+                            style={{
+                              padding: "0.75rem 1rem",
+                              textAlign: "right",
+                              fontWeight: 700,
+                              color: "var(--text-main)",
+                            }}
+                          >
+                            ₹{" "}
+                            {(
+                              (Number(it.price) || 0) * (it.quantity || 1)
+                            ).toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -2686,10 +3527,23 @@ export function AdminTakeaway({
                   border: "1px solid rgba(34, 197, 94, 0.25)",
                 }}
               >
-                <span style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-main)" }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    color: "var(--text-main)",
+                  }}
+                >
                   Total Bill Amount:
                 </span>
-                <span style={{ fontSize: "1.35rem", fontWeight: 800, color: "#16a34a", letterSpacing: "-0.01em" }}>
+                <span
+                  style={{
+                    fontSize: "1.35rem",
+                    fontWeight: 800,
+                    color: "#16a34a",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
                   ₹ {getTakeawayOrderTotal(selectedOrderDetails).toFixed(2)}
                 </span>
               </div>
@@ -2706,19 +3560,37 @@ export function AdminTakeaway({
                     border: "1px solid var(--border-card)",
                   }}
                 >
-                  <strong style={{ color: "var(--text-main)" }}>Notes:</strong> {selectedOrderDetails.notes}
+                  <strong style={{ color: "var(--text-main)" }}>Notes:</strong>{" "}
+                  {selectedOrderDetails.notes}
                 </div>
               )}
 
               {/* Status Change Quick Actions */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", paddingTop: "0.2rem" }}>
-                <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", marginRight: "0.3rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  flexWrap: "wrap",
+                  paddingTop: "0.2rem",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    color: "var(--text-muted)",
+                    marginRight: "0.3rem",
+                  }}
+                >
                   Quick Status:
                 </span>
                 {selectedOrderDetails.status === "Pending" && (
                   <button
                     type="button"
-                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Preparing")}
+                    onClick={() =>
+                      updateOrderStatus(selectedOrderDetails.id, "Preparing")
+                    }
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -2736,10 +3608,13 @@ export function AdminTakeaway({
                     <ChefHat size={13} /> Start Preparing
                   </button>
                 )}
-                {(selectedOrderDetails.status === "Pending" || selectedOrderDetails.status === "Preparing") && (
+                {(selectedOrderDetails.status === "Pending" ||
+                  selectedOrderDetails.status === "Preparing") && (
                   <button
                     type="button"
-                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Ready")}
+                    onClick={() =>
+                      updateOrderStatus(selectedOrderDetails.id, "Ready")
+                    }
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -2757,31 +3632,36 @@ export function AdminTakeaway({
                     <Bell size={13} /> Mark as Ready
                   </button>
                 )}
-                {selectedOrderDetails.status !== "Completed" && selectedOrderDetails.status !== "Cancelled" && (
-                  <button
-                    type="button"
-                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Completed")}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.35rem",
-                      padding: "0.35rem 0.75rem",
-                      borderRadius: "6px",
-                      border: "1px solid rgba(34, 197, 94, 0.4)",
-                      background: "rgba(34, 197, 94, 0.1)",
-                      color: "#16a34a",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <CheckCircle2 size={13} /> Complete Order
-                  </button>
-                )}
+                {selectedOrderDetails.status !== "Completed" &&
+                  selectedOrderDetails.status !== "Cancelled" && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateOrderStatus(selectedOrderDetails.id, "Completed")
+                      }
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        padding: "0.35rem 0.75rem",
+                        borderRadius: "6px",
+                        border: "1px solid rgba(34, 197, 94, 0.4)",
+                        background: "rgba(34, 197, 94, 0.1)",
+                        color: "#16a34a",
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <CheckCircle2 size={13} /> Complete Order
+                    </button>
+                  )}
                 {selectedOrderDetails.status !== "Cancelled" && (
                   <button
                     type="button"
-                    onClick={() => updateOrderStatus(selectedOrderDetails.id, "Cancelled")}
+                    onClick={() =>
+                      updateOrderStatus(selectedOrderDetails.id, "Cancelled")
+                    }
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
