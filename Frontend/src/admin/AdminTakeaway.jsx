@@ -28,12 +28,18 @@ import {
   FileText,
 } from "lucide-react";
 import {
-  apiGetTakeawayOrders,
-  apiGetTakeawayOrderHistory,
-  apiCreatePaidTakeawayOrder,
-  apiDispatchTakeawayOrder,
-  apiCancelTakeawayOrder,
-} from "../api/orderApi";
+  apiGetAllAdminTakeawayOrders,
+  apiGetAdminTakeawaySummary,
+  apiGetAdminTakeawayOrder,
+  apiUpdateAdminTakeawayStatus,
+  apiCancelAdminTakeawayOrder,
+  apiGetAdminTakeawayMenu,
+  apiSearchAdminTakeawayMenu,
+  apiGetAdminTakeawayCategories,
+  apiCalculateAdminTakeawayCart,
+  apiCreateAdminTakeawayOrder,
+  apiGetAdminTakeawayInvoice,
+} from "../api/takeawayAdminApi";
 import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
 
 const STORAGE_KEY_TAKEAWAY = "avsr_admin_takeaway_orders_v1";
@@ -68,7 +74,7 @@ function calculateTakeawayBill(items, fallbackSubtotal = 0) {
 }
 
 function getTakeawayOrderTotal(order) {
-  return calculateTakeawayBill(order?.items, order?.amount).grandTotal;
+  return Number(order?.totalAmount ?? order?.grandTotal ?? order?.amount ?? 0);
 }
 
 function isValidIndianMobileNumber(phone) {
@@ -504,34 +510,48 @@ export function AdminTakeaway({
     };
   }, [restaurantSettings, restaurantName, restaurantLogo]);
 
-  // --- Persistent & Live Orders State ---
-  const [orders, setOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_TAKEAWAY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 8) return parsed;
-      }
-    } catch {}
-    return generateExpandedSeedOrders();
-  });
-
-  // Save changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TAKEAWAY, JSON.stringify(orders));
-    } catch {}
-  }, [orders]);
-
-  // Fetch live active takeaway orders from backend API
+  const [orders, setOrders] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const normalizeOrder = (order) => {
+    const rawStatus = String(order.fulfillmentStatus || order.orderStatus || "New");
+    const normalizedStatus = rawStatus.toLowerCase() === "new" ? "Pending" : rawStatus.toLowerCase() === "pickedup" ? "Completed" : rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+    const date = order.orderDateTime || order.createdAt || "";
+    return {
+      ...order,
+      id: String(order.orderId ?? order.id ?? ""),
+      orderNumber: String(order.orderNumber || order.orderId || order.id || ""),
+      customer: order.customerName || "",
+      phone: order.customerPhone || "",
+      itemsCount: Number(order.totalQuantity || order.itemCount || 0),
+      items: (Array.isArray(order.items) ? order.items : []).map((item) => ({
+        ...item,
+        name: item.name || item.dishName || "",
+        quantity: Number(item.quantity || 0),
+        price: Number(item.unitPrice ?? item.price ?? 0),
+      })),
+      amount: Number(order.totalAmount ?? order.grandTotal ?? 0),
+      status: normalizedStatus,
+      orderTime: date ? new Date(date).toLocaleString("en-IN") : "",
+      date,
+      paymentMethod: order.paymentMethod || "",
+      notes: order.specialInstructions || order.notes || "",
+    };
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const [activeResult, historyResult] = await Promise.all([
-        apiGetTakeawayOrders().catch(() => null),
-        apiGetTakeawayOrderHistory().catch(() => null),
+      const [ordersResult, summaryResult] = await Promise.all([
+        apiGetAllAdminTakeawayOrders(),
+        apiGetAdminTakeawaySummary(),
       ]);
+      if (!ordersResult?.success) throw new Error(ordersResult?.error || "Could not load takeaway orders.");
+      setOrders((Array.isArray(ordersResult.data) ? ordersResult.data : []).map(normalizeOrder));
+      if (summaryResult?.success) setSummary(summaryResult.data || null);
+      else throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
+    } catch (error) {
+      alert(error?.message || "Could not load takeaway orders.");
 
       const backendOrders = [];
       if (activeResult?.success && Array.isArray(activeResult.data)) {
@@ -573,16 +593,19 @@ export function AdminTakeaway({
     } catch (err) {
       console.warn("Could not sync live takeaway orders:", err);
     } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
+      setIsRefreshing(false);
     }
   };
 
-  // --- Filtering & Tab State ---
+  useEffect(() => {
+    handleRefresh();
+  }, []);  // --- Filtering & Tab State ---
   const [activeTabStatus, setActiveTabStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState("all");
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+  const [dateRangeLabel, setDateRangeLabel] = useState("All Dates");
   const [dateRangeLabel, setDateRangeLabel] = useState(
     "01 Oct 2026 – 14 Oct 2026",
   );
@@ -596,8 +619,43 @@ export function AdminTakeaway({
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [printReceiptOrder, setPrintReceiptOrder] = useState(null);
+  const [orderDetailsLoadingId, setOrderDetailsLoadingId] = useState(null);
   const [actionMenuOrderId, setActionMenuOrderId] = useState(null);
   const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
+
+  const handleViewOrder = async (order) => {
+    setOrderDetailsLoadingId(String(order.id));
+    const result = await apiGetAdminTakeawayOrder(order.id);
+    setOrderDetailsLoadingId(null);
+    if (!result?.success) {
+      alert(result?.error || "Could not load takeaway order details.");
+      return;
+    }
+    setSelectedOrderDetails(normalizeOrder(result.data));
+  };
+
+  const handlePrintInvoice = async (order) => {
+    if (!order.invoiceId) {
+      alert("This order has no invoice available.");
+      return;
+    }
+    const result = await apiGetAdminTakeawayInvoice(order.invoiceId);
+    if (!result?.success) {
+      alert(result?.error || "Could not load takeaway invoice.");
+      return;
+    }
+    const invoice = result.data || {};
+    setPrintReceiptOrder({
+      ...invoice,
+      id: order.id,
+      orderNumber: invoice.orderNumber || order.orderNumber,
+      customer: invoice.customerName || order.customer,
+      phone: invoice.customerPhone || order.phone,
+      status: invoice.fulfillmentStatus || order.status,
+      date: invoice.invoiceDate || invoice.orderDate || order.date,
+      amount: invoice.totalAmount,
+    });
+  };
 
   // Table data formatted specifically for the unified ReceiptModal (80mm Thermal & A4 Tax Invoice)
   const receiptTableData = useMemo(() => {
@@ -611,6 +669,12 @@ export function AdminTakeaway({
             quantity: Number(it?.quantity ?? it?.qty) || 1,
             price: Number(it?.price ?? it?.unitPrice) || 0,
           }))
+        : [];
+
+    const subtotal = Number(printReceiptOrder.subtotal ?? 0);
+    const taxAmount = Number(printReceiptOrder.taxAmount ?? printReceiptOrder.gstAmount ?? 0);
+    const serviceChargeAmount = Number(printReceiptOrder.packagingCharge ?? printReceiptOrder.serviceCharge ?? 0);
+    const grandTotal = Number(printReceiptOrder.totalAmount ?? printReceiptOrder.grandTotal ?? printReceiptOrder.amount ?? 0);
         : [
             {
               name: "Takeaway Meal Package",
@@ -646,7 +710,7 @@ export function AdminTakeaway({
       items,
       subtotal,
       taxAmount,
-      serviceCharge: TAKEAWAY_SERVICE_CHARGE_RATE * 100,
+      serviceCharge: 0,
       serviceChargeAmount,
       grandTotal,
     };
@@ -668,32 +732,22 @@ export function AdminTakeaway({
   }, []);
 
   // --- KPI Card Calculations ---
-  const totalOrdersCount = orders.length;
-  const totalSalesAmount = useMemo(() => {
-    return orders
-      .filter((o) => o.status === "Completed")
-      .reduce((sum, o) => sum + getTakeawayOrderTotal(o), 0);
-  }, [orders]);
-
-  const pendingOrdersCount = useMemo(() => {
-    return orders.filter((o) => o.status === "Pending").length;
-  }, [orders]);
-
-  const completedOrdersCount = useMemo(() => {
-    return orders.filter((o) => o.status === "Completed").length;
-  }, [orders]);
+  const totalOrdersCount = Number(summary?.totalTakeawayOrders ?? orders.length);
+  const totalSalesAmount = Number(summary?.totalTakeawaySales ?? 0);
+  const pendingOrdersCount = Number(summary?.pendingOrders ?? 0);
+  const completedOrdersCount = Number(summary?.completedOrders ?? 0);
 
   // Tab Badge Counts
   const tabCounts = useMemo(() => {
     return {
-      all: orders.length,
-      Pending: orders.filter((o) => o.status === "Pending").length,
-      Preparing: orders.filter((o) => o.status === "Preparing").length,
-      Ready: orders.filter((o) => o.status === "Ready").length,
-      Completed: orders.filter((o) => o.status === "Completed").length,
-      Cancelled: orders.filter((o) => o.status === "Cancelled").length,
+      all: Number(summary?.totalTakeawayOrders ?? orders.length),
+      Pending: Number(summary?.pendingOrders ?? 0),
+      Preparing: Number(summary?.preparingOrders ?? 0),
+      Ready: Number(summary?.readyOrders ?? 0),
+      Completed: Number(summary?.completedOrders ?? 0),
+      Cancelled: Number(summary?.cancelledOrders ?? 0),
     };
-  }, [orders]);
+  }, [orders, summary]);
 
   // --- Filtered Orders List ---
   const filteredOrders = useMemo(() => {
@@ -787,8 +841,8 @@ export function AdminTakeaway({
     setCurrentPage(1);
   }, [activeTabStatus, searchQuery, dateFilter, secondaryStatusFilter]);
 
-  // --- Order Status Updater ---
   const updateOrderStatus = async (orderId, newStatus) => {
+    if (newStatus === "Cancelled" && !window.confirm("Cancel this takeaway order? The backend will apply supported refund and KOT/BOT voiding rules.")) return;
     setOrders((prev) =>
       prev.map((ord) =>
         ord.id === orderId ? { ...ord, status: newStatus } : ord,
@@ -799,17 +853,20 @@ export function AdminTakeaway({
     }
     setActionMenuOrderId(null);
     setActionMenuOpenAbove(false);
-
-    try {
-      if (newStatus === "Cancelled") {
-        await apiCancelTakeawayOrder(orderId).catch(() => null);
-      } else if (newStatus === "Completed" || newStatus === "Ready") {
-        await apiDispatchTakeawayOrder(orderId).catch(() => null);
-      }
-    } catch {}
+    const result = newStatus === "Cancelled"
+      ? await apiCancelAdminTakeawayOrder(orderId, "Cancelled by admin")
+      : await apiUpdateAdminTakeawayStatus(orderId, newStatus);
+    if (!result?.success) {
+      alert(result?.error || `Could not update order status to ${newStatus}.`);
+      return;
+    }
+    await handleRefresh();
+    if (selectedOrderDetails && String(selectedOrderDetails.id) === String(orderId)) {
+      const detail = await apiGetAdminTakeawayOrder(orderId);
+      if (detail?.success) setSelectedOrderDetails(normalizeOrder(detail.data));
+    }
   };
 
-  // --- New Takeaway Order Form State ---
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [customerPhoneError, setCustomerPhoneError] = useState("");
@@ -818,6 +875,52 @@ export function AdminTakeaway({
   const [newOrderCart, setNewOrderCart] = useState({});
   const [itemSearchQuery, setItemSearchQuery] = useState("");
   const [itemCategoryFilter, setItemCategoryFilter] = useState("all");
+  const [takeawayMenuItems, setTakeawayMenuItems] = useState([]);
+  const [takeawayCategories, setTakeawayCategories] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const [cartCalculation, setCartCalculation] = useState(null);
+  const [cartCalculationLoading, setCartCalculationLoading] = useState(false);
+  const [orderSaving, setOrderSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isNewOrderModalOpen) return undefined;
+    let cancelled = false;
+    apiGetAdminTakeawayCategories().then((result) => {
+      if (!cancelled && result?.success) setTakeawayCategories(Array.isArray(result.data) ? result.data : []);
+    }).catch((error) => { if (!cancelled) alert(error?.message || "Could not load takeaway categories."); });
+    return () => { cancelled = true; };
+  }, [isNewOrderModalOpen]);
+
+  useEffect(() => {
+    if (!isNewOrderModalOpen) return undefined;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setMenuLoading(true);
+      try {
+        const result = itemSearchQuery.trim()
+          ? await apiSearchAdminTakeawayMenu(itemSearchQuery.trim(), itemCategoryFilter === "all" ? undefined : itemCategoryFilter)
+          : await apiGetAdminTakeawayMenu({ page: 1, pageSize: 100, category: itemCategoryFilter === "all" ? undefined : itemCategoryFilter });
+        if (!result?.success) throw new Error(result?.error || "Could not load takeaway menu.");
+        const payload = result.data;
+        const rows = Array.isArray(payload) ? payload : (payload?.data || []);
+        if (!cancelled) setTakeawayMenuItems(rows.map((item) => ({
+          ...item,
+          id: item.itemId ?? item.menuItemId,
+          name: item.name || item.dishName || "",
+          price: Number(item.price || 0),
+          category: item.category || "",
+        })));
+      } catch (error) {
+        if (!cancelled) {
+          setTakeawayMenuItems([]);
+          alert(error?.message || "Could not load takeaway menu.");
+        }
+      } finally {
+        if (!cancelled) setMenuLoading(false);
+      }
+    }, itemSearchQuery.trim() ? 250 : 0);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [isNewOrderModalOpen, itemSearchQuery, itemCategoryFilter]);
 
   const availableFoodItems = useMemo(() => {
     return (menuItems || []).filter((item) => {
@@ -836,16 +939,17 @@ export function AdminTakeaway({
     });
   }, [menuItems, itemSearchQuery, itemCategoryFilter]);
 
+  const availableFoodItems = takeawayMenuItems.filter((item) => item.isAvailable !== false);
   const addCartItem = (dish) => {
-    const id = dish.id || dish.menuItemId || dish.name;
+    const id = dish.itemId ?? dish.menuItemId ?? dish.id;
+    if (!id) return;
     setNewOrderCart((prev) => {
       const cur = prev[id] || { item: dish, quantity: 0 };
       return { ...prev, [id]: { ...cur, quantity: cur.quantity + 1 } };
     });
   };
-
   const removeCartItem = (dish) => {
-    const id = dish.id || dish.menuItemId || dish.name;
+    const id = dish.itemId ?? dish.menuItemId ?? dish.id;
     setNewOrderCart((prev) => {
       const cur = prev[id];
       if (!cur) return prev;
@@ -859,6 +963,37 @@ export function AdminTakeaway({
   };
 
   const cartItemsList = Object.values(newOrderCart);
+  useEffect(() => {
+    if (!isNewOrderModalOpen || cartItemsList.length === 0) {
+      setCartCalculation(null);
+      setCartCalculationLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setCartCalculationLoading(true);
+      try {
+        const result = await apiCalculateAdminTakeawayCart({
+          items: cartItemsList.map(({ item, quantity }) => ({ itemId: Number(item.itemId ?? item.menuItemId ?? item.id), quantity })),
+        });
+        if (!result?.success) throw new Error(result?.error || "Could not calculate takeaway total.");
+        if (!cancelled) setCartCalculation(result.data || null);
+      } catch (error) {
+        if (!cancelled) {
+          setCartCalculation(null);
+          alert(error?.message || "Could not calculate takeaway total.");
+        }
+      } finally {
+        if (!cancelled) setCartCalculationLoading(false);
+      }
+    }, 150);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [isNewOrderModalOpen, newOrderCart]);
+
+  const cartSubtotal = Number(cartCalculation?.subtotal || 0);
+  const cartGst = Number(cartCalculation?.taxAmount ?? cartCalculation?.gstAmount ?? 0);
+  const cartServiceCharge = Number(cartCalculation?.packagingCharge || 0);
+  const cartTotal = Number(cartCalculation?.finalAmount ?? cartCalculation?.totalAmount ?? 0);
   const cartBill = calculateTakeawayBill(
     cartItemsList.map((line) => ({
       price: line.item.price,
@@ -874,6 +1009,7 @@ export function AdminTakeaway({
 
   const handleCreateTakeawayOrder = async () => {
     if (!isValidIndianMobileNumber(newCustomerPhone)) {
+      setCustomerPhoneError(newCustomerPhone.trim() ? "Enter a valid 10-digit Indian mobile number." : "Phone number is required.");
       setCustomerPhoneError(
         newCustomerPhone.trim()
           ? "Enter a valid 10-digit Indian mobile number."
@@ -881,13 +1017,22 @@ export function AdminTakeaway({
       );
       return;
     }
-
     setCustomerPhoneError("");
-
     if (cartItemsList.length === 0) {
       alert("Please add at least one item to the takeaway order.");
       return;
     }
+    if (!cartCalculation || cartCalculationLoading) {
+      alert("Wait for the server to calculate the order total.");
+      return;
+    }
+
+    setOrderSaving(true);
+    try {
+      const payload = {
+        orderType: "TAKEAWAY",
+        customerName: newCustomerName.trim() || null,
+        customerPhone: newCustomerPhone.trim(),
 
     const nextNumber = 1069 + orders.length;
     const newId = `TK-${nextNumber}`;
@@ -938,18 +1083,31 @@ export function AdminTakeaway({
         totalAmount: cartTotal,
         grandTotal: cartTotal,
         paymentMethod: newPaymentMethod,
-        items: newOrder.items,
-      }).catch(() => null);
-    } catch {}
-
-    setIsNewOrderModalOpen(false);
-    setNewCustomerName("");
-    setNewCustomerPhone("");
-    setCustomerPhoneError("");
-    setNewOrderNotes("");
-    setNewOrderCart({});
+        paymentStatus: "Paid",
+        isPaid: true,
+        paidAmount: cartTotal,
+        notes: newOrderNotes.trim() || null,
+        items: cartItemsList.map(({ item, quantity }) => ({ itemId: Number(item.itemId ?? item.menuItemId ?? item.id), quantity })),
+        idempotencyKey: globalThis.crypto?.randomUUID?.() || `admin-takeaway-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      };
+      const result = await apiCreateAdminTakeawayOrder(payload);
+      if (!result?.success) throw new Error(result?.error || "Could not create takeaway order.");
+      const created = result.data || {};
+      setIsNewOrderModalOpen(false);
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewOrderNotes("");
+      setNewOrderCart({});
+      setCartCalculation(null);
+      await handleRefresh();
+      const detail = created.orderId ? await apiGetAdminTakeawayOrder(created.orderId) : null;
+      setSelectedOrderDetails(normalizeOrder(detail?.success ? detail.data : created));
+    } catch (error) {
+      alert(error?.message || "Could not create takeaway order.");
+    } finally {
+      setOrderSaving(false);
+    }
   };
-
   // Status Badge Component
   const renderStatusBadge = (status) => {
     switch (status) {
@@ -2064,7 +2222,7 @@ export function AdminTakeaway({
                       key={order.id}
                       onClick={() => {
                         setActionMenuOrderId(null);
-                        setSelectedOrderDetails(order);
+                        handleViewOrder(order);
                       }}
                       style={{
                         transition: "background 0.15s ease",
@@ -2218,8 +2376,8 @@ export function AdminTakeaway({
                           {/* View bill & print invoice */}
                           <button
                             type="button"
-                            onClick={() => setPrintReceiptOrder(order)}
-                            title="View bill & tax invoice"
+                            onClick={() => handleViewOrder(order)}
+                            title="View order details"
                             style={{
                               width: "32px",
                               height: "32px",
@@ -2247,7 +2405,7 @@ export function AdminTakeaway({
                           {/* Print receipt */}
                           <button
                             type="button"
-                            onClick={() => setPrintReceiptOrder(order)}
+                            onClick={() => handlePrintInvoice(order)}
                             title="Print bill / tax invoice"
                             style={{
                               width: "32px",
@@ -2761,6 +2919,18 @@ export function AdminTakeaway({
                   />
                 </div>
 
+                <select
+                  value={itemCategoryFilter}
+                  onChange={(e) => setItemCategoryFilter(e.target.value)}
+                  style={{ width: "100%", height: "38px", marginBottom: "0.75rem", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.82rem" }}
+                >
+                  <option value="all">All categories</option>
+                  {takeawayCategories.map((category) => {
+                    const name = category.name || category.categoryName;
+                    return name ? <option key={category.categoryId || name} value={name}>{name}</option> : null;
+                  })}
+                </select>
+
                 {/* Dishes list */}
                 <div
                   style={{
@@ -2771,7 +2941,7 @@ export function AdminTakeaway({
                     gap: "0.5rem",
                   }}
                 >
-                  {availableFoodItems.slice(0, 35).map((dish) => {
+                  {menuLoading ? <div style={{ padding: "1rem", color: "var(--text-muted)" }}>Loading menu…</div> : availableFoodItems.length === 0 ? <div style={{ padding: "1rem", color: "var(--text-muted)" }}>No dishes found.</div> : availableFoodItems.slice(0, 35).map((dish) => {
                     const dishId = dish.id || dish.menuItemId || dish.name;
                     const inCart = newOrderCart[dishId]?.quantity || 0;
                     return (

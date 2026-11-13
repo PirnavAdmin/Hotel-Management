@@ -28,18 +28,14 @@ import {
 } from "lucide-react";
 import {
   apiGetReservations,
+  apiGetReservationById,
   apiCreateReservation,
   apiUpdateReservationStatus,
   apiDeleteReservation,
-  getStoredReservations,
-  saveStoredReservations,
-  getStoredReservationTables,
-  saveStoredReservationTables,
 } from "../../api/reservationApi";
 import { apiGetTables } from "../../api/tableApi";
 import { ReceiptModal, formatOrderNumber } from "../../user/ReceiptModal";
 
-const STORAGE_KEY_RESERVATIONS = "bhanu_bistro_reservations_v1";
 
 // ── Default Curated Seed Reservations (matches Takeaway scale & IDs: RES-4964, RES-3884, etc.) ──
 const INITIAL_SEED_RESERVATIONS = [
@@ -442,86 +438,16 @@ const INITIAL_SEED_RESERVATIONS = [
 ];
 
 const DEFAULT_TABLES = [
-  {
-    id: 1,
-    tableId: 1,
-    name: "Table 1",
-    section: "Indoor AC",
-    capacity: 2,
-    status: "available",
-  },
-  {
-    id: 2,
-    tableId: 2,
-    name: "Table 2",
-    section: "Indoor AC",
-    capacity: 2,
-    status: "reserved",
-  },
-  {
-    id: 3,
-    tableId: 3,
-    name: "Table 3",
-    section: "Indoor AC",
-    capacity: 2,
-    status: "reserved",
-  },
-  {
-    id: 4,
-    tableId: 4,
-    name: "Table 4",
-    section: "Indoor AC",
-    capacity: 4,
-    status: "available",
-  },
-  {
-    id: 5,
-    tableId: 5,
-    name: "Table 5",
-    section: "Main Hall",
-    capacity: 4,
-    status: "reserved",
-  },
-  {
-    id: 6,
-    tableId: 6,
-    name: "Table 6",
-    section: "Outdoor Garden",
-    capacity: 6,
-    status: "available",
-  },
-  {
-    id: 7,
-    tableId: 7,
-    name: "Table 7",
-    section: "Outdoor Patio",
-    capacity: 4,
-    status: "available",
-  },
-  {
-    id: 8,
-    tableId: 8,
-    name: "Table 8",
-    section: "Outdoor Patio",
-    capacity: 6,
-    status: "reserved",
-  },
-  {
-    id: 9,
-    tableId: 9,
-    name: "Table 9",
-    section: "Private Dining",
-    capacity: 8,
-    status: "available",
-  },
-  {
-    id: 10,
-    tableId: 10,
-    name: "Table 10",
-    section: "Family Lounge",
-    capacity: 6,
-    status: "available",
-  },
+  { id: 1, tableId: 1, name: "Table 1", section: "Indoor AC", capacity: 2, status: "available" },
+  { id: 2, tableId: 2, name: "Table 2", section: "Indoor AC", capacity: 2, status: "reserved" },
+  { id: 3, tableId: 3, name: "Table 3", section: "Indoor AC", capacity: 2, status: "reserved" },
+  { id: 4, tableId: 4, name: "Table 4", section: "Indoor AC", capacity: 4, status: "available" },
+  { id: 5, tableId: 5, name: "Table 5", section: "Main Hall", capacity: 4, status: "reserved" },
+  { id: 6, tableId: 6, name: "Table 6", section: "Outdoor Garden", capacity: 6, status: "available" },
+  { id: 7, tableId: 7, name: "Table 7", section: "Outdoor Patio", capacity: 4, status: "available" },
+  { id: 8, tableId: 8, name: "Table 8", section: "Outdoor Patio", capacity: 6, status: "reserved" },
+  { id: 9, tableId: 9, name: "Table 9", section: "Private Dining", capacity: 8, status: "available" },
+  { id: 10, tableId: 10, name: "Table 10", section: "Family Lounge", capacity: 6, status: "available" },
 ];
 
 // Vibrant status tab color themes (matches Takeaway Orders tabs)
@@ -564,42 +490,34 @@ const STATUS_TAB_THEMES = {
   },
 };
 
+const normalizeReservation = (reservation) => ({
+  ...reservation,
+  id: String(reservation.reservationId ?? reservation.id ?? ""),
+  reservationId: reservation.reservationId ?? reservation.id,
+  customerName: reservation.customerName || reservation.fullName || reservation.name || "",
+  phone: reservation.customerPhone || reservation.phone || reservation.mobileNumber || "",
+  tableId: reservation.tableId ?? reservation.table?.tableId ?? "",
+  tableName: reservation.tableName || reservation.tableNumber || "",
+  tableNumber: reservation.tableNumber || reservation.tableName || "",
+  guestsCount: Number(reservation.guestsCount ?? reservation.guests ?? 0),
+  reservationDate: reservation.reservationDate || reservation.date || "",
+  reservationTime: reservation.reservationTime || reservation.time || reservation.formattedTime || "",
+  advanceAmount: Number(reservation.advanceAmount ?? reservation.reservationAmount ?? 0),
+  notes: reservation.notes || reservation.specialRequests || "",
+  status: String(reservation.status || "pending").toLowerCase(),
+});
+
 export function ReservationsManagement({
   isLight = false,
   showToast = alert,
-  tables = [],
+  tables: _tables = [],
   restaurantName = "Bhanu Bistro",
   restaurantSettings = {},
 }) {
   // ── 1. Reservations & Tables State with Local Storage fallback ────────
-  const [reservations, setReservations] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_RESERVATIONS);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      const customerRaw = localStorage.getItem("avsr_customer_reservations");
-      if (customerRaw) {
-        const parsedCustomer = JSON.parse(customerRaw);
-        if (Array.isArray(parsedCustomer) && parsedCustomer.length > 0) {
-          return [...parsedCustomer, ...INITIAL_SEED_RESERVATIONS];
-        }
-      }
-    } catch (e) {
-      console.warn("Could not read local reservations, using seed data:", e);
-    }
-    return INITIAL_SEED_RESERVATIONS;
-  });
-
-  const [tablesList, setTablesList] = useState(() => {
-    if (Array.isArray(tables) && tables.length > 0) return tables;
-    const stored = getStoredReservationTables();
-    if (Array.isArray(stored) && stored.length > 0) return stored;
-    return DEFAULT_TABLES;
-  });
-
-  const [loading, setLoading] = useState(false);
+  const [reservations, setReservations] = useState([]);
+  const [tablesList, setTablesList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ── 2. Filters & Search State ──────────────────────────────────────────
@@ -627,13 +545,18 @@ export function ReservationsManagement({
     customerName: "",
     phone: "",
     email: "",
-    tableId: 3,
+    tableId: "",
     guestsCount: 2,
     reservationDate: new Date().toISOString().split("T")[0],
     reservationTime: "07:30 PM",
     notes: "",
-    advanceAmount: 100,
   });
+
+  useEffect(() => {
+    if (!tablesList.length) return;
+    const currentExists = tablesList.some((table) => String(table.tableId ?? table.id) === String(form.tableId));
+    if (!currentExists) setForm((prev) => ({ ...prev, tableId: String(tablesList[0].tableId ?? tablesList[0].id) }));
+  }, [tablesList, form.tableId]);
 
   // Action Menu outside click ref
   const actionMenuRef = useRef(null);
@@ -654,10 +577,7 @@ export function ReservationsManagement({
   // Sync state to localStorage whenever reservations change
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY_RESERVATIONS,
-        JSON.stringify(reservations),
-      );
+      localStorage.setItem(STORAGE_KEY_RESERVATIONS, JSON.stringify(reservations));
     } catch (e) {
       console.warn("Storage sync failed:", e);
     }
@@ -667,47 +587,31 @@ export function ReservationsManagement({
   const fetchReservations = async (silent = false) => {
     if (!silent) setIsRefreshing(true);
     try {
-      const [resRes, tblRes] = await Promise.allSettled([
+      const [reservationResult, tableResult] = await Promise.all([
         apiGetReservations(),
-        apiGetTables(),
+        apiGetTables({ remoteOnly: true }),
       ]);
 
-      if (
-        resRes.status === "fulfilled" &&
-        resRes.value?.success &&
-        Array.isArray(resRes.value.data)
-      ) {
+      if (resRes.status === "fulfilled" && resRes.value?.success && Array.isArray(resRes.value.data)) {
         const serverData = resRes.value.data;
         if (serverData.length > 0) {
           setReservations((prev) => {
-            const serverIds = new Set(
-              serverData.map((r) => String(r.reservationId || r.id)),
-            );
-            const localOnly = prev.filter(
-              (r) => !serverIds.has(String(r.reservationId || r.id)),
-            );
+            const serverIds = new Set(serverData.map((r) => String(r.reservationId || r.id)));
+            const localOnly = prev.filter((r) => !serverIds.has(String(r.reservationId || r.id)));
             return [...localOnly, ...serverData];
           });
         }
       }
 
-      if (
-        tblRes.status === "fulfilled" &&
-        tblRes.value?.success &&
-        Array.isArray(tblRes.value.data)
-      ) {
+      if (tblRes.status === "fulfilled" && tblRes.value?.success && Array.isArray(tblRes.value.data)) {
         if (tblRes.value.data.length > 0) {
           setTablesList(tblRes.value.data);
         }
       }
-      if (!silent) {
-        showToast("✅ Table reservations refreshed successfully.");
-      }
-    } catch (err) {
-      console.warn("API refresh fallback to local state:", err);
-      if (!silent) {
-        showToast("ℹ️ Loaded current table reservations.");
-      }
+      if (!silent) showToast("Reservations refreshed.");
+    } catch (error) {
+      if (!silent) showToast(error?.message || "Could not load reservations.");
+      else console.error("Unable to load reservations:", error);
     } finally {
       setIsRefreshing(false);
       setLoading(false);
@@ -724,15 +628,11 @@ export function ReservationsManagement({
       prev.map((r) =>
         String(r.reservationId || r.id) === String(reservationId)
           ? { ...r, status: newStatus, updatedAt: new Date().toISOString() }
-          : r,
-      ),
+          : r
+      )
     );
     setActionMenuOpenId(null);
-    if (
-      viewingReservation &&
-      String(viewingReservation.reservationId || viewingReservation.id) ===
-        String(reservationId)
-    ) {
+    if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) {
       setViewingReservation((prev) => ({ ...prev, status: newStatus }));
     }
 
@@ -741,24 +641,15 @@ export function ReservationsManagement({
     } catch (e) {
       console.warn("Backend status update offline, state kept locally:", e);
     }
-    showToast(`✅ Reservation marked as ${newStatus.toUpperCase()}`);
+    setViewingReservation(normalizeReservation(result.data?.data || result.data || reservation));
   };
-
-  // ── 6. Delete / Cancel Handler ─────────────────────────────────────────
   const handleDelete = async (reservationId) => {
-    if (!window.confirm("Are you sure you want to remove this reservation?"))
-      return;
+    if (!window.confirm("Are you sure you want to remove this reservation?")) return;
     setReservations((prev) =>
-      prev.filter(
-        (r) => String(r.reservationId || r.id) !== String(reservationId),
-      ),
+      prev.filter((r) => String(r.reservationId || r.id) !== String(reservationId))
     );
     setActionMenuOpenId(null);
-    if (
-      viewingReservation &&
-      String(viewingReservation.reservationId || viewingReservation.id) ===
-        String(reservationId)
-    ) {
+    if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) {
       setViewingReservation(null);
     }
     try {
@@ -772,13 +663,13 @@ export function ReservationsManagement({
   // ── 7. Create New Reservation ──────────────────────────────────────────
   const handleCreateReservation = async (e) => {
     e.preventDefault();
-    if (!form.customerName.trim() || !form.phone.trim()) {
-      showToast("❌ Customer name and phone number are required.");
+    if (!form.customerName.trim() || !form.phone.trim() || !form.tableId || !form.reservationDate || !form.reservationTime) {
+      showToast("Guest, phone, table, date and time are required.");
       return;
     }
     setSaving(true);
     const chosenTable = tablesList.find(
-      (t) => (t.id || t.tableId) === Number(form.tableId),
+      (t) => (t.id || t.tableId) === Number(form.tableId)
     );
     const nextIdNum = 5000 + Math.floor(Math.random() * 4000);
     const newReservation = {
@@ -788,12 +679,8 @@ export function ReservationsManagement({
       phone: form.phone.trim(),
       email: form.email.trim(),
       tableId: Number(form.tableId),
-      tableName: chosenTable
-        ? chosenTable.name || chosenTable.tableName || `Table ${chosenTable.id}`
-        : `Table ${form.tableId}`,
-      tableNumber: chosenTable
-        ? chosenTable.tableNumber || chosenTable.id
-        : form.tableId,
+      tableName: chosenTable ? (chosenTable.name || chosenTable.tableName || `Table ${chosenTable.id}`) : `Table ${form.tableId}`,
+      tableNumber: chosenTable ? (chosenTable.tableNumber || chosenTable.id) : form.tableId,
       guestsCount: Number(form.guestsCount) || 2,
       reservationDate: form.reservationDate,
       reservationTime: form.reservationTime,
@@ -824,9 +711,7 @@ export function ReservationsManagement({
     } catch (e) {
       console.warn("Backend reservation create offline, preserved locally:", e);
     }
-    showToast("🎉 Table reserved successfully!");
   };
-
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -967,10 +852,10 @@ export function ReservationsManagement({
   const metrics = useMemo(() => {
     const total = reservations.length;
     const confirmed = reservations.filter(
-      (r) => String(r.status || "").toLowerCase() === "confirmed",
+      (r) => String(r.status || "").toLowerCase() === "confirmed"
     ).length;
     const pending = reservations.filter(
-      (r) => String(r.status || "").toLowerCase() === "pending",
+      (r) => String(r.status || "").toLowerCase() === "pending"
     ).length;
     const seatedOrCompleted = reservations.filter((r) => {
       const s = String(r.status || "").toLowerCase();
@@ -979,7 +864,6 @@ export function ReservationsManagement({
 
     return { total, confirmed, pending, seatedOrCompleted };
   }, [reservations]);
-
   // Tab badge counts
   const tabCounts = useMemo(() => {
     return {
@@ -1060,7 +944,7 @@ export function ReservationsManagement({
       r.tableName ||
         (r.tableNumber ? `Table ${r.tableNumber}` : `Table ${r.tableId || 1}`),
     );
-    const advancePaid = Number(r.advanceAmount) || 100;
+    const advancePaid = Number(r.advanceAmount) || 0;
 
     const items = [
       {
@@ -1080,7 +964,7 @@ export function ReservationsManagement({
       invoiceNo: formatOrderNumber(resId),
       name: tableName,
       tableName: tableName,
-      tableNumber: r.tableNumber || r.tableId || 1,
+      tableNumber: r.tableNumber || r.tableId || "",
       section: r.section || "Fine Dining",
       server: "Host Staff",
       guests: Number(r.guestsCount || r.guests || 2),
@@ -1469,8 +1353,7 @@ export function ReservationsManagement({
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
-            boxShadow:
-              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
           }}
         >
           <div
@@ -1489,24 +1372,10 @@ export function ReservationsManagement({
             <Calendar size={22} />
           </div>
           <div>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--text-muted, #94a3b8)",
-                fontWeight: 600,
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
               Total Reservations
             </div>
-            <div
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                marginTop: "0.1rem",
-                color: "var(--text-main, #f8fafc)",
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "var(--text-main, #f8fafc)", letterSpacing: "-0.02em" }}>
               {metrics.total}
             </div>
           </div>
@@ -1522,8 +1391,7 @@ export function ReservationsManagement({
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
-            boxShadow:
-              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
           }}
         >
           <div
@@ -1542,24 +1410,10 @@ export function ReservationsManagement({
             <CheckCircle2 size={22} />
           </div>
           <div>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--text-muted, #94a3b8)",
-                fontWeight: 600,
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
               Confirmed Bookings
             </div>
-            <div
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                marginTop: "0.1rem",
-                color: "#16a34a",
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#16a34a", letterSpacing: "-0.02em" }}>
               {metrics.confirmed}
             </div>
           </div>
@@ -1575,8 +1429,7 @@ export function ReservationsManagement({
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
-            boxShadow:
-              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
           }}
         >
           <div
@@ -1595,24 +1448,10 @@ export function ReservationsManagement({
             <Hourglass size={22} />
           </div>
           <div>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--text-muted, #94a3b8)",
-                fontWeight: 600,
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
               Pending Bookings
             </div>
-            <div
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                marginTop: "0.1rem",
-                color: "#d97706",
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#d97706", letterSpacing: "-0.02em" }}>
               {metrics.pending}
             </div>
           </div>
@@ -1628,8 +1467,7 @@ export function ReservationsManagement({
             display: "flex",
             alignItems: "center",
             gap: "0.85rem",
-            boxShadow:
-              "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
           }}
         >
           <div
@@ -1648,24 +1486,10 @@ export function ReservationsManagement({
             <Utensils size={22} />
           </div>
           <div>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--text-muted, #94a3b8)",
-                fontWeight: 600,
-              }}
-            >
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
               Seated & Completed
             </div>
-            <div
-              style={{
-                fontSize: "1.4rem",
-                fontWeight: 800,
-                marginTop: "0.1rem",
-                color: "#3b82f6",
-                letterSpacing: "-0.02em",
-              }}
-            >
+            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#3b82f6", letterSpacing: "-0.02em" }}>
               {metrics.seatedOrCompleted}
             </div>
           </div>
@@ -2094,28 +1918,12 @@ export function ReservationsManagement({
                       color: "var(--text-muted, #94a3b8)",
                     }}
                   >
-                    <Calendar
-                      size={36}
-                      color="#ea580c"
-                      style={{
-                        margin: "0 auto 0.75rem",
-                        display: "block",
-                        opacity: 0.8,
-                      }}
-                    />
-                    <div
-                      style={{
-                        fontSize: "1rem",
-                        fontWeight: 700,
-                        color: "var(--text-main, #f8fafc)",
-                        marginBottom: "0.25rem",
-                      }}
-                    >
+                    <Calendar size={36} color="#ea580c" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", marginBottom: "0.25rem" }}>
                       No reservations found
                     </div>
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
-                      Try adjusting your search query, status filters or date
-                      range.
+                      Try adjusting your search query, status filters or date range.
                     </p>
                   </td>
                 </tr>
@@ -2133,7 +1941,7 @@ export function ReservationsManagement({
                       key={resId || index}
                       onClick={() => {
                         setActionMenuOpenId(null);
-                        setViewingReservation(r);
+                        handleViewReservation(r);
                       }}
                       style={{
                         borderBottom: "1px solid var(--border-card, #27272a)",
@@ -3093,13 +2901,8 @@ export function ReservationsManagement({
                     }}
                   >
                     {tablesList.map((tbl) => (
-                      <option
-                        key={tbl.id || tbl.tableId}
-                        value={tbl.id || tbl.tableId}
-                      >
-                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} (
-                        {tbl.section || "Indoor"} •{" "}
-                        {tbl.capacity || tbl.seatingCapacity || 4} Guests)
+                      <option key={tbl.id || tbl.tableId} value={tbl.id || tbl.tableId}>
+                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.section || "Indoor"} • {tbl.capacity || tbl.seatingCapacity || 4} Guests)
                       </option>
                     ))}
                   </select>
@@ -3539,8 +3342,7 @@ export function ReservationsManagement({
                   </small>
 >>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
                   <div style={{ color: "#10b981", fontWeight: 700 }}>
-                    ₹{" "}
-                    {Number(viewingReservation.advanceAmount || 100).toFixed(2)}
+                    ₹ {Number(viewingReservation.advanceAmount || 100).toFixed(2)}
                   </div>
                 </div>
               </div>

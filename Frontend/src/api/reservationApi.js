@@ -295,10 +295,10 @@ const unwrap = (result) => {
 
 /** Legacy Admin/POS listing contract. Never substitute guest-facing mock records. */
 export async function apiGetReservations(params = {}) {
-  return unwrap(await apiClient(`${BASE}${queryString(params)}`));
+  return unwrap(await apiClient(`${BASE}${queryString(params)}`, { remoteOnly: true }));
 }
 export async function apiGetReservationById(id) {
-  return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`));
+  return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`, { remoteOnly: true }));
 }
 export async function apiCreateReservation(reservationData) {
   try {
