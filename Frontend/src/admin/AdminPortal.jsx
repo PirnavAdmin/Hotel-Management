@@ -72,7 +72,7 @@ import { RolesManagement } from "./modules/RolesManagement";
 import { apiGetRestaurantSettings, apiSaveRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
-import { apiGetInventory, apiCreateInventoryItem } from "../api/inventoryApi";
+import { apiGetInventory, apiCreateIngredient } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
 import {
@@ -335,125 +335,153 @@ export function getApproximateIngredientMrp(rawName = "", unit = "KG") {
   return Number(rate.toFixed(2));
 }
 
+const RECIPE_INVENTORY_STORAGE_KEY = "gourmet_pos_inventory_v1";
+let recipeInventoryRequest = null;
+const recipeIngredientRequests = new Map();
+
+const getRecipeInventoryRows = async () => {
+  if (!recipeInventoryRequest) {
+    recipeInventoryRequest = apiGetInventory(undefined, undefined, { remoteOnly: true }).then((result) => {
+      if (!result?.success) {
+        throw new Error(result?.error || "Could not load inventory from the API.");
+      }
+      const payload = result.data;
+      const rows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.ingredients)
+            ? payload.ingredients
+            : null;
+      if (!rows) throw new Error("Inventory API returned an invalid ingredient list.");
+      return rows;
+    }).catch((error) => {
+      recipeInventoryRequest = null;
+      throw error;
+    });
+  }
+  return recipeInventoryRequest;
+};
+
+const cacheRecipeInventoryItem = (apiItem) => {
+  const id = apiItem.ingredientId ?? apiItem.id;
+  if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+    throw new Error("Inventory API created an ingredient but returned no valid ingredient ID.");
+  }
+
+  const normalized = {
+    ...apiItem,
+    id: String(id),
+    ingredientId: Number(id),
+    name: apiItem.name || apiItem.ingredientName || "",
+    category: apiItem.category || "General",
+    unit: apiItem.unit || "KG",
+    stock: Number(apiItem.currentStock ?? apiItem.stock ?? 0),
+    minThreshold: Number(apiItem.minimumThreshold ?? apiItem.minThreshold ?? 5),
+    unitCost: Number(apiItem.unitCost ?? apiItem.costPerUnit ?? 0),
+  };
+
+  let localItems = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECIPE_INVENTORY_STORAGE_KEY) || "[]");
+    if (Array.isArray(parsed)) localItems = parsed;
+  } catch {}
+  const existingIndex = localItems.findIndex((item) =>
+    String(item.ingredientId ?? item.id) === String(id) ||
+    ((item.name || "").trim().toLowerCase() === normalized.name.trim().toLowerCase() &&
+      (item.category || "General").trim().toLowerCase() === normalized.category.trim().toLowerCase()),
+  );
+  if (existingIndex >= 0) {
+    localItems[existingIndex] = { ...localItems[existingIndex], ...normalized };
+  } else {
+    localItems.unshift(normalized);
+  }
+  try {
+    localStorage.setItem(RECIPE_INVENTORY_STORAGE_KEY, JSON.stringify(localItems));
+    window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: localItems }));
+  } catch (error) {
+    console.warn("[Inventory] The API item was saved, but the local cache could not be updated:", error);
+  }
+  return normalized;
+};
+
+const ensureRecipeIngredient = async (ingredient) => {
+  const name = String(ingredient?.name || "").trim();
+  if (!name) return null;
+  const category = String(ingredient.category || inferIngredientCategory(name)).trim() || "General";
+  const unit = ingredient.unit === "Litres" ? "L" : String(ingredient.unit || "KG").trim();
+  const requestKey = `${name.toLocaleLowerCase()}|${category.toLocaleLowerCase()}`;
+  if (recipeIngredientRequests.has(requestKey)) return recipeIngredientRequests.get(requestKey);
+
+  const request = (async () => {
+    const inventoryRows = await getRecipeInventoryRows();
+    const existing = inventoryRows.find((item) =>
+      String(item.name || item.ingredientName || "").trim().toLocaleLowerCase() === name.toLocaleLowerCase() &&
+      String(item.category || "General").trim().toLocaleLowerCase() === category.toLocaleLowerCase(),
+    );
+    if (existing) return existing;
+
+    const result = await apiCreateIngredient({
+      name,
+      category,
+      subcategory: String(ingredient.subcategory || "").trim(),
+      unit,
+      stock: 0,
+      minThreshold: 0,
+      unitCost: Number(ingredient.unitCost) || 0,
+      mrp: ingredient.mrp == null || ingredient.mrp === "" ? null : Number(ingredient.mrp),
+      ...(ingredient.supplier ? { supplier: String(ingredient.supplier).trim() } : {}),
+    });
+    const response = result?.data;
+    if (!result?.success || response?.success === false) {
+      const details = response?.message || response?.error || result?.error;
+      throw new Error(details || `Inventory API rejected ingredient "${name}".`);
+    }
+
+    const created = response?.data ?? response?.items?.[0] ?? response?.item ?? response;
+    const id = created?.ingredientId ?? created?.IngredientId ?? created?.id ?? created?.Id;
+    if (!Number.isInteger(Number(id)) || Number(id) <= 0) {
+      throw new Error(response?.message || `Inventory API did not return an ID for ingredient "${name}".`);
+    }
+    const saved = { ...created, id: Number(id), ingredientId: Number(id) };
+    inventoryRows.push(saved);
+    cacheRecipeInventoryItem(saved);
+    return saved;
+  })().finally(() => recipeIngredientRequests.delete(requestKey));
+
+  recipeIngredientRequests.set(requestKey, request);
+  return request;
+};
+
 export async function autoGenerateInventoryFromRecipe(recipe = []) {
   if (!Array.isArray(recipe) || recipe.length === 0) return [];
+  const ingredientsByKey = new Map();
 
-  const STORAGE_KEY = "gourmet_pos_inventory_v1";
-  let currentInventory = [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) currentInventory = JSON.parse(raw);
-  } catch {}
-  if (!Array.isArray(currentInventory)) currentInventory = [];
+  for (const ingredient of recipe) {
+    const name = String(ingredient?.name || "").trim();
+    if (!name) continue;
+    const category = String(ingredient.category || inferIngredientCategory(name)).trim() || "General";
+    const key = `${name.toLocaleLowerCase()}|${category.toLocaleLowerCase()}`;
+    const quantity = Number(ingredient.quantity) || 0;
+    const prior = ingredientsByKey.get(key);
+    ingredientsByKey.set(key, prior
+      ? { ...prior, quantity: prior.quantity + quantity }
+      : { ...ingredient, name, category, quantity });
+  }
 
-  const updatedInventory = [...currentInventory];
   const mappedRecipe = [];
-  let inventoryChanged = false;
-
-  for (const ing of recipe) {
-    const rawName = String(ing?.name || "").trim();
-    if (!rawName) continue;
-
-    const unit = (ing.unit === "Litres" ? "L" : (ing.unit || "KG")).toUpperCase();
-    const quantity = Number(ing.quantity) || 0;
-    const category = ing.category || inferIngredientCategory(rawName);
-
-    // 1. Match existing by canonical name
-    let existingItem = updatedInventory.find(
-      (item) => (item.name || "").trim().toLowerCase() === rawName.toLowerCase()
-    );
-
-    // 2. Or match by ID if inventoryId was provided
-    if (!existingItem && ing.inventoryId) {
-      existingItem = updatedInventory.find(
-        (item) => String(item.id) === String(ing.inventoryId)
-      );
-    }
-
-    if (existingItem) {
-      const currentMrp = Number(existingItem.mrp ?? existingItem.unitCost ?? 0);
-      if (!Number.isFinite(currentMrp) || currentMrp <= 0) {
-        const sampleMrp = getApproximateIngredientMrp(rawName, existingItem.unit || unit);
-        existingItem.mrp = sampleMrp;
-        existingItem.unitCost = sampleMrp;
-        inventoryChanged = true;
-      }
-      mappedRecipe.push({
-        inventoryId: existingItem.id,
-        name: existingItem.name,
-        quantity,
-        unit: existingItem.unit || unit,
-        category: existingItem.category || category,
-      });
-    } else {
-      // Auto-generate new item in Inventory!
-      const newId = `inv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const sampleMrp = getApproximateIngredientMrp(rawName, unit);
-      const newStockItem = {
-        id: newId,
-        name: rawName,
-        category: category,
-        subcategory: "",
-        supplier: "Local Supplier",
-        unit: unit,
-        stock: 50,
-        minThreshold: 10,
-        unitCost: sampleMrp,
-        mrp: sampleMrp,
-        totalUsed: 0,
-        totalRestocked: 50,
-        lastRestocked: new Date().toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-
-      updatedInventory.unshift(newStockItem);
-      inventoryChanged = true;
-
-      try {
-        const createResult = await apiCreateInventoryItem(newStockItem);
-        const createdItem = createResult?.data?.data || createResult?.data?.item || createResult?.data;
-        const backendId = Number(createdItem?.ingredientId ?? createdItem?.IngredientId ?? createdItem?.id);
-        if (createResult?.success && Number.isFinite(backendId) && backendId > 0) {
-          newStockItem.id = String(backendId);
-          newStockItem.ingredientId = backendId;
-        } else {
-          throw new Error(createResult?.error || "Inventory API create failed");
-        }
-      } catch (error) {
-        console.warn("Inventory database create failed; keeping local cache:", error);
-      }
-
-      mappedRecipe.push({
-        inventoryId: newStockItem.id,
-        name: newStockItem.name,
-        quantity,
-        unit: newStockItem.unit,
-        category: newStockItem.category,
-      });
-    }
+  for (const ingredient of ingredientsByKey.values()) {
+    const saved = await ensureRecipeIngredient(ingredient);
+    if (!saved) continue;
+    const id = saved.ingredientId ?? saved.id;
+    mappedRecipe.push({
+      inventoryId: Number(id),
+      name: saved.name || saved.ingredientName || name,
+      quantity: Number(ingredient.quantity) || 0,
+      unit: saved.unit || ingredient.unit || "KG",
+      category: saved.category || category,
+    });
   }
-
-  if (inventoryChanged) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedInventory));
-      window.dispatchEvent(
-        new CustomEvent("avsr-inventory-updated", { detail: updatedInventory })
-      );
-      try {
-        fetch(`${API_SYNC_BASE}/api/sync`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ [STORAGE_KEY]: updatedInventory }),
-        }).catch(() => {});
-      } catch {}
-    } catch {}
-  }
-
   return mappedRecipe;
 }
 
@@ -1591,7 +1619,12 @@ export function AdminPortal({
     // Auto-generate recipe ingredients directly into Inventory database
     let mappedRecipe = itemForm.recipe || [];
     if (Array.isArray(itemForm.recipe) && itemForm.recipe.length > 0) {
-      mappedRecipe = await autoGenerateInventoryFromRecipe(itemForm.recipe);
+      try {
+        mappedRecipe = await autoGenerateInventoryFromRecipe(itemForm.recipe);
+      } catch (error) {
+        showToast(`Could not save recipe ingredients to inventory: ${error?.message || "API request failed."}`);
+        return;
+      }
     }
 
     const isSpecialValue = Boolean(itemForm.isChefSpecial);

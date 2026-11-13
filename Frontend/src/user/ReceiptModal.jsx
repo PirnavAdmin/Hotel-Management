@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
 import { getTodayDateString, getNextInvoiceNumber } from '../utils/invoiceCounter';
+import { formatInvoiceNumber } from '../utils/orderDedupe';
 import { printSurface } from '../utils/printSurface';
 
 /**
@@ -204,8 +205,10 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     ? Number(table.grandTotal)
     : roundCurrency(taxableAmount + taxAmount + serviceChargeAmount + tipAmount);
 
-  // Raw and unified Order Number (Always formatted as ORD-XXXX)
-  const rawInvoiceNo = table.invoiceNo || table.id || table.orderId || getNextInvoiceNumber();
+  // Raw and unified Invoice and Order Number
+  const rawInvoiceNo = formatInvoiceNumber(
+    (table.invoiceNo || table.id || table.orderId) ? table : getNextInvoiceNumber()
+  );
   const orderNumber = formatOrderNumber(rawInvoiceNo);
 
   // Clean date & time formats
@@ -510,7 +513,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 Table: <strong>{displayTableName} ({displaySection})</strong>
               </div>
               <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                Ord: <strong style={{ fontFamily: 'monospace' }}>{orderNumber}</strong>
+                Inv: <strong style={{ fontFamily: 'monospace' }}>{rawInvoiceNo}</strong>
               </div>
 
               {/* Row 2 */}
@@ -807,7 +810,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 </div>
                 <div style={{ display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '7px 12px', background: '#fafafa' }}>
                   <span style={{ width: '110px', color: '#64748b', fontWeight: 600 }}>Invoice No.</span>
-                  <span style={{ color: '#0f172a', fontWeight: 700, fontFamily: 'monospace' }}>: {rawInvoiceNo || orderNumber}</span>
+                  <span style={{ color: '#0f172a', fontWeight: 700, fontFamily: 'monospace' }}>: {rawInvoiceNo}</span>
                 </div>
                 <div style={{ display: 'flex', padding: '7px 12px' }}>
                   <span style={{ width: '110px', color: '#64748b', fontWeight: 600 }}>Date & Time</span>

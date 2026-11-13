@@ -117,16 +117,15 @@ export function AdminTakeaway({
         apiGetAdminTakeawaySummary(),
       ]);
       if (!ordersResult?.success) throw new Error(ordersResult?.error || "Could not load takeaway orders.");
+      if (!summaryResult?.success) throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
       setOrders((Array.isArray(ordersResult.data) ? ordersResult.data : []).map(normalizeOrder));
-      if (summaryResult?.success) setSummary(summaryResult.data || null);
-      else throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
+      setSummary(summaryResult.data || null);
     } catch (error) {
       alert(error?.message || "Could not load takeaway orders.");
     } finally {
       setIsRefreshing(false);
     }
   };
-
   useEffect(() => {
     handleRefresh();
   }, []);  // --- Filtering & Tab State ---
@@ -468,7 +467,7 @@ export function AdminTakeaway({
       return;
     }
     setCustomerPhoneError("");
-    if (cartItemsList.length === 0) {
+    if (!cartItemsList.length) {
       alert("Please add at least one item to the takeaway order.");
       return;
     }
@@ -480,16 +479,18 @@ export function AdminTakeaway({
     setOrderSaving(true);
     try {
       const payload = {
-        orderType: "TAKEAWAY",
-        customerName: newCustomerName.trim() || null,
+        customerName: newCustomerName.trim() || "Walk-in Guest",
         customerPhone: newCustomerPhone.trim(),
         paymentMethod: newPaymentMethod || "Direct",
         paymentStatus: "Paid",
         isPaid: true,
         paidAmount: cartSubtotal || cartTotal,
         notes: newOrderNotes.trim() || null,
-        items: cartItemsList.map(({ item, quantity }) => ({ itemId: Number(item.itemId ?? item.menuItemId ?? item.id), quantity })),
-        idempotencyKey: globalThis.crypto?.randomUUID?.() || `admin-takeaway-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        items: cartItemsList.map(({ item, quantity }) => ({
+          itemId: Number(item.itemId ?? item.menuItemId ?? item.id),
+          quantity: Number(quantity),
+        })),
+        idempotencyKey: globalThis.crypto?.randomUUID?.() || `admin-takeaway-${Date.now()}`,
       };
       const result = await apiCreateAdminTakeawayOrder(payload);
       if (!result?.success) throw new Error(result?.error || "Could not create takeaway order.");
@@ -501,15 +502,16 @@ export function AdminTakeaway({
       setNewOrderCart({});
       setCartCalculation(null);
       await handleRefresh();
-      const detail = created.orderId ? await apiGetAdminTakeawayOrder(created.orderId) : null;
-      setSelectedOrderDetails(normalizeOrder(detail?.success ? detail.data : created));
+      if (created.orderId) {
+        const detail = await apiGetAdminTakeawayOrder(created.orderId);
+        if (detail?.success) setSelectedOrderDetails(normalizeOrder(detail.data));
+      }
     } catch (error) {
       alert(error?.message || "Could not create takeaway order.");
     } finally {
       setOrderSaving(false);
     }
-  };
-  // Status Badge Component
+  };  // Status Badge Component
   const renderStatusBadge = (status) => {
     switch (status) {
       case "Pending":

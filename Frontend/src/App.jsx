@@ -1,5 +1,5 @@
 import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
 import { AdminPortal } from "./admin";
@@ -95,7 +95,6 @@ import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
   autoGenerateInventoryFromRecipe,
-  getStandardDishSuggestions,
 } from "./admin/AdminPortal";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
@@ -689,46 +688,53 @@ export function App() {
   const [barMenuItems, setBarMenuItems] = useState([]);
   const [barMenuLoading, setBarMenuLoading] = useState(true);
   const [barMenuLoadError, setBarMenuLoadError] = useState("");
+  const [toastMessage, setToastMessage] = useState(null);
+  const showToast = useCallback((msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2800);
+  }, []);
 
   useEffect(() => {
     if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+    const menuItemsWithRecipes = menuItems.filter(
+      (item) => Array.isArray(item.recipe) && item.recipe.length > 0,
+    );
+    if (menuItemsWithRecipes.length === 0) return;
 
     let cancelled = false;
 
     const syncMenuIngredientsToInventory = async () => {
-      let menuChanged = false;
-      const syncedMenu = await Promise.all(
-        menuItems.map(async (item) => {
-          const hasRecipe = Array.isArray(item.recipe) && item.recipe.length > 0;
-          const recipe = hasRecipe
-            ? item.recipe
-            : getStandardDishSuggestions(
-                item.name || item.dishName || "",
-                item.category || "",
-              );
-          const mappedRecipe = await autoGenerateInventoryFromRecipe(recipe);
-          if (mappedRecipe.length === 0) return item;
-
-          if (JSON.stringify(mappedRecipe) !== JSON.stringify(item.recipe)) {
+      try {
+        let menuChanged = false;
+        const syncedMenu = await Promise.all(
+          menuItems.map(async (item) => {
+            if (!Array.isArray(item.recipe) || item.recipe.length === 0) return item;
+            const mappedRecipe = await autoGenerateInventoryFromRecipe(item.recipe);
+            if (mappedRecipe.length === 0 || JSON.stringify(mappedRecipe) === JSON.stringify(item.recipe)) {
+              return item;
+            }
             menuChanged = true;
             return { ...item, recipe: mappedRecipe };
-          }
-          return item;
-        }),
-      );
+          }),
+        );
 
-      if (cancelled || !menuChanged) return;
-      setMenuItems(syncedMenu);
-      try {
-        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(syncedMenu));
-      } catch {}
+        if (cancelled || !menuChanged) return;
+        setMenuItems(syncedMenu);
+        try {
+          localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(syncedMenu));
+        } catch {}
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Inventory] Could not sync recipe ingredients:", error);
+        showToast(`Could not sync recipe ingredients to inventory: ${error?.message || "API request failed."}`);
+      }
     };
 
     syncMenuIngredientsToInventory();
     return () => {
       cancelled = true;
     };
-  }, [menuItems]);
+  }, [menuItems, showToast]);
 
   // Load staff personnel (supports Admin staff additions/deletions)
   const [staffList, setStaffList] = useState(() => {
@@ -1181,16 +1187,6 @@ export function App() {
   const [isKOTOpen, setIsKOTOpen] = useState(false);
   const kotDispatchesInFlight = useRef(new Set());
   const [reprintReceiptData, setReprintReceiptData] = useState(null);
-
-  // Toast notification
-  const [toastMessage, setToastMessage] = useState(null);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 2800);
-  };
 
   useEffect(() => {
     let cancelled = false;

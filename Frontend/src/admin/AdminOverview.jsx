@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
-import { dedupeOrders, parseOrderToYMD } from "../utils/orderDedupe";
+import { dedupeOrders, formatInvoiceNumber, getOrderTimestamp, parseOrderToYMD } from "../utils/orderDedupe";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
 
@@ -1149,11 +1149,11 @@ export function AdminOverview({
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <div style={{ minWidth: "640px" }}>
+            <div style={{ minWidth: "750px" }}>
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1.3fr 1.1fr 1fr 1fr 1.2fr 1fr",
+                  gridTemplateColumns: "1.1fr 1.3fr 1.1fr 0.9fr 1.1fr 1.1fr 0.9fr",
                   padding: "0.45rem 0.75rem",
                   background: "var(--bg-tertiary)",
                   borderRadius: "6px",
@@ -1166,6 +1166,7 @@ export function AdminOverview({
                 }}
               >
                 <div>Invoice #</div>
+                <div>Date & Time</div>
                 <div>Table / Source</div>
                 <div>Items</div>
                 <div>Payment Mode</div>
@@ -1176,8 +1177,17 @@ export function AdminOverview({
               {cleanOrders.slice(0, 5).map((order) => {
                 const mode = String(order.paymentMethod || order.paymentMode || "UPI").toUpperCase();
                 const total = Number(order.grandTotal ?? order.total ?? 0);
-                const invNumber = order.invoiceNumber || order.invoiceNo || order.id || "INV-001";
+                const invNumber = formatInvoiceNumber(order);
                 const tableName = order.tableName || (order.tableId ? `Table ${order.tableId}` : "Takeaway / Direct");
+
+                const ts = getOrderTimestamp(order);
+                const d = ts > 0 ? new Date(ts) : null;
+                const dateStr = d
+                  ? d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  : (order.date || "—");
+                const timeStr = d
+                  ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+                  : (order.settledAt || "");
 
                 return (
                   <div
@@ -1185,7 +1195,7 @@ export function AdminOverview({
                     onClick={() => onNavigateTab("invoices")}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1.3fr 1.1fr 1fr 1fr 1.2fr 1fr",
+                      gridTemplateColumns: "1.1fr 1.3fr 1.1fr 0.9fr 1.1fr 1.1fr 0.9fr",
                       alignItems: "center",
                       padding: "0.45rem 0.75rem",
                       background: "var(--bg-tertiary)",
@@ -1205,6 +1215,10 @@ export function AdminOverview({
                   >
                     <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
                       {invNumber}
+                    </div>
+                    <div>
+                      <div style={{ color: "var(--text-main)", fontWeight: 600 }}>{dateStr}</div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "1px" }}>{timeStr}</div>
                     </div>
                     <div style={{ color: "var(--text-muted)", fontWeight: 500 }}>
                       {tableName}
