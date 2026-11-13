@@ -16,6 +16,8 @@ import {
   Users,
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   Printer,
   MoreHorizontal,
@@ -121,6 +123,7 @@ export function ReservationsManagement({
 
   // ── 3. Modals & Actions Menu State ─────────────────────────────────────
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
+  const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [viewingReservation, setViewingReservation] = useState(null);
   const [printReceiptReservation, setPrintReceiptReservation] = useState(null);
@@ -151,6 +154,7 @@ export function ReservationsManagement({
     const handleOutsideClick = (e) => {
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
         setActionMenuOpenId(null);
+        setActionMenuOpenAbove(false);
       }
     };
     if (actionMenuOpenId) {
@@ -476,15 +480,48 @@ export function ReservationsManagement({
     };
   }, [printReceiptReservation]);
 
+  const reservationModalColors = isLight
+    ? {
+        overlay: "rgba(23, 32, 51, 0.35)",
+        surface: "#ffffff",
+        border: "#e1e7f0",
+        header: "linear-gradient(135deg, rgba(234, 88, 12, 0.1) 0%, rgba(245, 158, 11, 0.06) 100%)",
+        text: "#0f172a",
+        muted: "#64748b",
+        secondary: "#334155",
+        inset: "#f8fafc",
+        notes: "#334155",
+        input: "#ffffff",
+        inputBorder: "#cbd5e1",
+        label: "#334155",
+        cancelBackground: "#f1f5f9",
+        shadow: "0 25px 60px rgba(15, 23, 42, 0.25)",
+      }
+    : {
+        overlay: "rgba(0, 0, 0, 0.75)",
+        surface: "#18181b",
+        border: "#27272a",
+        header: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
+        text: "#f8fafc",
+        muted: "#94a3b8",
+        secondary: "#cbd5e1",
+        inset: "rgba(255, 255, 255, 0.03)",
+        notes: "#cbd5e1",
+        input: "#27272a",
+        inputBorder: "#3f3f46",
+        label: "#cbd5e1",
+        cancelBackground: "rgba(255, 255, 255, 0.06)",
+        shadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+      };
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "1.15rem",
-        padding: "1.25rem",
-        color: "var(--text-main, #f8fafc)",
-        background: "transparent",
+        gap: "1.25rem",
+        color: "var(--text-main)",
+        fontFamily: "inherit",
       }}
     >
       {/* ── 1. Top Header Banner (Matches Takeaway Orders Banner) ── */}
@@ -766,18 +803,76 @@ export function ReservationsManagement({
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+      {/* ── 2. Key Metrics / KPI Summary Cards ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "0.75rem",
+        }}
+      >
         {[
-          { label: "Total Reservations", value: metrics.total, icon: Calendar, color: "#ea580c", tint: "rgba(249,115,22,.14)" },
-          { label: "Confirmed", value: metrics.confirmed, icon: CheckCircle2, color: "#059669", tint: "rgba(16,185,129,.14)" },
-          { label: "Pending", value: metrics.pending, icon: Hourglass, color: "#d97706", tint: "rgba(245,158,11,.14)" },
-          { label: "Seated", value: metrics.seated, icon: Utensils, color: "#2563eb", tint: "rgba(59,130,246,.14)" },
-          { label: "Completed", value: metrics.completed, icon: Check, color: "#059669", tint: "rgba(16,185,129,.14)" },
-          { label: "Cancelled", value: metrics.cancelled, icon: XCircle, color: "#dc2626", tint: "rgba(239,68,68,.14)" },
+          { label: "Total Reservations", value: metrics.total, icon: Calendar, color: "#ea580c", tint: "rgba(249, 115, 22, 0.12)" },
+          { label: "Confirmed", value: metrics.confirmed, icon: CheckCircle2, color: "#16a34a", tint: "rgba(34, 197, 94, 0.12)" },
+          { label: "Pending", value: metrics.pending, icon: Hourglass, color: "#d97706", tint: "rgba(245, 158, 11, 0.12)" },
+          { label: "Seated", value: metrics.seated, icon: Utensils, color: "#2563eb", tint: "rgba(59, 130, 246, 0.12)" },
+          { label: "Completed", value: metrics.completed, icon: Check, color: "#059669", tint: "rgba(16, 185, 129, 0.12)" },
+          { label: "Cancelled", value: metrics.cancelled, icon: XCircle, color: "#dc2626", tint: "rgba(239, 68, 68, 0.12)" },
         ].map(({ label, value, icon: Icon, color, tint }) => (
-          <div key={label} style={{ background: "var(--bg-card, #18181b)", border: "1px solid var(--border-card, #27272a)", borderRadius: "12px", padding: "0.4rem 0.45rem", display: "flex", alignItems: "center", gap: "0.85rem", boxShadow: "0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.02)" }}>
-            <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: tint, display: "flex", alignItems: "center", justifyContent: "center", color, flexShrink: 0 }}><Icon size={22} /></div>
-            <div><div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>{label}</div><div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "var(--text-main, #f8fafc)", letterSpacing: "-0.02em" }}>{value}</div></div>
+          <div
+            key={label}
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "12px",
+              padding: "0.75rem 0.85rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.7rem",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                background: tint,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: color,
+                flexShrink: 0,
+              }}
+            >
+              <Icon size={20} />
+            </div>
+            <div style={{ minWidth: 0, overflow: "hidden" }}>
+              <div
+                style={{
+                  fontSize: "0.74rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  marginTop: "0.1rem",
+                  color: color === "#ea580c" ? "var(--text-main)" : color,
+                  whiteSpace: "nowrap",
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.1,
+                }}
+              >
+                {value}
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -812,21 +907,20 @@ export function ReservationsManagement({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "0.45rem",
-                padding: "0.48rem 0.95rem",
+                height: "38px",
+                padding: "0 1.05rem",
                 borderRadius: "10px",
-                border: isActive
-                  ? "1px solid transparent"
-                  : `1px solid ${theme.border}`,
+                border: `1px solid ${theme.border}`,
                 background: isActive
                   ? theme.activeBg
-                  : theme.background,
+                  : `linear-gradient(${theme.background}, ${theme.background}), var(--bg-card)`,
                 color: isActive ? "#ffffff" : theme.text,
-                fontSize: "0.82rem",
-                fontWeight: isActive ? 750 : 650,
+                fontSize: "0.84rem",
+                fontWeight: isActive ? 600 : 500,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
+                boxShadow: isActive ? `0 3px 8px ${theme.border}` : "none",
                 transition: "all 0.15s ease",
-                boxShadow: isActive ? "0 3px 10px rgba(0, 0, 0, 0.3)" : "none",
               }}
             >
               <Icon size={14} />
@@ -863,7 +957,7 @@ export function ReservationsManagement({
               left: "0.95rem",
               top: "50%",
               transform: "translateY(-50%)",
-              color: "var(--text-muted, #94a3b8)",
+              color: "var(--text-muted)",
               pointerEvents: "none",
             }}
           />
@@ -875,11 +969,11 @@ export function ReservationsManagement({
             style={{
               width: "100%",
               height: "42px",
-              padding: "0 0.95rem 0 2.5rem",
+              padding: "0 2rem 0 2.5rem",
               borderRadius: "10px",
-              border: "1px solid var(--border-card, #27272a)",
-              background: "var(--bg-card, #18181b)",
-              color: "var(--text-main, #f8fafc)",
+              border: "1px solid var(--border-card)",
+              background: "var(--bg-card)",
+              color: "var(--text-main)",
               fontSize: "0.84rem",
               outline: "none",
               boxSizing: "border-box",
@@ -896,7 +990,7 @@ export function ReservationsManagement({
                 transform: "translateY(-50%)",
                 background: "transparent",
                 border: "none",
-                color: "var(--text-muted, #94a3b8)",
+                color: "var(--text-muted)",
                 cursor: "pointer",
               }}
             >
@@ -934,9 +1028,9 @@ export function ReservationsManagement({
               height: "42px",
               padding: "0 1rem",
               borderRadius: "10px",
-              border: "1px solid var(--border-card, #27272a)",
-              background: "var(--bg-card, #18181b)",
-              color: "var(--text-main, #f8fafc)",
+              border: "1px solid var(--border-card)",
+              background: "var(--bg-card)",
+              color: "var(--text-main)",
               fontSize: "0.83rem",
               fontWeight: 500,
               cursor: "pointer",
@@ -966,8 +1060,8 @@ export function ReservationsManagement({
                   padding: "0 0.85rem",
                   borderRadius: "10px",
                   border: "1.5px solid #ea580c",
-                  background: "var(--bg-card, #18181b)",
-                  color: "var(--text-main, #f8fafc)",
+                  background: "var(--bg-card)",
+                  color: "var(--text-main)",
                   fontSize: "0.83rem",
                   fontWeight: 600,
                   outline: "none",
@@ -989,9 +1083,9 @@ export function ReservationsManagement({
                     height: "42px",
                     width: "36px",
                     borderRadius: "10px",
-                    border: "1px solid var(--border-card, #27272a)",
-                    background: "var(--bg-card, #18181b)",
-                    color: "var(--text-muted, #94a3b8)",
+                    border: "1px solid var(--border-card)",
+                    background: "var(--bg-card)",
+                    color: "var(--text-muted)",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -1012,9 +1106,9 @@ export function ReservationsManagement({
               height: "42px",
               padding: "0 1rem",
               borderRadius: "10px",
-              border: "1px solid var(--border-card, #27272a)",
-              background: "var(--bg-card, #18181b)",
-              color: "var(--text-main, #f8fafc)",
+              border: "1px solid var(--border-card)",
+              background: "var(--bg-card)",
+              color: "var(--text-main)",
               fontSize: "0.83rem",
               fontWeight: 500,
               cursor: "pointer",
@@ -1038,9 +1132,9 @@ export function ReservationsManagement({
               height: "42px",
               width: "42px",
               borderRadius: "10px",
-              border: "1px solid var(--border-card, #27272a)",
-              background: "var(--bg-card, #18181b)",
-              color: "var(--text-main, #f8fafc)",
+              border: "1px solid var(--border-card)",
+              background: "var(--bg-card)",
+              color: "var(--text-main)",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -1061,8 +1155,8 @@ export function ReservationsManagement({
       {/* ── 5. Main Table: Table Reservations ────────────────── */}
       <div
         style={{
-          background: "var(--bg-card, #18181b)",
-          border: "1px solid var(--border-card, #27272a)",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-card)",
           borderRadius: "14px",
           overflow: "hidden",
           boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
@@ -1072,32 +1166,53 @@ export function ReservationsManagement({
           <table
             style={{
               width: "100%",
-              borderCollapse: "collapse",
+              tableLayout: "fixed",
+              borderCollapse: "separate",
+              borderSpacing: 0,
               textAlign: "left",
-              fontSize: "0.7rem",
+              fontSize: "0.73rem",
             }}
           >
+            <colgroup>
+              <col style={{ width: "4%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+            </colgroup>
             <thead>
-              <tr
-                style={{
-                  background: "var(--bg-secondary, #202024)",
-                  borderBottom: "1px solid var(--border-card, #27272a)",
-                  color: "var(--text-muted, #94a3b8)",
-                  fontSize: "0.64rem",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                <th style={{ padding: "0.4rem 0.45rem", width: "40px" }}>#</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>RESERVATION ID</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>GUEST NAME</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>PHONE</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>TABLE</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>GUESTS</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>DATE & TIME</th>
-                <th style={{ padding: "0.4rem 0.45rem" }}>STATUS</th>
-                <th style={{ padding: "0.4rem 0.45rem", textAlign: "right" }}>ACTIONS</th>
+              <tr>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  #
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  RESERVATION ID
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  GUEST NAME
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  PHONE
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  TABLE
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  GUESTS
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  DATE & TIME
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                  STATUS
+                </th>
+                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
+                  ACTIONS
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -1108,11 +1223,11 @@ export function ReservationsManagement({
                     style={{
                       padding: "3.5rem 1rem",
                       textAlign: "center",
-                      color: "var(--text-muted, #94a3b8)",
+                      color: "var(--text-muted)",
                     }}
                   >
                     <Calendar size={36} color="#ea580c" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
-                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", marginBottom: "0.25rem" }}>
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main)", marginBottom: "0.25rem" }}>
                       {loading ? "Loading reservations…" : "No reservations found"}
                     </div>
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
@@ -1587,7 +1702,7 @@ export function ReservationsManagement({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: reservationModalColors.overlay,
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
@@ -1598,12 +1713,12 @@ export function ReservationsManagement({
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: reservationModalColors.surface,
+              border: `1px solid ${reservationModalColors.border}`,
               borderRadius: "16px",
               width: "100%",
               maxWidth: "520px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              boxShadow: reservationModalColors.shadow,
               overflow: "hidden",
             }}
           >
@@ -1611,8 +1726,8 @@ export function ReservationsManagement({
             <div
               style={{
                 padding: "1.1rem 1.4rem",
-                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
+                background: reservationModalColors.header,
+                borderBottom: `1px solid ${reservationModalColors.border}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -1621,10 +1736,10 @@ export function ReservationsManagement({
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: reservationModalColors.text }}>
                     New Table Reservation
                   </h3>
-                  <small style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.75rem" }}>
                     Reserve a dining table at {restaurantName}
                   </small>
                 </div>
@@ -1635,7 +1750,7 @@ export function ReservationsManagement({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#94a3b8",
+                  color: reservationModalColors.muted,
                   cursor: "pointer",
                   padding: "4px",
                 }}
@@ -1648,7 +1763,7 @@ export function ReservationsManagement({
             <form onSubmit={handleCreateReservation} style={{ padding: "1.25rem 1.4rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                     Guest Full Name *
                   </label>
                   <input
@@ -1660,10 +1775,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: reservationModalColors.input,
+                      border: `1px solid ${reservationModalColors.inputBorder}`,
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: reservationModalColors.text,
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -1671,7 +1786,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                     Mobile Number *
                   </label>
                   <input
@@ -1683,10 +1798,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: reservationModalColors.input,
+                      border: `1px solid ${reservationModalColors.inputBorder}`,
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: reservationModalColors.text,
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -1697,7 +1812,7 @@ export function ReservationsManagement({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                     Dining Table *
                   </label>
                   <select
@@ -1706,10 +1821,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: reservationModalColors.input,
+                      border: `1px solid ${reservationModalColors.inputBorder}`,
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: reservationModalColors.text,
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -1724,7 +1839,7 @@ export function ReservationsManagement({
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                     Number of Guests
                   </label>
                   <input
@@ -1736,10 +1851,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: reservationModalColors.input,
+                      border: `1px solid ${reservationModalColors.inputBorder}`,
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: reservationModalColors.text,
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -1750,7 +1865,7 @@ export function ReservationsManagement({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                     Reservation Date
                   </label>
                   <input
@@ -1760,10 +1875,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: reservationModalColors.input,
+                      border: `1px solid ${reservationModalColors.inputBorder}`,
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: reservationModalColors.text,
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -1771,7 +1886,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                     Time Slot
                   </label>
                   <select
@@ -1780,10 +1895,10 @@ export function ReservationsManagement({
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "#27272a",
-                      border: "1px solid #3f3f46",
+                      background: reservationModalColors.input,
+                      border: `1px solid ${reservationModalColors.inputBorder}`,
                       borderRadius: "8px",
-                      color: "#f8fafc",
+                      color: reservationModalColors.text,
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -1801,7 +1916,7 @@ export function ReservationsManagement({
               </div>
 
               <div style={{ marginBottom: "0.85rem" }}>
-                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: reservationModalColors.label, marginBottom: "0.3rem" }}>
                   Special Requests / Occasion (Optional)
                 </label>
                 <textarea
@@ -1812,10 +1927,10 @@ export function ReservationsManagement({
                   style={{
                     width: "100%",
                     padding: "0.55rem 0.75rem",
-                    background: "#27272a",
-                    border: "1px solid #3f3f46",
+                    background: reservationModalColors.input,
+                    border: `1px solid ${reservationModalColors.inputBorder}`,
                     borderRadius: "8px",
-                    color: "#f8fafc",
+                    color: reservationModalColors.text,
                     fontSize: "0.84rem",
                     boxSizing: "border-box",
                     outline: "none",
@@ -1830,10 +1945,10 @@ export function ReservationsManagement({
                   onClick={() => setIsNewBookingModalOpen(false)}
                   style={{
                     padding: "0.6rem 1.15rem",
-                    background: "rgba(255, 255, 255, 0.06)",
-                    border: "1px solid #3f3f46",
+                    background: reservationModalColors.cancelBackground,
+                    border: `1px solid ${reservationModalColors.inputBorder}`,
                     borderRadius: "8px",
-                    color: "#f8fafc",
+                    color: reservationModalColors.secondary,
                     cursor: "pointer",
                     fontSize: "0.84rem",
                     fontWeight: 500,
@@ -1870,7 +1985,7 @@ export function ReservationsManagement({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: reservationModalColors.overlay,
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
@@ -1881,20 +1996,20 @@ export function ReservationsManagement({
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: reservationModalColors.surface,
+              border: `1px solid ${reservationModalColors.border}`,
               borderRadius: "16px",
               width: "100%",
               maxWidth: "500px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
+              boxShadow: reservationModalColors.shadow,
               overflow: "hidden",
             }}
           >
             <div
               style={{
                 padding: "1.1rem 1.4rem",
-                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid #27272a",
+                background: reservationModalColors.header,
+                borderBottom: `1px solid ${reservationModalColors.border}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -1902,14 +2017,14 @@ export function ReservationsManagement({
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: reservationModalColors.text }}>
                   Reservation {viewingReservation.reservationId || viewingReservation.id}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingReservation(null)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: reservationModalColors.muted, cursor: "pointer" }}
               >
                 <X size={18} />
               </button>
@@ -1922,33 +2037,33 @@ export function ReservationsManagement({
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "0.75rem",
-                  background: "rgba(255, 255, 255, 0.03)",
+                  background: reservationModalColors.inset,
                   padding: "0.4rem 0.45rem",
                   borderRadius: "10px",
-                  border: "1px solid #27272a",
+                  border: `1px solid ${reservationModalColors.border}`,
                 }}
               >
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Name</small>
-                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Guest Name</small>
+                  <div style={{ fontWeight: 700, color: reservationModalColors.text, fontSize: "0.95rem" }}>
                     {viewingReservation.customerName || "Guest"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Contact Phone</small>
-                  <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Contact Phone</small>
+                  <div style={{ color: reservationModalColors.text, fontSize: "0.9rem" }}>
                     {viewingReservation.phone || viewingReservation.customerPhone || "—"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Assigned Table</small>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Assigned Table</small>
                   <div style={{ fontWeight: 650, color: "#ea580c", fontSize: "0.9rem" }}>
                     {viewingReservation.tableName || `Table ${viewingReservation.tableId}`}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Count</small>
-                  <div style={{ fontWeight: 650, color: "#f8fafc", fontSize: "0.9rem" }}>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Guest Count</small>
+                  <div style={{ fontWeight: 650, color: reservationModalColors.text, fontSize: "0.9rem" }}>
                     {viewingReservation.guestsCount || 2} Persons
                   </div>
                 </div>
@@ -1963,13 +2078,13 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Date & Time</small>
-                  <div style={{ color: "#f8fafc", fontWeight: 600 }}>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Date & Time</small>
+                  <div style={{ color: reservationModalColors.text, fontWeight: 600 }}>
                     {viewingReservation.reservationDate || viewingReservation.date} at {viewingReservation.reservationTime || viewingReservation.time}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Advance Paid</small>
+                  <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Advance Paid</small>
                   <div style={{ color: "#10b981", fontWeight: 700 }}>
                     ₹ {Number(viewingReservation.advanceAmount || 0).toFixed(2)}
                   </div>
@@ -1978,14 +2093,14 @@ export function ReservationsManagement({
 
               {/* Special Requests */}
               <div>
-                <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Special Requests & Notes</small>
+                <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Special Requests & Notes</small>
                 <div
                   style={{
-                    background: "rgba(255, 255, 255, 0.03)",
+                    background: reservationModalColors.inset,
                     padding: "0.6rem 0.85rem",
                     borderRadius: "8px",
-                    border: "1px solid #27272a",
-                    color: "#cbd5e1",
+                    border: `1px solid ${reservationModalColors.border}`,
+                    color: reservationModalColors.notes,
                     fontSize: "0.82rem",
                     marginTop: "0.25rem",
                   }}
