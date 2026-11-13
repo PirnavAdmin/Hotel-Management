@@ -284,6 +284,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
+  const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
   const actionMenuRef = useRef(null);
 
   // Form State
@@ -304,6 +305,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
     function handleClickOutside(e) {
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
         setActionMenuOpenId(null);
+        setActionMenuOpenAbove(false);
       }
     }
     if (actionMenuOpenId) {
@@ -1426,7 +1428,19 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                           <div style={{ position: "relative", flexShrink: 0 }}>
                             <button
                               type="button"
-                              onClick={() => setActionMenuOpenId(isMenuOpen ? null : custId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isMenuOpen) {
+                                  setActionMenuOpenId(null);
+                                  setActionMenuOpenAbove(false);
+                                } else {
+                                  const buttonRect = e.currentTarget.getBoundingClientRect();
+                                  const spaceBelow = window.innerHeight - buttonRect.bottom;
+                                  const openAbove = spaceBelow < 195 || index >= paginatedCustomers.length - 3;
+                                  setActionMenuOpenAbove(openAbove);
+                                  setActionMenuOpenId(custId);
+                                }
+                              }}
                               title="Actions"
                               style={{
                                 width: "30px",
@@ -1449,17 +1463,19 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                             {isMenuOpen && (
                               <div
                                 ref={actionMenuRef}
+                                onClick={(e) => e.stopPropagation()}
                                 style={{
                                   position: "absolute",
                                   right: 0,
-                                  top: "calc(100% + 5px)",
+                                  top: actionMenuOpenAbove ? "auto" : "calc(100% + 5px)",
+                                  bottom: actionMenuOpenAbove ? "calc(100% + 5px)" : "auto",
                                   background: "#18181b",
                                   border: "1px solid #27272a",
                                   borderRadius: "10px",
                                   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.75)",
                                   padding: "0.35rem",
-                                  minWidth: "180px",
-                                  zIndex: 100,
+                                  minWidth: "185px",
+                                  zIndex: 9999,
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: "0.2rem",
@@ -1470,6 +1486,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   type="button"
                                   onClick={() => {
                                     setActionMenuOpenId(null);
+                                    setActionMenuOpenAbove(false);
                                     setViewingCustomer(c);
                                   }}
                                   style={{
@@ -1496,6 +1513,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   type="button"
                                   onClick={() => {
                                     setActionMenuOpenId(null);
+                                    setActionMenuOpenAbove(false);
                                     const nextTier = String(c.tier).toLowerCase() === "vip" ? "Regular" : "VIP";
                                     setCustomers((prev) =>
                                       prev.map((item) =>
@@ -1532,6 +1550,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   type="button"
                                   onClick={() => {
                                     setActionMenuOpenId(null);
+                                    setActionMenuOpenAbove(false);
                                     handleDeleteCustomer(custId, c.fullName || c.name);
                                   }}
                                   style={{
