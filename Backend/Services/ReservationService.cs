@@ -748,8 +748,11 @@ public class ReservationService
         long branchId = request.BranchId.HasValue && request.BranchId.Value > 0 ? request.BranchId.Value : 1;
         var (estimatedTotal, advanceAmount) = CalculateAmounts(guests);
 
-        bool skipAdvance = request.SkipAdvancePayment && caller.IsStaff &&
-                           string.Equals(request.Source, "POS", StringComparison.OrdinalIgnoreCase);
+        bool skipAdvance = (request.SkipAdvancePayment && caller.IsStaff &&
+                           string.Equals(request.Source, "POS", StringComparison.OrdinalIgnoreCase))
+                           || string.Equals(request.Status, "confirmed", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(request.Source, "ADMIN", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(request.Source, "POS", StringComparison.OrdinalIgnoreCase);
 
         string initialStatus = (!RequireAdvancePayment || advanceAmount <= 0m || skipAdvance)
             ? (string.Equals(request.Source, "POS", StringComparison.OrdinalIgnoreCase) ? "booked" : "CONFIRMED")
