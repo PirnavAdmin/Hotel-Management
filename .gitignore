@@ -31,3 +31,5 @@ Desktop.ini
 .DS_Store
 Thumbs.db
 
+# Local environment variables and secrets
+

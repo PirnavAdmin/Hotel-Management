@@ -1,5 +1,5 @@
 import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 // Admin modules
 import { AdminPortal } from "./admin";
@@ -95,7 +95,6 @@ import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
   autoGenerateInventoryFromRecipe,
-  getStandardDishSuggestions,
 } from "./admin/AdminPortal";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
@@ -689,46 +688,53 @@ export function App() {
   const [barMenuItems, setBarMenuItems] = useState([]);
   const [barMenuLoading, setBarMenuLoading] = useState(true);
   const [barMenuLoadError, setBarMenuLoadError] = useState("");
+  const [toastMessage, setToastMessage] = useState(null);
+  const showToast = useCallback((msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2800);
+  }, []);
 
   useEffect(() => {
     if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+    const menuItemsWithRecipes = menuItems.filter(
+      (item) => Array.isArray(item.recipe) && item.recipe.length > 0,
+    );
+    if (menuItemsWithRecipes.length === 0) return;
 
     let cancelled = false;
 
     const syncMenuIngredientsToInventory = async () => {
-      let menuChanged = false;
-      const syncedMenu = await Promise.all(
-        menuItems.map(async (item) => {
-          const hasRecipe = Array.isArray(item.recipe) && item.recipe.length > 0;
-          const recipe = hasRecipe
-            ? item.recipe
-            : getStandardDishSuggestions(
-                item.name || item.dishName || "",
-                item.category || "",
-              );
-          const mappedRecipe = await autoGenerateInventoryFromRecipe(recipe);
-          if (mappedRecipe.length === 0) return item;
-
-          if (JSON.stringify(mappedRecipe) !== JSON.stringify(item.recipe)) {
+      try {
+        let menuChanged = false;
+        const syncedMenu = await Promise.all(
+          menuItems.map(async (item) => {
+            if (!Array.isArray(item.recipe) || item.recipe.length === 0) return item;
+            const mappedRecipe = await autoGenerateInventoryFromRecipe(item.recipe);
+            if (mappedRecipe.length === 0 || JSON.stringify(mappedRecipe) === JSON.stringify(item.recipe)) {
+              return item;
+            }
             menuChanged = true;
             return { ...item, recipe: mappedRecipe };
-          }
-          return item;
-        }),
-      );
+          }),
+        );
 
-      if (cancelled || !menuChanged) return;
-      setMenuItems(syncedMenu);
-      try {
-        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(syncedMenu));
-      } catch {}
+        if (cancelled || !menuChanged) return;
+        setMenuItems(syncedMenu);
+        try {
+          localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(syncedMenu));
+        } catch {}
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[Inventory] Could not sync recipe ingredients:", error);
+        showToast(`Could not sync recipe ingredients to inventory: ${error?.message || "API request failed."}`);
+      }
     };
 
     syncMenuIngredientsToInventory();
     return () => {
       cancelled = true;
     };
-  }, [menuItems]);
+  }, [menuItems, showToast]);
 
   // Load staff personnel (supports Admin staff additions/deletions)
   const [staffList, setStaffList] = useState(() => {
@@ -770,6 +776,7 @@ export function App() {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
+  const takeawayCheckoutInFlightRef = useRef(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -1181,16 +1188,6 @@ export function App() {
   const [isKOTOpen, setIsKOTOpen] = useState(false);
   const kotDispatchesInFlight = useRef(new Set());
   const [reprintReceiptData, setReprintReceiptData] = useState(null);
-
-  // Toast notification
-  const [toastMessage, setToastMessage] = useState(null);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 2800);
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -2937,26 +2934,36 @@ export function App() {
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
     let dineInBackendTableVacated = false;
     if (isTakeawayOrder) {
-      const createResult = await apiCreatePaidTakeawayOrder({
-        orderType: "Takeaway",
-        tableId: null,
-        tableName: "Takeaway",
-        serverName: settlementData.server || posSession?.name || "Server",
-        guests: 1,
-        status: "Settled",
-        paymentMethod: enrichedSettlement.paymentMethod,
-        invoiceNumber: settlementData.invoiceNo,
-        discountPercent: Number(settlementData.discountPercent) || 0,
-        serviceChargeEnabled: false,
-        tipAmount: Number(settlementData.tipAmount) || 0,
-        items: billableItems.map((item) => ({
-          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          notes: item.notes || "",
-        })),
-      });
+      if (takeawayCheckoutInFlightRef.current) return false;
+      takeawayCheckoutInFlightRef.current = true;
+      let createResult;
+      try {
+        createResult = await apiCreatePaidTakeawayOrder({
+          orderType: "Takeaway",
+          tableId: null,
+          tableName: "Takeaway",
+          serverName: settlementData.server || posSession?.name || "Server",
+          guests: 1,
+          status: "Settled",
+          paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: settlementData.invoiceNo,
+          idempotencyKey: settlementData.invoiceNo,
+          discountPercent: Number(settlementData.discountPercent) || 0,
+          serviceChargeEnabled: false,
+          tipAmount: Number(settlementData.tipAmount) || 0,
+          items: billableItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            notes: item.notes || "",
+          })),
+        });
+      } catch (error) {
+        return `Payment was not recorded: ${error?.message || "The server could not save the takeaway order."}`;
+      } finally {
+        takeawayCheckoutInFlightRef.current = false;
+      }
       if (!createResult?.success) {
         const errorMessage = `Payment was not recorded: ${createResult?.error || "The server could not save the takeaway order."}`;
         showToast(errorMessage);

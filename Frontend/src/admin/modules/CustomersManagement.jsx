@@ -1696,7 +1696,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: "var(--modal-overlay, rgba(0, 0, 0, 0.45))",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
@@ -1899,7 +1899,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
+            background: "var(--modal-overlay, rgba(0, 0, 0, 0.45))",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",

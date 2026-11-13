@@ -26,6 +26,9 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   --bg-card: #111c30;
   --bg-card-hover: rgba(26, 40, 68, 0.98);
   --bg-glass: rgba(17, 24, 39, 0.88);
+  --bg-main: #0b1220;
+  --bg-modal: #111c30;
+  --border-modal: #2b3a52;
 
   --border-subtle: rgba(245, 158, 11, 0.24);
   --border-card: #2b3a52;
@@ -88,6 +91,9 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   --bg-card: #ffffff;
   --bg-card-hover: #f8fafc;
   --bg-glass: rgba(255, 255, 255, 0.92);
+  --bg-main: #ffffff;
+  --bg-modal: #ffffff;
+  --border-modal: #cbd5e1;
 
   --border-subtle: #e2e8f0;
   --border-card: #cbd5e1;
@@ -123,6 +129,25 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
 
 [data-theme="light-bistro"] {
   color-scheme: light;
+}
+
+[data-theme="light-bistro"] .modal-overlay,
+[data-theme="light-bistro"] [data-modal] {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
+
+[data-theme="light-bistro"] input,
+[data-theme="light-bistro"] select,
+[data-theme="light-bistro"] textarea {
+  background-color: var(--bg-main) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-card) !important;
+}
+
+[data-theme="light-bistro"] input::placeholder,
+[data-theme="light-bistro"] textarea::placeholder {
+  color: var(--text-dim) !important;
 }
 
 input,
@@ -649,11 +674,6 @@ textarea {
     gap: 0.55rem !important;
   }
 
-  /* Hide verbose desktop widgets on mobile */
-  .desktop-only {
-    display: none !important;
-  }
-
   /* Navigation Header compact on mobile */
   .mobile-header-nav {
     padding: 0.5rem 0.75rem !important;
@@ -661,30 +681,64 @@ textarea {
 
   .mobile-header-primary {
     padding: 0 !important;
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand actions" "clock clock";
+    gap: 0.45rem 0.6rem !important;
+    align-items: center !important;
   }
 
   .mobile-header-primary > div:first-of-type {
-    width: 100%;
-    flex-wrap: wrap !important;
-    justify-content: space-between;
-    gap: 0.5rem !important;
+    grid-area: brand;
+    width: auto !important;
+    min-width: 0;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 0.45rem !important;
   }
 
   .mobile-header-primary > div:first-of-type > nav {
-    width: 100%;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
+    width: auto !important;
+    display: flex !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    min-width: 0;
   }
 
   .mobile-header-primary > div:first-of-type > nav > button {
     justify-content: center;
+    flex: 0 0 auto;
+    padding: 0.35rem 0.45rem !important;
   }
 
   .mobile-header-primary > div:last-child {
+    grid-area: actions;
+    width: auto !important;
+    justify-content: flex-end !important;
+    gap: 0.35rem !important;
+    margin-left: 0 !important;
+  }
+
+  .pos-header-clock {
+    grid-area: clock;
+    display: flex !important;
+    justify-self: start;
+  }
+
+  .pos-header-status {
+    display: block !important;
     width: 100%;
-    justify-content: space-between;
+    box-sizing: border-box;
+    overflow-x: auto;
+    padding: 0.35rem 0.65rem !important;
+  }
+
+  .pos-header-status-inner {
+    width: max-content;
+    min-width: 100%;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    white-space: nowrap;
   }
 
   .mobile-container > div:first-child {

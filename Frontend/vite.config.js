@@ -2310,11 +2310,14 @@ export default defineConfig(({ mode }) => {
     ...loadEnv(mode, process.cwd(), ""),
   };
 
+  const rawBackendUrl = env.BACKEND_URL ?? process.env.BACKEND_URL ?? "";
   const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
   const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
+  const backendUrl = String(rawBackendUrl).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
 
   // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
   const backendTarget =
+    backendUrl ||
     apiBase ||
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||

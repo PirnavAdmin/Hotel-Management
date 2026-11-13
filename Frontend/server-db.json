@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "gourmet_pos_past_orders_v2_inr": [
     {
       "id": 118,
@@ -13790,6 +13791,8 @@
       "Status": "Settled"
     }
   ],
+=======
+>>>>>>> d7636716fcbb5016aa34272ce5ec2817e1ca4f44
   "gourmet_pos_staff_v1": [
     {
       "staffId": 1,
@@ -13888,6 +13891,7 @@
       "monthlySalary": 0
     }
   ],
+<<<<<<< HEAD
   "gourmet_pos_inventory_v1": [
     {
       "id": "inv-1794562192047-lu44",
@@ -14742,4 +14746,8 @@
     "title": "Food Ready to Serve",
     "message": "All dishes for Table-1 are cooked and ready to serve!"
   }
+=======
+  "gourmet_pos_salary_payments_v1": [],
+  "gourmet_pos_tables_v2_inr": []
+>>>>>>> d7636716fcbb5016aa34272ce5ec2817e1ca4f44
 }

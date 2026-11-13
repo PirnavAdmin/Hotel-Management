@@ -3,12 +3,12 @@ import { apiClient } from "./apiConfig";
 /**
  * Retrieves all inventory ingredients from backend MySQL database.
  */
-export async function apiGetInventory(category, search) {
+export async function apiGetInventory(category, search, options = {}) {
   const query = new URLSearchParams();
   if (category) query.set("category", category);
   if (search) query.set("search", search);
   const queryString = query.toString();
-  return apiClient(`/api/v1/inventory${queryString ? `?${queryString}` : ""}`);
+  return apiClient(`/api/v1/inventory${queryString ? `?${queryString}` : ""}`, options);
 }
 
 export async function apiGetInventoryIngredients() {
@@ -56,6 +56,7 @@ export async function apiCreateInventoryItem(itemData) {
 export async function apiCreateIngredient(ingredientData) {
   return apiClient("/api/v1/inventory/ingredients", {
     method: "POST",
+    remoteOnly: true,
     body: JSON.stringify(ingredientData),
   });
 }
