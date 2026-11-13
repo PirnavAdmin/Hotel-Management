@@ -674,8 +674,11 @@ export function installGlobalFetchInterceptor() {
       });
     }
 
+    const requestDetail = { requestId, method, url, button: null };
+    window.dispatchEvent(new CustomEvent("api-request-start", { detail: requestDetail }));
     try {
       const response = await originalFetch.apply(this, arguments);
+      window.dispatchEvent(new CustomEvent("api-request-end", { detail: requestDetail }));
       const durationMs = Math.round(performance.now() - startTime);
 
       if (!skipLogging && isApiLoggingEnabled()) {
@@ -755,6 +758,7 @@ export function installGlobalFetchInterceptor() {
 
       return response;
     } catch (networkError) {
+      window.dispatchEvent(new CustomEvent("api-request-end", { detail: requestDetail }));
       const durationMs = Math.round(performance.now() - startTime);
       if (!skipLogging && isApiLoggingEnabled()) {
         logApiError({

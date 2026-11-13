@@ -2315,11 +2315,11 @@ export default defineConfig(({ mode }) => {
 
   // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
   const backendTarget =
-    process.env.BACKEND_URL ||
-    env.BACKEND_URL ||
+    apiBase ||
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||
-    apiBase ||
+    process.env.BACKEND_URL ||
+    env.BACKEND_URL ||
     "http://127.0.0.1:5018";
 
   return {

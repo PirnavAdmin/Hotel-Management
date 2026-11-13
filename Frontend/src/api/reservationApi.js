@@ -150,92 +150,40 @@ const unwrap = (result) => {
 
 /** Legacy Admin/POS listing contract. Never substitute guest-facing mock records. */
 export async function apiGetReservations(params = {}) {
-  return unwrap(await apiClient(`${BASE}${queryString(params)}`));
+  return unwrap(await apiClient(`${BASE}${queryString(params)}`, { remoteOnly: true }));
 }
 export async function apiGetReservationById(id) {
-  return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`));
+  return unwrap(await apiClient(`${BASE}/${encodeURIComponent(id)}`, { remoteOnly: true }));
 }
 export async function apiCreateReservation(reservationData) {
-  try {
-    const remote = await apiClient(BASE, { method: "POST", body: JSON.stringify(reservationData) });
-    if (remote?.success) return unwrap(remote);
-  } catch {
-    // Fallback to local storage when backend is unreachable or offline
-  }
-
-  const all = getStoredReservations();
-  const nextNum = 1000 + all.length + 1;
-  const newReservation = {
-    id: `RES-${nextNum}`,
-    reservationId: `RES-${nextNum}`,
-    ...reservationData,
-    advanceAmount: reservationData?.advanceAmount || 100,
-    status: "confirmed",
-    createdAt: new Date().toISOString(),
-  };
-  const updated = [newReservation, ...all];
-  saveStoredReservations(updated);
-
-  if (reservationData?.tableId) {
-    const tables = getStoredReservationTables();
-    const updatedTables = tables.map((t) =>
-      t.id === reservationData.tableId ? { ...t, status: "reserved" } : t
-    );
-    saveStoredReservationTables(updatedTables);
-  }
-
-  return { success: true, data: newReservation };
+  return unwrap(await apiClient(BASE, {
+    method: "POST",
+    body: JSON.stringify(reservationData),
+    remoteOnly: true,
+  }));
 }
 
 export async function apiUpdateReservation(id, reservationData) {
-  try {
-    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      body: JSON.stringify(reservationData)
-    });
-    if (res?.success) return res;
-  } catch {}
-
-  const all = getStoredReservations();
-  const updated = all.map((r) => (r.id === id || r.reservationId === id ? { ...r, ...reservationData } : r));
-  saveStoredReservations(updated);
-  return { success: true, data: updated.find((r) => r.id === id || r.reservationId === id) };
+  return unwrap(await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(reservationData),
+    remoteOnly: true,
+  }));
 }
 
 export async function apiUpdateReservationStatus(id, status) {
-  try {
-    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status })
-    });
-    if (res?.success) return res;
-  } catch {}
-
-  return await apiUpdateReservation(id, { status });
+  return unwrap(await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+    remoteOnly: true,
+  }));
 }
 
 export async function apiDeleteReservation(id) {
-  try {
-    const res = await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
-      method: 'DELETE'
-    });
-    if (res?.success) return res;
-  } catch {}
-
-  const all = getStoredReservations();
-  const target = all.find((r) => r.id === id || r.reservationId === id);
-  const updated = all.filter((r) => r.id !== id && r.reservationId !== id);
-  saveStoredReservations(updated);
-
-  if (target?.tableId) {
-    const tables = getStoredReservationTables();
-    const updatedTables = tables.map((t) =>
-      t.id === target.tableId ? { ...t, status: "available" } : t
-    );
-    saveStoredReservationTables(updatedTables);
-  }
-
-  return { success: true, message: "Reservation deleted successfully." };
+  return unwrap(await apiClient(`/api/v1/reservations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    remoteOnly: true,
+  }));
 }
 
 export const apiCancelReservation = apiDeleteReservation;
