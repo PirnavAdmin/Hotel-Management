@@ -237,11 +237,96 @@ public class ReservationsController : ControllerBase
     #region Create, Read Detail, Modify & Cancel Reservations
 
     /// <summary>
-    /// Retrieves reservations for Admin POS management with optional branch, date, and status filters.
+    /// <summary>
+    /// Retrieves summary metrics for Table Reservations dashboard (Total, Confirmed, Pending, Seated, Completed, Cancelled).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetReservationsSummary(
+        [FromQuery] long? branchId,
+        [FromQuery] string? date,
+        [FromQuery] string? fromDate,
+        [FromQuery] string? toDate)
+    {
+        try
+        {
+            var reservations = await FetchReservationsListAsync(branchId, date, fromDate, toDate, null, null);
+
+            int total = reservations.Count;
+            int confirmed = reservations.Count(r => string.Equals(r.Status, "confirmed", StringComparison.OrdinalIgnoreCase) || string.Equals(r.Status, "booked", StringComparison.OrdinalIgnoreCase));
+            int pending = reservations.Count(r => string.Equals(r.Status, "pending", StringComparison.OrdinalIgnoreCase) || string.Equals(r.Status, "pending_payment", StringComparison.OrdinalIgnoreCase));
+            int seated = reservations.Count(r => string.Equals(r.Status, "seated", StringComparison.OrdinalIgnoreCase));
+            int completed = reservations.Count(r => string.Equals(r.Status, "completed", StringComparison.OrdinalIgnoreCase));
+            int cancelled = reservations.Count(r => string.Equals(r.Status, "cancelled", StringComparison.OrdinalIgnoreCase));
+
+            return Ok(new
+            {
+                success = true,
+                message = "Reservations summary retrieved successfully.",
+                data = new
+                {
+                    totalReservations = total,
+                    total = total,
+                    confirmedBookings = confirmed,
+                    confirmed = confirmed,
+                    pendingBookings = pending,
+                    pending = pending,
+                    seatedBookings = seated,
+                    seated = seated,
+                    completedBookings = completed,
+                    completed = completed,
+                    seatedAndCompleted = seated + completed,
+                    cancelledBookings = cancelled,
+                    cancelled = cancelled
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving reservations summary.");
+            return StatusCode(500, new { success = false, message = "Failed to retrieve reservations summary.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Retrieves reservations for Admin POS management with optional branch, date, search, and status filters.
     /// </summary>
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> GetReservations([FromQuery] long? branchId, [FromQuery] string? date, [FromQuery] string? status)
+    public async Task<IActionResult> GetReservations(
+        [FromQuery] long? branchId,
+        [FromQuery] string? date,
+        [FromQuery] string? fromDate,
+        [FromQuery] string? toDate,
+        [FromQuery] string? status,
+        [FromQuery] string? search)
+    {
+        try
+        {
+            var reservations = await FetchReservationsListAsync(branchId, date, fromDate, toDate, status, search);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Reservations retrieved successfully.",
+                count = reservations.Count,
+                data = reservations
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving reservations.");
+            return StatusCode(500, new { success = false, message = "Failed to retrieve reservations.", error = ex.Message });
+        }
+    }
+
+    private async Task<List<ReservationResponseDto>> FetchReservationsListAsync(
+        long? branchId,
+        string? date,
+        string? fromDate,
+        string? toDate,
+        string? status,
+        string? search)
     {
         string? formattedDate = null;
         if (!string.IsNullOrWhiteSpace(date) && DateTime.TryParse(date, out var parsedDate))
@@ -267,18 +352,37 @@ public class ReservationsController : ControllerBase
 
         var reservations = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapReservationResponse, parameters);
 
-        if (!string.IsNullOrWhiteSpace(status))
+        if (!string.IsNullOrWhiteSpace(fromDate) && DateTime.TryParse(fromDate, out var fromDt))
+        {
+            var fromStr = fromDt.ToString("yyyy-MM-dd");
+            reservations = reservations.Where(r => string.Compare(r.ReservationDate, fromStr, StringComparison.Ordinal) >= 0).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(toDate) && DateTime.TryParse(toDate, out var toDt))
+        {
+            var toStr = toDt.ToString("yyyy-MM-dd");
+            reservations = reservations.Where(r => string.Compare(r.ReservationDate, toStr, StringComparison.Ordinal) <= 0).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && !status.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
             reservations = reservations.Where(r => r.Status.Equals(status, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
-        return Ok(new
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            success = true,
-            message = "Reservations retrieved successfully.",
-            count = reservations.Count,
-            data = reservations
-        });
+            var q = search.Trim();
+            reservations = reservations.Where(r =>
+                (!string.IsNullOrEmpty(r.ReservationNumber) && r.ReservationNumber.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                r.ReservationId.ToString().Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrEmpty(r.CustomerName) && r.CustomerName.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(r.CustomerPhone) && r.CustomerPhone.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(r.TableNumber) && r.TableNumber.Contains(q, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(r.Location) && r.Location.Contains(q, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
+        }
+
+        return reservations;
     }
 
     /// <summary>
@@ -497,53 +601,56 @@ public class ReservationsController : ControllerBase
 
     #region Legacy Admin POS Compatibility Endpoints
 
-    // PUT /api/v1/reservations/{id:long}/status
+    // PUT / PATCH /api/v1/reservations/{id}/status
     [AllowAnonymous]
-    [HttpPut("{id:long}/status")]
-    public async Task<IActionResult> UpdateReservationStatus(long id, [FromBody] UpdateReservationStatusDto request)
+    [HttpPut("{id}/status")]
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateReservationStatus(string id, [FromBody] UpdateReservationStatusDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Status))
         {
             return BadRequest(new { success = false, message = "Status is required." });
         }
 
-        string normalized = request.Status.Trim();
-        if (normalized.Length <= 20)
+        long numericId = 0;
+        if (!string.IsNullOrEmpty(id))
         {
-            var parameters = new Dictionary<string, object?>
-            {
-                { "p_action", "UPDATE_STATUS" },
-                { "p_reservation_id", id },
-                { "p_customer_id", null },
-                { "p_table_id", null },
-                { "p_branch_id", null },
-                { "p_reservation_date", null },
-                { "p_reservation_time", null },
-                { "p_guests_count", null },
-                { "p_status", normalized.ToLowerInvariant() },
-                { "p_notes", null }
-            };
-
-            var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);
-            var result = results.Count > 0 ? results[0] : null;
-
-            return Ok(new
-            {
-                success = true,
-                message = result?.Message ?? "Reservation status updated successfully.",
-                data = new { reservationId = id, status = normalized.ToLowerInvariant() }
-            });
+            var cleanId = System.Text.RegularExpressions.Regex.Replace(id, @"^[^\d]+", "");
+            long.TryParse(cleanId, out numericId);
         }
+
+        if (numericId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Invalid reservation ID." });
+        }
+
+        string normalized = request.Status.Trim();
+        var parameters = new Dictionary<string, object?>
+        {
+            { "p_action", "UPDATE_STATUS" },
+            { "p_reservation_id", numericId },
+            { "p_customer_id", null },
+            { "p_table_id", null },
+            { "p_branch_id", null },
+            { "p_reservation_date", null },
+            { "p_reservation_time", null },
+            { "p_guests_count", null },
+            { "p_status", normalized.ToLowerInvariant() },
+            { "p_notes", null }
+        };
+
+        var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);
+        var result = results.Count > 0 ? results[0] : null;
 
         await _spService.ExecuteSqlNonQueryAsync(
             "UPDATE reservations SET status = @stat, updated_at = UTC_TIMESTAMP() WHERE reservation_id = @rid;",
-            new Dictionary<string, object?> { { "@stat", normalized }, { "@rid", id } });
+            new Dictionary<string, object?> { { "@stat", normalized.ToLowerInvariant() }, { "@rid", numericId } });
 
         return Ok(new
         {
             success = true,
-            message = "Reservation status updated successfully.",
-            data = new { reservationId = id, status = normalized }
+            message = result?.Message ?? "Reservation status updated successfully.",
+            data = new { reservationId = numericId, status = normalized.ToLowerInvariant() }
         });
     }
 
