@@ -197,12 +197,19 @@ function globalSyncPlugin(backendTarget) {
   const saveDb = (data) => {
     try {
       const file = getDataFile();
-      fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+      const serialized = JSON.stringify(data, null, 2);
+      const writeIfChanged = (target) => {
+        const existing = fs.existsSync(target)
+          ? fs.readFileSync(target, "utf-8").replace(/^\uFEFF/, "")
+          : null;
+        if (existing !== serialized) fs.writeFileSync(target, serialized, "utf-8");
+      };
+      writeIfChanged(file);
       const altFile = file.includes("Frontend")
         ? path.resolve(file, "..", "..", "server-db.json")
         : path.resolve(file, "..", "Frontend", "server-db.json");
       if (fs.existsSync(altFile) && altFile !== file) {
-        try { fs.writeFileSync(altFile, JSON.stringify(data, null, 2), "utf-8"); } catch {}
+        try { writeIfChanged(altFile); } catch {}
       }
     } catch {}
   };
