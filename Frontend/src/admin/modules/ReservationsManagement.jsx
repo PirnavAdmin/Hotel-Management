@@ -38,419 +38,6 @@ import { ReceiptModal, formatOrderNumber } from "../../user/ReceiptModal";
 
 
 // ── Default Curated Seed Reservations (matches Takeaway scale & IDs: RES-4964, RES-3884, etc.) ──
-const INITIAL_SEED_RESERVATIONS = [
-  {
-    id: "RES-4964",
-    reservationId: "RES-4964",
-    customerName: "Priya Sharma",
-    phone: "+91 98765 43210",
-    email: "priya.sharma@example.com",
-    tableId: 3,
-    tableName: "Table 3 (Indoor AC)",
-    tableNumber: 3,
-    guestsCount: 2,
-    reservationDate: "2026-11-12",
-    reservationTime: "07:30 PM",
-    status: "confirmed",
-    advanceAmount: 100,
-    paymentMethod: "UPI (Google Pay)",
-    notes: "Anniversary celebration. Window table preference.",
-    createdAt: "2026-11-12T10:30:00",
-  },
-  {
-    id: "RES-3884",
-    reservationId: "RES-3884",
-    customerName: "Ramesh Kumar",
-    phone: "+91 98450 11223",
-    email: "ramesh.k@example.com",
-    tableId: 5,
-    tableName: "Table 5 (Main Hall)",
-    tableNumber: 5,
-    guestsCount: 4,
-    reservationDate: "2026-11-12",
-    reservationTime: "08:00 PM",
-    status: "confirmed",
-    advanceAmount: 200,
-    paymentMethod: "UPI (PhonePe)",
-    notes: "High chair needed for a child.",
-    createdAt: "2026-11-12T11:15:00",
-  },
-  {
-    id: "RES-9156",
-    reservationId: "RES-9156",
-    customerName: "Vikram Singh",
-    phone: "+91 90085 33445",
-    email: "vikram.s@example.com",
-    tableId: 8,
-    tableName: "Table 8 (Outdoor Patio)",
-    tableNumber: 8,
-    guestsCount: 6,
-    reservationDate: "2026-11-12",
-    reservationTime: "08:30 PM",
-    status: "seated",
-    advanceAmount: 300,
-    paymentMethod: "Card",
-    notes: "Family reunion dinner. Warm lighting preferred.",
-    createdAt: "2026-11-12T09:45:00",
-  },
-  {
-    id: "RES-6157",
-    reservationId: "RES-6157",
-    customerName: "Ananya Reddy",
-    phone: "+91 99887 76655",
-    email: "ananya.r@example.com",
-    tableId: 2,
-    tableName: "Table 2 (Indoor AC)",
-    tableNumber: 2,
-    guestsCount: 2,
-    reservationDate: "2026-11-12",
-    reservationTime: "07:00 PM",
-    status: "confirmed",
-    advanceAmount: 100,
-    paymentMethod: "UPI (Paytm)",
-    notes: "Quiet corner table for birthday celebration.",
-    createdAt: "2026-11-12T12:00:00",
-  },
-  {
-    id: "RES-2515",
-    reservationId: "RES-2515",
-    customerName: "Karthik Mohan",
-    phone: "+91 78902 55661",
-    email: "karthik.m@example.com",
-    tableId: 4,
-    tableName: "Table 4 (Indoor AC)",
-    tableNumber: 4,
-    guestsCount: 4,
-    reservationDate: "2026-11-12",
-    reservationTime: "09:00 PM",
-    status: "pending",
-    advanceAmount: 200,
-    paymentMethod: "UPI",
-    notes: "Please keep dessert menu ready.",
-    createdAt: "2026-11-12T13:20:00",
-  },
-  {
-    id: "RES-5306",
-    reservationId: "RES-5306",
-    customerName: "Suresh Das",
-    phone: "+91 99804 22110",
-    email: "suresh.das@example.com",
-    tableId: 6,
-    tableName: "Table 6 (Outdoor Garden)",
-    tableNumber: 6,
-    guestsCount: 6,
-    reservationDate: "2026-11-12",
-    reservationTime: "01:30 PM",
-    status: "completed",
-    advanceAmount: 300,
-    paymentMethod: "Cash",
-    notes: "Corporate executive lunch meeting.",
-    createdAt: "2026-11-12T08:15:00",
-  },
-  {
-    id: "RES-1023",
-    reservationId: "RES-1023",
-    customerName: "Sneha Reddy",
-    phone: "+91 98451 22334",
-    email: "sneha.reddy@example.com",
-    tableId: 1,
-    tableName: "Table 1 (Indoor)",
-    tableNumber: 1,
-    guestsCount: 2,
-    reservationDate: "2026-11-13",
-    reservationTime: "08:00 PM",
-    status: "confirmed",
-    advanceAmount: 100,
-    paymentMethod: "UPI",
-    notes: "Candlelight arrangement requested.",
-    createdAt: "2026-11-11T16:40:00",
-  },
-  {
-    id: "RES-1022",
-    reservationId: "RES-1022",
-    customerName: "Rahul Verma",
-    phone: "+91 98112 44556",
-    email: "rahul.v@example.com",
-    tableId: 7,
-    tableName: "Table 7 (Outdoor)",
-    tableNumber: 7,
-    guestsCount: 4,
-    reservationDate: "2026-11-13",
-    reservationTime: "07:30 PM",
-    status: "pending",
-    advanceAmount: 200,
-    paymentMethod: "Card",
-    notes: "Non-smoking zone required.",
-    createdAt: "2026-11-11T15:20:00",
-  },
-  {
-    id: "RES-1021",
-    reservationId: "RES-1021",
-    customerName: "Meenakshi Sundaram",
-    phone: "+91 97334 55667",
-    email: "meenakshi@example.com",
-    tableId: 9,
-    tableName: "Table 9 (Private Dining)",
-    tableNumber: 9,
-    guestsCount: 8,
-    reservationDate: "2026-11-13",
-    reservationTime: "08:30 PM",
-    status: "confirmed",
-    advanceAmount: 500,
-    paymentMethod: "Net Banking",
-    notes: "Exclusive private dining booking with custom banquet menu.",
-    createdAt: "2026-11-11T14:10:00",
-  },
-  {
-    id: "RES-1020",
-    reservationId: "RES-1020",
-    customerName: "Aditya Roy",
-    phone: "+91 96221 88990",
-    email: "aditya.roy@example.com",
-    tableId: 3,
-    tableName: "Table 3 (Indoor AC)",
-    tableNumber: 3,
-    guestsCount: 2,
-    reservationDate: "2026-11-11",
-    reservationTime: "08:00 PM",
-    status: "completed",
-    advanceAmount: 100,
-    paymentMethod: "UPI",
-    notes: "Dinner completed happily.",
-    createdAt: "2026-11-10T12:00:00",
-  },
-  {
-    id: "RES-1019",
-    reservationId: "RES-1019",
-    customerName: "Pooja Hegde",
-    phone: "+91 95443 22110",
-    email: "pooja.h@example.com",
-    tableId: 5,
-    tableName: "Table 5 (Main Hall)",
-    tableNumber: 5,
-    guestsCount: 4,
-    reservationDate: "2026-11-11",
-    reservationTime: "07:30 PM",
-    status: "completed",
-    advanceAmount: 200,
-    paymentMethod: "UPI",
-    notes: "",
-    createdAt: "2026-11-10T11:00:00",
-  },
-  {
-    id: "RES-1018",
-    reservationId: "RES-1018",
-    customerName: "Rajesh Varma",
-    phone: "+91 91234 56789",
-    email: "rajesh@example.com",
-    tableId: 8,
-    tableName: "Table 8 (Outdoor Patio)",
-    tableNumber: 8,
-    guestsCount: 4,
-    reservationDate: "2026-11-11",
-    reservationTime: "08:30 PM",
-    status: "completed",
-    advanceAmount: 200,
-    paymentMethod: "Credit Card",
-    notes: "High chair for child.",
-    createdAt: "2026-11-09T18:00:00",
-  },
-  {
-    id: "RES-1017",
-    reservationId: "RES-1017",
-    customerName: "Gautam Rao",
-    phone: "+91 94332 11998",
-    email: "gautam.rao@example.com",
-    tableId: 2,
-    tableName: "Table 2 (Indoor AC)",
-    tableNumber: 2,
-    guestsCount: 2,
-    reservationDate: "2026-11-10",
-    reservationTime: "08:00 PM",
-    status: "completed",
-    advanceAmount: 100,
-    paymentMethod: "UPI",
-    notes: "",
-    createdAt: "2026-11-09T14:30:00",
-  },
-  {
-    id: "RES-1016",
-    reservationId: "RES-1016",
-    customerName: "Divya Nair",
-    phone: "+91 94810 77550",
-    email: "divya.n@example.com",
-    tableId: 6,
-    tableName: "Table 6 (Outdoor Garden)",
-    tableNumber: 6,
-    guestsCount: 6,
-    reservationDate: "2026-11-09",
-    reservationTime: "01:30 PM",
-    status: "completed",
-    advanceAmount: 300,
-    paymentMethod: "UPI",
-    notes: "Team celebration lunch.",
-    createdAt: "2026-11-08T16:00:00",
-  },
-  {
-    id: "RES-1015",
-    reservationId: "RES-1015",
-    customerName: "Manoj Tiwari",
-    phone: "+91 97422 88990",
-    email: "manoj.t@example.com",
-    tableId: 4,
-    tableName: "Table 4 (Indoor AC)",
-    tableNumber: 4,
-    guestsCount: 4,
-    reservationDate: "2026-11-08",
-    reservationTime: "08:00 PM",
-    status: "cancelled",
-    advanceAmount: 200,
-    paymentMethod: "UPI",
-    notes: "Guest cancelled due to travel delay.",
-    createdAt: "2026-11-07T10:15:00",
-  },
-  {
-    id: "RES-1014",
-    reservationId: "RES-1014",
-    customerName: "Kavitha Narayan",
-    phone: "+91 93221 00887",
-    email: "kavitha.n@example.com",
-    tableId: 1,
-    tableName: "Table 1 (Indoor)",
-    tableNumber: 1,
-    guestsCount: 2,
-    reservationDate: "2026-11-07",
-    reservationTime: "07:30 PM",
-    status: "completed",
-    advanceAmount: 100,
-    paymentMethod: "Cash",
-    notes: "",
-    createdAt: "2026-11-06T15:00:00",
-  },
-  {
-    id: "RES-1013",
-    reservationId: "RES-1013",
-    customerName: "Arun Kumar",
-    phone: "+91 98452 33445",
-    email: "arun.k@example.com",
-    tableId: 7,
-    tableName: "Table 7 (Outdoor)",
-    tableNumber: 7,
-    guestsCount: 4,
-    reservationDate: "2026-11-06",
-    reservationTime: "08:00 PM",
-    status: "completed",
-    advanceAmount: 200,
-    paymentMethod: "UPI",
-    notes: "",
-    createdAt: "2026-11-05T12:00:00",
-  },
-  {
-    id: "RES-1012",
-    reservationId: "RES-1012",
-    customerName: "Ananya Roy",
-    phone: "+91 99887 76655",
-    email: "ananya@example.com",
-    tableId: 8,
-    tableName: "Table 8 (Outdoor Patio)",
-    tableNumber: 8,
-    guestsCount: 6,
-    reservationDate: "2026-11-05",
-    reservationTime: "01:30 PM",
-    status: "completed",
-    advanceAmount: 300,
-    paymentMethod: "Net Banking",
-    notes: "Family reunion.",
-    createdAt: "2026-11-04T16:00:00",
-  },
-  {
-    id: "RES-1011",
-    reservationId: "RES-1011",
-    customerName: "Deepa Menon",
-    phone: "+91 98113 55667",
-    email: "deepa.m@example.com",
-    tableId: 3,
-    tableName: "Table 3 (Indoor AC)",
-    tableNumber: 3,
-    guestsCount: 2,
-    reservationDate: "2026-11-04",
-    reservationTime: "08:30 PM",
-    status: "completed",
-    advanceAmount: 100,
-    paymentMethod: "UPI",
-    notes: "",
-    createdAt: "2026-11-03T11:20:00",
-  },
-  {
-    id: "RES-1010",
-    reservationId: "RES-1010",
-    customerName: "Kiran Bedi",
-    phone: "+91 97335 66778",
-    email: "kiran.b@example.com",
-    tableId: 5,
-    tableName: "Table 5 (Main Hall)",
-    tableNumber: 5,
-    guestsCount: 4,
-    reservationDate: "2026-11-03",
-    reservationTime: "07:30 PM",
-    status: "completed",
-    advanceAmount: 200,
-    paymentMethod: "UPI",
-    notes: "",
-    createdAt: "2026-11-02T17:45:00",
-  },
-  {
-    id: "RES-1009",
-    reservationId: "RES-1009",
-    customerName: "Sanjay Vyas",
-    phone: "+91 96222 99001",
-    email: "sanjay.v@example.com",
-    tableId: 2,
-    tableName: "Table 2 (Indoor AC)",
-    tableNumber: 2,
-    guestsCount: 2,
-    reservationDate: "2026-11-02",
-    reservationTime: "08:00 PM",
-    status: "cancelled",
-    advanceAmount: 100,
-    paymentMethod: "UPI",
-    notes: "Cancelled by guest.",
-    createdAt: "2026-11-01T14:10:00",
-  },
-  {
-    id: "RES-1008",
-    reservationId: "RES-1008",
-    customerName: "Meera Sengupta",
-    phone: "+91 95444 33221",
-    email: "meera.s@example.com",
-    tableId: 9,
-    tableName: "Table 9 (Private Dining)",
-    tableNumber: 9,
-    guestsCount: 8,
-    reservationDate: "2026-11-01",
-    reservationTime: "08:30 PM",
-    status: "completed",
-    advanceAmount: 500,
-    paymentMethod: "Card",
-    notes: "Anniversary celebration dinner.",
-    createdAt: "2026-10-31T18:00:00",
-  },
-];
-
-const DEFAULT_TABLES = [
-  { id: 1, tableId: 1, name: "Table 1", section: "Indoor AC", capacity: 2, status: "available" },
-  { id: 2, tableId: 2, name: "Table 2", section: "Indoor AC", capacity: 2, status: "reserved" },
-  { id: 3, tableId: 3, name: "Table 3", section: "Indoor AC", capacity: 2, status: "reserved" },
-  { id: 4, tableId: 4, name: "Table 4", section: "Indoor AC", capacity: 4, status: "available" },
-  { id: 5, tableId: 5, name: "Table 5", section: "Main Hall", capacity: 4, status: "reserved" },
-  { id: 6, tableId: 6, name: "Table 6", section: "Outdoor Garden", capacity: 6, status: "available" },
-  { id: 7, tableId: 7, name: "Table 7", section: "Outdoor Patio", capacity: 4, status: "available" },
-  { id: 8, tableId: 8, name: "Table 8", section: "Outdoor Patio", capacity: 6, status: "reserved" },
-  { id: 9, tableId: 9, name: "Table 9", section: "Private Dining", capacity: 8, status: "available" },
-  { id: 10, tableId: 10, name: "Table 10", section: "Family Lounge", capacity: 6, status: "available" },
-];
-
-// Vibrant status tab color themes (matches Takeaway Orders tabs)
 const STATUS_TAB_THEMES = {
   all: {
     text: "#ea580c",
@@ -534,7 +121,6 @@ export function ReservationsManagement({
 
   // ── 3. Modals & Actions Menu State ─────────────────────────────────────
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
-  const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
   const [isNewBookingModalOpen, setIsNewBookingModalOpen] = useState(false);
   const [viewingReservation, setViewingReservation] = useState(null);
   const [printReceiptReservation, setPrintReceiptReservation] = useState(null);
@@ -565,7 +151,6 @@ export function ReservationsManagement({
     const handleOutsideClick = (e) => {
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
         setActionMenuOpenId(null);
-        setActionMenuOpenAbove(false);
       }
     };
     if (actionMenuOpenId) {
@@ -574,14 +159,6 @@ export function ReservationsManagement({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [actionMenuOpenId]);
 
-  // Sync state to localStorage whenever reservations change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_RESERVATIONS, JSON.stringify(reservations));
-    } catch (e) {
-      console.warn("Storage sync failed:", e);
-    }
-  }, [reservations]);
 
   // ── 4. Fetch / Refresh Reservations ────────────────────────────────────
   const fetchReservations = async (silent = false) => {
@@ -591,22 +168,13 @@ export function ReservationsManagement({
         apiGetReservations(),
         apiGetTables({ remoteOnly: true }),
       ]);
-
-      if (resRes.status === "fulfilled" && resRes.value?.success && Array.isArray(resRes.value.data)) {
-        const serverData = resRes.value.data;
-        if (serverData.length > 0) {
-          setReservations((prev) => {
-            const serverIds = new Set(serverData.map((r) => String(r.reservationId || r.id)));
-            const localOnly = prev.filter((r) => !serverIds.has(String(r.reservationId || r.id)));
-            return [...localOnly, ...serverData];
-          });
-        }
-      }
-
-      if (tblRes.status === "fulfilled" && tblRes.value?.success && Array.isArray(tblRes.value.data)) {
-        if (tblRes.value.data.length > 0) {
-          setTablesList(tblRes.value.data);
-        }
+      if (!reservationResult?.success) throw new Error(reservationResult?.error || "Could not load reservations.");
+      setReservations(Array.isArray(reservationResult.data) ? reservationResult.data.map(normalizeReservation) : []);
+      if (tableResult?.success) {
+        const payload = tableResult.data?.data ?? tableResult.data;
+        setTablesList(Array.isArray(payload) ? payload : []);
+      } else if (!silent) {
+        showToast(tableResult?.error || "Could not load table options.");
       }
       if (!silent) showToast("Reservations refreshed.");
     } catch (error) {
@@ -624,43 +192,41 @@ export function ReservationsManagement({
 
   // ── 5. Status Update Handler ───────────────────────────────────────────
   const handleStatusUpdate = async (reservationId, newStatus) => {
-    setReservations((prev) =>
-      prev.map((r) =>
-        String(r.reservationId || r.id) === String(reservationId)
-          ? { ...r, status: newStatus, updatedAt: new Date().toISOString() }
-          : r
-      )
-    );
-    setActionMenuOpenId(null);
-    if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) {
-      setViewingReservation((prev) => ({ ...prev, status: newStatus }));
-    }
-
     try {
-      await apiUpdateReservationStatus(reservationId, newStatus);
-    } catch (e) {
-      console.warn("Backend status update offline, state kept locally:", e);
+      const result = await apiUpdateReservationStatus(reservationId, newStatus);
+      if (!result?.success) throw new Error(result?.error || "Could not update reservation status.");
+      setActionMenuOpenId(null);
+      await fetchReservations(true);
+      showToast(`Reservation marked as ${newStatus}.`);
+    } catch (error) {
+      showToast(error?.message || "Could not update reservation status.");
+    }
+  };
+
+  const handleViewReservation = async (reservation) => {
+    const id = reservation.reservationId || reservation.id;
+    setViewingReservation({ ...reservation, detailsLoading: true });
+    const result = await apiGetReservationById(id);
+    if (!result?.success) {
+      setViewingReservation(null);
+      showToast(result?.error || "Could not load reservation details.");
+      return;
     }
     setViewingReservation(normalizeReservation(result.data?.data || result.data || reservation));
   };
   const handleDelete = async (reservationId) => {
-    if (!window.confirm("Are you sure you want to remove this reservation?")) return;
-    setReservations((prev) =>
-      prev.filter((r) => String(r.reservationId || r.id) !== String(reservationId))
-    );
-    setActionMenuOpenId(null);
-    if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) {
-      setViewingReservation(null);
-    }
+    if (!window.confirm("Are you sure you want to cancel this reservation?")) return;
     try {
-      await apiDeleteReservation(reservationId);
-    } catch (e) {
-      console.warn("Backend delete offline, removed locally:", e);
+      const result = await apiDeleteReservation(reservationId);
+      if (!result?.success) throw new Error(result?.error || "Could not cancel reservation.");
+      setActionMenuOpenId(null);
+      if (viewingReservation && String(viewingReservation.reservationId || viewingReservation.id) === String(reservationId)) setViewingReservation(null);
+      await fetchReservations(true);
+      showToast("Reservation cancelled.");
+    } catch (error) {
+      showToast(error?.message || "Could not cancel reservation.");
     }
-    showToast("✅ Reservation removed.");
   };
-
-  // ── 7. Create New Reservation ──────────────────────────────────────────
   const handleCreateReservation = async (e) => {
     e.preventDefault();
     if (!form.customerName.trim() || !form.phone.trim() || !form.tableId || !form.reservationDate || !form.reservationTime) {
@@ -668,48 +234,28 @@ export function ReservationsManagement({
       return;
     }
     setSaving(true);
-    const chosenTable = tablesList.find(
-      (t) => (t.id || t.tableId) === Number(form.tableId)
-    );
-    const nextIdNum = 5000 + Math.floor(Math.random() * 4000);
-    const newReservation = {
-      id: `RES-${nextIdNum}`,
-      reservationId: `RES-${nextIdNum}`,
-      customerName: form.customerName.trim(),
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-      tableId: Number(form.tableId),
-      tableName: chosenTable ? (chosenTable.name || chosenTable.tableName || `Table ${chosenTable.id}`) : `Table ${form.tableId}`,
-      tableNumber: chosenTable ? (chosenTable.tableNumber || chosenTable.id) : form.tableId,
-      guestsCount: Number(form.guestsCount) || 2,
-      reservationDate: form.reservationDate,
-      reservationTime: form.reservationTime,
-      status: "confirmed",
-      advanceAmount: Number(form.advanceAmount) || 100,
-      paymentMethod: "Advance (Cash / Counter)",
-      notes: form.notes.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    setReservations((prev) => [newReservation, ...prev]);
-    setIsNewBookingModalOpen(false);
-    setForm({
-      customerName: "",
-      phone: "",
-      email: "",
-      tableId: tablesList[0]?.id || 1,
-      guestsCount: 2,
-      reservationDate: new Date().toISOString().split("T")[0],
-      reservationTime: "07:30 PM",
-      notes: "",
-      advanceAmount: 100,
-    });
-    setSaving(false);
-
     try {
-      await apiCreateReservation(newReservation);
-    } catch (e) {
-      console.warn("Backend reservation create offline, preserved locally:", e);
+      const result = await apiCreateReservation({
+        customerName: form.customerName.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || null,
+        tableId: Number(form.tableId),
+        guestsCount: Number(form.guestsCount) || 2,
+        reservationDate: form.reservationDate,
+        reservationTime: form.reservationTime,
+        status: "confirmed",
+        notes: form.notes.trim() || null,
+        source: "admin",
+      });
+      if (!result?.success) throw new Error(result?.error || "Could not create reservation.");
+      setIsNewBookingModalOpen(false);
+      setForm({ customerName: "", phone: "", email: "", tableId: tablesList[0]?.tableId || tablesList[0]?.id || "", guestsCount: 2, reservationDate: new Date().toISOString().split("T")[0], reservationTime: "07:30 PM", notes: "" });
+      await fetchReservations(true);
+      showToast("Table reservation created successfully.");
+    } catch (error) {
+      showToast(error?.message || "Could not create reservation.");
+    } finally {
+      setSaving(false);
     }
   };
   const [currentPage, setCurrentPage] = useState(1);
@@ -722,18 +268,14 @@ export function ReservationsManagement({
     // Status Tab Filter
     if (activeStatusTab !== "all") {
       list = list.filter(
-        (r) =>
-          String(r.status || "").toLowerCase() ===
-          activeStatusTab.toLowerCase(),
+        (r) => String(r.status || "").toLowerCase() === activeStatusTab.toLowerCase()
       );
     }
 
     // Secondary Status Dropdown Filter
     if (secondaryStatusFilter !== "all") {
       list = list.filter(
-        (r) =>
-          String(r.status || "").toLowerCase() ===
-          secondaryStatusFilter.toLowerCase(),
+        (r) => String(r.status || "").toLowerCase() === secondaryStatusFilter.toLowerCase()
       );
     }
 
@@ -744,13 +286,9 @@ export function ReservationsManagement({
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
     if (dateFilter === "today") {
-      list = list.filter((r) =>
-        String(r.reservationDate || r.date || "").startsWith(todayStr),
-      );
+      list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(todayStr));
     } else if (dateFilter === "tomorrow") {
-      list = list.filter((r) =>
-        String(r.reservationDate || r.date || "").startsWith(tomorrowStr),
-      );
+      list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(tomorrowStr));
     } else if (dateFilter === "7days") {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -761,14 +299,10 @@ export function ReservationsManagement({
       });
     } else if (dateFilter === "month") {
       const currentMonth = todayStr.slice(0, 7);
-      list = list.filter((r) =>
-        String(r.reservationDate || r.date || "").startsWith(currentMonth),
-      );
+      list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(currentMonth));
     } else if (dateFilter === "custom") {
       if (particularDate) {
-        list = list.filter((r) =>
-          String(r.reservationDate || r.date || "").startsWith(particularDate),
-        );
+        list = list.filter((r) => String(r.reservationDate || r.date || "").startsWith(particularDate));
       } else if (customStartDate && customEndDate) {
         list = list.filter((r) => {
           const d = String(r.reservationDate || r.date || "");
@@ -782,21 +316,10 @@ export function ReservationsManagement({
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((r) => {
         const idStr = String(r.reservationId ?? r.id ?? "").toLowerCase();
-        const nameStr = String(
-          r.customerName ?? r.name ?? r.customer ?? "",
-        ).toLowerCase();
+        const nameStr = String(r.customerName ?? r.name ?? r.customer ?? "").toLowerCase();
         const phoneStr = String(r.phone ?? r.customerPhone ?? "").toLowerCase();
-        const tableStr = String(
-          r.tableName ??
-            (r.tableNumber
-              ? `Table ${r.tableNumber}`
-              : r.tableId
-                ? `Table ${r.tableId}`
-                : ""),
-        ).toLowerCase();
-        const notesStr = String(
-          r.notes ?? r.specialRequests ?? "",
-        ).toLowerCase();
+        const tableStr = String(r.tableName ?? (r.tableNumber ? `Table ${r.tableNumber}` : r.tableId ? `Table ${r.tableId}` : "")).toLowerCase();
+        const notesStr = String(r.notes ?? r.specialRequests ?? "").toLowerCase();
         const statusStr = String(r.status ?? "").toLowerCase();
         const dateStr = String(r.reservationDate ?? r.date ?? "").toLowerCase();
         const timeStr = String(r.reservationTime ?? r.time ?? "").toLowerCase();
@@ -825,64 +348,32 @@ export function ReservationsManagement({
     searchQuery,
   ]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredReservations.length / PAGE_SIZE),
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredReservations.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const pageStart = (safePage - 1) * PAGE_SIZE;
   const paginatedReservations = useMemo(
     () => filteredReservations.slice(pageStart, pageStart + PAGE_SIZE),
-    [filteredReservations, pageStart],
+    [filteredReservations, pageStart]
   );
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    activeStatusTab,
-    secondaryStatusFilter,
-    dateFilter,
-    particularDate,
-    customStartDate,
-    customEndDate,
-    searchQuery,
-  ]);
+  }, [activeStatusTab, secondaryStatusFilter, dateFilter, particularDate, customStartDate, customEndDate, searchQuery]);
 
   // ── 9. KPI Metrics Calculation ─────────────────────────────────────────
   const metrics = useMemo(() => {
-    const total = reservations.length;
-    const confirmed = reservations.filter(
-      (r) => String(r.status || "").toLowerCase() === "confirmed"
-    ).length;
-    const pending = reservations.filter(
-      (r) => String(r.status || "").toLowerCase() === "pending"
-    ).length;
-    const seatedOrCompleted = reservations.filter((r) => {
-      const s = String(r.status || "").toLowerCase();
-      return s === "seated" || s === "completed";
-    }).length;
-
-    return { total, confirmed, pending, seatedOrCompleted };
+    const count = (status) => reservations.filter((r) => String(r.status || "").toLowerCase() === status).length;
+    return { total: reservations.length, confirmed: count("confirmed"), pending: count("pending"), seated: count("seated"), completed: count("completed"), cancelled: count("cancelled") };
   }, [reservations]);
   // Tab badge counts
   const tabCounts = useMemo(() => {
     return {
       all: reservations.length,
-      confirmed: reservations.filter(
-        (r) => String(r.status).toLowerCase() === "confirmed",
-      ).length,
-      pending: reservations.filter(
-        (r) => String(r.status).toLowerCase() === "pending",
-      ).length,
-      seated: reservations.filter(
-        (r) => String(r.status).toLowerCase() === "seated",
-      ).length,
-      completed: reservations.filter(
-        (r) => String(r.status).toLowerCase() === "completed",
-      ).length,
-      cancelled: reservations.filter(
-        (r) => String(r.status).toLowerCase() === "cancelled",
-      ).length,
+      confirmed: reservations.filter((r) => String(r.status).toLowerCase() === "confirmed").length,
+      pending: reservations.filter((r) => String(r.status).toLowerCase() === "pending").length,
+      seated: reservations.filter((r) => String(r.status).toLowerCase() === "seated").length,
+      completed: reservations.filter((r) => String(r.status).toLowerCase() === "completed").length,
+      cancelled: reservations.filter((r) => String(r.status).toLowerCase() === "cancelled").length,
     };
   }, [reservations]);
 
@@ -941,8 +432,7 @@ export function ReservationsManagement({
 
     const resId = String(r.reservationId || r.id || "RES-1000");
     const tableName = String(
-      r.tableName ||
-        (r.tableNumber ? `Table ${r.tableNumber}` : `Table ${r.tableId || 1}`),
+      r.tableName || (r.tableNumber ? `Table ${r.tableNumber}` : `Table ${r.tableId || 1}`)
     );
     const advancePaid = Number(r.advanceAmount) || 0;
 
@@ -968,8 +458,7 @@ export function ReservationsManagement({
       section: r.section || "Fine Dining",
       server: "Host Staff",
       guests: Number(r.guestsCount || r.guests || 2),
-      date:
-        r.reservationDate || r.date || new Date().toISOString().split("T")[0],
+      date: r.reservationDate || r.date || new Date().toISOString().split("T")[0],
       orderTime: r.reservationTime || r.time || "07:30 PM",
       status: r.status === "cancelled" ? "Cancelled" : "Completed",
       isPaid: true,
@@ -1045,8 +534,7 @@ export function ReservationsManagement({
                 color: "var(--text-muted, #94a3b8)",
               }}
             >
-              Schedule dining room bookings, manage guest arrivals, and track
-              table allocations
+              Schedule dining room bookings, manage guest arrivals, and track table allocations
             </p>
           </div>
         </div>
@@ -1120,19 +608,10 @@ export function ReservationsManagement({
                       padding: "0.55rem 0.85rem",
                       borderRadius: "6px",
                       border: "none",
-                      background:
-                        dateFilter === preset.value && !particularDate
-                          ? "rgba(234, 88, 12, 0.15)"
-                          : "transparent",
-                      color:
-                        dateFilter === preset.value && !particularDate
-                          ? "#ea580c"
-                          : "var(--text-main, #f8fafc)",
+                      background: dateFilter === preset.value && !particularDate ? "rgba(234, 88, 12, 0.15)" : "transparent",
+                      color: dateFilter === preset.value && !particularDate ? "#ea580c" : "var(--text-main, #f8fafc)",
                       fontSize: "0.82rem",
-                      fontWeight:
-                        dateFilter === preset.value && !particularDate
-                          ? 600
-                          : 400,
+                      fontWeight: dateFilter === preset.value && !particularDate ? 600 : 400,
                       cursor: "pointer",
                     }}
                   >
@@ -1148,19 +627,10 @@ export function ReservationsManagement({
                     padding: "0.55rem 0.85rem",
                     borderRadius: "6px",
                     border: "none",
-                    background:
-                      customDateRangeOpen || dateFilter === "custom"
-                        ? "rgba(234, 88, 12, 0.15)"
-                        : "transparent",
-                    color:
-                      customDateRangeOpen || dateFilter === "custom"
-                        ? "#ea580c"
-                        : "var(--text-main, #f8fafc)",
+                    background: customDateRangeOpen || dateFilter === "custom" ? "rgba(234, 88, 12, 0.15)" : "transparent",
+                    color: customDateRangeOpen || dateFilter === "custom" ? "#ea580c" : "var(--text-main, #f8fafc)",
                     fontSize: "0.82rem",
-                    fontWeight:
-                      customDateRangeOpen || dateFilter === "custom"
-                        ? 600
-                        : 400,
+                    fontWeight: customDateRangeOpen || dateFilter === "custom" ? 600 : 400,
                     cursor: "pointer",
                   }}
                 >
@@ -1177,15 +647,7 @@ export function ReservationsManagement({
                       borderTop: "1px solid var(--border-card, #27272a)",
                     }}
                   >
-                    <label
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.25rem",
-                        color: "var(--text-muted, #94a3b8)",
-                        fontSize: "0.72rem",
-                      }}
-                    >
+                    <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem" }}>
                       Exact Date
                       <input
                         type="date"
@@ -1194,9 +656,7 @@ export function ReservationsManagement({
                           const val = e.target.value;
                           setParticularDate(val);
                           setDateFilter("custom");
-                          setDateRangeLabel(
-                            val ? `Date: ${val}` : "Particular Date",
-                          );
+                          setDateRangeLabel(val ? `Date: ${val}` : "Particular Date");
                           setDateDropdownOpen(false);
                         }}
                         style={{
@@ -1212,29 +672,10 @@ export function ReservationsManagement({
                       />
                     </label>
 
-                    <div
-                      style={{
-                        height: "1px",
-                        background: "var(--border-card, #27272a)",
-                        margin: "2px 0",
-                      }}
-                    />
+                    <div style={{ height: "1px", background: "var(--border-card, #27272a)", margin: "2px 0" }} />
 
-                    <div
-                      style={{
-                        fontSize: "0.72rem",
-                        color: "var(--text-muted, #94a3b8)",
-                      }}
-                    >
-                      Or Date Range:
-                    </div>
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "0.35rem",
-                      }}
-                    >
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted, #94a3b8)" }}>Or Date Range:</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem" }}>
                       <input
                         type="date"
                         value={customStartDate}
@@ -1270,16 +711,10 @@ export function ReservationsManagement({
                     </div>
                     <button
                       type="button"
-                      disabled={
-                        !customStartDate ||
-                        !customEndDate ||
-                        customStartDate > customEndDate
-                      }
+                      disabled={!customStartDate || !customEndDate || customStartDate > customEndDate}
                       onClick={() => {
                         setDateFilter("custom");
-                        setDateRangeLabel(
-                          `${customStartDate} to ${customEndDate}`,
-                        );
+                        setDateRangeLabel(`${customStartDate} to ${customEndDate}`);
                         setParticularDate("");
                         setDateDropdownOpen(false);
                       }}
@@ -1322,12 +757,8 @@ export function ReservationsManagement({
               boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
               transition: "transform 0.15s ease",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = "translateY(-1px)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.transform = "translateY(0)")
-            }
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
           >
             <Plus size={16} strokeWidth={2.5} />
             <span>Book Table</span>
@@ -1335,167 +766,21 @@ export function ReservationsManagement({
         </div>
       </div>
 
-      {/* ── 2. Key Metrics / KPI Summary Cards (4 Cards, exact Takeaway layout) ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
-        {/* Card 1: Total Reservations */}
-        <div
-          style={{
-            background: "var(--bg-card, #18181b)",
-            border: "1px solid var(--border-card, #27272a)",
-            borderRadius: "12px",
-            padding: "0.4rem 0.45rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.85rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              background: "rgba(249, 115, 22, 0.14)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#ea580c",
-              flexShrink: 0,
-            }}
-          >
-            <Calendar size={22} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+        {[
+          { label: "Total Reservations", value: metrics.total, icon: Calendar, color: "#ea580c", tint: "rgba(249,115,22,.14)" },
+          { label: "Confirmed", value: metrics.confirmed, icon: CheckCircle2, color: "#059669", tint: "rgba(16,185,129,.14)" },
+          { label: "Pending", value: metrics.pending, icon: Hourglass, color: "#d97706", tint: "rgba(245,158,11,.14)" },
+          { label: "Seated", value: metrics.seated, icon: Utensils, color: "#2563eb", tint: "rgba(59,130,246,.14)" },
+          { label: "Completed", value: metrics.completed, icon: Check, color: "#059669", tint: "rgba(16,185,129,.14)" },
+          { label: "Cancelled", value: metrics.cancelled, icon: XCircle, color: "#dc2626", tint: "rgba(239,68,68,.14)" },
+        ].map(({ label, value, icon: Icon, color, tint }) => (
+          <div key={label} style={{ background: "var(--bg-card, #18181b)", border: "1px solid var(--border-card, #27272a)", borderRadius: "12px", padding: "0.4rem 0.45rem", display: "flex", alignItems: "center", gap: "0.85rem", boxShadow: "0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.02)" }}>
+            <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: tint, display: "flex", alignItems: "center", justifyContent: "center", color, flexShrink: 0 }}><Icon size={22} /></div>
+            <div><div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>{label}</div><div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "var(--text-main, #f8fafc)", letterSpacing: "-0.02em" }}>{value}</div></div>
           </div>
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
-              Total Reservations
-            </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "var(--text-main, #f8fafc)", letterSpacing: "-0.02em" }}>
-              {metrics.total}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Confirmed Bookings */}
-        <div
-          style={{
-            background: "var(--bg-card, #18181b)",
-            border: "1px solid var(--border-card, #27272a)",
-            borderRadius: "12px",
-            padding: "0.4rem 0.45rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.85rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              background: "rgba(34, 197, 94, 0.14)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#16a34a",
-              flexShrink: 0,
-            }}
-          >
-            <CheckCircle2 size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
-              Confirmed Bookings
-            </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#16a34a", letterSpacing: "-0.02em" }}>
-              {metrics.confirmed}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Pending Bookings */}
-        <div
-          style={{
-            background: "var(--bg-card, #18181b)",
-            border: "1px solid var(--border-card, #27272a)",
-            borderRadius: "12px",
-            padding: "0.4rem 0.45rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.85rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              background: "rgba(245, 158, 11, 0.14)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#d97706",
-              flexShrink: 0,
-            }}
-          >
-            <Hourglass size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
-              Pending Bookings
-            </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#d97706", letterSpacing: "-0.02em" }}>
-              {metrics.pending}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Seated / Completed */}
-        <div
-          style={{
-            background: "var(--bg-card, #18181b)",
-            border: "1px solid var(--border-card, #27272a)",
-            borderRadius: "12px",
-            padding: "0.4rem 0.45rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.85rem",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div
-            style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "50%",
-              background: "rgba(59, 130, 246, 0.14)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#3b82f6",
-              flexShrink: 0,
-            }}
-          >
-            <Utensils size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted, #94a3b8)", fontWeight: 600 }}>
-              Seated & Completed
-            </div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.1rem", color: "#3b82f6", letterSpacing: "-0.02em" }}>
-              {metrics.seatedOrCompleted}
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
-
       {/* ── 3. Status Filter Tabs (Vibrant Colors for Each Status) ── */}
       <div
         style={{
@@ -1507,45 +792,14 @@ export function ReservationsManagement({
         }}
       >
         {[
-          {
-            key: "all",
-            label: "All Bookings",
-            count: tabCounts.all,
-            icon: Calendar,
-          },
-          {
-            key: "confirmed",
-            label: "Confirmed",
-            count: tabCounts.confirmed,
-            icon: CheckCircle2,
-          },
-          {
-            key: "pending",
-            label: "Pending",
-            count: tabCounts.pending,
-            icon: Hourglass,
-          },
-          {
-            key: "seated",
-            label: "Seated",
-            count: tabCounts.seated,
-            icon: Utensils,
-          },
-          {
-            key: "completed",
-            label: "Completed",
-            count: tabCounts.completed,
-            icon: Check,
-          },
-          {
-            key: "cancelled",
-            label: "Cancelled",
-            count: tabCounts.cancelled,
-            icon: XCircle,
-          },
+          { key: "all", label: "All Bookings", count: tabCounts.all, icon: Calendar },
+          { key: "confirmed", label: "Confirmed", count: tabCounts.confirmed, icon: CheckCircle2 },
+          { key: "pending", label: "Pending", count: tabCounts.pending, icon: Hourglass },
+          { key: "seated", label: "Seated", count: tabCounts.seated, icon: Utensils },
+          { key: "completed", label: "Completed", count: tabCounts.completed, icon: Check },
+          { key: "cancelled", label: "Cancelled", count: tabCounts.cancelled, icon: XCircle },
         ].map((tab) => {
-          const isActive =
-            activeStatusTab.toLowerCase() === tab.key.toLowerCase();
+          const isActive = activeStatusTab.toLowerCase() === tab.key.toLowerCase();
           const Icon = tab.icon;
           const theme = STATUS_TAB_THEMES[tab.key] || STATUS_TAB_THEMES.all;
 
@@ -1563,7 +817,9 @@ export function ReservationsManagement({
                 border: isActive
                   ? "1px solid transparent"
                   : `1px solid ${theme.border}`,
-                background: isActive ? theme.activeBg : theme.background,
+                background: isActive
+                  ? theme.activeBg
+                  : theme.background,
                 color: isActive ? "#ffffff" : theme.text,
                 fontSize: "0.82rem",
                 fontWeight: isActive ? 750 : 650,
@@ -1650,14 +906,7 @@ export function ReservationsManagement({
         </div>
 
         {/* Dropdown Filters, Particular Date Picker, and Refresh Button */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.6rem",
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
           {/* Quick Date Select */}
           <select
             value={dateFilter}
@@ -1704,17 +953,13 @@ export function ReservationsManagement({
 
           {/* Particular Date Picker (Appears when Particular Date is selected) */}
           {dateFilter === "custom" && (
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <input
                 type="date"
                 value={particularDate}
                 onChange={(e) => {
                   setParticularDate(e.target.value);
-                  setDateRangeLabel(
-                    e.target.value ? `Date: ${e.target.value}` : "Custom Date",
-                  );
+                  setDateRangeLabel(e.target.value ? `Date: ${e.target.value}` : "Custom Date");
                 }}
                 style={{
                   height: "42px",
@@ -1820,62 +1065,39 @@ export function ReservationsManagement({
           border: "1px solid var(--border-card, #27272a)",
           borderRadius: "14px",
           overflow: "hidden",
-          boxShadow:
-            "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)",
         }}
       >
         <div style={{ overflowX: "auto" }}>
           <table
             style={{
               width: "100%",
-              minWidth: "1180px",
-              tableLayout: "fixed",
-              borderCollapse: "separate",
-              borderSpacing: 0,
+              borderCollapse: "collapse",
               textAlign: "left",
-              fontSize: "0.76rem",
+              fontSize: "0.7rem",
             }}
           >
-            <colgroup>
-              <col style={{ width: "4%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "17%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "8%" }} />
-            </colgroup>
             <thead>
-              <tr>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  #
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  RESERVATION ID
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  GUEST NAME
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  PHONE
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  TABLE
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  GUESTS
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  DATE & TIME
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  STATUS
-                </th>
-                <th style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
-                  ACTIONS
-                </th>
+              <tr
+                style={{
+                  background: "var(--bg-secondary, #202024)",
+                  borderBottom: "1px solid var(--border-card, #27272a)",
+                  color: "var(--text-muted, #94a3b8)",
+                  fontSize: "0.64rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                <th style={{ padding: "0.4rem 0.45rem", width: "40px" }}>#</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>RESERVATION ID</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>GUEST NAME</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>PHONE</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>TABLE</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>GUESTS</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>DATE & TIME</th>
+                <th style={{ padding: "0.4rem 0.45rem" }}>STATUS</th>
+                <th style={{ padding: "0.4rem 0.45rem", textAlign: "right" }}>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -1891,18 +1113,16 @@ export function ReservationsManagement({
                   >
                     <Calendar size={36} color="#ea580c" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
                     <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", marginBottom: "0.25rem" }}>
-                      No reservations found
+                      {loading ? "Loading reservations…" : "No reservations found"}
                     </div>
                     <p style={{ margin: 0, fontSize: "0.84rem" }}>
-                      Try adjusting your search query, status filters or date range.
+                      {loading ? "Fetching reservations from the backend." : "Try adjusting your search query, status filters or date range."}
                     </p>
                   </td>
                 </tr>
               ) : (
                 paginatedReservations.map((r, index) => {
-                  const resId = String(
-                    r.reservationId || r.id || `RES-${index + 1000}`,
-                  );
+                  const resId = String(r.reservationId || r.id || `RES-${index + 1000}`);
                   const badge = getStatusBadge(r.status);
                   const BadgeIcon = badge.icon;
                   const isMenuOpen = actionMenuOpenId === resId;
@@ -1919,21 +1139,16 @@ export function ReservationsManagement({
                         transition: "background 0.15s ease",
                         cursor: "pointer",
                       }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          "var(--bg-secondary, #27272a)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "transparent")
-                      }
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-secondary, #27272a)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       {/* Row Index */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem", whiteSpace: "nowrap", textAlign: "center" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-muted, #94a3b8)", fontSize: "0.72rem", whiteSpace: "nowrap" }}>
                         {pageStart + index + 1}
                       </td>
 
                       {/* Reservation ID */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", fontWeight: 700, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             fontFamily: "monospace",
@@ -1946,39 +1161,39 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Guest Name */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 650, color: "var(--text-main, #f8fafc)", display: "inline-flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}>
                           <div
                             style={{
-                              width: "22px",
-                              height: "22px",
+                              width: "20px",
+                              height: "20px",
                               borderRadius: "50%",
                               background: "rgba(249, 115, 22, 0.15)",
                               color: "#ea580c",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "0.68rem",
+                              fontSize: "0.65rem",
                               fontWeight: 800,
                               flexShrink: 0,
                             }}
                           >
-                            {String(r.customerName || "G")[0].toUpperCase()}
+                            {(String(r.customerName || "G"))[0].toUpperCase()}
                           </div>
                           <span>{r.customerName || "Guest"}</span>
                         </div>
                       </td>
 
                       {/* Phone */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.74rem" }}>
-                          <Phone size={13} color="#94a3b8" style={{ flexShrink: 0 }} />
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-muted, #94a3b8)", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                          <Phone size={13} color="#94a3b8" />
                           {r.phone || r.customerPhone || "—"}
                         </span>
                       </td>
 
                       {/* Table */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", fontWeight: 600, color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -1986,57 +1201,38 @@ export function ReservationsManagement({
                             gap: "0.35rem",
                             background: "rgba(255, 255, 255, 0.04)",
                             border: "1px solid var(--border-card, #27272a)",
-                            padding: "0.2rem 0.55rem",
+                            padding: "0.15rem 0.45rem",
                             borderRadius: "6px",
-                            fontSize: "0.72rem",
+                            fontSize: "0.7rem",
                             whiteSpace: "nowrap",
-                            maxWidth: "100%",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
                           }}
                         >
                           <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
-                          </span>
+                          {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
                         </span>
                       </td>
 
                       {/* Guests Count */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                          <Users size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
-                          <span><strong style={{ fontWeight: 700 }}>{r.guestsCount || r.guests || 2}</strong> Guests</span>
+                          <Users size={14} color="#f59e0b" />
+                          <strong>{r.guestsCount || r.guests || 2}</strong> Guests
                         </span>
                       </td>
 
                       {/* Date & Time */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", whiteSpace: "nowrap" }}>
-                          <span style={{ fontWeight: 550, color: "var(--text-main, #f8fafc)" }}>
-                            {r.reservationDate || r.date || "Today"}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              color: "var(--text-muted, #94a3b8)",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                              background: "rgba(255, 255, 255, 0.04)",
-                              border: "1px solid var(--border-card, #27272a)",
-                              padding: "0.15rem 0.45rem",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            <Clock size={11} color="#ea580c" style={{ flexShrink: 0 }} />
+                      <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", whiteSpace: "nowrap" }}>
+                          <span>{r.reservationDate || r.date || "Today"}</span>
+                          <span style={{ fontSize: "0.7rem", color: "var(--text-muted, #94a3b8)", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                            <Clock size={12} color="#ea580c" />
                             {r.reservationTime || r.time || "07:30 PM"}
                           </span>
-                        </div>
+                        </span>
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.4rem 0.45rem", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
@@ -2057,8 +1253,8 @@ export function ReservationsManagement({
                       </td>
 
                       {/* Actions: Eye Icon (Opens ReceiptModal Bill), Printer, More Menu */}
-                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.6rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.4rem 0.45rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
                           {/* Eye Icon -> Opens the 5th picture Invoice & Bill Print (ReceiptModal) */}
                           <button
                             type="button"
@@ -2082,10 +1278,8 @@ export function ReservationsManagement({
                               e.currentTarget.style.color = "#ea580c";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor =
-                                "var(--border-card, #27272a)";
-                              e.currentTarget.style.color =
-                                "var(--text-main, #f8fafc)";
+                              e.currentTarget.style.borderColor = "var(--border-card, #27272a)";
+                              e.currentTarget.style.color = "var(--text-main, #f8fafc)";
                             }}
                           >
                             <Eye size={15} />
@@ -2114,10 +1308,8 @@ export function ReservationsManagement({
                               e.currentTarget.style.color = "#ea580c";
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor =
-                                "var(--border-card, #27272a)";
-                              e.currentTarget.style.color =
-                                "var(--text-main, #f8fafc)";
+                              e.currentTarget.style.borderColor = "var(--border-card, #27272a)";
+                              e.currentTarget.style.color = "var(--text-main, #f8fafc)";
                             }}
                           >
                             <Printer size={15} />
@@ -2127,31 +1319,15 @@ export function ReservationsManagement({
                           <div style={{ position: "relative" }}>
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isMenuOpen) {
-                                  setActionMenuOpenId(null);
-                                  setActionMenuOpenAbove(false);
-                                } else {
-                                  const buttonRect = e.currentTarget.getBoundingClientRect();
-                                  const spaceBelow = window.innerHeight - buttonRect.bottom;
-                                  const openAbove = spaceBelow < 195 || index >= filteredReservations.length - 3;
-                                  setActionMenuOpenAbove(openAbove);
-                                  setActionMenuOpenId(resId);
-                                }
-                              }}
+                              onClick={() => setActionMenuOpenId(isMenuOpen ? null : resId)}
                               title="Actions"
                               style={{
                                 width: "32px",
                                 height: "32px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card, #27272a)",
-                                background: isMenuOpen
-                                  ? "rgba(234, 88, 12, 0.15)"
-                                  : "rgba(255, 255, 255, 0.04)",
-                                color: isMenuOpen
-                                  ? "#ea580c"
-                                  : "var(--text-main, #f8fafc)",
+                                background: isMenuOpen ? "rgba(234, 88, 12, 0.15)" : "rgba(255, 255, 255, 0.04)",
+                                color: isMenuOpen ? "#ea580c" : "var(--text-main, #f8fafc)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -2166,30 +1342,28 @@ export function ReservationsManagement({
                             {isMenuOpen && (
                               <div
                                 ref={actionMenuRef}
-                                onClick={(e) => e.stopPropagation()}
                                 style={{
                                   position: "absolute",
                                   right: 0,
                                   top: "calc(100% + 5px)",
-                                  background: "var(--bg-card)",
-                                  border: "1px solid var(--border-card)",
+                                  background: "#18181b",
+                                  border: "1px solid #27272a",
                                   borderRadius: "10px",
-                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
+                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.75)",
                                   padding: "0.35rem",
                                   minWidth: "195px",
-                                  zIndex: 9999,
+                                  zIndex: 100,
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: "0.15rem",
                                   textAlign: "left",
                                 }}
                               >
+
                                 {r.status !== "confirmed" && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleStatusUpdate(resId, "confirmed")
-                                    }
+                                    onClick={() => handleStatusUpdate(resId, "confirmed")}
                                     style={{
                                       display: "flex",
                                       alignItems: "center",
@@ -2203,14 +1377,8 @@ export function ReservationsManagement({
                                       cursor: "pointer",
                                       fontWeight: 600,
                                     }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "rgba(16, 185, 129, 0.12)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "transparent")
-                                    }
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(16, 185, 129, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                                   >
                                     <CheckCircle2 size={14} />
                                     <span>Mark as Confirmed</span>
@@ -2220,9 +1388,7 @@ export function ReservationsManagement({
                                 {r.status !== "seated" && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleStatusUpdate(resId, "seated")
-                                    }
+                                    onClick={() => handleStatusUpdate(resId, "seated")}
                                     style={{
                                       display: "flex",
                                       alignItems: "center",
@@ -2236,14 +1402,8 @@ export function ReservationsManagement({
                                       cursor: "pointer",
                                       fontWeight: 600,
                                     }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "rgba(59, 130, 246, 0.12)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "transparent")
-                                    }
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                                   >
                                     <Utensils size={14} />
                                     <span>Mark as Seated</span>
@@ -2253,9 +1413,7 @@ export function ReservationsManagement({
                                 {r.status !== "completed" && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleStatusUpdate(resId, "completed")
-                                    }
+                                    onClick={() => handleStatusUpdate(resId, "completed")}
                                     style={{
                                       display: "flex",
                                       alignItems: "center",
@@ -2269,14 +1427,8 @@ export function ReservationsManagement({
                                       cursor: "pointer",
                                       fontWeight: 600,
                                     }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "rgba(5, 150, 105, 0.12)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "transparent")
-                                    }
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(5, 150, 105, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                                   >
                                     <Check size={14} />
                                     <span>Mark as Completed</span>
@@ -2286,9 +1438,7 @@ export function ReservationsManagement({
                                 {r.status !== "cancelled" && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      handleStatusUpdate(resId, "cancelled")
-                                    }
+                                    onClick={() => handleStatusUpdate(resId, "cancelled")}
                                     style={{
                                       display: "flex",
                                       alignItems: "center",
@@ -2302,27 +1452,15 @@ export function ReservationsManagement({
                                       cursor: "pointer",
                                       fontWeight: 600,
                                     }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "rgba(239, 68, 68, 0.12)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "transparent")
-                                    }
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.12)")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                                   >
                                     <XCircle size={14} />
                                     <span>Cancel Reservation</span>
                                   </button>
                                 )}
 
-                                <div
-                                  style={{
-                                    height: "1px",
-                                    background: "#27272a",
-                                    margin: "0.2rem 0",
-                                  }}
-                                />
+                                <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
 
                                 <button
                                   type="button"
@@ -2339,12 +1477,8 @@ export function ReservationsManagement({
                                     fontSize: "0.78rem",
                                     cursor: "pointer",
                                   }}
-                                  onMouseEnter={(e) =>
-                                    (e.currentTarget.style.color = "#ef4444")
-                                  }
-                                  onMouseLeave={(e) =>
-                                    (e.currentTarget.style.color = "#94a3b8")
-                                  }
+                                  onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
                                 >
                                   <Trash2 size={13} />
                                   <span>Delete Record</span>
@@ -2377,23 +1511,11 @@ export function ReservationsManagement({
             }}
           >
             <span>
-              Showing{" "}
-              <strong style={{ color: "var(--text-main, #f8fafc)" }}>
-                {pageStart + 1}
-              </strong>
-              –
-              <strong style={{ color: "var(--text-main, #f8fafc)" }}>
-                {Math.min(pageStart + PAGE_SIZE, filteredReservations.length)}
-              </strong>{" "}
-              of{" "}
-              <strong style={{ color: "var(--text-main, #f8fafc)" }}>
-                {filteredReservations.length}
-              </strong>{" "}
-              reservations
+              Showing <strong style={{ color: "var(--text-main, #f8fafc)" }}>{pageStart + 1}</strong>–
+              <strong style={{ color: "var(--text-main, #f8fafc)" }}>{Math.min(pageStart + PAGE_SIZE, filteredReservations.length)}</strong> of{" "}
+              <strong style={{ color: "var(--text-main, #f8fafc)" }}>{filteredReservations.length}</strong> reservations
             </span>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}
-            >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <button
                 type="button"
                 disabled={safePage <= 1}
@@ -2403,10 +1525,7 @@ export function ReservationsManagement({
                   borderRadius: "6px",
                   border: "1px solid var(--border-card, #27272a)",
                   background: "var(--bg-card, #18181b)",
-                  color:
-                    safePage <= 1
-                      ? "var(--text-dim, #52525b)"
-                      : "var(--text-main, #f8fafc)",
+                  color: safePage <= 1 ? "var(--text-dim, #52525b)" : "var(--text-main, #f8fafc)",
                   fontSize: "0.72rem",
                   fontWeight: 700,
                   cursor: safePage <= 1 ? "not-allowed" : "pointer",
@@ -2415,23 +1534,11 @@ export function ReservationsManagement({
                 Prev
               </button>
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(
-                  (pNum) =>
-                    pNum === 1 ||
-                    pNum === totalPages ||
-                    Math.abs(pNum - safePage) <= 1,
-                )
+                .filter((pNum) => pNum === 1 || pNum === totalPages || Math.abs(pNum - safePage) <= 1)
                 .map((pNum, idx, arr) => (
                   <React.Fragment key={pNum}>
                     {idx > 0 && arr[idx - 1] !== pNum - 1 && (
-                      <span
-                        style={{
-                          padding: "0 0.25rem",
-                          color: "var(--text-dim, #52525b)",
-                        }}
-                      >
-                        …
-                      </span>
+                      <span style={{ padding: "0 0.25rem", color: "var(--text-dim, #52525b)" }}>…</span>
                     )}
                     <button
                       type="button"
@@ -2440,18 +1547,9 @@ export function ReservationsManagement({
                         minWidth: "28px",
                         padding: "0.3rem 0.5rem",
                         borderRadius: "6px",
-                        border:
-                          pNum === safePage
-                            ? "1px solid #ea580c"
-                            : "1px solid var(--border-card, #27272a)",
-                        background:
-                          pNum === safePage
-                            ? "#ea580c"
-                            : "var(--bg-card, #18181b)",
-                        color:
-                          pNum === safePage
-                            ? "#ffffff"
-                            : "var(--text-main, #f8fafc)",
+                        border: pNum === safePage ? "1px solid #ea580c" : "1px solid var(--border-card, #27272a)",
+                        background: pNum === safePage ? "#ea580c" : "var(--bg-card, #18181b)",
+                        color: pNum === safePage ? "#ffffff" : "var(--text-main, #f8fafc)",
                         fontSize: "0.72rem",
                         fontWeight: 700,
                         cursor: "pointer",
@@ -2464,18 +1562,13 @@ export function ReservationsManagement({
               <button
                 type="button"
                 disabled={safePage >= totalPages}
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 style={{
                   padding: "0.3rem 0.65rem",
                   borderRadius: "6px",
                   border: "1px solid var(--border-card, #27272a)",
                   background: "var(--bg-card, #18181b)",
-                  color:
-                    safePage >= totalPages
-                      ? "var(--text-dim, #52525b)"
-                      : "var(--text-main, #f8fafc)",
+                  color: safePage >= totalPages ? "var(--text-dim, #52525b)" : "var(--text-main, #f8fafc)",
                   fontSize: "0.72rem",
                   fontWeight: 700,
                   cursor: safePage >= totalPages ? "not-allowed" : "pointer",
@@ -2494,7 +1587,7 @@ export function ReservationsManagement({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.6)",
+            background: "rgba(0, 0, 0, 0.75)",
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
@@ -2502,40 +1595,36 @@ export function ReservationsManagement({
             zIndex: 9999,
             padding: "1rem",
           }}
-          onClick={() => setIsNewBookingModalOpen(false)}
         >
           <div
             style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-card)",
+              background: "#18181b",
+              border: "1px solid #27272a",
               borderRadius: "16px",
               width: "100%",
               maxWidth: "520px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
               overflow: "hidden",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div
               style={{
                 padding: "1.1rem 1.4rem",
                 background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
-                borderBottom: "1px solid var(--border-card)",
+                borderBottom: "1px solid #27272a",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
                     New Table Reservation
                   </h3>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
+                  <small style={{ color: "#94a3b8", fontSize: "0.75rem" }}>
                     Reserve a dining table at {restaurantName}
                   </small>
                 </div>
@@ -2546,7 +1635,7 @@ export function ReservationsManagement({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "var(--text-muted)",
+                  color: "#94a3b8",
                   cursor: "pointer",
                   padding: "4px",
                 }}
@@ -2556,20 +1645,10 @@ export function ReservationsManagement({
             </div>
 
             {/* Modal Form */}
-            <form
-              onSubmit={handleCreateReservation}
-              style={{ padding: "1.25rem 1.4rem" }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.85rem",
-                  marginBottom: "0.85rem",
-                }}
-              >
+            <form onSubmit={handleCreateReservation} style={{ padding: "1.25rem 1.4rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                     Guest Full Name *
                   </label>
                   <input
@@ -2577,16 +1656,14 @@ export function ReservationsManagement({
                     required
                     placeholder="e.g. Ramesh Kumar"
                     value={form.customerName}
-                    onChange={(e) =>
-                      setForm({ ...form, customerName: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, customerName: e.target.value })}
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "var(--bg-main)",
-                      border: "1px solid var(--border-card)",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
                       borderRadius: "8px",
-                      color: "var(--text-main)",
+                      color: "#f8fafc",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2594,7 +1671,7 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                     Mobile Number *
                   </label>
                   <input
@@ -2602,16 +1679,14 @@ export function ReservationsManagement({
                     required
                     placeholder="+91 98765 43210"
                     value={form.phone}
-                    onChange={(e) =>
-                      setForm({ ...form, phone: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "var(--bg-main)",
-                      border: "1px solid var(--border-card)",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
                       borderRadius: "8px",
-                      color: "var(--text-main)",
+                      color: "#f8fafc",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2620,30 +1695,21 @@ export function ReservationsManagement({
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.85rem",
-                  marginBottom: "0.85rem",
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                     Dining Table *
                   </label>
                   <select
                     value={form.tableId}
-                    onChange={(e) =>
-                      setForm({ ...form, tableId: Number(e.target.value) })
-                    }
+                    onChange={(e) => setForm({ ...form, tableId: Number(e.target.value) })}
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "var(--bg-main)",
-                      border: "1px solid var(--border-card)",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
                       borderRadius: "8px",
-                      color: "var(--text-main)",
+                      color: "#f8fafc",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2652,13 +1718,13 @@ export function ReservationsManagement({
                   >
                     {tablesList.map((tbl) => (
                       <option key={tbl.id || tbl.tableId} value={tbl.id || tbl.tableId}>
-                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.section || "Indoor"} • {tbl.capacity || tbl.seatingCapacity || 4} Guests)
+                        {tbl.name || tbl.tableName || `Table ${tbl.id}`} ({tbl.sectionArea || tbl.location || tbl.section || "Section unavailable"} • {tbl.capacity || tbl.seatingCapacity || "—"} Guests)
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                     Number of Guests
                   </label>
                   <input
@@ -2666,16 +1732,14 @@ export function ReservationsManagement({
                     min="1"
                     max="50"
                     value={form.guestsCount}
-                    onChange={(e) =>
-                      setForm({ ...form, guestsCount: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, guestsCount: e.target.value })}
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "var(--bg-main)",
-                      border: "1px solid var(--border-card)",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
                       borderRadius: "8px",
-                      color: "var(--text-main)",
+                      color: "#f8fafc",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2684,31 +1748,22 @@ export function ReservationsManagement({
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "0.85rem",
-                  marginBottom: "0.85rem",
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem", marginBottom: "0.85rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                     Reservation Date
                   </label>
                   <input
                     type="date"
                     value={form.reservationDate}
-                    onChange={(e) =>
-                      setForm({ ...form, reservationDate: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, reservationDate: e.target.value })}
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "var(--bg-main)",
-                      border: "1px solid var(--border-card)",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
                       borderRadius: "8px",
-                      color: "var(--text-main)",
+                      color: "#f8fafc",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2716,21 +1771,19 @@ export function ReservationsManagement({
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                     Time Slot
                   </label>
                   <select
                     value={form.reservationTime}
-                    onChange={(e) =>
-                      setForm({ ...form, reservationTime: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, reservationTime: e.target.value })}
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.75rem",
-                      background: "var(--bg-main)",
-                      border: "1px solid var(--border-card)",
+                      background: "#27272a",
+                      border: "1px solid #3f3f46",
                       borderRadius: "8px",
-                      color: "var(--text-main)",
+                      color: "#f8fafc",
                       fontSize: "0.84rem",
                       boxSizing: "border-box",
                       outline: "none",
@@ -2738,27 +1791,17 @@ export function ReservationsManagement({
                     }}
                   >
                     {[
-                      "12:30 PM",
-                      "01:00 PM",
-                      "01:30 PM",
-                      "02:00 PM",
-                      "07:00 PM",
-                      "07:30 PM",
-                      "08:00 PM",
-                      "08:30 PM",
-                      "09:00 PM",
-                      "09:30 PM",
+                      "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM",
+                      "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM", "09:00 PM", "09:30 PM"
                     ].map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
+                      <option key={time} value={time}>{time}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
               <div style={{ marginBottom: "0.85rem" }}>
-                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.3rem" }}>
                   Special Requests / Occasion (Optional)
                 </label>
                 <textarea
@@ -2769,10 +1812,10 @@ export function ReservationsManagement({
                   style={{
                     width: "100%",
                     padding: "0.55rem 0.75rem",
-                    background: "var(--bg-main)",
-                    border: "1px solid var(--border-card)",
+                    background: "#27272a",
+                    border: "1px solid #3f3f46",
                     borderRadius: "8px",
-                    color: "var(--text-main)",
+                    color: "#f8fafc",
                     fontSize: "0.84rem",
                     boxSizing: "border-box",
                     outline: "none",
@@ -2781,23 +1824,16 @@ export function ReservationsManagement({
                 />
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "0.75rem",
-                  marginTop: "1.25rem",
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.25rem" }}>
                 <button
                   type="button"
                   onClick={() => setIsNewBookingModalOpen(false)}
                   style={{
                     padding: "0.6rem 1.15rem",
-                    background: "var(--bg-main)",
-                    border: "1px solid var(--border-card)",
+                    background: "rgba(255, 255, 255, 0.06)",
+                    border: "1px solid #3f3f46",
                     borderRadius: "8px",
-                    color: "var(--text-main)",
+                    color: "#f8fafc",
                     cursor: "pointer",
                     fontSize: "0.84rem",
                     fontWeight: 500,
@@ -2810,8 +1846,7 @@ export function ReservationsManagement({
                   disabled={saving}
                   style={{
                     padding: "0.6rem 1.4rem",
-                    background:
-                      "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                    background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
                     border: "none",
                     borderRadius: "8px",
                     color: "#ffffff",
@@ -2835,7 +1870,7 @@ export function ReservationsManagement({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.6)",
+            background: "rgba(0, 0, 0, 0.75)",
             backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
@@ -2843,88 +1878,77 @@ export function ReservationsManagement({
             zIndex: 9999,
             padding: "1rem",
           }}
-          onClick={() => setViewingReservation(null)}
         >
           <div
             style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-card)",
+              background: "#18181b",
+              border: "1px solid #27272a",
               borderRadius: "16px",
               width: "100%",
               maxWidth: "500px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.3)",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
               overflow: "hidden",
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <div
               style={{
                 padding: "1.1rem 1.4rem",
-                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)",
-                borderBottom: "1px solid var(--border-card)",
+                background: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
+                borderBottom: "1px solid #27272a",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
               }}
             >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <Calendar size={20} color="#ea580c" />
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f8fafc" }}>
                   Reservation {viewingReservation.reservationId || viewingReservation.id}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setViewingReservation(null)}
-                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", borderRadius: "6px" }}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div
-              style={{
-                padding: "1.4rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-              }}
-            >
+            <div style={{ padding: "1.4rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
               {/* Guest & Table Strip */}
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "0.75rem",
-                  background: "var(--bg-main)",
-                  padding: "0.85rem",
+                  background: "rgba(255, 255, 255, 0.03)",
+                  padding: "0.4rem 0.45rem",
                   borderRadius: "10px",
-                  border: "1px solid var(--border-card)",
+                  border: "1px solid #27272a",
                 }}
               >
                 <div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Name</small>
-                  <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.95rem" }}>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Name</small>
+                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
                     {viewingReservation.customerName || "Guest"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Contact Phone</small>
-                  <div style={{ color: "var(--text-main)", fontSize: "0.9rem" }}>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Contact Phone</small>
+                  <div style={{ color: "#f8fafc", fontSize: "0.9rem" }}>
                     {viewingReservation.phone || viewingReservation.customerPhone || "—"}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Assigned Table</small>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Assigned Table</small>
                   <div style={{ fontWeight: 650, color: "#ea580c", fontSize: "0.9rem" }}>
                     {viewingReservation.tableName || `Table ${viewingReservation.tableId}`}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Guest Count</small>
-                  <div style={{ fontWeight: 650, color: "var(--text-main)", fontSize: "0.9rem" }}>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Guest Count</small>
+                  <div style={{ fontWeight: 650, color: "#f8fafc", fontSize: "0.9rem" }}>
                     {viewingReservation.guestsCount || 2} Persons
                   </div>
                 </div>
@@ -2939,29 +1963,29 @@ export function ReservationsManagement({
                 }}
               >
                 <div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Date & Time</small>
-                  <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Date & Time</small>
+                  <div style={{ color: "#f8fafc", fontWeight: 600 }}>
                     {viewingReservation.reservationDate || viewingReservation.date} at {viewingReservation.reservationTime || viewingReservation.time}
                   </div>
                 </div>
                 <div>
-                  <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Advance Paid</small>
+                  <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Advance Paid</small>
                   <div style={{ color: "#10b981", fontWeight: 700 }}>
-                    ₹ {Number(viewingReservation.advanceAmount || 100).toFixed(2)}
+                    ₹ {Number(viewingReservation.advanceAmount || 0).toFixed(2)}
                   </div>
                 </div>
               </div>
 
               {/* Special Requests */}
               <div>
-                <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Special Requests & Notes</small>
+                <small style={{ color: "#94a3b8", fontSize: "0.72rem" }}>Special Requests & Notes</small>
                 <div
                   style={{
-                    background: "var(--bg-main)",
+                    background: "rgba(255, 255, 255, 0.03)",
                     padding: "0.6rem 0.85rem",
                     borderRadius: "8px",
-                    border: "1px solid var(--border-card)",
-                    color: "var(--text-main)",
+                    border: "1px solid #27272a",
+                    color: "#cbd5e1",
                     fontSize: "0.82rem",
                     marginTop: "0.25rem",
                   }}
@@ -2971,14 +1995,7 @@ export function ReservationsManagement({
               </div>
 
               {/* Action Buttons */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "0.5rem",
-                  flexWrap: "wrap",
-                  marginTop: "0.5rem",
-                }}
-              >
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -2986,7 +2003,7 @@ export function ReservationsManagement({
                     setViewingReservation(null);
                     setPrintReceiptReservation(r);
                   }}
-                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.12)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.15)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
                 >
                   <ReceiptIcon size={14} />
                   <span>View / Print Bill</span>
@@ -2995,7 +2012,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "confirmed")}
-                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.35)", background: "rgba(16, 185, 129, 0.15)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Confirm Booking
                   </button>
@@ -3004,7 +2021,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "seated")}
-                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.35)", background: "rgba(59, 130, 246, 0.15)", color: "#2563eb", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Seat Guests
                   </button>
@@ -3013,7 +2030,7 @@ export function ReservationsManagement({
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(viewingReservation.reservationId || viewingReservation.id, "completed")}
-                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid rgba(5, 150, 105, 0.35)", background: "rgba(5, 150, 105, 0.15)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
+                    style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "none", background: "rgba(5, 150, 105, 0.2)", color: "#059669", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem" }}
                   >
                     Complete Visit
                   </button>

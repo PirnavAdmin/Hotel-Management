@@ -131,7 +131,7 @@ public class KitchenController : ControllerBase
 
                     KotBatch = batch.Key,
 
-                    OrderTime = orderTime,
+                    OrderTime = DateTime.SpecifyKind(orderTime, DateTimeKind.Utc),
 
                     TicketStatus = overallStatus,
 

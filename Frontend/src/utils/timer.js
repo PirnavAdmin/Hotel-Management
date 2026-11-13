@@ -3,6 +3,35 @@
 export function parseTimeToSeconds(timeStr, endTimeStr = null) {
   if (!timeStr) return 0;
   try {
+    const raw = String(timeStr).trim();
+
+    // 1. If it's an ISO date or numeric timestamp, calculate elapsed seconds accurately from timestamp
+    const isIso = /^\d{4}-\d{2}-\d{2}/.test(raw);
+    if (isIso || (!Number.isNaN(Number(raw)) && Number(raw) > 1000000000)) {
+      let isoStr = raw;
+      if (isIso && !isoStr.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(isoStr)) {
+        // Backend stores timestamps in UTC
+        isoStr += 'Z';
+      }
+      const orderDate = new Date(isIso ? isoStr : Number(raw));
+      if (!Number.isNaN(orderDate.getTime())) {
+        let targetDate = new Date();
+        if (endTimeStr) {
+          let endIso = String(endTimeStr).trim();
+          if (/^\d{4}-\d{2}-\d{2}/.test(endIso) && !endIso.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(endIso)) {
+            endIso += 'Z';
+          }
+          const parsedEnd = new Date(endIso);
+          if (!Number.isNaN(parsedEnd.getTime())) {
+            targetDate = parsedEnd;
+          }
+        }
+        const diffSec = Math.floor((targetDate.getTime() - orderDate.getTime()) / 1000);
+        return Math.max(0, diffSec);
+      }
+    }
+
+    // 2. Fallback to time string like "07:30 PM"
     const parseComponents = (str) => {
       const match = str.match(/(\d+):(\d+)(?::(\d+))?\s*(AM|PM)?/i);
       if (!match) return null;
@@ -17,7 +46,7 @@ export function parseTimeToSeconds(timeStr, endTimeStr = null) {
       return { hours, minutes, seconds };
     };
 
-    const start = parseComponents(timeStr);
+    const start = parseComponents(raw);
     if (!start) return 0;
 
     const orderDate = new Date();
@@ -87,15 +116,21 @@ export function formatDisplayTime(raw) {
   if (["in queue", "started", "done", "ready", "pending", "waiting", "active", "cooked"].includes(str.toLowerCase())) {
     return str;
   }
-  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)?$/i.test(str)) {
+  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)$/i.test(str)) {
     return str.toUpperCase();
   }
-  if (/^\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)?$/i.test(str)) {
+  if (/^\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)$/i.test(str)) {
     const parts = str.split(' ');
     const timeParts = parts[0].split(':');
     return (timeParts[0] + ':' + timeParts[1] + (parts[1] ? ' ' + parts[1] : '')).toUpperCase();
   }
-  const d = new Date(str);
+  let isoStr = str;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(isoStr)) {
+    if (!isoStr.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(isoStr)) {
+      isoStr += 'Z';
+    }
+  }
+  const d = new Date(isoStr);
   if (!Number.isNaN(d.getTime())) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   }
