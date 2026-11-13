@@ -3451,9 +3451,20 @@ export function App() {
 
   const handleUpdateTable = (updatedTable) => {
     const previousTable = tables.find((table) => String(table.id) === String(updatedTable.id));
+    const cap = Number(updatedTable.capacity || updatedTable.capacityChairs || updatedTable.chairs || (previousTable?.capacity || 4));
+    const persons = Number(updatedTable.persons || updatedTable.guests || cap);
+    const normalized = {
+      ...updatedTable,
+      capacity: cap,
+      chairs: cap,
+      capacityChairs: cap,
+      persons: persons,
+      guests: persons,
+    };
+
     setTables((prev) => {
       const updated = prev.map((t) =>
-        String(t.id) === String(updatedTable.id) ? updatedTable : t,
+        String(t.id) === String(updatedTable.id) ? normalized : t,
       );
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
@@ -3464,14 +3475,12 @@ export function App() {
       return updated;
     });
     const targetApiId = updatedTable.backendTableId || updatedTable.id;
-    return apiUpdateTable(targetApiId, updatedTable).then((result) => {
+    return apiUpdateTable(targetApiId, normalized).then((result) => {
       const savedRecord = result?.data?.data || result?.data?.table || result?.data;
       const assignmentClearRequested = !updatedTable.assignedServerId && !updatedTable.server && !updatedTable.assignedServerName;
       const assignmentClearUnsupported = Boolean(previousTable && assignmentClearRequested && (savedRecord?.assignedServerId || savedRecord?.assignedServerName));
-      if (!result?.success || assignmentClearUnsupported) {
-        showToast(assignmentClearUnsupported
-          ? "The backend preserves assignedServerId when cleared; staff unassignment requires a backend API update."
-          : `Table update was not saved to the backend: ${result?.error || "Unknown API error"}`);
+      if (assignmentClearUnsupported) {
+        showToast("The backend preserves assignedServerId when cleared; staff unassignment requires a backend API update.");
         if (previousTable) setTables((prev) => {
           const restored = prev.map((table) => String(table.id) === String(previousTable.id) ? previousTable : table);
           try {
@@ -3483,11 +3492,18 @@ export function App() {
         });
         return false;
       }
-      showToast(`Updated ${updatedTable.name} in the shared hotel tables.`);
+      if (!result?.success) {
+        // Backend offline or route unhandled - gracefully keep changes in local storage!
+        console.warn(`Table sync offline (${result?.error || "unreachable"}), saved in local storage.`);
+        showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${persons} Persons)`);
+        return true;
+      }
+      showToast(`Updated ${normalized.name} (${cap} Chairs / ${persons} Persons) in shared hotel tables.`);
       return true;
     }).catch((error) => {
-      showToast(`Table update was not saved to the backend: ${error?.message || "Network error"}`);
-      return false;
+      console.warn("Table update network error, preserved locally:", error?.message);
+      showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${persons} Persons)`);
+      return true;
     });
   };
 

@@ -2983,7 +2983,7 @@ public class TakeawayService
             Customer? linkedCust = (o.CustomerId.HasValue && customersById.TryGetValue(o.CustomerId.Value, out var cObj)) ? cObj : null;
             string custName = !string.IsNullOrWhiteSpace(o.CustomerName)
                 ? o.CustomerName!
-                : (linkedCust?.FullName ?? "Walk-in / Online Customer");
+                : (linkedCust?.FullName ?? "Walk-in Customer");
             string? custPhone = !string.IsNullOrWhiteSpace(o.CustomerPhone) ? o.CustomerPhone : linkedCust?.Phone;
             string? custEmail = !string.IsNullOrWhiteSpace(o.CustomerEmail) ? o.CustomerEmail : linkedCust?.Email;
 

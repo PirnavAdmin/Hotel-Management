@@ -1442,6 +1442,15 @@ export function AdminPortal({
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
   const [seatingStructureTable, setSeatingStructureTable] = useState(null);
+
+  useEffect(() => {
+    if (seatingStructureTable) {
+      const match = (tables || []).find((t) => String(t.id) === String(seatingStructureTable.id));
+      if (match && (match.capacity !== seatingStructureTable.capacity || match.guests !== seatingStructureTable.guests || match.persons !== seatingStructureTable.persons)) {
+        setSeatingStructureTable(match);
+      }
+    }
+  }, [tables, seatingStructureTable]);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerRole, setNewServerRole] = useState("");
@@ -3524,7 +3533,9 @@ export function AdminPortal({
                                     title="Click to view & configure seating structure"
                                   >
                                     <Armchair size={13} color="var(--accent-amber)" />
-                                    <span>{tbl.capacity} Chairs / {tbl.capacity} Persons</span>
+                                    <span>
+                                      {tbl.capacity || tbl.capacityChairs || tbl.chairs || 4} Chairs / {tbl.persons || tbl.guests || tbl.capacity || tbl.chairs || 4} Persons
+                                    </span>
                                   </button>
                                 </div>
 
@@ -7498,7 +7509,12 @@ export function AdminPortal({
         table={seatingStructureTable}
         isOpen={Boolean(seatingStructureTable)}
         onClose={() => setSeatingStructureTable(null)}
-        onUpdateTable={onUpdateTable}
+        onUpdateTable={(updatedTable) => {
+          if (onUpdateTable) {
+            onUpdateTable(updatedTable);
+          }
+          setSeatingStructureTable(updatedTable);
+        }}
         isLight={currentTheme === "light-bistro"}
         role="admin"
       />

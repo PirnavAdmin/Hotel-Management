@@ -1072,6 +1072,9 @@ export function TableView({
     const finalTable = {
       ...selectedSeatTable,
       capacity: selectedSeatTable.capacity,
+      chairs: selectedSeatTable.capacity,
+      capacityChairs: selectedSeatTable.capacity,
+      persons: count,
       seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
       guests: count,
       occupiedChairs: count,
@@ -1089,6 +1092,9 @@ export function TableView({
               ? {
                   ...t,
                   capacity: selectedSeatTable.capacity,
+                  chairs: selectedSeatTable.capacity,
+                  capacityChairs: selectedSeatTable.capacity,
+                  persons: count,
                   seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
                   guests: count,
                   occupiedChairs: count,
