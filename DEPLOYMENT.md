@@ -1,7 +1,7 @@
 # Ubuntu deployment
 
 1. Install Docker Engine and the Docker Compose plugin on the Ubuntu server.
-2. Copy this repository to the server and set real `DB_USER`, `DB_PASSWORD`, and `JWT_KEY` values in the root `.env` file. The example values are placeholders. Ensure MySQL at `DB_HOST` accepts connections from Docker containers and the database user has access to `DB_NAME`.
+2. Copy this repository to the server. Create the root `.env` from `.env.example` if it does not exist. For an existing deployment, preserve its current values and add `SMTP_PASS` rather than replacing the file. Set it to a Google App Password for the configured Gmail account (requires 2-Step Verification; do not use the normal account password). Keep `.env` private; it is excluded from Git. Ensure MySQL at `DB_HOST` accepts connections from Docker containers and the database user has access to `DB_NAME`.
 3. From the repository root, build and start the services:
 
    ```sh
