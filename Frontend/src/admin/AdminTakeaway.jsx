@@ -481,10 +481,10 @@ export function AdminTakeaway({
       const payload = {
         customerName: newCustomerName.trim() || "Walk-in Guest",
         customerPhone: newCustomerPhone.trim(),
-        paymentMethod: newPaymentMethod,
+        paymentMethod: newPaymentMethod || "Direct",
         paymentStatus: "Paid",
         isPaid: true,
-        paidAmount: cartTotal,
+        paidAmount: cartSubtotal || cartTotal,
         notes: newOrderNotes.trim() || null,
         items: cartItemsList.map(({ item, quantity }) => ({
           itemId: Number(item.itemId ?? item.menuItemId ?? item.id),
@@ -1794,7 +1794,7 @@ export function AdminTakeaway({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.65)",
+            background: "var(--modal-overlay, rgba(0, 0, 0, 0.45))",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
@@ -2155,41 +2155,12 @@ export function AdminTakeaway({
                   </div>
                 </div>
 
-                {/* Payment Method */}
-                <div>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "0.3rem" }}>
-                    Payment Mode
-                  </label>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    {["UPI", "Cash"].map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setNewPaymentMethod(mode)}
-                        style={{
-                          flex: 1,
-                          height: "36px",
-                          borderRadius: "8px",
-                          border: newPaymentMethod === mode ? "1px solid #ea580c" : "1px solid var(--border-card)",
-                          background: newPaymentMethod === mode ? "rgba(234, 88, 12, 0.1)" : "var(--bg-main)",
-                          color: newPaymentMethod === mode ? "#ea580c" : "var(--text-main)",
-                          fontSize: "0.82rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {mode}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Bill Totals */}
                 <div
                   style={{
                     background: "var(--bg-main)",
                     borderRadius: "10px",
-                    padding: "0.75rem 0.95rem",
+                    padding: "0.85rem 1rem",
                     border: "1px solid var(--border-card)",
                     display: "flex",
                     flexDirection: "column",
@@ -2197,18 +2168,6 @@ export function AdminTakeaway({
                     fontSize: "0.84rem",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
-                    <span>Subtotal:</span>
-                    <span style={{ fontWeight: 600 }}>₹ {cartSubtotal.toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
-                    <span>GST (5%):</span>
-                    <span style={{ fontWeight: 600 }}>₹ {cartGst.toFixed(2)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-muted)" }}>
-                    <span>Service Charge (5%):</span>
-                    <span style={{ fontWeight: 600 }}>₹ {cartServiceCharge.toFixed(2)}</span>
-                  </div>
                   <div
                     style={{
                       display: "flex",
@@ -2216,13 +2175,10 @@ export function AdminTakeaway({
                       fontWeight: 800,
                       fontSize: "1.05rem",
                       color: "#16a34a",
-                      borderTop: "1px dashed var(--border-card)",
-                      paddingTop: "0.45rem",
-                      marginTop: "0.2rem",
                     }}
                   >
                     <span>Total Amount:</span>
-                    <span>₹ {cartTotal.toFixed(2)}</span>
+                    <span>₹ {cartSubtotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -2282,7 +2238,7 @@ export function AdminTakeaway({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.65)",
+            background: "var(--modal-overlay, rgba(0, 0, 0, 0.45))",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
