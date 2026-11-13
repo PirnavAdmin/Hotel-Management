@@ -187,7 +187,7 @@ export function Header({
         }}
       >
         {/* 1. BRAND & LOGO */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
+      <div className="pos-header-brand-nav" style={{ display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0 }}>
         <div
           onClick={() => {
             setActiveView("tables");
@@ -354,7 +354,7 @@ export function Header({
 
       {/* 2.5 LIVE RESTAURANT DATE & TIME */}
       <div
-        className="desktop-only"
+        className="pos-header-clock"
         style={{
           display: "flex",
           alignItems: "center",
@@ -415,6 +415,7 @@ export function Header({
       </div>
 
       <div
+        className="pos-header-actions"
         style={{
           display: "flex",
           alignItems: "center",
@@ -793,7 +794,7 @@ export function Header({
 
       {/* ── SECONDARY SUB-BAR (DOWN): VACANT / DINING / GUESTS / RUNNING TOTAL ── */}
       <div
-        className="desktop-only"
+        className="pos-header-status"
         style={{
           display: "flex",
           alignItems: "center",
@@ -805,6 +806,7 @@ export function Header({
         }}
       >
         <div
+          className="pos-header-status-inner"
           style={{
             display: "flex",
             alignItems: "center",

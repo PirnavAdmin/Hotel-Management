@@ -776,6 +776,7 @@ export function App() {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [takeawayCheckoutTable, setTakeawayCheckoutTable] = useState(null);
   const [takeawayOrderRefreshToken, setTakeawayOrderRefreshToken] = useState(0);
+  const takeawayCheckoutInFlightRef = useRef(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -2933,26 +2934,36 @@ export function App() {
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
     let dineInBackendTableVacated = false;
     if (isTakeawayOrder) {
-      const createResult = await apiCreatePaidTakeawayOrder({
-        orderType: "Takeaway",
-        tableId: null,
-        tableName: "Takeaway",
-        serverName: settlementData.server || posSession?.name || "Server",
-        guests: 1,
-        status: "Settled",
-        paymentMethod: enrichedSettlement.paymentMethod,
-        invoiceNumber: settlementData.invoiceNo,
-        discountPercent: Number(settlementData.discountPercent) || 0,
-        serviceChargeEnabled: false,
-        tipAmount: Number(settlementData.tipAmount) || 0,
-        items: billableItems.map((item) => ({
-          menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          notes: item.notes || "",
-        })),
-      });
+      if (takeawayCheckoutInFlightRef.current) return false;
+      takeawayCheckoutInFlightRef.current = true;
+      let createResult;
+      try {
+        createResult = await apiCreatePaidTakeawayOrder({
+          orderType: "Takeaway",
+          tableId: null,
+          tableName: "Takeaway",
+          serverName: settlementData.server || posSession?.name || "Server",
+          guests: 1,
+          status: "Settled",
+          paymentMethod: enrichedSettlement.paymentMethod,
+          invoiceNumber: settlementData.invoiceNo,
+          idempotencyKey: settlementData.invoiceNo,
+          discountPercent: Number(settlementData.discountPercent) || 0,
+          serviceChargeEnabled: false,
+          tipAmount: Number(settlementData.tipAmount) || 0,
+          items: billableItems.map((item) => ({
+            menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            notes: item.notes || "",
+          })),
+        });
+      } catch (error) {
+        return `Payment was not recorded: ${error?.message || "The server could not save the takeaway order."}`;
+      } finally {
+        takeawayCheckoutInFlightRef.current = false;
+      }
       if (!createResult?.success) {
         const errorMessage = `Payment was not recorded: ${createResult?.error || "The server could not save the takeaway order."}`;
         showToast(errorMessage);

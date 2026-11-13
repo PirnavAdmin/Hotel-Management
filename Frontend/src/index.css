@@ -649,11 +649,6 @@ textarea {
     gap: 0.55rem !important;
   }
 
-  /* Hide verbose desktop widgets on mobile */
-  .desktop-only {
-    display: none !important;
-  }
-
   /* Navigation Header compact on mobile */
   .mobile-header-nav {
     padding: 0.5rem 0.75rem !important;
@@ -661,30 +656,64 @@ textarea {
 
   .mobile-header-primary {
     padding: 0 !important;
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand actions" "clock clock";
+    gap: 0.45rem 0.6rem !important;
+    align-items: center !important;
   }
 
   .mobile-header-primary > div:first-of-type {
-    width: 100%;
-    flex-wrap: wrap !important;
-    justify-content: space-between;
-    gap: 0.5rem !important;
+    grid-area: brand;
+    width: auto !important;
+    min-width: 0;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 0.45rem !important;
   }
 
   .mobile-header-primary > div:first-of-type > nav {
-    width: 100%;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
+    width: auto !important;
+    display: flex !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    min-width: 0;
   }
 
   .mobile-header-primary > div:first-of-type > nav > button {
     justify-content: center;
+    flex: 0 0 auto;
+    padding: 0.35rem 0.45rem !important;
   }
 
   .mobile-header-primary > div:last-child {
+    grid-area: actions;
+    width: auto !important;
+    justify-content: flex-end !important;
+    gap: 0.35rem !important;
+    margin-left: 0 !important;
+  }
+
+  .pos-header-clock {
+    grid-area: clock;
+    display: flex !important;
+    justify-self: start;
+  }
+
+  .pos-header-status {
+    display: block !important;
     width: 100%;
-    justify-content: space-between;
+    box-sizing: border-box;
+    overflow-x: auto;
+    padding: 0.35rem 0.65rem !important;
+  }
+
+  .pos-header-status-inner {
+    width: max-content;
+    min-width: 100%;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+    white-space: nowrap;
   }
 
   .mobile-container > div:first-child {
