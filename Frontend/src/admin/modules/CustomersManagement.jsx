@@ -676,32 +676,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
           </div>
         </div>
 
-        {/* Top Right Controls (+ Add Customer Button & Refresh) */}
+        {/* Top Right Controls (+ Add Customer Button) */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <button
-            type="button"
-            onClick={() => fetchCustomers(false)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.45rem",
-              height: "42px",
-              padding: "0 1rem",
-              borderRadius: "10px",
-              border: "1px solid var(--border-card)",
-              background: "var(--bg-card)",
-              color: "var(--text-main)",
-              fontSize: "0.84rem",
-              fontWeight: 500,
-              cursor: "pointer",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <RefreshCw size={15} style={{ animation: isRefreshing ? "spin 0.8s linear infinite" : "none" }} />
-            <span>Sync MySQL</span>
-          </button>
-
           <button
             type="button"
             onClick={handleOpenAddModal}
@@ -1189,11 +1165,11 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               <col style={{ width: "11%" }} />
               <col style={{ width: "16%" }} />
               <col style={{ width: "13%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "8%" }} />
               <col style={{ width: "12%" }} />
-              <col style={{ width: "10%" }} />
+              <col style={{ width: "8%" }} />
               <col style={{ width: "11%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "14%" }} />
             </colgroup>
             <thead>
               <tr>
@@ -1210,7 +1186,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   PHONE
                 </th>
                 <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
-                  EMAIL / LOCATION
+                  LOCATION
                 </th>
                 <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
                   VISITS
@@ -1286,7 +1262,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                         </span>
                       </td>
 
-                      {/* Customer Name + Avatar */}
+                      {/* Customer Name */}
                       <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", whiteSpace: "nowrap" }}>
                         <div style={{ fontWeight: 650, color: "var(--text-main)", display: "inline-flex", alignItems: "center", gap: "0.45rem", whiteSpace: "nowrap" }}>
                           <div
@@ -1306,14 +1282,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                           >
                             {(String(c.fullName || c.name || "G"))[0].toUpperCase()}
                           </div>
-                          <div style={{ display: "flex", flexDirection: "column" }}>
-                            <span>{c.fullName || c.name || "Unnamed Diner"}</span>
-                            {c.dietaryNotes && (
-                              <span style={{ fontSize: "0.64rem", color: "var(--text-muted)", fontWeight: 400, maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {c.dietaryNotes}
-                              </span>
-                            )}
-                          </div>
+                          <span>{c.fullName || c.name || "Guest"}</span>
                         </div>
                       </td>
 
@@ -1325,21 +1294,24 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                         </span>
                       </td>
 
-                      {/* Email / Address */}
-                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          {c.email ? (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", color: "var(--text-main)", fontSize: "0.72rem" }}>
-                              <Mail size={12} color="#94a3b8" />
-                              <span style={{ maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email}</span>
-                            </span>
-                          ) : (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem" }}>
-                              <MapPin size={12} color="#ea580c" />
-                              <span style={{ maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis" }}>{c.address || "Hyderabad"}</span>
-                            </span>
-                          )}
-                        </div>
+                      {/* Location */}
+                      <td style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 500, color: "var(--text-main)", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            background: "rgba(255, 255, 255, 0.04)",
+                            border: "1px solid var(--border-card)",
+                            padding: "0.15rem 0.45rem",
+                            borderRadius: "6px",
+                            fontSize: "0.7rem",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
+                          <span>{c.address ? c.address.split(",")[0].trim() : "Hyderabad"}</span>
+                        </span>
                       </td>
 
                       {/* Visits Count */}
@@ -1387,15 +1359,15 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
 
                       {/* Actions: View Details, Edit, More Menu */}
                       <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "0.35rem" }}>
                           {/* View Customer Profile & History */}
                           <button
                             type="button"
                             onClick={() => setViewingCustomer(c)}
                             title="View Customer Profile & Dining History"
                             style={{
-                              width: "32px",
-                              height: "32px",
+                              width: "30px",
+                              height: "30px",
                               borderRadius: "8px",
                               border: "1px solid var(--border-card)",
                               background: "rgba(255, 255, 255, 0.04)",
@@ -1405,6 +1377,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                               alignItems: "center",
                               justifyContent: "center",
                               transition: "all 0.15s ease",
+                              flexShrink: 0,
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.borderColor = "#ea580c";
@@ -1415,7 +1388,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                               e.currentTarget.style.color = "var(--text-main)";
                             }}
                           >
-                            <Eye size={15} />
+                            <Eye size={14} />
                           </button>
 
                           {/* Edit Customer Profile */}
@@ -1424,8 +1397,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                             onClick={() => handleOpenEditModal(c)}
                             title="Edit Customer Profile"
                             style={{
-                              width: "32px",
-                              height: "32px",
+                              width: "30px",
+                              height: "30px",
                               borderRadius: "8px",
                               border: "1px solid var(--border-card)",
                               background: "rgba(255, 255, 255, 0.04)",
@@ -1435,6 +1408,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                               alignItems: "center",
                               justifyContent: "center",
                               transition: "all 0.15s ease",
+                              flexShrink: 0,
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.borderColor = "#2563eb";
@@ -1445,18 +1419,18 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                               e.currentTarget.style.color = "var(--text-main)";
                             }}
                           >
-                            <Edit2 size={14} />
+                            <Edit2 size={13} />
                           </button>
 
                           {/* More Horizontal Dropdown Menu */}
-                          <div style={{ position: "relative" }}>
+                          <div style={{ position: "relative", flexShrink: 0 }}>
                             <button
                               type="button"
                               onClick={() => setActionMenuOpenId(isMenuOpen ? null : custId)}
                               title="Actions"
                               style={{
-                                width: "32px",
-                                height: "32px",
+                                width: "30px",
+                                height: "30px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card)",
                                 background: isMenuOpen ? "rgba(234, 88, 12, 0.15)" : "rgba(255, 255, 255, 0.04)",
@@ -1466,9 +1440,10 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                 alignItems: "center",
                                 justifyContent: "center",
                                 transition: "all 0.15s ease",
+                                flexShrink: 0,
                               }}
                             >
-                              <MoreHorizontal size={15} />
+                              <MoreHorizontal size={14} />
                             </button>
 
                             {isMenuOpen && (
@@ -1623,14 +1598,14 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             </div>
 
             {/* Pagination Controls */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
               <button
                 type="button"
                 disabled={safePage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 style={{
-                  width: "34px",
-                  height: "34px",
+                  width: "30px",
+                  height: "30px",
                   borderRadius: "8px",
                   border: "1px solid var(--border-card)",
                   background: "var(--bg-card)",
@@ -1641,7 +1616,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   cursor: safePage <= 1 ? "not-allowed" : "pointer",
                 }}
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={15} />
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
@@ -1649,20 +1624,20 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                 .map((pNum, idx, arr) => (
                   <React.Fragment key={pNum}>
                     {idx > 0 && arr[idx - 1] !== pNum - 1 && (
-                      <span style={{ padding: "0 0.25rem", color: "var(--text-muted)" }}>…</span>
+                      <span style={{ padding: "0 0.2rem", color: "var(--text-muted)" }}>…</span>
                     )}
                     <button
                       type="button"
                       onClick={() => setCurrentPage(pNum)}
                       style={{
-                        minWidth: "34px",
-                        height: "34px",
-                        padding: "0 0.55rem",
+                        minWidth: "30px",
+                        height: "30px",
+                        padding: "0 0.45rem",
                         borderRadius: "8px",
                         border: pNum === safePage ? "1px solid #ea580c" : "1px solid var(--border-card)",
                         background: pNum === safePage ? "#ea580c" : "var(--bg-card)",
                         color: pNum === safePage ? "#ffffff" : "var(--text-main)",
-                        fontSize: "0.82rem",
+                        fontSize: "0.78rem",
                         fontWeight: 700,
                         cursor: "pointer",
                       }}
@@ -1677,8 +1652,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                 disabled={safePage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 style={{
-                  width: "34px",
-                  height: "34px",
+                  width: "30px",
+                  height: "30px",
                   borderRadius: "8px",
                   border: "1px solid var(--border-card)",
                   background: "var(--bg-card)",
@@ -1689,14 +1664,14 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   cursor: safePage >= totalPages ? "not-allowed" : "pointer",
                 }}
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── MODAL 1: Add / Edit Customer Profile ────────────── */}
+      {/* ── MODAL 1: Add / Edit Customer Profile (Compact - Fits Without Scroll) ── */}
       {isAddEditModalOpen && (
         <div
           style={{
@@ -1716,28 +1691,26 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             style={{
               background: "#18181b",
               border: "1px solid #27272a",
-              borderRadius: "16px",
+              borderRadius: "14px",
               width: "100%",
               maxWidth: "520px",
-              maxHeight: "90vh",
-              overflowY: "auto",
               boxShadow: "0 25px 60px rgba(0, 0, 0, 0.7)",
               color: "#f8fafc",
-              padding: "1.5rem",
+              padding: "1.15rem 1.35rem",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", borderBottom: "1px solid #27272a", paddingBottom: "0.85rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(249, 115, 22, 0.15)", color: "#ea580c", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {editingCustomer ? <Edit2 size={18} /> : <UserPlus size={18} />}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem", borderBottom: "1px solid #27272a", paddingBottom: "0.65rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(249, 115, 22, 0.15)", color: "#ea580c", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {editingCustomer ? <Edit2 size={16} /> : <UserPlus size={16} />}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
                     {editingCustomer ? `Edit Customer: ${editingCustomer.fullName}` : "Add New Customer"}
                   </h3>
-                  <p style={{ margin: "2px 0 0", fontSize: "0.78rem", color: "#94a3b8" }}>
+                  <p style={{ margin: "1px 0 0", fontSize: "0.74rem", color: "#94a3b8" }}>
                     {editingCustomer ? "Update diner contact details & loyalty tier" : "Register a new guest profile with loyalty status"}
                   </p>
                 </div>
@@ -1745,17 +1718,18 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               <button
                 type="button"
                 onClick={() => setIsAddEditModalOpen(false)}
-                style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSaveCustomer} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <form onSubmit={handleSaveCustomer} style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+              {/* Row 1: Name & Phone */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Full Name *
                   </label>
                   <input
@@ -1764,11 +1738,11 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. Priya Sharma"
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Phone Number *
                   </label>
                   <input
@@ -1777,14 +1751,15 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. +91 98765 43210"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              {/* Row 2: Email & Loyalty Tier */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Email Address
                   </label>
                   <input
@@ -1792,17 +1767,17 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. guest@example.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Loyalty Tier
                   </label>
                   <select
                     value={form.tier}
                     onChange={(e) => setForm({ ...form, tier: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none", cursor: "pointer" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none", cursor: "pointer" }}
                   >
                     <option value="Regular">💚 Regular Diner</option>
                     <option value="VIP">👑 VIP Diner</option>
@@ -1812,22 +1787,37 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
-                  Delivery / Area Address
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Flat 302, Green Heights, Banjara Hills, Hyderabad"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none" }}
-                />
+              {/* Row 3: Area/Address & Birthday */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                    Delivery / Area Address
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Banjara Hills, Hyderabad"
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                    Birthday / Anniversary
+                  </label>
+                  <input
+                    type="date"
+                    value={form.birthday}
+                    onChange={(e) => setForm({ ...form, birthday: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none", cursor: "pointer" }}
+                  />
+                </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              {/* Row 4: Favorite Dish & Dietary / Table Preferences */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Favorite Dish / Order
                   </label>
                   <input
@@ -1835,41 +1825,29 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. Dum Biryani, Paneer Tikka"
                     value={form.favoriteDish}
                     onChange={(e) => setForm({ ...form, favoriteDish: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
-                    Birthday / Anniversary
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                    Dietary / Table Preferences
                   </label>
                   <input
-                    type="date"
-                    value={form.birthday}
-                    onChange={(e) => setForm({ ...form, birthday: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none", cursor: "pointer" }}
+                    type="text"
+                    placeholder="e.g. Vegetarian, window seat"
+                    value={form.dietaryNotes}
+                    onChange={(e) => setForm({ ...form, dietaryNotes: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.3rem", fontWeight: 600 }}>
-                  Dietary Preferences / Table Notes
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Vegetarian only, allergic to nuts, prefers corner booth table."
-                  value={form.dietaryNotes}
-                  onChange={(e) => setForm({ ...form, dietaryNotes: e.target.value })}
-                  style={{ width: "100%", boxSizing: "border-box", padding: "0.55rem 0.75rem", background: "#202024", border: "1px solid #27272a", borderRadius: "8px", color: "#f8fafc", fontSize: "0.84rem", outline: "none", resize: "vertical" }}
-                />
-              </div>
-
               {/* Action Buttons */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem", marginTop: "0.4rem" }}>
                 <button
                   type="button"
                   onClick={() => setIsAddEditModalOpen(false)}
-                  style={{ padding: "0.6rem 1.15rem", borderRadius: "8px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", fontWeight: 600, cursor: "pointer", fontSize: "0.84rem" }}
+                  style={{ padding: "0.48rem 1rem", borderRadius: "7px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", fontWeight: 600, cursor: "pointer", fontSize: "0.8rem" }}
                 >
                   Cancel
                 </button>
@@ -1877,14 +1855,14 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   type="submit"
                   disabled={isSaving}
                   style={{
-                    padding: "0.6rem 1.4rem",
-                    borderRadius: "8px",
+                    padding: "0.48rem 1.25rem",
+                    borderRadius: "7px",
                     border: "none",
                     background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
                     color: "#ffffff",
                     fontWeight: 700,
                     cursor: "pointer",
-                    fontSize: "0.84rem",
+                    fontSize: "0.8rem",
                     boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
                   }}
                 >
