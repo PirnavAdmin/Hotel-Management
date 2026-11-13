@@ -284,6 +284,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [actionMenuOpenId, setActionMenuOpenId] = useState(null);
+  const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
   const actionMenuRef = useRef(null);
 
   // Form State
@@ -304,6 +305,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
     function handleClickOutside(e) {
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
         setActionMenuOpenId(null);
+        setActionMenuOpenAbove(false);
       }
     }
     if (actionMenuOpenId) {
@@ -1426,7 +1428,19 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                           <div style={{ position: "relative", flexShrink: 0 }}>
                             <button
                               type="button"
-                              onClick={() => setActionMenuOpenId(isMenuOpen ? null : custId)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isMenuOpen) {
+                                  setActionMenuOpenId(null);
+                                  setActionMenuOpenAbove(false);
+                                } else {
+                                  const buttonRect = e.currentTarget.getBoundingClientRect();
+                                  const spaceBelow = window.innerHeight - buttonRect.bottom;
+                                  const openAbove = spaceBelow < 195 || index >= paginatedCustomers.length - 3;
+                                  setActionMenuOpenAbove(openAbove);
+                                  setActionMenuOpenId(custId);
+                                }
+                              }}
                               title="Actions"
                               style={{
                                 width: "30px",
@@ -1449,17 +1463,19 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                             {isMenuOpen && (
                               <div
                                 ref={actionMenuRef}
+                                onClick={(e) => e.stopPropagation()}
                                 style={{
                                   position: "absolute",
                                   right: 0,
-                                  top: "calc(100% + 5px)",
-                                  background: "#18181b",
-                                  border: "1px solid #27272a",
+                                  top: actionMenuOpenAbove ? "auto" : "calc(100% + 5px)",
+                                  bottom: actionMenuOpenAbove ? "calc(100% + 5px)" : "auto",
+                                  background: "var(--bg-card)",
+                                  border: "1px solid var(--border-card)",
                                   borderRadius: "10px",
-                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.75)",
+                                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
                                   padding: "0.35rem",
-                                  minWidth: "180px",
-                                  zIndex: 100,
+                                  minWidth: "185px",
+                                  zIndex: 9999,
                                   display: "flex",
                                   flexDirection: "column",
                                   gap: "0.2rem",
@@ -1470,6 +1486,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   type="button"
                                   onClick={() => {
                                     setActionMenuOpenId(null);
+                                    setActionMenuOpenAbove(false);
                                     setViewingCustomer(c);
                                   }}
                                   style={{
@@ -1480,7 +1497,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                     borderRadius: "6px",
                                     border: "none",
                                     background: "transparent",
-                                    color: "#f8fafc",
+                                    color: "var(--text-main)",
                                     fontSize: "0.8rem",
                                     cursor: "pointer",
                                     fontWeight: 500,
@@ -1496,6 +1513,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   type="button"
                                   onClick={() => {
                                     setActionMenuOpenId(null);
+                                    setActionMenuOpenAbove(false);
                                     const nextTier = String(c.tier).toLowerCase() === "vip" ? "Regular" : "VIP";
                                     setCustomers((prev) =>
                                       prev.map((item) =>
@@ -1514,7 +1532,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                     borderRadius: "6px",
                                     border: "none",
                                     background: "transparent",
-                                    color: "#c084fc",
+                                    color: "#a855f7",
                                     fontSize: "0.8rem",
                                     cursor: "pointer",
                                     fontWeight: 500,
@@ -1526,12 +1544,13 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   <span>{String(c.tier).toLowerCase() === "vip" ? "Demote to Regular" : "Promote to VIP"}</span>
                                 </button>
 
-                                <div style={{ height: "1px", background: "#27272a", margin: "0.2rem 0" }} />
+                                <div style={{ height: "1px", background: "var(--border-card)", margin: "0.2rem 0" }} />
 
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setActionMenuOpenId(null);
+                                    setActionMenuOpenAbove(false);
                                     handleDeleteCustomer(custId, c.fullName || c.name);
                                   }}
                                   style={{
@@ -1689,28 +1708,28 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "14px",
               width: "100%",
               maxWidth: "520px",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.7)",
-              color: "#f8fafc",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4)",
+              color: "var(--text-main)",
               padding: "1.15rem 1.35rem",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem", borderBottom: "1px solid #27272a", paddingBottom: "0.65rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem", borderBottom: "1px solid var(--border-card)", paddingBottom: "0.65rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
                 <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(249, 115, 22, 0.15)", color: "#ea580c", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {editingCustomer ? <Edit2 size={16} /> : <UserPlus size={16} />}
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700 }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--text-main)" }}>
                     {editingCustomer ? `Edit Customer: ${editingCustomer.fullName}` : "Add New Customer"}
                   </h3>
-                  <p style={{ margin: "1px 0 0", fontSize: "0.74rem", color: "#94a3b8" }}>
+                  <p style={{ margin: "1px 0 0", fontSize: "0.74rem", color: "var(--text-muted)" }}>
                     {editingCustomer ? "Update diner contact details & loyalty tier" : "Register a new guest profile with loyalty status"}
                   </p>
                 </div>
@@ -1718,7 +1737,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               <button
                 type="button"
                 onClick={() => setIsAddEditModalOpen(false)}
-                style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid var(--border-card)", background: "var(--bg-main)", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 <X size={15} />
               </button>
@@ -1729,7 +1748,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               {/* Row 1: Name & Phone */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Full Name *
                   </label>
                   <input
@@ -1738,11 +1757,11 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. Priya Sharma"
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Phone Number *
                   </label>
                   <input
@@ -1751,7 +1770,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. +91 98765 43210"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
               </div>
@@ -1759,7 +1778,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               {/* Row 2: Email & Loyalty Tier */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Email Address
                   </label>
                   <input
@@ -1767,17 +1786,17 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. guest@example.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Loyalty Tier
                   </label>
                   <select
                     value={form.tier}
                     onChange={(e) => setForm({ ...form, tier: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none", cursor: "pointer" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none", cursor: "pointer" }}
                   >
                     <option value="Regular">💚 Regular Diner</option>
                     <option value="VIP">👑 VIP Diner</option>
@@ -1790,7 +1809,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               {/* Row 3: Area/Address & Birthday */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Delivery / Area Address
                   </label>
                   <input
@@ -1798,18 +1817,18 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. Banjara Hills, Hyderabad"
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Birthday / Anniversary
                   </label>
                   <input
                     type="date"
                     value={form.birthday}
                     onChange={(e) => setForm({ ...form, birthday: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none", cursor: "pointer" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none", cursor: "pointer" }}
                   />
                 </div>
               </div>
@@ -1817,7 +1836,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               {/* Row 4: Favorite Dish & Dietary / Table Preferences */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Favorite Dish / Order
                   </label>
                   <input
@@ -1825,11 +1844,11 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. Dum Biryani, Paneer Tikka"
                     value={form.favoriteDish}
                     onChange={(e) => setForm({ ...form, favoriteDish: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.72rem", color: "#94a3b8", marginBottom: "0.2rem", fontWeight: 600 }}>
+                  <label style={{ display: "block", fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "0.2rem", fontWeight: 600 }}>
                     Dietary / Table Preferences
                   </label>
                   <input
@@ -1837,7 +1856,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     placeholder="e.g. Vegetarian, window seat"
                     value={form.dietaryNotes}
                     onChange={(e) => setForm({ ...form, dietaryNotes: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "#202024", border: "1px solid #27272a", borderRadius: "7px", color: "#f8fafc", fontSize: "0.8rem", outline: "none" }}
+                    style={{ width: "100%", boxSizing: "border-box", height: "36px", padding: "0.42rem 0.65rem", background: "var(--bg-main)", border: "1px solid var(--border-card)", borderRadius: "7px", color: "var(--text-main)", fontSize: "0.8rem", outline: "none" }}
                   />
                 </div>
               </div>
@@ -1847,7 +1866,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                 <button
                   type="button"
                   onClick={() => setIsAddEditModalOpen(false)}
-                  style={{ padding: "0.48rem 1rem", borderRadius: "7px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", fontWeight: 600, cursor: "pointer", fontSize: "0.8rem" }}
+                  style={{ padding: "0.48rem 1rem", borderRadius: "7px", border: "1px solid var(--border-card)", background: "var(--bg-main)", color: "var(--text-muted)", fontWeight: 600, cursor: "pointer", fontSize: "0.8rem" }}
                 >
                   Cancel
                 </button>
@@ -1892,21 +1911,21 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
         >
           <div
             style={{
-              background: "#18181b",
-              border: "1px solid #27272a",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-card)",
               borderRadius: "16px",
               width: "100%",
               maxWidth: "560px",
               maxHeight: "90vh",
               overflowY: "auto",
-              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.7)",
-              color: "#f8fafc",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.4)",
+              color: "var(--text-main)",
               padding: "1.5rem",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Profile Header */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.25rem", borderBottom: "1px solid #27272a", paddingBottom: "1rem" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.25rem", borderBottom: "1px solid var(--border-card)", paddingBottom: "1rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.9rem" }}>
                 <div
                   style={{
@@ -1928,7 +1947,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                 </div>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>
+                    <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700, color: "var(--text-main)" }}>
                       {viewingCustomer.fullName}
                     </h3>
                     {(() => {
@@ -1954,7 +1973,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                       );
                     })()}
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: "2px", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "0.6rem" }}>
                     <span style={{ fontFamily: "monospace", color: "#ea580c" }}>{viewingCustomer.customerId || viewingCustomer.id}</span>
                     <span>•</span>
                     <span>Last visit: {viewingCustomer.lastVisit || "Recent"}</span>
@@ -1965,7 +1984,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               <button
                 type="button"
                 onClick={() => setViewingCustomer(null)}
-                style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #27272a", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-main)", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 <X size={16} />
               </button>
@@ -1973,26 +1992,26 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
 
             {/* 4 Quick Stat Cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.55rem", marginBottom: "1.25rem" }}>
-              <div style={{ background: "#202024", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid #27272a" }}>
-                <div style={{ fontSize: "0.66rem", color: "#94a3b8", fontWeight: 600 }}>Total Visits</div>
+              <div style={{ background: "var(--bg-main)", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid var(--border-card)" }}>
+                <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600 }}>Total Visits</div>
                 <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ea580c", marginTop: "2px" }}>
                   {viewingCustomer.visitsCount || 1}
                 </div>
               </div>
-              <div style={{ background: "#202024", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid #27272a" }}>
-                <div style={{ fontSize: "0.66rem", color: "#94a3b8", fontWeight: 600 }}>Total Spent</div>
+              <div style={{ background: "var(--bg-main)", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid var(--border-card)" }}>
+                <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600 }}>Total Spent</div>
                 <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#16a34a", marginTop: "2px" }}>
                   ₹{(Number(viewingCustomer.totalSpent) || 0).toLocaleString("en-IN")}
                 </div>
               </div>
-              <div style={{ background: "#202024", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid #27272a" }}>
-                <div style={{ fontSize: "0.66rem", color: "#94a3b8", fontWeight: 600 }}>Loyalty Points</div>
+              <div style={{ background: "var(--bg-main)", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid var(--border-card)" }}>
+                <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600 }}>Loyalty Points</div>
                 <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#a855f7", marginTop: "2px" }}>
                   {viewingCustomer.loyaltyPoints || 40} pts
                 </div>
               </div>
-              <div style={{ background: "#202024", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid #27272a" }}>
-                <div style={{ fontSize: "0.66rem", color: "#94a3b8", fontWeight: 600 }}>Avg / Visit</div>
+              <div style={{ background: "var(--bg-main)", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid var(--border-card)" }}>
+                <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600 }}>Avg / Visit</div>
                 <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#38bdf8", marginTop: "2px" }}>
                   ₹{Math.round((Number(viewingCustomer.totalSpent) || 1200) / Math.max(1, viewingCustomer.visitsCount || 1)).toLocaleString("en-IN")}
                 </div>
@@ -2000,48 +2019,48 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             </div>
 
             {/* Contact Details & Dining Preferences */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", background: "#202024", padding: "0.9rem", borderRadius: "10px", border: "1px solid #27272a", marginBottom: "1.25rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", background: "var(--bg-main)", padding: "0.9rem", borderRadius: "10px", border: "1px solid var(--border-card)", marginBottom: "1.25rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
                 <Phone size={14} color="#ea580c" />
-                <span style={{ color: "#94a3b8", width: "90px" }}>Phone:</span>
-                <span style={{ fontWeight: 600, color: "#f8fafc" }}>{viewingCustomer.phone || "—"}</span>
+                <span style={{ color: "var(--text-muted)", width: "90px" }}>Phone:</span>
+                <span style={{ fontWeight: 600, color: "var(--text-main)" }}>{viewingCustomer.phone || "—"}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
                 <Mail size={14} color="#ea580c" />
-                <span style={{ color: "#94a3b8", width: "90px" }}>Email:</span>
-                <span style={{ color: "#f8fafc" }}>{viewingCustomer.email || "No email on file"}</span>
+                <span style={{ color: "var(--text-muted)", width: "90px" }}>Email:</span>
+                <span style={{ color: "var(--text-main)" }}>{viewingCustomer.email || "No email on file"}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
                 <MapPin size={14} color="#ea580c" />
-                <span style={{ color: "#94a3b8", width: "90px" }}>Location:</span>
-                <span style={{ color: "#f8fafc" }}>{viewingCustomer.address || "Hyderabad"}</span>
+                <span style={{ color: "var(--text-muted)", width: "90px" }}>Location:</span>
+                <span style={{ color: "var(--text-main)" }}>{viewingCustomer.address || "Hyderabad"}</span>
               </div>
               {viewingCustomer.birthday && (
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
                   <Cake size={14} color="#f59e0b" />
-                  <span style={{ color: "#94a3b8", width: "90px" }}>Birthday:</span>
-                  <span style={{ color: "#f8fafc" }}>{viewingCustomer.birthday}</span>
+                  <span style={{ color: "var(--text-muted)", width: "90px" }}>Birthday:</span>
+                  <span style={{ color: "var(--text-main)" }}>{viewingCustomer.birthday}</span>
                 </div>
               )}
               {viewingCustomer.favoriteDish && (
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
                   <Utensils size={14} color="#16a34a" />
-                  <span style={{ color: "#94a3b8", width: "90px" }}>Favorite:</span>
+                  <span style={{ color: "var(--text-muted)", width: "90px" }}>Favorite:</span>
                   <span style={{ fontWeight: 600, color: "#16a34a" }}>{viewingCustomer.favoriteDish}</span>
                 </div>
               )}
               {viewingCustomer.dietaryNotes && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", fontSize: "0.82rem", marginTop: "2px" }}>
                   <FileText size={14} color="#a855f7" style={{ marginTop: "2px" }} />
-                  <span style={{ color: "#94a3b8", width: "90px" }}>Preferences:</span>
-                  <span style={{ color: "#f8fafc", flex: 1 }}>{viewingCustomer.dietaryNotes}</span>
+                  <span style={{ color: "var(--text-muted)", width: "90px" }}>Preferences:</span>
+                  <span style={{ color: "var(--text-main)", flex: 1 }}>{viewingCustomer.dietaryNotes}</span>
                 </div>
               )}
             </div>
 
             {/* Recent Orders / Dining Activity */}
             <div style={{ marginBottom: "1.25rem" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#94a3b8", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 Recent Dining & Takeaway Activity
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
@@ -2057,9 +2076,9 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "0.55rem 0.75rem",
-                      background: "#202024",
+                      background: "var(--bg-main)",
                       borderRadius: "8px",
-                      border: "1px solid #27272a",
+                      border: "1px solid var(--border-card)",
                       fontSize: "0.76rem",
                     }}
                   >
@@ -2070,8 +2089,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                         <ShoppingBag size={14} color="#2563eb" />
                       )}
                       <div>
-                        <div style={{ fontWeight: 600, color: "#f8fafc" }}>{act.table || act.items}</div>
-                        <div style={{ fontSize: "0.68rem", color: "#94a3b8" }}>{act.date}</div>
+                        <div style={{ fontWeight: 600, color: "var(--text-main)" }}>{act.table || act.items}</div>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{act.date}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -2084,7 +2103,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             </div>
 
             {/* Bottom Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem", borderTop: "1px solid #27272a", paddingTop: "0.85rem" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem", borderTop: "1px solid var(--border-card)", paddingTop: "0.85rem" }}>
               <button
                 type="button"
                 onClick={() => {
@@ -2098,9 +2117,9 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   gap: "0.35rem",
                   padding: "0.5rem 1rem",
                   borderRadius: "8px",
-                  border: "1px solid #27272a",
-                  background: "transparent",
-                  color: "#f8fafc",
+                  border: "1px solid var(--border-card)",
+                  background: "var(--bg-main)",
+                  color: "var(--text-main)",
                   fontSize: "0.82rem",
                   fontWeight: 600,
                   cursor: "pointer",

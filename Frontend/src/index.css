@@ -216,6 +216,27 @@ button {
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.app-loading-spinner {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: app-loading-spin 0.7s linear infinite;
+  vertical-align: -0.12em;
+  pointer-events: none;
+}
+
+.app-button-loading-spinner {
+  margin-right: 0.45em;
+}
+
+@keyframes app-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Shared foreground treatment for orange primary actions. The inline
    background selectors cover existing gradient buttons without changing
    their backgrounds or the styling of outlined/secondary variants. */

@@ -28,40 +28,22 @@ import {
   FileText,
 } from "lucide-react";
 import {
-  apiGetTakeawayOrders,
-  apiGetTakeawayOrderHistory,
-  apiCreatePaidTakeawayOrder,
-  apiDispatchTakeawayOrder,
-  apiCancelTakeawayOrder,
-} from "../api/orderApi";
+  apiGetAllAdminTakeawayOrders,
+  apiGetAdminTakeawaySummary,
+  apiGetAdminTakeawayOrder,
+  apiUpdateAdminTakeawayStatus,
+  apiCancelAdminTakeawayOrder,
+  apiGetAdminTakeawayMenu,
+  apiSearchAdminTakeawayMenu,
+  apiGetAdminTakeawayCategories,
+  apiCalculateAdminTakeawayCart,
+  apiCreateAdminTakeawayOrder,
+  apiGetAdminTakeawayInvoice,
+} from "../api/takeawayAdminApi";
 import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
 
-const STORAGE_KEY_TAKEAWAY = "avsr_admin_takeaway_orders_v1";
-const TAKEAWAY_GST_RATE = 0.05;
-const TAKEAWAY_SERVICE_CHARGE_RATE = 0.05;
-
-function calculateTakeawayBill(items, fallbackSubtotal = 0) {
-  const subtotalFromItems = (Array.isArray(items) ? items : []).reduce(
-    (sum, item) =>
-      sum +
-      (Number(item?.price ?? item?.unitPrice) || 0) *
-        (Number(item?.quantity ?? item?.qty) || 1),
-    0
-  );
-  const subtotal = Math.round((subtotalFromItems || Number(fallbackSubtotal) || 0) * 100) / 100;
-  const taxAmount = Math.round((subtotal * TAKEAWAY_GST_RATE + Number.EPSILON) * 100) / 100;
-  const serviceChargeAmount = Math.round((subtotal * TAKEAWAY_SERVICE_CHARGE_RATE + Number.EPSILON) * 100) / 100;
-
-  return {
-    subtotal,
-    taxAmount,
-    serviceChargeAmount,
-    grandTotal: Math.round((subtotal + taxAmount + serviceChargeAmount) * 100) / 100,
-  };
-}
-
 function getTakeawayOrderTotal(order) {
-  return calculateTakeawayBill(order?.items, order?.amount).grandTotal;
+  return Number(order?.totalAmount ?? order?.grandTotal ?? order?.amount ?? 0);
 }
 
 function isValidIndianMobileNumber(phone) {
@@ -73,291 +55,6 @@ function isValidIndianMobileNumber(phone) {
 }
 
 // ── Initial Seed Data (Precisely calibrated to the 86 Total / 8 Pending / 78 Completed / ₹74,320.00 KPI mockup) ──
-const SEED_TAKEAWAY_ORDERS = [
-  {
-    id: "TK-1068",
-    orderNumber: "TK-1068",
-    customer: "Ramesh K.",
-    phone: "+91 98450 11223",
-    itemsCount: 4,
-    items: [
-      { name: "Chicken Biryani", quantity: 2, price: 380 },
-      { name: "Butter Naan", quantity: 4, price: 60 },
-      { name: "Paneer Tikka", quantity: 1, price: 280 },
-    ],
-    amount: 1280.0,
-    status: "Pending",
-    orderTime: "14 Oct 2026, 11:10 AM",
-    date: "2026-10-14T11:10:00",
-    paymentMethod: "UPI",
-    notes: "Extra spicy, pack gravy separately",
-  },
-  {
-    id: "TK-1067",
-    orderNumber: "TK-1067",
-    customer: "Priya S.",
-    phone: "+91 99451 66788",
-    itemsCount: 3,
-    items: [
-      { name: "Veg Fried Rice", quantity: 2, price: 260 },
-      { name: "Veg Manchurian", quantity: 1, price: 240 },
-    ],
-    amount: 760.0,
-    status: "Preparing",
-    orderTime: "14 Oct 2026, 10:55 AM",
-    date: "2026-10-14T10:55:00",
-    paymentMethod: "Card",
-    notes: "No onion, no garlic",
-  },
-  {
-    id: "TK-1066",
-    orderNumber: "TK-1066",
-    customer: "Vikram R.",
-    phone: "+91 90085 33445",
-    itemsCount: 5,
-    items: [
-      { name: "Mutton Dum Biryani", quantity: 2, price: 490 },
-      { name: "Tandoori Chicken (Half)", quantity: 1, price: 360 },
-      { name: "Garlic Naan", quantity: 4, price: 80 },
-      { name: "Gulab Jamun", quantity: 4, price: 170 },
-    ],
-    amount: 2340.0,
-    status: "Ready",
-    orderTime: "14 Oct 2026, 10:35 AM",
-    date: "2026-10-14T10:35:00",
-    paymentMethod: "UPI",
-    notes: "Customer waiting at counter",
-  },
-  {
-    id: "TK-1065",
-    orderNumber: "TK-1065",
-    customer: "Karthik M.",
-    phone: "+91 78902 55661",
-    itemsCount: 2,
-    items: [
-      { name: "Paneer Butter Masala", quantity: 1, price: 320 },
-      { name: "Butter Roti", quantity: 4, price: 40 },
-    ],
-    amount: 480.0,
-    status: "Completed",
-    orderTime: "14 Oct 2026, 10:20 AM",
-    date: "2026-10-14T10:20:00",
-    paymentMethod: "Cash",
-    notes: "",
-  },
-  {
-    id: "TK-1064",
-    orderNumber: "TK-1064",
-    customer: "Ananya P.",
-    phone: "+91 96060 99887",
-    itemsCount: 6,
-    items: [
-      { name: "Chicken Tikka Masala", quantity: 2, price: 390 },
-      { name: "Jeera Rice", quantity: 2, price: 220 },
-      { name: "Butter Naan", quantity: 6, price: 60 },
-      { name: "Rasmalai", quantity: 2, price: 100 },
-    ],
-    amount: 1960.0,
-    status: "Completed",
-    orderTime: "14 Oct 2026, 09:50 AM",
-    date: "2026-10-14T09:50:00",
-    paymentMethod: "UPI",
-    notes: "Double paper bag packing please",
-  },
-  {
-    id: "TK-1063",
-    orderNumber: "TK-1063",
-    customer: "Suresh D.",
-    phone: "+91 99804 22110",
-    itemsCount: 3,
-    items: [
-      { name: "Chicken 65", quantity: 2, price: 310 },
-      { name: "Veg Noodles", quantity: 1, price: 240 },
-    ],
-    amount: 920.0,
-    status: "Cancelled",
-    orderTime: "14 Oct 2026, 09:30 AM",
-    date: "2026-10-14T09:30:00",
-    paymentMethod: "UPI",
-    notes: "Customer cancelled due to emergency",
-  },
-  {
-    id: "TK-1062",
-    orderNumber: "TK-1062",
-    customer: "Divya N.",
-    phone: "+91 94810 77550",
-    itemsCount: 4,
-    items: [
-      { name: "Dal Makhani", quantity: 1, price: 280 },
-      { name: "Kadai Paneer", quantity: 1, price: 340 },
-      { name: "Tandoori Roti", quantity: 6, price: 35 },
-      { name: "Gulab Jamun", quantity: 4, price: 170 },
-    ],
-    amount: 1360.0,
-    status: "Completed",
-    orderTime: "14 Oct 2026, 09:05 AM",
-    date: "2026-10-14T09:05:00",
-    paymentMethod: "Card",
-    notes: "",
-  },
-  {
-    id: "TK-1061",
-    orderNumber: "TK-1061",
-    customer: "Manoj T.",
-    phone: "+91 97422 88990",
-    itemsCount: 2,
-    items: [
-      { name: "Egg Fried Rice", quantity: 1, price: 260 },
-      { name: "Chilli Chicken", quantity: 1, price: 260 },
-    ],
-    amount: 520.0,
-    status: "Completed",
-    orderTime: "14 Oct 2026, 08:45 AM",
-    date: "2026-10-14T08:45:00",
-    paymentMethod: "Cash",
-    notes: "Medium spicy",
-  },
-];
-
-// Helper to seed the full 86 orders with 78 completed, 8 pending, and exact sales sum
-function generateExpandedSeedOrders() {
-  const list = [...SEED_TAKEAWAY_ORDERS];
-  const names = [
-    "Arun K.", "Deepa M.", "Kiran B.", "Sanjay V.", "Meera S.", "Naveen P.",
-    "Swathi R.", "Pooja G.", "Harish T.", "Sneha L.", "Vijay C.", "Rohit K.",
-    "Bhavya S.", "Rajesh M.", "Snehal P.", "Girish D.", "Aishwarya K.", "Sunil R."
-  ];
-
-  // 7 more pending orders to reach 8 total pending
-  const pendingTemplates = [
-    { customer: "Sneha Reddy", phone: "+91 98451 22334", items: [{ name: "Veg Biryani", quantity: 2, price: 280 }], amount: 560, notes: "Pack extra raita" },
-    { customer: "Rahul V.", phone: "+91 98112 44556", items: [{ name: "Butter Chicken", quantity: 1, price: 390 }, { name: "Garlic Naan", quantity: 3, price: 75 }], amount: 615, notes: "" },
-    { customer: "Meenakshi S.", phone: "+91 97334 55667", items: [{ name: "Paneer Tikka", quantity: 2, price: 290 }], amount: 580, notes: "Green chutney extra" },
-    { customer: "Aditya Roy", phone: "+91 96221 88990", items: [{ name: "Chicken 65", quantity: 2, price: 310 }], amount: 620, notes: "Crispy fry" },
-    { customer: "Pooja Hegde", phone: "+91 95443 22110", items: [{ name: "Veg Hakka Noodles", quantity: 2, price: 240 }], amount: 480, notes: "" },
-    { customer: "Gautam Rao", phone: "+91 94332 11998", items: [{ name: "Tandoori Roti", quantity: 8, price: 35 }, { name: "Dal Makhani", quantity: 1, price: 280 }], amount: 560, notes: "" },
-    { customer: "Kavitha N.", phone: "+91 93221 00887", items: [{ name: "Chicken Dum Biryani", quantity: 2, price: 380 }], amount: 760, notes: "Urgent pickup" },
-  ];
-
-  pendingTemplates.forEach((pt, i) => {
-    list.push({
-      id: `TK-${1060 - i}`,
-      orderNumber: `TK-${1060 - i}`,
-      customer: pt.customer,
-      phone: pt.phone,
-      itemsCount: pt.items.reduce((s, it) => s + it.quantity, 0),
-      items: pt.items,
-      amount: pt.amount,
-      status: "Pending",
-      orderTime: `14 Oct 2026, ${String(8 - Math.floor(i / 2)).padStart(2, "0")}:${String(15 + i * 5).padStart(2, "0")} AM`,
-      date: `2026-10-14T08:${String(15 + i * 5).padStart(2, "0")}:00`,
-      paymentMethod: "UPI",
-      notes: pt.notes,
-    });
-  });
-
-  // 1 more cancelled order to reach 2 total cancelled
-  list.push({
-    id: "TK-1053",
-    orderNumber: "TK-1053",
-    customer: "Sameer Joshi",
-    phone: "+91 98223 33441",
-    itemsCount: 2,
-    items: [{ name: "Mutton Biryani", quantity: 1, price: 490 }],
-    amount: 490.0,
-    status: "Cancelled",
-    orderTime: "14 Oct 2026, 08:10 AM",
-    date: "2026-10-14T08:10:00",
-    paymentMethod: "UPI",
-    notes: "Customer delayed, cancelled order",
-  });
-
-  // 4 more preparing orders to reach 5 total preparing
-  const preparingTemplates = [
-    { customer: "Varun Verma", phone: "+91 98334 11223", items: [{ name: "Chicken Tikka", quantity: 2, price: 320 }], amount: 640 },
-    { customer: "Shweta K.", phone: "+91 97445 22334", items: [{ name: "Veg Pulao", quantity: 2, price: 250 }], amount: 500 },
-    { customer: "Murali B.", phone: "+91 96556 33445", items: [{ name: "Fish Curry", quantity: 1, price: 420 }, { name: "Steamed Rice", quantity: 2, price: 120 }], amount: 660 },
-    { customer: "Neha Sharma", phone: "+91 95667 44556", items: [{ name: "Paneer Kulcha", quantity: 4, price: 90 }], amount: 360 },
-  ];
-  preparingTemplates.forEach((pt, i) => {
-    list.push({
-      id: `TK-${1052 - i}`,
-      orderNumber: `TK-${1052 - i}`,
-      customer: pt.customer,
-      phone: pt.phone,
-      itemsCount: pt.items.reduce((s, it) => s + it.quantity, 0),
-      items: pt.items,
-      amount: pt.amount,
-      status: "Preparing",
-      orderTime: `14 Oct 2026, 07:${String(45 + i * 3).padStart(2, "0")} AM`,
-      date: `2026-10-14T07:${String(45 + i * 3).padStart(2, "0")}:00`,
-      paymentMethod: "Card",
-      notes: "",
-    });
-  });
-
-  // 2 more ready orders to reach 3 total ready
-  const readyTemplates = [
-    { customer: "Prashanth D.", phone: "+91 94778 55667", items: [{ name: "Chicken Biryani", quantity: 2, price: 380 }], amount: 760 },
-    { customer: "Deepika R.", phone: "+91 93889 66778", items: [{ name: "Paneer Butter Masala", quantity: 1, price: 320 }, { name: "Naan", quantity: 4, price: 50 }], amount: 520 },
-  ];
-  readyTemplates.forEach((rt, i) => {
-    list.push({
-      id: `TK-${1048 - i}`,
-      orderNumber: `TK-${1048 - i}`,
-      customer: rt.customer,
-      phone: rt.phone,
-      itemsCount: rt.items.reduce((s, it) => s + it.quantity, 0),
-      items: rt.items,
-      amount: rt.amount,
-      status: "Ready",
-      orderTime: `14 Oct 2026, 07:30 AM`,
-      date: `2026-10-14T07:30:00`,
-      paymentMethod: "UPI",
-      notes: "Packed and ready at counter",
-    });
-  });
-
-  // Generate completed orders to reach exact target 78 completed and ₹74,320.00 total sales
-  const currentCompletedList = list.filter((o) => o.status === "Completed");
-  const neededCompleted = 78 - currentCompletedList.length;
-  let remainingSales = 74320.0 - currentCompletedList.reduce((s, o) => s + o.amount, 0);
-
-  for (let i = 1; i <= neededCompleted; i++) {
-    const num = 1046 - i;
-    const name = names[i % names.length];
-    const isLast = i === neededCompleted;
-    const amount = isLast ? Math.max(200, Math.round(remainingSales)) : Math.round(remainingSales / (neededCompleted - i + 1));
-    remainingSales -= amount;
-
-    const day = Math.max(1, 14 - Math.floor(i / 6));
-    const dayStr = String(day).padStart(2, "0");
-    const hour = 11 + (i % 10);
-    const minute = (i * 13) % 60;
-    const timeStr = `${dayStr} Oct 2026, ${String(hour > 12 ? hour - 12 : hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
-
-    list.push({
-      id: `TK-${num}`,
-      orderNumber: `TK-${num}`,
-      customer: name,
-      phone: `+91 98${String(10000000 + i * 2311).slice(0, 8)}`,
-      itemsCount: 3,
-      items: [
-        { name: "Special Dine Combo", quantity: 1, price: Math.round(amount * 0.6) },
-        { name: "Indian Bread / Rice", quantity: 2, price: Math.round((amount * 0.4) / 2) },
-      ],
-      amount: amount,
-      status: "Completed",
-      orderTime: timeStr,
-      date: `2026-10-${dayStr}T14:00:00`,
-      paymentMethod: i % 2 === 0 ? "UPI" : "Cash",
-      notes: "",
-    });
-  }
-
-  return list;
-}
-
 export function AdminTakeaway({
   menuItems = [],
   restaurantName = "Bhanu Fine Dining & POS Management",
@@ -383,76 +80,61 @@ export function AdminTakeaway({
     };
   }, [restaurantSettings, restaurantName, restaurantLogo]);
 
-  // --- Persistent & Live Orders State ---
-  const [orders, setOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_TAKEAWAY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 8) return parsed;
-      }
-    } catch {}
-    return generateExpandedSeedOrders();
-  });
-
-  // Save changes to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_TAKEAWAY, JSON.stringify(orders));
-    } catch {}
-  }, [orders]);
-
-  // Fetch live active takeaway orders from backend API
+  const [orders, setOrders] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const normalizeOrder = (order) => {
+    const rawStatus = String(order.fulfillmentStatus || order.orderStatus || "New");
+    const normalizedStatus = rawStatus.toLowerCase() === "new" ? "Pending" : rawStatus.toLowerCase() === "pickedup" ? "Completed" : rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+    const date = order.orderDateTime || order.createdAt || "";
+    return {
+      ...order,
+      id: String(order.orderId ?? order.id ?? ""),
+      orderNumber: String(order.orderNumber || order.orderId || order.id || ""),
+      customer: order.customerName || "",
+      phone: order.customerPhone || "",
+      itemsCount: Number(order.totalQuantity || order.itemCount || 0),
+      items: (Array.isArray(order.items) ? order.items : []).map((item) => ({
+        ...item,
+        name: item.name || item.dishName || "",
+        quantity: Number(item.quantity || 0),
+        price: Number(item.unitPrice ?? item.price ?? 0),
+      })),
+      amount: Number(order.totalAmount ?? order.grandTotal ?? 0),
+      status: normalizedStatus,
+      orderTime: date ? new Date(date).toLocaleString("en-IN") : "",
+      date,
+      paymentMethod: order.paymentMethod || "",
+      notes: order.specialInstructions || order.notes || "",
+    };
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const [activeResult, historyResult] = await Promise.all([
-        apiGetTakeawayOrders().catch(() => null),
-        apiGetTakeawayOrderHistory().catch(() => null),
+      const [ordersResult, summaryResult] = await Promise.all([
+        apiGetAllAdminTakeawayOrders(),
+        apiGetAdminTakeawaySummary(),
       ]);
-
-      const backendOrders = [];
-      if (activeResult?.success && Array.isArray(activeResult.data)) {
-        activeResult.data.forEach((bo) => {
-          backendOrders.push({
-            id: String(bo.orderNumber || bo.id || `TK-${bo.id}`),
-            orderNumber: String(bo.orderNumber || bo.id || `TK-${bo.id}`),
-            customer: bo.customerName || bo.customer || "Walk-in Guest",
-            phone: bo.customerPhone || bo.phone || "—",
-            itemsCount: Array.isArray(bo.items) ? bo.items.reduce((s, it) => s + (it.quantity || 1), 0) : 1,
-            items: Array.isArray(bo.items) ? bo.items : [],
-            amount: Number(bo.totalAmount || bo.grandTotal || bo.amount || 0),
-            status: bo.status ? bo.status.charAt(0).toUpperCase() + bo.status.slice(1).toLowerCase() : "Pending",
-            orderTime: bo.orderTime || new Date(bo.date || Date.now()).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
-            date: bo.date || new Date().toISOString(),
-            paymentMethod: bo.paymentMethod || "UPI",
-            notes: bo.notes || "",
-          });
-        });
-      }
-
-      if (backendOrders.length > 0) {
-        setOrders((prev) => {
-          const ids = new Set(backendOrders.map((b) => b.id));
-          const preserved = prev.filter((p) => !ids.has(p.id));
-          return [...backendOrders, ...preserved];
-        });
-      }
-    } catch (err) {
-      console.warn("Could not sync live takeaway orders:", err);
+      if (!ordersResult?.success) throw new Error(ordersResult?.error || "Could not load takeaway orders.");
+      if (!summaryResult?.success) throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
+      setOrders((Array.isArray(ordersResult.data) ? ordersResult.data : []).map(normalizeOrder));
+      setSummary(summaryResult.data || null);
+    } catch (error) {
+      alert(error?.message || "Could not load takeaway orders.");
     } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
+      setIsRefreshing(false);
     }
   };
-
-  // --- Filtering & Tab State ---
+  useEffect(() => {
+    handleRefresh();
+  }, []);  // --- Filtering & Tab State ---
   const [activeTabStatus, setActiveTabStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [secondaryStatusFilter, setSecondaryStatusFilter] = useState("all");
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-  const [dateRangeLabel, setDateRangeLabel] = useState("01 Oct 2026 – 14 Oct 2026");
+  const [dateRangeLabel, setDateRangeLabel] = useState("All Dates");
   const [customDateRangeOpen, setCustomDateRangeOpen] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -463,8 +145,43 @@ export function AdminTakeaway({
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [printReceiptOrder, setPrintReceiptOrder] = useState(null);
+  const [orderDetailsLoadingId, setOrderDetailsLoadingId] = useState(null);
   const [actionMenuOrderId, setActionMenuOrderId] = useState(null);
   const [actionMenuOpenAbove, setActionMenuOpenAbove] = useState(false);
+
+  const handleViewOrder = async (order) => {
+    setOrderDetailsLoadingId(String(order.id));
+    const result = await apiGetAdminTakeawayOrder(order.id);
+    setOrderDetailsLoadingId(null);
+    if (!result?.success) {
+      alert(result?.error || "Could not load takeaway order details.");
+      return;
+    }
+    setSelectedOrderDetails(normalizeOrder(result.data));
+  };
+
+  const handlePrintInvoice = async (order) => {
+    if (!order.invoiceId) {
+      alert("This order has no invoice available.");
+      return;
+    }
+    const result = await apiGetAdminTakeawayInvoice(order.invoiceId);
+    if (!result?.success) {
+      alert(result?.error || "Could not load takeaway invoice.");
+      return;
+    }
+    const invoice = result.data || {};
+    setPrintReceiptOrder({
+      ...invoice,
+      id: order.id,
+      orderNumber: invoice.orderNumber || order.orderNumber,
+      customer: invoice.customerName || order.customer,
+      phone: invoice.customerPhone || order.phone,
+      status: invoice.fulfillmentStatus || order.status,
+      date: invoice.invoiceDate || invoice.orderDate || order.date,
+      amount: invoice.totalAmount,
+    });
+  };
 
   // Table data formatted specifically for the unified ReceiptModal (80mm Thermal & A4 Tax Invoice)
   const receiptTableData = useMemo(() => {
@@ -477,18 +194,12 @@ export function AdminTakeaway({
             quantity: Number(it?.quantity ?? it?.qty) || 1,
             price: Number(it?.price ?? it?.unitPrice) || 0,
           }))
-        : [
-            {
-              name: "Takeaway Meal Package",
-              quantity: 1,
-              price: Number(printReceiptOrder.amount) || 0,
-            },
-          ];
+        : [];
 
-    const { subtotal, taxAmount, serviceChargeAmount, grandTotal } = calculateTakeawayBill(
-      items,
-      printReceiptOrder.amount
-    );
+    const subtotal = Number(printReceiptOrder.subtotal ?? 0);
+    const taxAmount = Number(printReceiptOrder.taxAmount ?? printReceiptOrder.gstAmount ?? 0);
+    const serviceChargeAmount = Number(printReceiptOrder.packagingCharge ?? printReceiptOrder.serviceCharge ?? 0);
+    const grandTotal = Number(printReceiptOrder.totalAmount ?? printReceiptOrder.grandTotal ?? printReceiptOrder.amount ?? 0);
 
     const isCancelled = printReceiptOrder.status === "Cancelled";
 
@@ -512,7 +223,7 @@ export function AdminTakeaway({
       items,
       subtotal,
       taxAmount,
-      serviceCharge: TAKEAWAY_SERVICE_CHARGE_RATE * 100,
+      serviceCharge: 0,
       serviceChargeAmount,
       grandTotal,
     };
@@ -534,32 +245,22 @@ export function AdminTakeaway({
   }, []);
 
   // --- KPI Card Calculations ---
-  const totalOrdersCount = orders.length;
-  const totalSalesAmount = useMemo(() => {
-    return orders
-      .filter((o) => o.status === "Completed")
-      .reduce((sum, o) => sum + getTakeawayOrderTotal(o), 0);
-  }, [orders]);
-
-  const pendingOrdersCount = useMemo(() => {
-    return orders.filter((o) => o.status === "Pending").length;
-  }, [orders]);
-
-  const completedOrdersCount = useMemo(() => {
-    return orders.filter((o) => o.status === "Completed").length;
-  }, [orders]);
+  const totalOrdersCount = Number(summary?.totalTakeawayOrders ?? orders.length);
+  const totalSalesAmount = Number(summary?.totalTakeawaySales ?? 0);
+  const pendingOrdersCount = Number(summary?.pendingOrders ?? 0);
+  const completedOrdersCount = Number(summary?.completedOrders ?? 0);
 
   // Tab Badge Counts
   const tabCounts = useMemo(() => {
     return {
-      all: orders.length,
-      Pending: orders.filter((o) => o.status === "Pending").length,
-      Preparing: orders.filter((o) => o.status === "Preparing").length,
-      Ready: orders.filter((o) => o.status === "Ready").length,
-      Completed: orders.filter((o) => o.status === "Completed").length,
-      Cancelled: orders.filter((o) => o.status === "Cancelled").length,
+      all: Number(summary?.totalTakeawayOrders ?? orders.length),
+      Pending: Number(summary?.pendingOrders ?? 0),
+      Preparing: Number(summary?.preparingOrders ?? 0),
+      Ready: Number(summary?.readyOrders ?? 0),
+      Completed: Number(summary?.completedOrders ?? 0),
+      Cancelled: Number(summary?.cancelledOrders ?? 0),
     };
-  }, [orders]);
+  }, [orders, summary]);
 
   // --- Filtered Orders List ---
   const filteredOrders = useMemo(() => {
@@ -631,27 +332,24 @@ export function AdminTakeaway({
     setCurrentPage(1);
   }, [activeTabStatus, searchQuery, dateFilter, secondaryStatusFilter]);
 
-  // --- Order Status Updater ---
   const updateOrderStatus = async (orderId, newStatus) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
-    );
-    if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
-      setSelectedOrderDetails((prev) => ({ ...prev, status: newStatus }));
-    }
+    if (newStatus === "Cancelled" && !window.confirm("Cancel this takeaway order? The backend will apply supported refund and KOT/BOT voiding rules.")) return;
     setActionMenuOrderId(null);
     setActionMenuOpenAbove(false);
-
-    try {
-      if (newStatus === "Cancelled") {
-        await apiCancelTakeawayOrder(orderId).catch(() => null);
-      } else if (newStatus === "Completed" || newStatus === "Ready") {
-        await apiDispatchTakeawayOrder(orderId).catch(() => null);
-      }
-    } catch {}
+    const result = newStatus === "Cancelled"
+      ? await apiCancelAdminTakeawayOrder(orderId, "Cancelled by admin")
+      : await apiUpdateAdminTakeawayStatus(orderId, newStatus);
+    if (!result?.success) {
+      alert(result?.error || `Could not update order status to ${newStatus}.`);
+      return;
+    }
+    await handleRefresh();
+    if (selectedOrderDetails && String(selectedOrderDetails.id) === String(orderId)) {
+      const detail = await apiGetAdminTakeawayOrder(orderId);
+      if (detail?.success) setSelectedOrderDetails(normalizeOrder(detail.data));
+    }
   };
 
-  // --- New Takeaway Order Form State ---
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [customerPhoneError, setCustomerPhoneError] = useState("");
@@ -660,29 +358,64 @@ export function AdminTakeaway({
   const [newOrderCart, setNewOrderCart] = useState({});
   const [itemSearchQuery, setItemSearchQuery] = useState("");
   const [itemCategoryFilter, setItemCategoryFilter] = useState("all");
+  const [takeawayMenuItems, setTakeawayMenuItems] = useState([]);
+  const [takeawayCategories, setTakeawayCategories] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const [cartCalculation, setCartCalculation] = useState(null);
+  const [cartCalculationLoading, setCartCalculationLoading] = useState(false);
+  const [orderSaving, setOrderSaving] = useState(false);
 
-  const availableFoodItems = useMemo(() => {
-    return (menuItems || []).filter((item) => {
-      if (item.isAvailable === false) return false;
-      const query = itemSearchQuery.trim().toLowerCase();
-      const matchQuery = !query || String(item.name || "").toLowerCase().includes(query);
-      const matchCat =
-        itemCategoryFilter === "all" ||
-        String(item.category || "").toLowerCase() === itemCategoryFilter.toLowerCase();
-      return matchQuery && matchCat;
-    });
-  }, [menuItems, itemSearchQuery, itemCategoryFilter]);
+  useEffect(() => {
+    if (!isNewOrderModalOpen) return undefined;
+    let cancelled = false;
+    apiGetAdminTakeawayCategories().then((result) => {
+      if (!cancelled && result?.success) setTakeawayCategories(Array.isArray(result.data) ? result.data : []);
+    }).catch((error) => { if (!cancelled) alert(error?.message || "Could not load takeaway categories."); });
+    return () => { cancelled = true; };
+  }, [isNewOrderModalOpen]);
 
+  useEffect(() => {
+    if (!isNewOrderModalOpen) return undefined;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setMenuLoading(true);
+      try {
+        const result = itemSearchQuery.trim()
+          ? await apiSearchAdminTakeawayMenu(itemSearchQuery.trim(), itemCategoryFilter === "all" ? undefined : itemCategoryFilter)
+          : await apiGetAdminTakeawayMenu({ page: 1, pageSize: 100, category: itemCategoryFilter === "all" ? undefined : itemCategoryFilter });
+        if (!result?.success) throw new Error(result?.error || "Could not load takeaway menu.");
+        const payload = result.data;
+        const rows = Array.isArray(payload) ? payload : (payload?.data || []);
+        if (!cancelled) setTakeawayMenuItems(rows.map((item) => ({
+          ...item,
+          id: item.itemId ?? item.menuItemId,
+          name: item.name || item.dishName || "",
+          price: Number(item.price || 0),
+          category: item.category || "",
+        })));
+      } catch (error) {
+        if (!cancelled) {
+          setTakeawayMenuItems([]);
+          alert(error?.message || "Could not load takeaway menu.");
+        }
+      } finally {
+        if (!cancelled) setMenuLoading(false);
+      }
+    }, itemSearchQuery.trim() ? 250 : 0);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [isNewOrderModalOpen, itemSearchQuery, itemCategoryFilter]);
+
+  const availableFoodItems = takeawayMenuItems.filter((item) => item.isAvailable !== false);
   const addCartItem = (dish) => {
-    const id = dish.id || dish.menuItemId || dish.name;
+    const id = dish.itemId ?? dish.menuItemId ?? dish.id;
+    if (!id) return;
     setNewOrderCart((prev) => {
       const cur = prev[id] || { item: dish, quantity: 0 };
       return { ...prev, [id]: { ...cur, quantity: cur.quantity + 1 } };
     });
   };
-
   const removeCartItem = (dish) => {
-    const id = dish.id || dish.menuItemId || dish.name;
+    const id = dish.itemId ?? dish.menuItemId ?? dish.id;
     setNewOrderCart((prev) => {
       const cur = prev[id];
       if (!cur) return prev;
@@ -696,88 +429,89 @@ export function AdminTakeaway({
   };
 
   const cartItemsList = Object.values(newOrderCart);
-  const cartBill = calculateTakeawayBill(
-    cartItemsList.map((line) => ({ price: line.item.price, quantity: line.quantity }))
-  );
-  const { subtotal: cartSubtotal, taxAmount: cartGst, serviceChargeAmount: cartServiceCharge, grandTotal: cartTotal } = cartBill;
+  useEffect(() => {
+    if (!isNewOrderModalOpen || cartItemsList.length === 0) {
+      setCartCalculation(null);
+      setCartCalculationLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setCartCalculationLoading(true);
+      try {
+        const result = await apiCalculateAdminTakeawayCart({
+          items: cartItemsList.map(({ item, quantity }) => ({ itemId: Number(item.itemId ?? item.menuItemId ?? item.id), quantity })),
+        });
+        if (!result?.success) throw new Error(result?.error || "Could not calculate takeaway total.");
+        if (!cancelled) setCartCalculation(result.data || null);
+      } catch (error) {
+        if (!cancelled) {
+          setCartCalculation(null);
+          alert(error?.message || "Could not calculate takeaway total.");
+        }
+      } finally {
+        if (!cancelled) setCartCalculationLoading(false);
+      }
+    }, 150);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [isNewOrderModalOpen, newOrderCart]);
+
+  const cartSubtotal = Number(cartCalculation?.subtotal || 0);
+  const cartGst = Number(cartCalculation?.taxAmount ?? cartCalculation?.gstAmount ?? 0);
+  const cartServiceCharge = Number(cartCalculation?.packagingCharge || 0);
+  const cartTotal = Number(cartCalculation?.finalAmount ?? cartCalculation?.totalAmount ?? 0);
 
   const handleCreateTakeawayOrder = async () => {
     if (!isValidIndianMobileNumber(newCustomerPhone)) {
-      setCustomerPhoneError(
-        newCustomerPhone.trim()
-          ? "Enter a valid 10-digit Indian mobile number."
-          : "Phone number is required."
-      );
+      setCustomerPhoneError(newCustomerPhone.trim() ? "Enter a valid 10-digit Indian mobile number." : "Phone number is required.");
       return;
     }
-
     setCustomerPhoneError("");
-
-    if (cartItemsList.length === 0) {
+    if (!cartItemsList.length) {
       alert("Please add at least one item to the takeaway order.");
       return;
     }
+    if (!cartCalculation || cartCalculationLoading) {
+      alert("Wait for the server to calculate the order total.");
+      return;
+    }
 
-    const nextNumber = 1069 + orders.length;
-    const newId = `TK-${nextNumber}`;
-    const now = new Date();
-    const timeFormatted = now.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }) + `, ${now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
-
-    const newOrder = {
-      id: newId,
-      orderNumber: newId,
-      customer: newCustomerName.trim() || "Walk-in Guest",
-      phone: newCustomerPhone.trim() || "—",
-      itemsCount: cartItemsList.reduce((s, it) => s + it.quantity, 0),
-      items: cartItemsList.map((line) => ({
-        name: line.item.name,
-        quantity: line.quantity,
-        price: Number(line.item.price) || 0,
-      })),
-      amount: cartTotal,
-      subtotal: cartSubtotal,
-      taxAmount: cartGst,
-      serviceChargeAmount: cartServiceCharge,
-      grandTotal: cartTotal,
-      status: "Pending",
-      orderTime: timeFormatted,
-      date: now.toISOString(),
-      paymentMethod: newPaymentMethod,
-      notes: newOrderNotes.trim(),
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-
+    setOrderSaving(true);
     try {
-      await apiCreatePaidTakeawayOrder({
-        orderNumber: newId,
-        orderType: "Takeaway",
-        tableName: "Takeaway",
-        customerName: newOrder.customer,
-        customerPhone: newOrder.phone,
-        subtotal: cartSubtotal,
-        taxAmount: cartGst,
-        serviceChargeAmount: cartServiceCharge,
-        totalAmount: cartTotal,
-        grandTotal: cartTotal,
+      const payload = {
+        customerName: newCustomerName.trim() || "Walk-in Guest",
+        customerPhone: newCustomerPhone.trim(),
         paymentMethod: newPaymentMethod,
-        items: newOrder.items,
-      }).catch(() => null);
-    } catch {}
-
-    setIsNewOrderModalOpen(false);
-    setNewCustomerName("");
-    setNewCustomerPhone("");
-    setCustomerPhoneError("");
-    setNewOrderNotes("");
-    setNewOrderCart({});
-  };
-
-  // Status Badge Component
+        paymentStatus: "Paid",
+        isPaid: true,
+        paidAmount: cartTotal,
+        notes: newOrderNotes.trim() || null,
+        items: cartItemsList.map(({ item, quantity }) => ({
+          itemId: Number(item.itemId ?? item.menuItemId ?? item.id),
+          quantity: Number(quantity),
+        })),
+        idempotencyKey: globalThis.crypto?.randomUUID?.() || `admin-takeaway-${Date.now()}`,
+      };
+      const result = await apiCreateAdminTakeawayOrder(payload);
+      if (!result?.success) throw new Error(result?.error || "Could not create takeaway order.");
+      const created = result.data || {};
+      setIsNewOrderModalOpen(false);
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setNewOrderNotes("");
+      setNewOrderCart({});
+      setCartCalculation(null);
+      await handleRefresh();
+      if (created.orderId) {
+        const detail = await apiGetAdminTakeawayOrder(created.orderId);
+        if (detail?.success) setSelectedOrderDetails(normalizeOrder(detail.data));
+      }
+    } catch (error) {
+      alert(error?.message || "Could not create takeaway order.");
+    } finally {
+      setOrderSaving(false);
+    }
+  };  // Status Badge Component
   const renderStatusBadge = (status) => {
     switch (status) {
       case "Pending":
@@ -1671,7 +1405,7 @@ export function AdminTakeaway({
                       key={order.id}
                       onClick={() => {
                         setActionMenuOrderId(null);
-                        setSelectedOrderDetails(order);
+                        handleViewOrder(order);
                       }}
                       style={{
                         transition: "background 0.15s ease",
@@ -1725,8 +1459,8 @@ export function AdminTakeaway({
                           {/* View bill & print invoice */}
                           <button
                             type="button"
-                            onClick={() => setPrintReceiptOrder(order)}
-                            title="View bill & tax invoice"
+                            onClick={() => handleViewOrder(order)}
+                            title="View order details"
                             style={{
                               width: "32px",
                               height: "32px",
@@ -1749,7 +1483,7 @@ export function AdminTakeaway({
                           {/* Print receipt */}
                           <button
                             type="button"
-                            onClick={() => setPrintReceiptOrder(order)}
+                            onClick={() => handlePrintInvoice(order)}
                             title="Print bill / tax invoice"
                             style={{
                               width: "32px",
@@ -2180,6 +1914,18 @@ export function AdminTakeaway({
                   />
                 </div>
 
+                <select
+                  value={itemCategoryFilter}
+                  onChange={(e) => setItemCategoryFilter(e.target.value)}
+                  style={{ width: "100%", height: "38px", marginBottom: "0.75rem", padding: "0 0.7rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.82rem" }}
+                >
+                  <option value="all">All categories</option>
+                  {takeawayCategories.map((category) => {
+                    const name = category.name || category.categoryName;
+                    return name ? <option key={category.categoryId || name} value={name}>{name}</option> : null;
+                  })}
+                </select>
+
                 {/* Dishes list */}
                 <div
                   style={{
@@ -2190,7 +1936,7 @@ export function AdminTakeaway({
                     gap: "0.5rem",
                   }}
                 >
-                  {availableFoodItems.slice(0, 35).map((dish) => {
+                  {menuLoading ? <div style={{ padding: "1rem", color: "var(--text-muted)" }}>Loading menu…</div> : availableFoodItems.length === 0 ? <div style={{ padding: "1rem", color: "var(--text-muted)" }}>No dishes found.</div> : availableFoodItems.slice(0, 35).map((dish) => {
                     const dishId = dish.id || dish.menuItemId || dish.name;
                     const inCart = newOrderCart[dishId]?.quantity || 0;
                     return (

@@ -62,13 +62,20 @@ import {
   setReservationCheckoutToken,
   setReservationCustomerToken,
 } from "../api/reservationApi";
-import { apiCustomerLogout, getCustomerRefreshToken, setCustomerRefreshToken } from "../api/customerAuthApi";
+import {
+  apiCustomerLogout,
+  getCustomerRefreshToken,
+  setCustomerRefreshToken,
+} from "../api/customerAuthApi";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
 import { CustomerOrdersPage } from "../customer/CustomerOrdersPage";
 import { CustomerProfilePage } from "../customer/CustomerProfilePage";
-import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
+import {
+  getMenuItemImage,
+  handleDishImageError,
+} from "../utils/menuImageHelper";
 import {
   cleanNotificationText,
   getCleanAlertMessage,
@@ -105,24 +112,41 @@ const getAvailableTables = (tables, guests) => {
 function todayDate() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
+}
 
 const getFormattedPickupDate = () => {
   const d = new Date();
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 };
 
 const isValidIndianMobileNumber = (phone) => {
-  const normalizedPhone = String(phone || "").trim().replace(/[\s()-]/g, "");
+  const normalizedPhone = String(phone || "")
+    .trim()
+    .replace(/[\s()-]/g, "");
   if (!/^\+?\d+$/.test(normalizedPhone)) return false;
   const digits = normalizedPhone.replace(/\D/g, "");
-  const mobileNumber = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  const mobileNumber =
+    digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
   return /^[6-9]\d{9}$/.test(mobileNumber);
 };
 
-const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+const isValidEmail = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 
 // Deterministic dish rating helper matching mockup e.g. ★ 4.6 (128)
 const getItemRating = (item) => {
@@ -167,9 +191,16 @@ export function CustomerLandingPage({
     if (hash === "#cart") return user ? "cart" : "auth";
     if (hash === "#checkout") return user ? "checkout" : "auth";
     if (hash === "#payment") return user ? "payment" : "auth";
-    if (hash === "#orders" || hash === "#my-orders" || path === "/my-orders") return user ? "orders" : "auth";
-    if (hash === "#profile" || path === "/profile") return user ? "profile" : "auth";
-    if (hash === "#reserve" || hash === "#my-reservations" || path === "/reserve" || path === "/my-reservations") {
+    if (hash === "#orders" || hash === "#my-orders" || path === "/my-orders")
+      return user ? "orders" : "auth";
+    if (hash === "#profile" || path === "/profile")
+      return user ? "profile" : "auth";
+    if (
+      hash === "#reserve" ||
+      hash === "#my-reservations" ||
+      path === "/reserve" ||
+      path === "/my-reservations"
+    ) {
       if (hash === "#my-reservations" || path === "/my-reservations") {
         setReservationInitialStep(6);
       }
@@ -186,8 +217,12 @@ export function CustomerLandingPage({
   // --- Checkout Details State ---
   const [pickupDate, setPickupDate] = useState(getFormattedPickupDate);
   const [pickupTime, setPickupTime] = useState("08:00 PM");
-  const [customerName, setCustomerName] = useState(() => customerUser?.name || "");
-  const [customerPhone, setCustomerPhone] = useState(() => customerUser?.phone || "");
+  const [customerName, setCustomerName] = useState(
+    () => customerUser?.name || "",
+  );
+  const [customerPhone, setCustomerPhone] = useState(
+    () => customerUser?.phone || "",
+  );
   const [customerPhoneError, setCustomerPhoneError] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
 
@@ -223,7 +258,8 @@ export function CustomerLandingPage({
   const [reservationDate, setReservationDate] = useState(todayDate);
   const [reservationTime, setReservationTime] = useState("19:00");
   const [reservationGuests, setReservationGuests] = useState(2);
-  const [reservationTablePreference, setReservationTablePreference] = useState("Any");
+  const [reservationTablePreference, setReservationTablePreference] =
+    useState("Any");
   const [reservationName, setReservationName] = useState("");
   const [reservationPhone, setReservationPhone] = useState("");
   const [reservationPhoneError, setReservationPhoneError] = useState("");
@@ -236,15 +272,19 @@ export function CustomerLandingPage({
   const [reservationTables, setReservationTables] = useState([]);
   const [reservationTableId, setReservationTableId] = useState("");
   const [reservationTableDetail, setReservationTableDetail] = useState(null);
-  const [reservationAvailabilityLoading, setReservationAvailabilityLoading] = useState(false);
-  const [reservationAvailabilityError, setReservationAvailabilityError] = useState("");
+  const [reservationAvailabilityLoading, setReservationAvailabilityLoading] =
+    useState(false);
+  const [reservationAvailabilityError, setReservationAvailabilityError] =
+    useState("");
   const [createdReservation, setCreatedReservation] = useState(null);
   const [reservationOtpSent, setReservationOtpSent] = useState(false);
   const [reservationOtp, setReservationOtp] = useState("");
   const [reservationOtpBusy, setReservationOtpBusy] = useState(false);
   const [reservationOtpCooldown, setReservationOtpCooldown] = useState(0);
   const [reservationDevOtp, setReservationDevOtp] = useState("");
-  const [reservationCustomerAuthed, setReservationCustomerAuthed] = useState(Boolean(getReservationCustomerToken()));
+  const [reservationCustomerAuthed, setReservationCustomerAuthed] = useState(
+    Boolean(getReservationCustomerToken()),
+  );
   const [myReservations, setMyReservations] = useState([]);
   const [reservationTab, setReservationTab] = useState("upcoming");
   const [reservationPage, setReservationPage] = useState(1);
@@ -255,10 +295,13 @@ export function CustomerLandingPage({
   const [reservationListError, setReservationListError] = useState("");
   const reservationSessionExpiredRef = useRef(false);
   const [reservationAccountOpen, setReservationAccountOpen] = useState(false);
-  const [selectedReservationDetails, setSelectedReservationDetails] = useState(null);
-  const [reservationPaymentStatus, setReservationPaymentStatus] = useState(null);
+  const [selectedReservationDetails, setSelectedReservationDetails] =
+    useState(null);
+  const [reservationPaymentStatus, setReservationPaymentStatus] =
+    useState(null);
   const [reservationActionBusy, setReservationActionBusy] = useState(false);
-  const [reservationAccountMessage, setReservationAccountMessage] = useState("");
+  const [reservationAccountMessage, setReservationAccountMessage] =
+    useState("");
   const reservationDateRef = useRef(null);
   const reservationTimeRef = useRef(null);
   const reservationIdempotencyKeyRef = useRef("");
@@ -359,7 +402,8 @@ export function CustomerLandingPage({
       window.scrollTo({ top: 0 });
     };
     window.addEventListener("popstate", handleHistoryNavigation);
-    return () => window.removeEventListener("popstate", handleHistoryNavigation);
+    return () =>
+      window.removeEventListener("popstate", handleHistoryNavigation);
   }, []);
 
   const navigateScreen = (screen) => {
@@ -368,14 +412,14 @@ export function CustomerLandingPage({
       targetScreen === "reservation"
         ? "#reserve"
         : targetScreen === "home"
-        ? "#home"
-        : screen === "auth"
-        ? "#auth"
-        : targetScreen === "orders" || targetScreen === "my-orders"
-        ? "#my-orders"
-        : targetScreen === "profile"
-        ? "#profile"
-        : `#${screen}`;
+          ? "#home"
+          : screen === "auth"
+            ? "#auth"
+            : targetScreen === "orders" || targetScreen === "my-orders"
+              ? "#my-orders"
+              : targetScreen === "profile"
+                ? "#profile"
+                : `#${screen}`;
     window.history.pushState(null, "", hash);
     setActiveScreen(targetScreen);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -400,7 +444,8 @@ export function CustomerLandingPage({
     setCustomerUser(user);
     if (user?.token) setReservationCustomerToken(user.token);
     setReservationCustomerAuthed(Boolean(user?.token));
-    if (user?.refreshToken) setCustomerRefreshToken(user.refreshToken, user.rememberMe);
+    if (user?.refreshToken)
+      setCustomerRefreshToken(user.refreshToken, user.rememberMe);
     try {
       const { token, refreshToken, ...profile } = user || {};
       localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(profile));
@@ -418,8 +463,10 @@ export function CustomerLandingPage({
   // Logout Handler
   const handleLogout = () => {
     const accessToken = getReservationCustomerToken();
-    const refreshToken = customerUser?.refreshToken || getCustomerRefreshToken();
-    if (accessToken || refreshToken) apiCustomerLogout(refreshToken, false, accessToken);
+    const refreshToken =
+      customerUser?.refreshToken || getCustomerRefreshToken();
+    if (accessToken || refreshToken)
+      apiCustomerLogout(refreshToken, false, accessToken);
     setCustomerRefreshToken("");
     setReservationCustomerToken("");
     setReservationCheckoutToken("");
@@ -444,12 +491,27 @@ export function CustomerLandingPage({
     return Array.isArray(menuItems) ? menuItems.filter(Boolean) : [];
   }, [menuItems]);
 
-  const takeawayCategories = useMemo(() => [
-    { id: "all", label: "All Items", icon: Utensils },
-    ...Array.from(new Set(combinedMenuItems.map((item) => String(item.category || "").trim()).filter(Boolean)))
-      .map((categoryName) => ({ id: `category:${categoryName}`, categoryName, label: categoryName, icon: Utensils })),
-  ], [combinedMenuItems]);
-  const activeCategory = takeawayCategories.find((category) => category.id === selectedCategory) || takeawayCategories[0];
+  const takeawayCategories = useMemo(
+    () => [
+      { id: "all", label: "All Items", icon: Utensils },
+      ...Array.from(
+        new Set(
+          combinedMenuItems
+            .map((item) => String(item.category || "").trim())
+            .filter(Boolean),
+        ),
+      ).map((categoryName) => ({
+        id: `category:${categoryName}`,
+        categoryName,
+        label: categoryName,
+        icon: Utensils,
+      })),
+    ],
+    [combinedMenuItems],
+  );
+  const activeCategory =
+    takeawayCategories.find((category) => category.id === selectedCategory) ||
+    takeawayCategories[0];
   const activeCategoryId = activeCategory.id;
 
   useEffect(() => {
@@ -457,7 +519,9 @@ export function CustomerLandingPage({
       let changed = false;
       const next = {};
       Object.entries(current).forEach(([id, line]) => {
-        const latestItem = combinedMenuItems.find((item) => String(item.id) === String(id));
+        const latestItem = combinedMenuItems.find(
+          (item) => String(item.id) === String(id),
+        );
         if (!latestItem || latestItem.isAvailable === false) {
           changed = true;
           return;
@@ -472,10 +536,16 @@ export function CustomerLandingPage({
   // Filtered menu items by station, category, dietary type, and search (Exact POS Template Logic)
   const visibleMenuItems = useMemo(() => {
     return combinedMenuItems.filter((item) => {
-      if (activeCategoryId !== "all" && String(item.category || "").trim() !== activeCategory.categoryName) return false;
+      if (
+        activeCategoryId !== "all" &&
+        String(item.category || "").trim() !== activeCategory.categoryName
+      )
+        return false;
 
       // 3. Dietary filter
-      const isVeg = item.isVeg === true || String(item.dietaryType || "").toUpperCase() === "VEG";
+      const isVeg =
+        item.isVeg === true ||
+        String(item.dietaryType || "").toUpperCase() === "VEG";
       if (dietaryFilter === "veg" && !isVeg) return false;
       if (dietaryFilter === "non-veg" && isVeg) return false;
       if (dietaryFilter === "special" && !item.isChefSpecial) return false;
@@ -483,15 +553,27 @@ export function CustomerLandingPage({
       // 4. Search query
       const query = searchQuery.trim().toLowerCase();
       if (query) {
-        const matchesName = String(item.name || "").toLowerCase().includes(query);
-        const matchesDesc = String(item.description || "").toLowerCase().includes(query);
-        const matchesCategory = String(item.category || "").toLowerCase().includes(query);
+        const matchesName = String(item.name || "")
+          .toLowerCase()
+          .includes(query);
+        const matchesDesc = String(item.description || "")
+          .toLowerCase()
+          .includes(query);
+        const matchesCategory = String(item.category || "")
+          .toLowerCase()
+          .includes(query);
         if (!matchesName && !matchesDesc && !matchesCategory) return false;
       }
 
       return true;
     });
-  }, [combinedMenuItems, activeCategoryId, activeCategory.categoryName, dietaryFilter, searchQuery]);
+  }, [
+    combinedMenuItems,
+    activeCategoryId,
+    activeCategory.categoryName,
+    dietaryFilter,
+    searchQuery,
+  ]);
 
   // Cart calculations matching screenshot financial breakdown:
   // Subtotal ₹640 + Packaging Charge ₹20 + GST (5%) ₹33 = Total Amount ₹693
@@ -503,12 +585,19 @@ export function CustomerLandingPage({
   );
   const packingCharges = cartItems.length > 0 ? 20.0 : 0.0;
   const taxRate = 0.05; // 5% GST
-  const taxes = itemsSubtotal > 0 ? Math.round((itemsSubtotal + packingCharges) * taxRate) : 0;
+  const taxes =
+    itemsSubtotal > 0
+      ? Math.round((itemsSubtotal + packingCharges) * taxRate)
+      : 0;
   const discount = couponApplied ? couponDiscount : 0;
-  const totalAmount = Math.max(0, itemsSubtotal - discount + packingCharges + taxes);
+  const totalAmount = Math.max(
+    0,
+    itemsSubtotal - discount + packingCharges + taxes,
+  );
 
   useEffect(() => {
-    if (activeScreen !== "reservation" || !reservationCustomerAuthed) return undefined;
+    if (activeScreen !== "reservation" || !reservationCustomerAuthed)
+      return undefined;
     const timer = window.setTimeout(async () => {
       setReservationAvailabilityLoading(true);
       setReservationAvailabilityError("");
@@ -523,31 +612,90 @@ export function CustomerLandingPage({
         apiCheckReservationAvailability(params),
         apiGetAvailableReservationTables(params),
       ]);
-      const availability = availabilityResult?.data?.data ?? availabilityResult?.data;
+      const availability =
+        availabilityResult?.data?.data ?? availabilityResult?.data;
       const tableData = tablesResult?.data?.data ?? tablesResult?.data;
       if (availabilityResult?.success) setReservationAvailability(availability);
       if (tablesResult?.success) {
         const rows = Array.isArray(tableData?.tables)
           ? tableData.tables
-          : Array.isArray(tableData?.availableTables) ? tableData.availableTables : [];
+          : Array.isArray(tableData?.availableTables)
+            ? tableData.availableTables
+            : [];
         setReservationTables(rows);
-        setReservationTableId((current) => rows.some((row) => String(row.tableId) === current)
-          ? current
-          : "");
+        setReservationTableId((current) =>
+          rows.some((row) => String(row.tableId) === current) ? current : "",
+        );
       }
       if (!availabilityResult?.success || !tablesResult?.success) {
-        setReservationAvailabilityError(availabilityResult?.error || tablesResult?.error || "Live availability could not be loaded.");
+        setReservationAvailabilityError(
+          availabilityResult?.error ||
+            tablesResult?.error ||
+            "Live availability could not be loaded.",
+        );
       }
       setReservationAvailabilityLoading(false);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [activeScreen, reservationCustomerAuthed, reservationDate, reservationTime, reservationGuests, reservationTablePreference]);
+  }, [
+    activeScreen,
+    reservationCustomerAuthed,
+    reservationDate,
+    reservationTime,
+    reservationGuests,
+    reservationTablePreference,
+  ]);
 
   useEffect(() => {
     if (!reservationOtpCooldown) return undefined;
-    const timer = window.setTimeout(() => setReservationOtpCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    const timer = window.setTimeout(
+      () => setReservationOtpCooldown((seconds) => Math.max(0, seconds - 1)),
+      1000,
+    );
     return () => window.clearTimeout(timer);
   }, [reservationOtpCooldown]);
+
+  // Live polling for placed takeaway order status updates from Kitchen / POS
+  useEffect(() => {
+    const orderId = placedOrder?.id ?? placedOrder?.orderId;
+    if (!orderId) return undefined;
+
+    let isMounted = true;
+    const pollStatus = async () => {
+      try {
+        const result = await apiGetCustomerTakeawayOrder(orderId);
+        if (!isMounted) return;
+        const resp = result?.data?.data ?? result?.data;
+        if (resp) {
+          const status = String(resp.fulfillmentStatus || resp.status || "").toLowerCase();
+          const items = Array.isArray(resp.items) ? resp.items : [];
+          const allReady = items.length > 0 && items.every((i) =>
+            ["ready", "served", "completed"].includes(String(i.kotStatus || "").toLowerCase())
+          );
+
+          if (status === "pickedup" || status === "completed" || status === "served") {
+            setTrackingStage(4);
+          } else if (status === "ready" || allReady) {
+            setTrackingStage(3);
+            if (activeScreen === "tracking") {
+              setActiveScreen("ready");
+            }
+          } else if (status === "preparing" || status === "cooking") {
+            setTrackingStage(2);
+          }
+        }
+      } catch {
+        // network or server transient error
+      }
+    };
+
+    pollStatus();
+    const interval = setInterval(pollStatus, 4000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [placedOrder?.id, placedOrder?.orderId, activeScreen]);
 
   const changeQuantity = (item, delta) => {
     if (delta > 0 && item?.isAvailable === false) return;
@@ -564,7 +712,9 @@ export function CustomerLandingPage({
     const result = await apiGetCustomerTakeawayOrder(orderId);
     const response = result?.data?.data ?? result?.data;
     if (!result?.success || response?.success === false) {
-      const error = new Error(result?.error || response?.message || "Could not retrieve this order.");
+      const error = new Error(
+        result?.error || response?.message || "Could not retrieve this order.",
+      );
       error.status = result?.status;
       throw error;
     }
@@ -573,20 +723,31 @@ export function CustomerLandingPage({
     let skipped = 0;
     orderLines.forEach((line) => {
       const id = line.itemId ?? line.menuItemId;
-      const menuItem = combinedMenuItems.find((item) => String(item.id) === String(id));
+      const menuItem = combinedMenuItems.find(
+        (item) => String(item.id) === String(id),
+      );
       const quantity = Number(line.quantity);
-      if (!menuItem || menuItem.isAvailable === false || !Number.isInteger(quantity) || quantity < 1) {
+      if (
+        !menuItem ||
+        menuItem.isAvailable === false ||
+        !Number.isInteger(quantity) ||
+        quantity < 1
+      ) {
         skipped += 1;
         return;
       }
       nextCart[menuItem.id] = { item: menuItem, quantity };
     });
     if (!Object.keys(nextCart).length) {
-      throw new Error("None of the dishes in this order are currently available to reorder.");
+      throw new Error(
+        "None of the dishes in this order are currently available to reorder.",
+      );
     }
     setCart(nextCart);
     navigateScreen("menu");
-    return skipped ? `${skipped} unavailable item(s) were left out of your cart.` : "Order items added to your cart.";
+    return skipped
+      ? `${skipped} unavailable item(s) were left out of your cart.`
+      : "Order items added to your cart.";
   };
 
   const removeFromCart = (itemId) => {
@@ -621,21 +782,41 @@ export function CustomerLandingPage({
     if (checkoutInFlightRef.current) return;
     setCheckoutError("");
     if (cartItems.length === 0) {
-      setCheckoutError("Add at least one available dish before confirming your order.");
+      setCheckoutError(
+        "Add at least one available dish before confirming your order.",
+      );
       return;
     }
     if (!customerName.trim() || !isValidIndianMobileNumber(customerPhone)) {
-      setCheckoutError("Enter your name and a valid mobile number to place the order.");
+      setCheckoutError(
+        "Enter your name and a valid mobile number to place the order.",
+      );
       return;
     }
 
     const requestItems = cartItems.map(({ item, quantity }) => {
       const rawId = item?.menuItemId ?? item?.menu_item_id ?? item?.id;
       const itemId = Number(rawId);
-      return { itemId, menuItemId: itemId, quantity: Number(quantity), notes: "" };
+      return {
+        itemId,
+        menuItemId: itemId,
+        quantity: Number(quantity),
+        notes: "",
+      };
     });
-    if (requestItems.some((item, index) => !Number.isSafeInteger(item.itemId) || item.itemId <= 0 || !Number.isInteger(item.quantity) || item.quantity < 1 || cartItems[index].item?.isAvailable === false)) {
-      setCheckoutError("One or more dishes are no longer available. Refresh the menu and try again.");
+    if (
+      requestItems.some(
+        (item, index) =>
+          !Number.isSafeInteger(item.itemId) ||
+          item.itemId <= 0 ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1 ||
+          cartItems[index].item?.isAvailable === false,
+      )
+    ) {
+      setCheckoutError(
+        "One or more dishes are no longer available. Refresh the menu and try again.",
+      );
       return;
     }
 
@@ -652,7 +833,9 @@ export function CustomerLandingPage({
     if (takeawayIdempotencyRef.current.signature !== signature) {
       takeawayIdempotencyRef.current = {
         signature,
-        key: globalThis.crypto?.randomUUID?.() || `takeaway-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        key:
+          globalThis.crypto?.randomUUID?.() ||
+          `takeaway-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       };
     }
 
@@ -679,25 +862,40 @@ export function CustomerLandingPage({
       });
       const response = result?.data?.data ?? result?.data;
       if (!result?.success || response?.success === false) {
-        throw new Error(result?.error || response?.message || "The server could not create your takeaway order.");
+        throw new Error(
+          result?.error ||
+            response?.message ||
+            "The server could not create your takeaway order.",
+        );
       }
       if (!response?.orderId || !response?.orderNumber) {
-        throw new Error(response?.message || "The server response did not confirm the created order.");
+        throw new Error(
+          response?.message ||
+            "The server response did not confirm the created order.",
+        );
       }
       const kitchenKot = response?.kitchenKot ?? response?.KitchenKot;
       const barKot = response?.barKot ?? response?.BarKot;
       if (!kitchenKot && !barKot) {
-        throw new Error("The order was saved, but the server did not confirm a kitchen ticket. Retry safely; duplicate orders are prevented.");
+        throw new Error(
+          "The order was saved, but the server did not confirm a kitchen ticket. Retry safely; duplicate orders are prevented.",
+        );
       }
 
       setProcessingStage(3);
       const now = new Date(response.createdAt || Date.now());
-      const orderItems = Array.isArray(response.items) ? response.items.map((item) => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: Number(item.unitPrice) || 0,
-        notes: item.notes || "",
-      })) : cartItems.map(({ item, quantity }) => ({ name: item.name, quantity, price: Number(item.price) || 0 }));
+      const orderItems = Array.isArray(response.items)
+        ? response.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: Number(item.unitPrice) || 0,
+            notes: item.notes || "",
+          }))
+        : cartItems.map(({ item, quantity }) => ({
+            name: item.name,
+            quantity,
+            price: Number(item.price) || 0,
+          }));
       const financials = response.financials || {};
       const newOrderData = {
         id: response.orderId,
@@ -707,7 +905,10 @@ export function CustomerLandingPage({
         tableName: "Takeaway",
         customerName: response.customerName || customerName.trim(),
         customerPhone: response.customerPhone || customerPhone.trim(),
-        itemsCount: orderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+        itemsCount: orderItems.reduce(
+          (sum, item) => sum + Number(item.quantity || 0),
+          0,
+        ),
         items: orderItems,
         itemsSubtotal: Number(financials.subtotal ?? itemsSubtotal),
         packingCharges: Number(financials.packagingCharge ?? packingCharges),
@@ -717,9 +918,13 @@ export function CustomerLandingPage({
         amount: Number(financials.totalAmount ?? totalAmount),
         status: response.orderStatus || "Active",
         paymentStatus: response.paymentStatus || "Pending",
-        paymentMethod: response.paymentMethod || (paymentMethod === "cash" ? "Cash" : "UPI"),
+        paymentMethod:
+          response.paymentMethod || (paymentMethod === "cash" ? "Cash" : "UPI"),
         date: now.toISOString(),
-        orderTime: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+        orderTime: now.toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         pickupDate,
         pickupTime,
         notes: customerNotes.trim(),
@@ -730,9 +935,19 @@ export function CustomerLandingPage({
       try {
         const key = "avsr_admin_takeaway_orders_v1";
         const existing = JSON.parse(localStorage.getItem(key) || "[]");
-        const withoutDuplicate = Array.isArray(existing) ? existing.filter((order) => String(order.orderId ?? order.id) !== String(response.orderId)) : [];
-        localStorage.setItem(key, JSON.stringify([newOrderData, ...withoutDuplicate]));
-      } catch { /* The backend remains the source of truth. */ }
+        const withoutDuplicate = Array.isArray(existing)
+          ? existing.filter(
+              (order) =>
+                String(order.orderId ?? order.id) !== String(response.orderId),
+            )
+          : [];
+        localStorage.setItem(
+          key,
+          JSON.stringify([newOrderData, ...withoutDuplicate]),
+        );
+      } catch {
+        /* The backend remains the source of truth. */
+      }
 
       setPlacedOrder(newOrderData);
       setTrackingStage(2);
@@ -740,7 +955,9 @@ export function CustomerLandingPage({
       takeawayIdempotencyRef.current = { signature: "", key: "" };
       navigateScreen("confirmation");
     } catch (error) {
-      setCheckoutError(error?.message || "Unable to place the order. Please try again.");
+      setCheckoutError(
+        error?.message || "Unable to place the order. Please try again.",
+      );
       navigateScreen("payment");
     } finally {
       checkoutInFlightRef.current = false;
@@ -763,31 +980,55 @@ export function CustomerLandingPage({
     }
     setReservationEmailError("");
 
-    if (!reservationAvailability?.isAvailable || !reservationTableId || reservationTables.length === 0) {
-      setReservationMessage("Choose an available table after checking live availability.");
+    if (
+      !reservationAvailability?.isAvailable ||
+      !reservationTableId ||
+      reservationTables.length === 0
+    ) {
+      setReservationMessage(
+        "Choose an available table after checking live availability.",
+      );
       return;
     }
-    const selectedTable = reservationTables.find((table) => String(table.tableId) === reservationTableId);
-    if (!selectedTable || selectedTable.isAvailableForSlot === false || (selectedTable.slotStatus && String(selectedTable.slotStatus).toLowerCase() !== "available")) {
-      setReservationMessage("That table is no longer available. Please choose another table.");
+    const selectedTable = reservationTables.find(
+      (table) => String(table.tableId) === reservationTableId,
+    );
+    if (
+      !selectedTable ||
+      selectedTable.isAvailableForSlot === false ||
+      (selectedTable.slotStatus &&
+        String(selectedTable.slotStatus).toLowerCase() !== "available")
+    ) {
+      setReservationMessage(
+        "That table is no longer available. Please choose another table.",
+      );
       return;
     }
 
     setReservationSubmitting(true);
-    const tableCheck = await apiGetReservationTableDetails(selectedTable.tableId, {
-      date: reservationDate,
-      time: reservationTime,
-      guests: Number(reservationGuests),
-    });
+    const tableCheck = await apiGetReservationTableDetails(
+      selectedTable.tableId,
+      {
+        date: reservationDate,
+        time: reservationTime,
+        guests: Number(reservationGuests),
+      },
+    );
     const tableDetails = tableCheck?.data?.data ?? tableCheck?.data;
     if (!tableCheck?.success || tableDetails?.isAvailableForSlot === false) {
       setReservationSubmitting(false);
-      setReservationMessage(tableCheck?.error || tableDetails?.conflictReason || "That table is no longer available. Please select another.");
+      setReservationMessage(
+        tableCheck?.error ||
+          tableDetails?.conflictReason ||
+          "That table is no longer available. Please select another.",
+      );
       return;
     }
 
     if (!reservationIdempotencyKeyRef.current) {
-      reservationIdempotencyKeyRef.current = globalThis.crypto?.randomUUID?.() || `reservation-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      reservationIdempotencyKeyRef.current =
+        globalThis.crypto?.randomUUID?.() ||
+        `reservation-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
     const result = await apiCreatePublicReservation({
       idempotencyKey: reservationIdempotencyKeyRef.current,
@@ -808,23 +1049,40 @@ export function CustomerLandingPage({
     setReservationSubmitting(false);
 
     if (!result?.success) {
-      setReservationMessage(result?.error || "We couldn't complete your reservation. Please try again.");
+      setReservationMessage(
+        result?.error ||
+          "We couldn't complete your reservation. Please try again.",
+      );
       return;
     }
-    const reservation = result.data?.reservation ?? result.data?.data ?? result.data;
+    const reservation =
+      result.data?.reservation ?? result.data?.data ?? result.data;
     reservationIdempotencyKeyRef.current = "";
-    const reservationNumber = reservation?.reservationNumber || `RES-${reservation?.reservationId ?? ""}`;
-    if (reservation?.guestToken) setReservationCheckoutToken(reservation.guestToken);
+    const reservationNumber =
+      reservation?.reservationNumber ||
+      `RES-${reservation?.reservationId ?? ""}`;
+    if (reservation?.guestToken)
+      setReservationCheckoutToken(reservation.guestToken);
     setCreatedReservation(reservation);
     const otpResult = await apiSendReservationOtp(reservationPhone.trim());
     setReservationOtpSent(Boolean(otpResult?.success));
     setReservationOtpCooldown(otpResult?.success ? 60 : 0);
     const otpPayload = otpResult?.data?.data ?? otpResult?.data;
-    setReservationDevOtp(import.meta.env.DEV && otpPayload?.devOtp ? String(otpPayload.devOtp) : "");
-    setReservationAccountMessage(otpResult?.success ? "" : otpResult?.error || "Try sending the verification code again.");
-    setReservationMessage(otpResult?.success
-      ? `Reservation ${reservationNumber} is on hold pending advance payment. Verify your mobile number to manage it.`
-      : `Reservation ${reservationNumber} was created, but we couldn't send the verification code: ${otpResult?.error || "Please try again."}`);
+    setReservationDevOtp(
+      import.meta.env.DEV && otpPayload?.devOtp
+        ? String(otpPayload.devOtp)
+        : "",
+    );
+    setReservationAccountMessage(
+      otpResult?.success
+        ? ""
+        : otpResult?.error || "Try sending the verification code again.",
+    );
+    setReservationMessage(
+      otpResult?.success
+        ? `Reservation ${reservationNumber} is on hold pending advance payment. Verify your mobile number to manage it.`
+        : `Reservation ${reservationNumber} was created, but we couldn't send the verification code: ${otpResult?.error || "Please try again."}`,
+    );
   };
 
   const handleVerifyReservationOtp = async (event) => {
@@ -834,10 +1092,15 @@ export function CustomerLandingPage({
       return;
     }
     setReservationOtpBusy(true);
-    const result = await apiVerifyReservationOtp(reservationPhone.trim(), reservationOtp);
+    const result = await apiVerifyReservationOtp(
+      reservationPhone.trim(),
+      reservationOtp,
+    );
     setReservationOtpBusy(false);
     if (!result?.success) {
-      setReservationAccountMessage(result?.error || "The verification code could not be confirmed.");
+      setReservationAccountMessage(
+        result?.error || "The verification code could not be confirmed.",
+      );
       return;
     }
     const verified = result.data?.data ?? result.data;
@@ -849,7 +1112,9 @@ export function CustomerLandingPage({
     setReservationOtp("");
     setReservationAccountOpen(true);
     await loadCustomerReservations("upcoming");
-    setReservationAccountMessage(verified?.message || "Mobile number verified.");
+    setReservationAccountMessage(
+      verified?.message || "Mobile number verified.",
+    );
   };
 
   const startReservationAccountOtp = async () => {
@@ -864,11 +1129,20 @@ export function CustomerLandingPage({
     const payload = result?.data?.data ?? result?.data;
     setReservationOtpSent(Boolean(result?.success));
     setReservationOtpCooldown(result?.success ? 60 : 0);
-    setReservationDevOtp(import.meta.env.DEV && payload?.devOtp ? String(payload.devOtp) : "");
-    setReservationAccountMessage(result?.success ? "A verification code was sent to your mobile number." : result?.error || "The verification code could not be sent.");
+    setReservationDevOtp(
+      import.meta.env.DEV && payload?.devOtp ? String(payload.devOtp) : "",
+    );
+    setReservationAccountMessage(
+      result?.success
+        ? "A verification code was sent to your mobile number."
+        : result?.error || "The verification code could not be sent.",
+    );
   };
 
-  async function loadCustomerReservations(tab = reservationTab, requestedPage = reservationPage) {
+  async function loadCustomerReservations(
+    tab = reservationTab,
+    requestedPage = reservationPage,
+  ) {
     setReservationListLoading(true);
     setReservationListError("");
     if (!getReservationCustomerToken()) {
@@ -876,14 +1150,22 @@ export function CustomerLandingPage({
       handleReservationSessionExpired();
       return false;
     }
-    const result = await apiGetCustomerReservations({ tab, page: requestedPage, pageSize: 20 });
+    const result = await apiGetCustomerReservations({
+      tab,
+      page: requestedPage,
+      pageSize: 20,
+    });
     const payload = result?.data?.data ?? result?.data;
     if (!result?.success || payload?.success === false) {
-      const message = result?.error || payload?.message || "Your reservations could not be loaded.";
+      const message =
+        result?.error ||
+        payload?.message ||
+        "Your reservations could not be loaded.";
       setReservationListError(message);
       setReservationAccountMessage(message);
       setReservationListLoading(false);
-      if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
+      if (result?.status === 401 || result?.status === 403)
+        handleReservationSessionExpired();
       return false;
     }
     setMyReservations(Array.isArray(payload?.items) ? payload.items : []);
@@ -912,43 +1194,65 @@ export function CustomerLandingPage({
       return;
     }
     let cancelled = false;
-    apiGetCustomerProfile().then((result) => {
-      if (cancelled) return;
-      const response = result?.data?.data ?? result?.data;
-      if (!result?.success || response?.success === false) {
-        if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
-        else setReservationListError(result?.error || response?.message || "Customer profile could not be loaded.");
-        return;
-      }
-      const profile = response?.data ?? response;
-      if (!profile) return;
-      setCustomerUser((current) => ({
-        ...current,
-        name: profile.fullName,
-        phone: profile.mobileNumber || profile.phone,
-        email: profile.email || current?.email || "",
-      }));
-    }).catch((error) => {
-      if (!cancelled) setReservationListError(error?.message || "Customer profile could not be loaded.");
-    });
-    return () => { cancelled = true; };
+    apiGetCustomerProfile()
+      .then((result) => {
+        if (cancelled) return;
+        const response = result?.data?.data ?? result?.data;
+        if (!result?.success || response?.success === false) {
+          if (result?.status === 401 || result?.status === 403)
+            handleReservationSessionExpired();
+          else
+            setReservationListError(
+              result?.error ||
+                response?.message ||
+                "Customer profile could not be loaded.",
+            );
+          return;
+        }
+        const profile = response?.data ?? response;
+        if (!profile) return;
+        setCustomerUser((current) => ({
+          ...current,
+          name: profile.fullName,
+          phone: profile.mobileNumber || profile.phone,
+          email: profile.email || current?.email || "",
+        }));
+      })
+      .catch((error) => {
+        if (!cancelled)
+          setReservationListError(
+            error?.message || "Customer profile could not be loaded.",
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [activeScreen]);
 
   const openCustomerReservation = async (reservation) => {
     setReservationActionBusy(true);
     const id = reservation.reservationId || reservation.reservationNumber;
-    const detailsResult = await apiGetReservationDetails(id, getReservationCustomerToken());
+    const detailsResult = await apiGetReservationDetails(
+      id,
+      getReservationCustomerToken(),
+    );
     setReservationActionBusy(false);
     if (!detailsResult?.success) {
-      if (detailsResult?.status === 401 || detailsResult?.status === 403) handleReservationSessionExpired();
-      throw new Error(detailsResult?.error || "Reservation details could not be loaded.");
+      if (detailsResult?.status === 401 || detailsResult?.status === 403)
+        handleReservationSessionExpired();
+      throw new Error(
+        detailsResult?.error || "Reservation details could not be loaded.",
+      );
     }
     const details = detailsResult.data?.data ?? detailsResult.data;
     setSelectedReservationDetails(details);
-    if (details?.reservationDate) setReservationDate(String(details.reservationDate).slice(0, 10));
-    if (details?.reservationTime) setReservationTime(String(details.reservationTime).slice(0, 5));
+    if (details?.reservationDate)
+      setReservationDate(String(details.reservationDate).slice(0, 10));
+    if (details?.reservationTime)
+      setReservationTime(String(details.reservationTime).slice(0, 5));
     if (details?.guestsCount) setReservationGuests(Number(details.guestsCount));
-    if (details?.seatingPreference) setReservationTablePreference(details.seatingPreference);
+    if (details?.seatingPreference)
+      setReservationTablePreference(details.seatingPreference);
     if (details?.notes) setReservationNotes(details.notes);
     if (details?.tableId) setReservationTableId(String(details.tableId));
     return details;
@@ -957,14 +1261,19 @@ export function CustomerLandingPage({
   const cancelCustomerReservation = async (reservation) => {
     const id = reservation.reservationId || reservation.reservationNumber;
     setReservationActionBusy(true);
-    const result = await apiCancelCustomerReservation(id, { cancellationReason: "Cancelled by customer" });
+    const result = await apiCancelCustomerReservation(id, {
+      cancellationReason: "Cancelled by customer",
+    });
     setReservationActionBusy(false);
     if (!result?.success) {
-      if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
+      if (result?.status === 401 || result?.status === 403)
+        handleReservationSessionExpired();
       throw new Error(result?.error || "Reservation cancellation failed.");
     }
     const response = result.data?.data ?? result.data;
-    setReservationAccountMessage(`${response?.message || "Reservation cancelled."} Refund: ${formatPrice(response?.refundAmount)} (${response?.refundStatus || "status unavailable"}).`);
+    setReservationAccountMessage(
+      `${response?.message || "Reservation cancelled."} Refund: ${formatPrice(response?.refundAmount)} (${response?.refundStatus || "status unavailable"}).`,
+    );
     setSelectedReservationDetails(response?.reservation || null);
     await loadCustomerReservations(reservationTab, reservationPage);
     return response;
@@ -978,30 +1287,41 @@ export function CustomerLandingPage({
       guests: Number(reservationGuests),
     });
     if (!result?.success) {
-      setReservationAvailabilityError(result?.error || "Table details could not be loaded.");
+      setReservationAvailabilityError(
+        result?.error || "Table details could not be loaded.",
+      );
       return;
     }
     const details = result.data?.data ?? result.data;
     setReservationTableDetail(details);
-    if (details?.isAvailableForSlot) setReservationTableId(String(details.tableId));
+    if (details?.isAvailableForSlot)
+      setReservationTableId(String(details.tableId));
   };
 
   const saveReservationChanges = async (draft = selectedReservationDetails) => {
     if (!draft) throw new Error("Select a reservation before saving changes.");
     const tableId = draft.tableId || selectedReservationDetails?.tableId;
     setReservationActionBusy(true);
-    const result = await apiModifyReservation(draft.reservationId || draft.reservationNumber, {
-      reservationDate: draft.date,
-      reservationTime: draft.time,
-      guestsCount: Number(draft.guests),
-      tableId: Number(tableId),
-      seatingPreference: draft.seatingPreference || selectedReservationDetails?.seatingPreference,
-      specialRequests: String(draft.specialRequests || "").trim(),
-    });
+    const result = await apiModifyReservation(
+      draft.reservationId || draft.reservationNumber,
+      {
+        reservationDate: draft.date,
+        reservationTime: draft.time,
+        guestsCount: Number(draft.guests),
+        tableId: Number(tableId),
+        seatingPreference:
+          draft.seatingPreference ||
+          selectedReservationDetails?.seatingPreference,
+        specialRequests: String(draft.specialRequests || "").trim(),
+      },
+    );
     setReservationActionBusy(false);
     if (!result?.success) {
-      if (result?.status === 401 || result?.status === 403) handleReservationSessionExpired();
-      throw new Error(result?.error || "Reservation changes could not be saved.");
+      if (result?.status === 401 || result?.status === 403)
+        handleReservationSessionExpired();
+      throw new Error(
+        result?.error || "Reservation changes could not be saved.",
+      );
     }
     const updated = result.data?.data ?? result.data;
     setSelectedReservationDetails(updated?.reservation ?? updated);
@@ -1013,15 +1333,24 @@ export function CustomerLandingPage({
   // Format data for standard POS ReceiptModal
   const receiptTableData = useMemo(() => {
     if (!placedOrder) return null;
-    const items = (Array.isArray(placedOrder.items) ? placedOrder.items : []).map((it) => ({
+    const items = (
+      Array.isArray(placedOrder.items) ? placedOrder.items : []
+    ).map((it) => ({
       name: it.name,
       quantity: Number(it.quantity) || 1,
       price: Number(it.price) || 0,
     }));
-    const subtotal = Number(placedOrder.itemsSubtotal || items.reduce((s, it) => s + it.price * it.quantity, 0));
-    const taxAmount = Number(placedOrder.taxes || Math.round(subtotal * 0.05 * 100) / 100);
+    const subtotal = Number(
+      placedOrder.itemsSubtotal ||
+        items.reduce((s, it) => s + it.price * it.quantity, 0),
+    );
+    const taxAmount = Number(
+      placedOrder.taxes || Math.round(subtotal * 0.05 * 100) / 100,
+    );
     const packing = Number(placedOrder.packingCharges || 20);
-    const grandTotal = Number(placedOrder.totalAmount || subtotal + taxAmount + packing);
+    const grandTotal = Number(
+      placedOrder.totalAmount || subtotal + taxAmount + packing,
+    );
 
     return {
       id: placedOrder.id || placedOrder.orderNumber,
@@ -1057,260 +1386,325 @@ export function CustomerLandingPage({
         activeScreen !== "orders" &&
         activeScreen !== "my-orders" &&
         activeScreen !== "profile" && (
-        <header className={`customer-header ${activeScreen === "menu" ? "is-takeaway-header" : ""}`}>
-          <a
-            className="customer-brand"
-            href="#home"
-            aria-label={`${restaurantName} home`}
-            onClick={(event) => {
-              event.preventDefault();
-              navigateScreen("home");
-            }}
+          <header
+            className={`customer-header ${activeScreen === "menu" ? "is-takeaway-header" : ""}`}
           >
-            {restaurantLogo ? (
-              <img className="customer-brand-logo" src={restaurantLogo} alt="" />
-            ) : (
-              <span className="customer-brand-mark">
-                <ChefHat size={25} />
+            <a
+              className="customer-brand"
+              href="#home"
+              aria-label={`${restaurantName} home`}
+              onClick={(event) => {
+                event.preventDefault();
+                navigateScreen("home");
+              }}
+            >
+              {restaurantLogo ? (
+                <img
+                  className="customer-brand-logo"
+                  src={restaurantLogo}
+                  alt=""
+                />
+              ) : (
+                <span className="customer-brand-mark">
+                  <ChefHat size={25} />
+                </span>
+              )}
+              <span>
+                <strong>{restaurantName}</strong>
+                <small>
+                  {activeScreen === "menu"
+                    ? "Takeaway Ordering"
+                    : "Fine Dining & Takeaway"}
+                </small>
               </span>
+            </a>
+
+            {/* Center Pill: Takeaway Only (Matches Mockup) */}
+            {activeScreen === "menu" && (
+              <div className="takeaway-header-center-pill">
+                <ShoppingBag size={15} color="#f59e0b" />
+                <span>Takeaway Only</span>
+              </div>
             )}
-            <span>
-              <strong>{restaurantName}</strong>
-              <small>{activeScreen === "menu" ? "Takeaway Ordering" : "Fine Dining & Takeaway"}</small>
-            </span>
-          </a>
 
-          {/* Center Pill: Takeaway Only (Matches Mockup) */}
-          {activeScreen === "menu" && (
-            <div className="takeaway-header-center-pill">
-              <ShoppingBag size={15} color="#f59e0b" />
-              <span>Takeaway Only</span>
-            </div>
-          )}
-
-          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-            {/* Kitchen Cooking Status Notification Bell (Matches POS Header) */}
-            {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
-              <div className="takeaway-header-notif-wrap" ref={notifRef}>
-                <button
-                  type="button"
-                  className={`takeaway-header-notif-btn ${effectiveNotifications.length > 0 ? "has-alerts" : ""}`}
-                  aria-label={`Kitchen status updates${effectiveNotifications.length ? `, ${effectiveNotifications.length} updates` : ""}`}
-                  aria-expanded={isNotifOpen}
-                  aria-haspopup="true"
-                  title="Kitchen Cooking Status Updates"
-                  onClick={() => setIsNotifOpen((open) => !open)}
-                >
-                  {Array.isArray(effectiveNotifications) && effectiveNotifications.some(
-                    (n) => n.type === "cooking_completed"
-                  ) ? (
-                    <BellRing size={16} className="takeaway-bell-ring-active" />
-                  ) : (
-                    <Bell size={16} />
-                  )}
-                  {Array.isArray(effectiveNotifications) && effectiveNotifications.length > 0 && (
-                    <span className="takeaway-notif-badge">
-                      {effectiveNotifications.length > 9 ? "9+" : effectiveNotifications.length}
-                    </span>
-                  )}
-                </button>
-
-                {/* Notifications Dropdown Panel */}
-                {isNotifOpen && (
-                  <div className="takeaway-notif-panel" role="dialog" aria-label="Kitchen Status Notifications">
-                    <div className="takeaway-notif-header">
-                      <div className="takeaway-notif-header-title">
-                        <Bell size={14} color="#f59e0b" />
-                        <span>Kitchen Status Updates</span>
-                        {effectiveNotifications.length > 0 && (
-                          <span className="takeaway-notif-count-tag">
-                            {effectiveNotifications.length}
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
+            >
+              {/* Kitchen Cooking Status Notification Bell (Matches POS Header) */}
+              {activeScreen !== "home" &&
+                activeScreen !== "reservation" &&
+                activeScreen !== "auth" && (
+                  <div className="takeaway-header-notif-wrap" ref={notifRef}>
+                    <button
+                      type="button"
+                      className={`takeaway-header-notif-btn ${effectiveNotifications.length > 0 ? "has-alerts" : ""}`}
+                      aria-label={`Kitchen status updates${effectiveNotifications.length ? `, ${effectiveNotifications.length} updates` : ""}`}
+                      aria-expanded={isNotifOpen}
+                      aria-haspopup="true"
+                      title="Kitchen Cooking Status Updates"
+                      onClick={() => setIsNotifOpen((open) => !open)}
+                    >
+                      {Array.isArray(effectiveNotifications) &&
+                      effectiveNotifications.some(
+                        (n) => n.type === "cooking_completed",
+                      ) ? (
+                        <BellRing
+                          size={16}
+                          className="takeaway-bell-ring-active"
+                        />
+                      ) : (
+                        <Bell size={16} />
+                      )}
+                      {Array.isArray(effectiveNotifications) &&
+                        effectiveNotifications.length > 0 && (
+                          <span className="takeaway-notif-badge">
+                            {effectiveNotifications.length > 9
+                              ? "9+"
+                              : effectiveNotifications.length}
                           </span>
                         )}
-                      </div>
-                      {effectiveNotifications.length > 0 && (
-                        <button
-                          type="button"
-                          className="takeaway-notif-clear-btn"
-                          title="Clear all updates"
-                          onClick={handleClearAllNotifs}
-                        >
-                          <Trash2 size={12} />
-                          <span>Clear</span>
-                        </button>
-                      )}
-                    </div>
+                    </button>
 
-                    {effectiveNotifications.length === 0 ? (
-                      <div className="takeaway-notif-empty">
-                        <span style={{ fontSize: "1.4rem", display: "block", marginBottom: "4px" }}>📭</span>
-                        <p>No kitchen status updates yet.</p>
-                      </div>
-                    ) : (
-                      <div className="takeaway-notif-list">
-                        {effectiveNotifications.map((notification, index) => {
-                          const isCompleted = notification.type === "cooking_completed";
-                          return (
-                            <div
-                              key={notification.id || index}
-                              className={`takeaway-notif-item ${isCompleted ? "is-ready" : ""}`}
+                    {/* Notifications Dropdown Panel */}
+                    {isNotifOpen && (
+                      <div
+                        className="takeaway-notif-panel"
+                        role="dialog"
+                        aria-label="Kitchen Status Notifications"
+                      >
+                        <div className="takeaway-notif-header">
+                          <div className="takeaway-notif-header-title">
+                            <Bell size={14} color="#f59e0b" />
+                            <span>Kitchen Status Updates</span>
+                            {effectiveNotifications.length > 0 && (
+                              <span className="takeaway-notif-count-tag">
+                                {effectiveNotifications.length}
+                              </span>
+                            )}
+                          </div>
+                          {effectiveNotifications.length > 0 && (
+                            <button
+                              type="button"
+                              className="takeaway-notif-clear-btn"
+                              title="Clear all updates"
+                              onClick={handleClearAllNotifs}
                             >
-                              <div className={`takeaway-notif-icon-circle ${isCompleted ? "is-ready" : ""}`}>
-                                {isCompleted ? <CheckCircle2 size={13} /> : <Clock size={13} />}
-                              </div>
-                              <div className="takeaway-notif-item-body">
-                                <div className="takeaway-notif-item-top">
-                                  <strong>{getCleanAlertTitle(notification)}</strong>
-                                  <span>{getCleanAlertTimestamp(notification)}</span>
-                                </div>
-                                <p>{getCleanAlertMessage(notification)}</p>
-                                {notification.tableId && (
-                                  <small className="takeaway-notification-table">
-                                    <MapPin size={10} />
-                                    {cleanNotificationText(notification.tableName) || `Table ${notification.tableId}`}
-                                  </small>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                              <Trash2 size={12} />
+                              <span>Clear</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {effectiveNotifications.length === 0 ? (
+                          <div className="takeaway-notif-empty">
+                            <span
+                              style={{
+                                fontSize: "1.4rem",
+                                display: "block",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              📭
+                            </span>
+                            <p>No kitchen status updates yet.</p>
+                          </div>
+                        ) : (
+                          <div className="takeaway-notif-list">
+                            {effectiveNotifications.map(
+                              (notification, index) => {
+                                const isCompleted =
+                                  notification.type === "cooking_completed";
+                                return (
+                                  <div
+                                    key={notification.id || index}
+                                    className={`takeaway-notif-item ${isCompleted ? "is-ready" : ""}`}
+                                  >
+                                    <div
+                                      className={`takeaway-notif-icon-circle ${isCompleted ? "is-ready" : ""}`}
+                                    >
+                                      {isCompleted ? (
+                                        <CheckCircle2 size={13} />
+                                      ) : (
+                                        <Clock size={13} />
+                                      )}
+                                    </div>
+                                    <div className="takeaway-notif-item-body">
+                                      <div className="takeaway-notif-item-top">
+                                        <strong>
+                                          {getCleanAlertTitle(notification)}
+                                        </strong>
+                                        <span>
+                                          {getCleanAlertTimestamp(notification)}
+                                        </span>
+                                      </div>
+                                      <p>
+                                        {getCleanAlertMessage(notification)}
+                                      </p>
+                                      {notification.tableId && (
+                                        <small className="takeaway-notification-table">
+                                          <MapPin size={10} />
+                                          {cleanNotificationText(
+                                            notification.tableName,
+                                          ) || `Table ${notification.tableId}`}
+                                        </small>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              },
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Redesigned Modern Cart Pill Button */}
-            {activeScreen !== "home" && activeScreen !== "reservation" && activeScreen !== "auth" && (
-              <button
-                type="button"
-                className={`takeaway-header-cart-btn ${cartCount > 0 ? "has-items" : ""}`}
-                onClick={() => {
-                  if (activeScreen === "menu") {
-                    const el = document.getElementById("takeaway-order-sidebar");
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                  } else {
-                    navigateScreen("menu");
-                  }
-                }}
-                title={cartCount > 0 ? `Your Cart: ${cartCount} item${cartCount === 1 ? "" : "s"} (${formatPrice(totalAmount)})` : "Your Cart is Empty"}
-              >
-                <div className="takeaway-cart-btn-icon-wrapper">
-                  <ConciergeBell size={17} />
-                  {cartCount > 0 && (
-                    <span className="takeaway-cart-count-badge">
-                      {cartCount > 9 ? "9+" : cartCount}
+              {/* Redesigned Modern Cart Pill Button */}
+              {activeScreen !== "home" &&
+                activeScreen !== "reservation" &&
+                activeScreen !== "auth" && (
+                  <button
+                    type="button"
+                    className={`takeaway-header-cart-btn ${cartCount > 0 ? "has-items" : ""}`}
+                    onClick={() => {
+                      if (activeScreen === "menu") {
+                        const el = document.getElementById(
+                          "takeaway-order-sidebar",
+                        );
+                        if (el) el.scrollIntoView({ behavior: "smooth" });
+                      } else {
+                        navigateScreen("menu");
+                      }
+                    }}
+                    title={
+                      cartCount > 0
+                        ? `Your Cart: ${cartCount} item${cartCount === 1 ? "" : "s"} (${formatPrice(totalAmount)})`
+                        : "Your Cart is Empty"
+                    }
+                  >
+                    <div className="takeaway-cart-btn-icon-wrapper">
+                      <ConciergeBell size={17} />
+                      {cartCount > 0 && (
+                        <span className="takeaway-cart-count-badge">
+                          {cartCount > 9 ? "9+" : cartCount}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )}
+
+              {/* Hotel / Admin Login Button */}
+              {!customerUser ? (
+                <button
+                  className="customer-login-pill-btn"
+                  type="button"
+                  onClick={() => {
+                    if (typeof onHotelLogin === "function") {
+                      onHotelLogin();
+                    } else if (typeof onAdminLogin === "function") {
+                      onAdminLogin();
+                    } else {
+                      window.location.href = "/admin";
+                    }
+                  }}
+                  title="Login"
+                >
+                  <UserRound size={16} />
+                  <span>Login</span>
+                </button>
+              ) : (
+                <div
+                  className="customer-profile-menu-container"
+                  style={{ position: "relative" }}
+                >
+                  <button
+                    className="customer-profile-pill-btn"
+                    type="button"
+                    onClick={() => setShowProfileDropdown((prev) => !prev)}
+                  >
+                    <div className="customer-avatar-badge">
+                      {(customerUser.name || "Priya")[0].toUpperCase()}
+                    </div>
+                    <span className="customer-profile-name">
+                      {customerUser.name || ""}
                     </span>
+                    <ChevronDown size={14} />
+                  </button>
+
+                  {showProfileDropdown && (
+                    <div className="customer-profile-dropdown-menu">
+                      <div className="customer-profile-dropdown-header">
+                        <div className="customer-dropdown-avatar">
+                          {(customerUser.name || "Priya")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <strong>{customerUser.name || ""}</strong>
+                          <small>
+                            {customerUser.phone ||
+                              customerUser.email ||
+                              "+91 98765 43210"}
+                          </small>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="customer-profile-menu-item"
+                        onClick={() => {
+                          setShowProfileDropdown(false);
+                          navigateScreen("orders");
+                        }}
+                      >
+                        <ShoppingBag size={17} color="#d4c5b9" />
+                        <span style={{ fontSize: "15px" }}>📋</span>
+                        <span>My Orders</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="customer-profile-menu-item"
+                        onClick={() => {
+                          setShowProfileDropdown(false);
+                          setReservationInitialStep(6);
+                          navigateScreen("reservation");
+                        }}
+                      >
+                        <CalendarDays size={17} color="#d4c5b9" />
+                        <span style={{ fontSize: "15px" }}>📅</span>
+                        <span>My Reservations</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="customer-profile-menu-item"
+                        onClick={() => {
+                          setShowProfileDropdown(false);
+                          navigateScreen("profile");
+                        }}
+                      >
+                        <User size={17} color="#d4c5b9" />
+                        <span style={{ fontSize: "15px" }}>👤</span>
+                        <span>My Profile</span>
+                      </button>
+
+                      <div className="customer-profile-dropdown-divider" />
+
+                      <button
+                        type="button"
+                        className="customer-profile-menu-item is-logout"
+                        onClick={handleLogout}
+                      >
+                        <LogOut size={15} />
+                        <span>🚪 Logout</span>
+                      </button>
+                    </div>
                   )}
                 </div>
-              </button>
-            )}
-
-            {/* Hotel / Admin Login Button */}
-            {!customerUser ? (
-              <button
-                className="customer-login-pill-btn"
-                type="button"
-                onClick={() => {
-                  if (typeof onHotelLogin === "function") {
-                    onHotelLogin();
-                  } else if (typeof onAdminLogin === "function") {
-                    onAdminLogin();
-                  } else {
-                    window.location.href = "/admin";
-                  }
-                }}
-                title="Login"
-              >
-                <UserRound size={16} />
-                <span>Login</span>
-              </button>
-            ) : (
-              <div className="customer-profile-menu-container" style={{ position: "relative" }}>
-                <button
-                  className="customer-profile-pill-btn"
-                  type="button"
-                  onClick={() => setShowProfileDropdown((prev) => !prev)}
-                >
-                  <div className="customer-avatar-badge">
-                    {(customerUser.name || "Priya")[0].toUpperCase()}
-                  </div>
-                  <span className="customer-profile-name">
-                    {customerUser.name || ""}
-                  </span>
-                  <ChevronDown size={14} />
-                </button>
-
-                {showProfileDropdown && (
-                  <div className="customer-profile-dropdown-menu">
-                    <div className="customer-profile-dropdown-header">
-                      <div className="customer-dropdown-avatar">
-                        {(customerUser.name || "Priya")[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <strong>{customerUser.name || ""}</strong>
-                        <small>{customerUser.phone || customerUser.email || "+91 98765 43210"}</small>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="customer-profile-menu-item"
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        navigateScreen("orders");
-                      }}
-                    >
-                      <ShoppingBag size={17} color="#d4c5b9" />
-                      <span style={{ fontSize: "15px" }}>📋</span>
-                      <span>My Orders</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="customer-profile-menu-item"
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        setReservationInitialStep(6);
-                        navigateScreen("reservation");
-                      }}
-                    >
-                      <CalendarDays size={17} color="#d4c5b9" />
-                      <span style={{ fontSize: "15px" }}>📅</span>
-                      <span>My Reservations</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="customer-profile-menu-item"
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        navigateScreen("profile");
-                      }}
-                    >
-                      <User size={17} color="#d4c5b9" />
-                      <span style={{ fontSize: "15px" }}>👤</span>
-                      <span>My Profile</span>
-                    </button>
-
-                    <div className="customer-profile-dropdown-divider" />
-
-                    <button
-                      type="button"
-                      className="customer-profile-menu-item is-logout"
-                      onClick={handleLogout}
-                    >
-                      <LogOut size={15} />
-                      <span>🚪 Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </header>
-      )}
+              )}
+            </div>
+          </header>
+        )}
 
       <main>
         {/* ========================================================= */}
@@ -1349,7 +1743,10 @@ export function CustomerLandingPage({
                     <ShoppingBag size={20} />
                   </span>
                   <h2>Order Takeaway Online</h2>
-                  <p>Browse our menu, place your order and pick it up at your convenience.</p>
+                  <p>
+                    Browse our menu, place your order and pick it up at your
+                    convenience.
+                  </p>
                   <button
                     className="customer-action-button takeaway-button"
                     type="button"
@@ -1366,7 +1763,10 @@ export function CustomerLandingPage({
                     <CalendarDays size={20} />
                   </span>
                   <h2>Reserve a Table</h2>
-                  <p>Book your table in advance and enjoy a great dining experience.</p>
+                  <p>
+                    Book your table in advance and enjoy a great dining
+                    experience.
+                  </p>
                   <button
                     className="customer-action-button reservation-button"
                     type="button"
@@ -1394,7 +1794,16 @@ export function CustomerLandingPage({
 
               <div className="customer-feature-item">
                 <span className="customer-feature-icon">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M12 4v2" />
                     <path d="M4 18h16" />
                     <path d="M20 18a8 8 0 0 0-16 0" />
@@ -1410,7 +1819,16 @@ export function CustomerLandingPage({
 
               <div className="customer-feature-item">
                 <span className="customer-feature-icon">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M3 10v9" />
                     <path d="M3 14h3" />
                     <path d="M6 10v9" />
@@ -1472,9 +1890,13 @@ export function CustomerLandingPage({
                 </div>
                 <div className="pos-takeaway-info-chip is-highlight">
                   <ShoppingBag size={13} />
-                  <span>{cartCount} item{cartCount === 1 ? "" : "s"}</span>
+                  <span>
+                    {cartCount} item{cartCount === 1 ? "" : "s"}
+                  </span>
                   <span className="pos-chip-sep">•</span>
-                  <strong className="font-mono">{formatPrice(totalAmount)}</strong>
+                  <strong className="font-mono">
+                    {formatPrice(totalAmount)}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -1482,7 +1904,10 @@ export function CustomerLandingPage({
             {/* 3-Panel Main Workspace (Full viewport height, exact POS template) */}
             <div className="pos-takeaway-workspace">
               {/* ── Left Sidebar: Categories Navigation ── */}
-              <aside className="pos-takeaway-sidebar" aria-label="Menu Categories">
+              <aside
+                className="pos-takeaway-sidebar"
+                aria-label="Menu Categories"
+              >
                 <div className="pos-takeaway-sidebar-header">
                   <h4>CATEGORIES</h4>
                 </div>
@@ -1498,7 +1923,8 @@ export function CustomerLandingPage({
                         onClick={() => {
                           setSelectedCategory(cat.id);
                           if (cat.id === "beverages") setOrderMode("bar");
-                          else if (orderMode === "bar" && cat.id !== "all") setOrderMode("kitchen");
+                          else if (orderMode === "bar" && cat.id !== "all")
+                            setOrderMode("kitchen");
                         }}
                       >
                         <IconComp size={16} className="pos-cat-icon" />
@@ -1520,7 +1946,8 @@ export function CustomerLandingPage({
                       className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
                       onClick={() => {
                         setOrderMode("kitchen");
-                        if (selectedCategory === "beverages") setSelectedCategory("all");
+                        if (selectedCategory === "beverages")
+                          setSelectedCategory("all");
                       }}
                     >
                       <ChefHat size={14} />
@@ -1571,7 +1998,11 @@ export function CustomerLandingPage({
                     <button
                       type="button"
                       className={`pos-dietary-btn ${dietaryFilter === "veg" ? "is-active" : ""}`}
-                      onClick={() => setDietaryFilter(dietaryFilter === "veg" ? "all" : "veg")}
+                      onClick={() =>
+                        setDietaryFilter(
+                          dietaryFilter === "veg" ? "all" : "veg",
+                        )
+                      }
                     >
                       <Circle size={13} fill="#16a34a" color="#16a34a" />
                       <span>Veg</span>
@@ -1579,7 +2010,11 @@ export function CustomerLandingPage({
                     <button
                       type="button"
                       className={`pos-dietary-btn ${dietaryFilter === "non-veg" ? "is-active" : ""}`}
-                      onClick={() => setDietaryFilter(dietaryFilter === "non-veg" ? "all" : "non-veg")}
+                      onClick={() =>
+                        setDietaryFilter(
+                          dietaryFilter === "non-veg" ? "all" : "non-veg",
+                        )
+                      }
                     >
                       <Circle size={13} fill="#dc2626" color="#dc2626" />
                       <span>Non-Veg</span>
@@ -1587,7 +2022,11 @@ export function CustomerLandingPage({
                     <button
                       type="button"
                       className={`pos-dietary-btn ${dietaryFilter === "special" ? "is-active" : ""}`}
-                      onClick={() => setDietaryFilter(dietaryFilter === "special" ? "all" : "special")}
+                      onClick={() =>
+                        setDietaryFilter(
+                          dietaryFilter === "special" ? "all" : "special",
+                        )
+                      }
                     >
                       <Star size={13} fill="#f59e0b" color="#f59e0b" />
                       <span>Specials</span>
@@ -1628,8 +2067,16 @@ export function CustomerLandingPage({
                   ) : visibleMenuItems.length === 0 ? (
                     <div className="pos-takeaway-empty">
                       <Flame size={40} color="var(--accent-amber)" />
-                      <h4>{combinedMenuItems.length === 0 ? "No dishes available" : "No dishes found"}</h4>
-                      <p>{combinedMenuItems.length === 0 ? "No dishes were returned by the menu API." : "Try searching with another keyword or resetting the category filter."}</p>
+                      <h4>
+                        {combinedMenuItems.length === 0
+                          ? "No dishes available"
+                          : "No dishes found"}
+                      </h4>
+                      <p>
+                        {combinedMenuItems.length === 0
+                          ? "No dishes were returned by the menu API."
+                          : "Try searching with another keyword or resetting the category filter."}
+                      </p>
                       {combinedMenuItems.length > 0 && (
                         <button
                           type="button"
@@ -1667,7 +2114,9 @@ export function CustomerLandingPage({
                             <div className="pos-takeaway-badge">
                               <span
                                 className="pos-badge-dot"
-                                style={{ background: isVeg ? "#10b981" : "#ef4444" }}
+                                style={{
+                                  background: isVeg ? "#10b981" : "#ef4444",
+                                }}
                               />
                               <span>{isVeg ? "VEG" : "NON-VEG"}</span>
                             </div>
@@ -1682,21 +2131,40 @@ export function CustomerLandingPage({
                           {/* Body Content */}
                           <div className="pos-takeaway-card-body">
                             <div className="pos-takeaway-card-title-row">
-                              <h4 className="pos-takeaway-card-title" title={item.name}>
+                              <h4
+                                className="pos-takeaway-card-title"
+                                title={item.name}
+                              >
                                 {item.name}
                               </h4>
                               {item.isChefSpecial && (
-                                <Star size={13} fill="#f59e0b" color="#f59e0b" title="Chef special" aria-label="Chef special" />
+                                <Star
+                                  size={13}
+                                  fill="#f59e0b"
+                                  color="#f59e0b"
+                                  title="Chef special"
+                                  aria-label="Chef special"
+                                />
                               )}
                               {item.spiceLevel > 0 && (
-                                <div className="pos-takeaway-spices" title={`Spicy Level: ${item.spiceLevel}`}>
+                                <div
+                                  className="pos-takeaway-spices"
+                                  title={`Spicy Level: ${item.spiceLevel}`}
+                                >
                                   {[...Array(item.spiceLevel)].map((_, i) => (
-                                    <Flame key={i} size={11} fill="#ef4444" color="#ef4444" />
+                                    <Flame
+                                      key={i}
+                                      size={11}
+                                      fill="#ef4444"
+                                      color="#ef4444"
+                                    />
                                   ))}
                                 </div>
                               )}
                             </div>
-                            <p className="pos-takeaway-card-desc">{item.description}</p>
+                            <p className="pos-takeaway-card-desc">
+                              {item.description}
+                            </p>
                           </div>
 
                           {/* Footer Actions */}
@@ -1711,9 +2179,20 @@ export function CustomerLandingPage({
                                 className="pos-takeaway-add-btn"
                                 disabled={!isAvailable}
                                 onClick={() => changeQuantity(item, 1)}
-                                title={isAvailable ? "Add to Order" : "Currently unavailable"}
+                                title={
+                                  isAvailable
+                                    ? "Add to Order"
+                                    : "Currently unavailable"
+                                }
                               >
-                                {isAvailable ? <><Plus size={12} /><span>Add</span></> : <span>Unavailable</span>}
+                                {isAvailable ? (
+                                  <>
+                                    <Plus size={12} />
+                                    <span>Add</span>
+                                  </>
+                                ) : (
+                                  <span>Unavailable</span>
+                                )}
                               </button>
                             ) : (
                               <div className="pos-takeaway-qty-stepper">
@@ -1725,7 +2204,9 @@ export function CustomerLandingPage({
                                 >
                                   <Minus size={11} />
                                 </button>
-                                <span className="font-mono pos-takeaway-qty-count">{qty}</span>
+                                <span className="font-mono pos-takeaway-qty-count">
+                                  {qty}
+                                </span>
                                 <button
                                   type="button"
                                   disabled={!isAvailable}
@@ -1745,7 +2226,10 @@ export function CustomerLandingPage({
               </div>
 
               {/* ── Right Sidebar: Takeaway Order Slip (Live Cart) ── */}
-              <aside className="pos-takeaway-slip-sidebar" id="takeaway-order-sidebar">
+              <aside
+                className="pos-takeaway-slip-sidebar"
+                id="takeaway-order-sidebar"
+              >
                 {/* Header */}
                 <div className="pos-slip-header">
                   <div className="pos-slip-header-title">
@@ -1754,11 +2238,16 @@ export function CustomerLandingPage({
                       <h3>Takeaway — Order Slip</h3>
                     </div>
                     <div className="pos-slip-subtext">
-                      <span>{cartCount} item{cartCount === 1 ? "" : "s"}</span>
+                      <span>
+                        {cartCount} item{cartCount === 1 ? "" : "s"}
+                      </span>
                       <span>•</span>
                       <span className="pos-slip-time">
                         <Clock size={10} color="var(--accent-amber)" />
-                        {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {new Date().toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </span>
                     </div>
                   </div>
@@ -1769,8 +2258,12 @@ export function CustomerLandingPage({
                 <div className="pos-slip-notice-box">
                   <div className="pos-slip-notice-icon">🛍️</div>
                   <div>
-                    <div className="pos-slip-notice-heading">TAKEAWAY ORDER</div>
-                    <div className="pos-slip-notice-sub">Dishes freshly packed for counter pickup</div>
+                    <div className="pos-slip-notice-heading">
+                      TAKEAWAY ORDER
+                    </div>
+                    <div className="pos-slip-notice-sub">
+                      Dishes freshly packed for counter pickup
+                    </div>
                   </div>
                 </div>
 
@@ -1780,14 +2273,19 @@ export function CustomerLandingPage({
                     <div className="pos-slip-empty">
                       <ShoppingBag size={34} color="var(--text-dim)" />
                       <h5>Your order slip is empty</h5>
-                      <p>Click <strong>+ Add</strong> on dishes to build your takeaway order.</p>
+                      <p>
+                        Click <strong>+ Add</strong> on dishes to build your
+                        takeaway order.
+                      </p>
                     </div>
                   ) : (
                     cartItems.map(({ item, quantity }) => (
                       <div key={item.id} className="pos-slip-item-card">
                         <div className="pos-slip-item-top">
                           <div className="pos-slip-item-title-group">
-                            <span className="pos-slip-item-name">{item.name}</span>
+                            <span className="pos-slip-item-name">
+                              {item.name}
+                            </span>
                             <span
                               className={`pos-slip-item-station ${
                                 item.station === "bar" ? "is-bar" : "is-kitchen"
@@ -1815,7 +2313,9 @@ export function CustomerLandingPage({
                               >
                                 <Minus size={11} />
                               </button>
-                              <span className="font-mono pos-slip-stepper-val">{quantity}</span>
+                              <span className="font-mono pos-slip-stepper-val">
+                                {quantity}
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => changeQuantity(item, 1)}
@@ -1844,11 +2344,15 @@ export function CustomerLandingPage({
                 <div className="pos-slip-financials">
                   <div className="pos-slip-fin-row">
                     <span>Subtotal</span>
-                    <span className="font-mono">{formatPrice(itemsSubtotal)}</span>
+                    <span className="font-mono">
+                      {formatPrice(itemsSubtotal)}
+                    </span>
                   </div>
                   <div className="pos-slip-fin-row">
                     <span>Packaging Charge</span>
-                    <span className="font-mono">{formatPrice(packingCharges)}</span>
+                    <span className="font-mono">
+                      {formatPrice(packingCharges)}
+                    </span>
                   </div>
                   <div className="pos-slip-fin-row">
                     <span>GST (5%)</span>
@@ -1857,7 +2361,9 @@ export function CustomerLandingPage({
                   {couponApplied && (
                     <div className="pos-slip-fin-row is-discount">
                       <span>Discount (Coupon)</span>
-                      <span className="font-mono">-{formatPrice(couponDiscount)}</span>
+                      <span className="font-mono">
+                        -{formatPrice(couponDiscount)}
+                      </span>
                     </div>
                   )}
 
@@ -1883,8 +2389,6 @@ export function CustomerLandingPage({
             </div>
           </div>
         )}
-
-
 
         {/* ========================================================= */}
         {/* STEP 4: Checkout Details - Add pickup time & contact     */}
@@ -1919,7 +2423,10 @@ export function CustomerLandingPage({
 
                     <div className="customer-checkout-grid">
                       <div className="customer-field-group">
-                        <label>Pickup Date <span style={{ color: "#ea580c" }}>*</span></label>
+                        <label>
+                          Pickup Date{" "}
+                          <span style={{ color: "#ea580c" }}>*</span>
+                        </label>
                         <div className="customer-field-control">
                           <CalendarDays size={16} />
                           <input
@@ -1932,14 +2439,19 @@ export function CustomerLandingPage({
                       </div>
 
                       <div className="customer-field-group">
-                        <label>Pickup Time <span style={{ color: "#ea580c" }}>*</span></label>
+                        <label>
+                          Pickup Time{" "}
+                          <span style={{ color: "#ea580c" }}>*</span>
+                        </label>
                         <div className="customer-field-control">
                           <Clock3 size={16} />
                           <select
                             value={pickupTime}
                             onChange={(e) => setPickupTime(e.target.value)}
                           >
-                            <option value="In 20 mins (ASAP)">In 20 mins (ASAP)</option>
+                            <option value="In 20 mins (ASAP)">
+                              In 20 mins (ASAP)
+                            </option>
                             <option value="In 30 mins">In 30 mins</option>
                             <option value="In 45 mins">In 45 mins</option>
                             <option value="07:30 PM">07:30 PM</option>
@@ -1954,7 +2466,13 @@ export function CustomerLandingPage({
                   </div>
 
                   {/* Section 2: Your Details */}
-                  <div className="customer-form-section" style={{ borderTop: "1px solid #f1f5f9", paddingTop: "1.2rem" }}>
+                  <div
+                    className="customer-form-section"
+                    style={{
+                      borderTop: "1px solid #f1f5f9",
+                      paddingTop: "1.2rem",
+                    }}
+                  >
                     <div className="customer-form-section-title">
                       <UserRound size={17} color="#ea580c" />
                       <span>Your Details</span>
@@ -1962,7 +2480,9 @@ export function CustomerLandingPage({
 
                     <div className="customer-checkout-grid">
                       <div className="customer-field-group">
-                        <label>Full Name <span style={{ color: "#ea580c" }}>*</span></label>
+                        <label>
+                          Full Name <span style={{ color: "#ea580c" }}>*</span>
+                        </label>
                         <div className="customer-field-control">
                           <UserRound size={16} />
                           <input
@@ -1970,13 +2490,19 @@ export function CustomerLandingPage({
                             required
                             placeholder="Your name"
                             value={customerName}
-                    onChange={(e) => { setCustomerName(e.target.value); setCheckoutError(""); }}
+                            onChange={(e) => {
+                              setCustomerName(e.target.value);
+                              setCheckoutError("");
+                            }}
                           />
                         </div>
                       </div>
 
                       <div className="customer-field-group">
-                        <label>Mobile Number <span style={{ color: "#ea580c" }}>*</span></label>
+                        <label>
+                          Mobile Number{" "}
+                          <span style={{ color: "#ea580c" }}>*</span>
+                        </label>
                         <div className="customer-field-control">
                           <Phone size={16} />
                           <input
@@ -1992,20 +2518,32 @@ export function CustomerLandingPage({
                           />
                         </div>
                         {customerPhoneError && (
-                          <span style={{ fontSize: "0.76rem", color: "#dc2626", marginTop: "3px" }}>
+                          <span
+                            style={{
+                              fontSize: "0.76rem",
+                              color: "#dc2626",
+                              marginTop: "3px",
+                            }}
+                          >
                             {customerPhoneError}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="customer-field-group" style={{ marginTop: "1rem" }}>
+                    <div
+                      className="customer-field-group"
+                      style={{ marginTop: "1rem" }}
+                    >
                       <label>Special Instructions (Optional)</label>
                       <textarea
                         rows={2}
                         placeholder="e.g. Extra spicy, pack gravy separately"
                         value={customerNotes}
-                        onChange={(e) => { setCustomerNotes(e.target.value); setCheckoutError(""); }}
+                        onChange={(e) => {
+                          setCustomerNotes(e.target.value);
+                          setCheckoutError("");
+                        }}
                         className="customer-field-textarea"
                       />
                     </div>
@@ -2031,7 +2569,10 @@ export function CustomerLandingPage({
                       <span>{formatPrice(taxes)}</span>
                     </div>
                     {couponApplied && (
-                      <div className="customer-summary-line" style={{ color: "#16a34a", fontWeight: 700 }}>
+                      <div
+                        className="customer-summary-line"
+                        style={{ color: "#16a34a", fontWeight: 700 }}
+                      >
                         <span>Discount</span>
                         <span>-{formatPrice(couponDiscount)}</span>
                       </div>
@@ -2129,17 +2670,29 @@ export function CustomerLandingPage({
                     <div className="customer-cash-tender-notice">
                       <div className="customer-cash-tender-header">
                         <Receipt size={14} color="#059669" />
-                        <span>Cash Tendered at Pickup Counter: <strong>{formatPrice(totalAmount)}</strong></span>
+                        <span>
+                          Cash Tendered at Pickup Counter:{" "}
+                          <strong>{formatPrice(totalAmount)}</strong>
+                        </span>
                       </div>
-                      <p>Please keep exact cash ready at the takeaway billing counter for speedy parcel handover.</p>
+                      <p>
+                        Please keep exact cash ready at the takeaway billing
+                        counter for speedy parcel handover.
+                      </p>
                     </div>
                   ) : (
                     <div className="customer-cash-tender-notice is-upi">
                       <div className="customer-cash-tender-header">
                         <Smartphone size={14} color="#ea580c" />
-                        <span>UPI Fast Pay: <strong>{formatPrice(totalAmount)}</strong></span>
+                        <span>
+                          UPI Fast Pay:{" "}
+                          <strong>{formatPrice(totalAmount)}</strong>
+                        </span>
                       </div>
-                      <p>Instant UPI payment confirmation with digital tax invoice receipt.</p>
+                      <p>
+                        Instant UPI payment confirmation with digital tax
+                        invoice receipt.
+                      </p>
                     </div>
                   )}
 
@@ -2148,10 +2701,15 @@ export function CustomerLandingPage({
                       {takeawayPaymentQr?.image ? (
                         <img
                           src={takeawayPaymentQr.image}
-                          alt={takeawayPaymentQr.label || "Scan to pay with UPI"}
+                          alt={
+                            takeawayPaymentQr.label || "Scan to pay with UPI"
+                          }
                         />
                       ) : (
-                        <div role="status" className="customer-takeaway-upi-qr-empty">
+                        <div
+                          role="status"
+                          className="customer-takeaway-upi-qr-empty"
+                        >
                           No UPI QR is configured. Add one in Admin Settings.
                         </div>
                       )}
@@ -2167,26 +2725,37 @@ export function CustomerLandingPage({
                   <div className="customer-summary-lines">
                     <div className="customer-summary-line">
                       <span>Items ({cartCount})</span>
-                      <span className="font-mono">{formatPrice(itemsSubtotal)}</span>
+                      <span className="font-mono">
+                        {formatPrice(itemsSubtotal)}
+                      </span>
                     </div>
                     <div className="customer-summary-line">
                       <span>Packing Charges</span>
-                      <span className="font-mono">{formatPrice(packingCharges)}</span>
+                      <span className="font-mono">
+                        {formatPrice(packingCharges)}
+                      </span>
                     </div>
                     <div className="customer-summary-line">
                       <span>Taxes (5%)</span>
                       <span className="font-mono">{formatPrice(taxes)}</span>
                     </div>
                     {couponApplied && (
-                      <div className="customer-summary-line" style={{ color: "#16a34a", fontWeight: 700 }}>
+                      <div
+                        className="customer-summary-line"
+                        style={{ color: "#16a34a", fontWeight: 700 }}
+                      >
                         <span>Discount</span>
-                        <span className="font-mono">-{formatPrice(couponDiscount)}</span>
+                        <span className="font-mono">
+                          -{formatPrice(couponDiscount)}
+                        </span>
                       </div>
                     )}
                     <div className="customer-summary-divider" />
                     <div className="customer-summary-total">
                       <span>Total Amount</span>
-                      <strong className="font-mono">{formatPrice(totalAmount)}</strong>
+                      <strong className="font-mono">
+                        {formatPrice(totalAmount)}
+                      </strong>
                     </div>
                   </div>
 
@@ -2196,7 +2765,9 @@ export function CustomerLandingPage({
                     onClick={handleStartPayment}
                     disabled={checkoutSubmitting}
                   >
-                    {checkoutSubmitting ? "Submitting order…" : paymentMethod === "cash" ? (
+                    {checkoutSubmitting ? (
+                      "Submitting order…"
+                    ) : paymentMethod === "cash" ? (
                       <>
                         <Check size={15} /> Confirm Order (Cash Tender)
                       </>
@@ -2206,7 +2777,18 @@ export function CustomerLandingPage({
                       </>
                     )}
                   </button>
-                  {checkoutError && <p role="alert" style={{ color: "#dc2626", fontSize: "0.82rem", marginTop: "0.75rem" }}>{checkoutError}</p>}
+                  {checkoutError && (
+                    <p
+                      role="alert"
+                      style={{
+                        color: "#dc2626",
+                        fontSize: "0.82rem",
+                        marginTop: "0.75rem",
+                      }}
+                    >
+                      {checkoutError}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -2217,7 +2799,10 @@ export function CustomerLandingPage({
         {/* STEP 6: Payment Processing - Verifying payment            */}
         {/* ========================================================= */}
         {activeScreen === "processing" && (
-          <section className="customer-flow-section customer-centered-screen" id="processing">
+          <section
+            className="customer-flow-section customer-centered-screen"
+            id="processing"
+          >
             <div className="customer-card-box customer-processing-card">
               <div className="customer-processing-icon-wrap">
                 <div className="customer-pulse-ring" />
@@ -2233,27 +2818,45 @@ export function CustomerLandingPage({
 
               {/* 3-Step Progress Track */}
               <div className="customer-processing-stepper">
-                <div className={`customer-proc-step ${processingStage >= 1 ? "is-done" : ""}`}>
+                <div
+                  className={`customer-proc-step ${processingStage >= 1 ? "is-done" : ""}`}
+                >
                   <div className="customer-proc-circle">
                     <Check size={13} />
                   </div>
                   <span>Creating Order</span>
                 </div>
 
-                <div className={`customer-proc-line ${processingStage >= 2 ? "is-done" : ""}`} />
+                <div
+                  className={`customer-proc-line ${processingStage >= 2 ? "is-done" : ""}`}
+                />
 
-                <div className={`customer-proc-step ${processingStage >= 2 ? (processingStage === 2 ? "is-active" : "is-done") : ""}`}>
+                <div
+                  className={`customer-proc-step ${processingStage >= 2 ? (processingStage === 2 ? "is-active" : "is-done") : ""}`}
+                >
                   <div className="customer-proc-circle">
-                    {processingStage > 2 ? <Check size={13} /> : <div className="customer-spinner-dot" />}
+                    {processingStage > 2 ? (
+                      <Check size={13} />
+                    ) : (
+                      <div className="customer-spinner-dot" />
+                    )}
                   </div>
                   <span>Kitchen Ticket</span>
                 </div>
 
-                <div className={`customer-proc-line ${processingStage >= 3 ? "is-done" : ""}`} />
+                <div
+                  className={`customer-proc-line ${processingStage >= 3 ? "is-done" : ""}`}
+                />
 
-                <div className={`customer-proc-step ${processingStage >= 3 ? "is-active" : ""}`}>
+                <div
+                  className={`customer-proc-step ${processingStage >= 3 ? "is-active" : ""}`}
+                >
                   <div className="customer-proc-circle">
-                    {processingStage >= 3 ? <div className="customer-spinner-dot" /> : <div />}
+                    {processingStage >= 3 ? (
+                      <div className="customer-spinner-dot" />
+                    ) : (
+                      <div />
+                    )}
                   </div>
                   <span>KOT Created</span>
                 </div>
@@ -2266,7 +2869,10 @@ export function CustomerLandingPage({
         {/* STEP 7: Order Confirmed - Takeaway order placed            */}
         {/* ========================================================= */}
         {activeScreen === "confirmation" && placedOrder && (
-          <section className="customer-flow-section customer-centered-screen" id="confirmation">
+          <section
+            className="customer-flow-section customer-centered-screen"
+            id="confirmation"
+          >
             <div className="customer-card-box customer-confirmed-card">
               <div className="customer-confirmed-badge">
                 <Check size={36} color="#ffffff" strokeWidth={3} />
@@ -2280,7 +2886,9 @@ export function CustomerLandingPage({
               {/* Details Box */}
               <div className="customer-confirmed-details-box">
                 <div className="customer-confirmed-detail-item">
-                  <div className="customer-conf-icon"><ShoppingBag size={20} color="#ea580c" /></div>
+                  <div className="customer-conf-icon">
+                    <ShoppingBag size={20} color="#ea580c" />
+                  </div>
                   <div>
                     <small>Order ID</small>
                     <strong>{placedOrder.orderNumber}</strong>
@@ -2288,7 +2896,9 @@ export function CustomerLandingPage({
                 </div>
 
                 <div className="customer-confirmed-detail-item">
-                  <div className="customer-conf-icon"><CalendarDays size={20} color="#ea580c" /></div>
+                  <div className="customer-conf-icon">
+                    <CalendarDays size={20} color="#ea580c" />
+                  </div>
                   <div>
                     <small>Pickup Date</small>
                     <strong>{placedOrder.pickupDate}</strong>
@@ -2296,7 +2906,9 @@ export function CustomerLandingPage({
                 </div>
 
                 <div className="customer-confirmed-detail-item">
-                  <div className="customer-conf-icon"><Clock3 size={20} color="#ea580c" /></div>
+                  <div className="customer-conf-icon">
+                    <Clock3 size={20} color="#ea580c" />
+                  </div>
                   <div>
                     <small>Pickup Time</small>
                     <strong>{placedOrder.pickupTime}</strong>
@@ -2357,35 +2969,54 @@ export function CustomerLandingPage({
                   {/* Vertical Timeline */}
                   <div className="customer-tracking-timeline">
                     {/* Stage 1 */}
-                    <div className={`customer-timeline-item ${trackingStage >= 1 ? "is-completed" : ""}`}>
+                    <div
+                      className={`customer-timeline-item ${trackingStage >= 1 ? "is-completed" : ""}`}
+                    >
                       <div className="customer-timeline-bullet">
                         <Check size={14} />
                       </div>
                       <div className="customer-timeline-content">
                         <div className="customer-timeline-header">
                           <strong>Order Confirmed</strong>
-                          <span className="customer-timeline-time">{placedOrder.orderTime}</span>
+                          <span className="customer-timeline-time">
+                            {placedOrder.orderTime}
+                          </span>
                         </div>
-                        <p>Your order has been received and sent to the kitchen.</p>
+                        <p>
+                          Your order has been received and sent to the kitchen.
+                        </p>
                       </div>
                     </div>
 
                     {/* Stage 2 */}
-                    <div className={`customer-timeline-item ${trackingStage >= 2 ? (trackingStage === 2 ? "is-current" : "is-completed") : ""}`}>
+                    <div
+                      className={`customer-timeline-item ${trackingStage >= 2 ? (trackingStage === 2 ? "is-current" : "is-completed") : ""}`}
+                    >
                       <div className="customer-timeline-bullet">
-                        {trackingStage > 2 ? <Check size={14} /> : <div className="customer-timeline-pulse" />}
+                        {trackingStage > 2 ? (
+                          <Check size={14} />
+                        ) : (
+                          <div className="customer-timeline-pulse" />
+                        )}
                       </div>
                       <div className="customer-timeline-content">
                         <div className="customer-timeline-header">
                           <strong>Preparing</strong>
-                          <span className="customer-timeline-time">Just now</span>
+                          <span className="customer-timeline-time">
+                            Just now
+                          </span>
                         </div>
-                        <p>Our kitchen is preparing your order with fresh ingredients.</p>
+                        <p>
+                          Our kitchen is preparing your order with fresh
+                          ingredients.
+                        </p>
                       </div>
                     </div>
 
                     {/* Stage 3 */}
-                    <div className={`customer-timeline-item ${trackingStage >= 3 ? (trackingStage === 3 ? "is-current" : "is-completed") : ""}`}>
+                    <div
+                      className={`customer-timeline-item ${trackingStage >= 3 ? (trackingStage === 3 ? "is-current" : "is-completed") : ""}`}
+                    >
                       <div className="customer-timeline-bullet">
                         {trackingStage > 3 ? <Check size={14} /> : <div />}
                       </div>
@@ -2398,7 +3029,9 @@ export function CustomerLandingPage({
                     </div>
 
                     {/* Stage 4 */}
-                    <div className={`customer-timeline-item ${trackingStage >= 4 ? "is-completed" : ""}`}>
+                    <div
+                      className={`customer-timeline-item ${trackingStage >= 4 ? "is-completed" : ""}`}
+                    >
                       <div className="customer-timeline-bullet">
                         <div />
                       </div>
@@ -2445,17 +3078,50 @@ export function CustomerLandingPage({
                     className="customer-tracking-bag-img"
                   />
                   <div style={{ marginTop: "1rem" }}>
-                    <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>Order Items</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.85rem" }}>
+                    <h4 style={{ margin: "0 0 0.5rem", fontSize: "0.95rem" }}>
+                      Order Items
+                    </h4>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.4rem",
+                        fontSize: "0.85rem",
+                      }}
+                    >
                       {(placedOrder.items || []).map((it, idx) => (
-                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", color: "#334155" }}>
-                          <span>{it.name} × {it.quantity}</span>
-                          <strong>{formatPrice((Number(it.price) || 0) * (it.quantity || 1))}</strong>
+                        <div
+                          key={idx}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            color: "#334155",
+                          }}
+                        >
+                          <span>
+                            {it.name} × {it.quantity}
+                          </span>
+                          <strong>
+                            {formatPrice(
+                              (Number(it.price) || 0) * (it.quantity || 1),
+                            )}
+                          </strong>
                         </div>
                       ))}
-                      <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: "0.5rem", marginTop: "0.2rem", display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+                      <div
+                        style={{
+                          borderTop: "1px dashed #cbd5e1",
+                          paddingTop: "0.5rem",
+                          marginTop: "0.2rem",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontWeight: 700,
+                        }}
+                      >
                         <span>Total Paid</span>
-                        <span style={{ color: "#ea580c" }}>{formatPrice(placedOrder.totalAmount)}</span>
+                        <span style={{ color: "#ea580c" }}>
+                          {formatPrice(placedOrder.totalAmount)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -2469,22 +3135,30 @@ export function CustomerLandingPage({
         {/* STEP 9: Order Ready - Notification for pickup             */}
         {/* ========================================================= */}
         {activeScreen === "ready" && placedOrder && (
-          <section className="customer-flow-section customer-centered-screen" id="ready">
+          <section
+            className="customer-flow-section customer-centered-screen"
+            id="ready"
+          >
             <div className="customer-card-box customer-ready-card">
               <div className="customer-ready-bell-wrap">
                 <Bell size={42} color="#ffffff" />
               </div>
 
               <h2>Your Order is Ready for Pickup!</h2>
-              <span className="customer-ready-orderid">Order ID: {placedOrder.orderNumber}</span>
+              <span className="customer-ready-orderid">
+                Order ID: {placedOrder.orderNumber}
+              </span>
               <p className="customer-ready-sub">
-                Please collect your order from the takeaway counter at Bhanu Bistro.
+                Please collect your order from the takeaway counter at Bhanu
+                Bistro.
               </p>
 
               <div className="customer-ready-info-strip">
                 <div className="customer-ready-info-item">
                   <Clock3 size={17} color="#ea580c" />
-                  <span>Pickup Time: <strong>{placedOrder.pickupTime}</strong></span>
+                  <span>
+                    Pickup Time: <strong>{placedOrder.pickupTime}</strong>
+                  </span>
                 </div>
                 <div className="customer-ready-info-item">
                   <MapPin size={17} color="#ea580c" />
@@ -2529,7 +3203,10 @@ export function CustomerLandingPage({
         {/* TABLE RESERVATION SCREEN                                  */}
         {/* ========================================================= */}
         {activeScreen === "reservation" && (
-          <div className="customer-reservation-flow-wrapper" style={{ width: "100%", minHeight: "100vh", background: "#0a0403" }}>
+          <div
+            className="customer-reservation-flow-wrapper"
+            style={{ width: "100%", minHeight: "100vh", background: "#0a0403" }}
+          >
             <TableReservationFlow
               onBackToPos={() => navigateScreen("home")}
               backLabel="Back to Home"
@@ -2545,19 +3222,35 @@ export function CustomerLandingPage({
               customerReservationsError={reservationListError}
               customerReservationActionBusy={reservationActionBusy}
               customerAvailableTables={reservationTables}
-              onCustomerReservationTabChange={(tab) => { setReservationTab(tab); setReservationPage(1); loadCustomerReservations(tab, 1); }}
-              onCustomerReservationPageChange={(page) => loadCustomerReservations(reservationTab, page)}
-              onCustomerReservationsRetry={() => loadCustomerReservations(reservationTab, reservationPage)}
+              onCustomerReservationTabChange={(tab) => {
+                setReservationTab(tab);
+                setReservationPage(1);
+                loadCustomerReservations(tab, 1);
+              }}
+              onCustomerReservationPageChange={(page) =>
+                loadCustomerReservations(reservationTab, page)
+              }
+              onCustomerReservationsRetry={() =>
+                loadCustomerReservations(reservationTab, reservationPage)
+              }
               onLoadCustomerReservation={openCustomerReservation}
               onSaveCustomerReservation={saveReservationChanges}
               onCancelCustomerReservation={cancelCustomerReservation}
               onCustomerSessionExpired={handleReservationSessionExpired}
               onLogout={handleLogout}
               onNavigate={(route) => {
-                if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+                if (
+                  route === "/my-reservations" ||
+                  route === "my-reservations" ||
+                  route === "reservation"
+                ) {
                   setReservationInitialStep(6);
                   navigateScreen("reservation");
-                } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+                } else if (
+                  route === "/my-orders" ||
+                  route === "orders" ||
+                  route === "my-orders"
+                ) {
                   navigateScreen("orders");
                 } else if (route === "/profile" || route === "profile") {
                   navigateScreen("profile");
@@ -2583,12 +3276,23 @@ export function CustomerLandingPage({
             customerUser={customerUser}
             menuItems={combinedMenuItems}
             onReorderOrder={handleReorderCustomerOrder}
-            onSessionExpired={() => { handleLogout(); navigateScreen("auth"); }}
+            onSessionExpired={() => {
+              handleLogout();
+              navigateScreen("auth");
+            }}
             onNavigate={(route) => {
-              if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+              if (
+                route === "/my-reservations" ||
+                route === "my-reservations" ||
+                route === "reservation"
+              ) {
                 setReservationInitialStep(6);
                 navigateScreen("reservation");
-              } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+              } else if (
+                route === "/my-orders" ||
+                route === "orders" ||
+                route === "my-orders"
+              ) {
                 navigateScreen("orders");
               } else if (route === "/profile" || route === "profile") {
                 navigateScreen("profile");
@@ -2615,14 +3319,25 @@ export function CustomerLandingPage({
             onUpdateUser={(updated) => {
               setCustomerUser(updated);
               try {
-                localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                localStorage.setItem(
+                  CUSTOMER_SESSION_KEY,
+                  JSON.stringify(updated),
+                );
               } catch (e) {}
             }}
             onNavigate={(route) => {
-              if (route === "/my-reservations" || route === "my-reservations" || route === "reservation") {
+              if (
+                route === "/my-reservations" ||
+                route === "my-reservations" ||
+                route === "reservation"
+              ) {
                 setReservationInitialStep(6);
                 navigateScreen("reservation");
-              } else if (route === "/my-orders" || route === "orders" || route === "my-orders") {
+              } else if (
+                route === "/my-orders" ||
+                route === "orders" ||
+                route === "my-orders"
+              ) {
                 navigateScreen("orders");
               } else if (route === "/profile" || route === "profile") {
                 navigateScreen("profile");
@@ -2643,70 +3358,197 @@ export function CustomerLandingPage({
 
       {/* ── Customer Profile Modal ──────────────────────────── */}
       {showProfileModal && (
-        <div className="customer-profile-modal-overlay" onClick={() => setShowProfileModal(false)}>
-          <div className="customer-profile-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#1a100b" }}>
+        <div
+          className="customer-profile-modal-overlay"
+          onClick={() => setShowProfileModal(false)}
+        >
+          <div
+            className="customer-profile-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "20px",
+                  fontWeight: 800,
+                  color: "#1a100b",
+                }}
+              >
                 Customer Profile
               </h3>
               <button
                 type="button"
                 onClick={() => setShowProfileModal(false)}
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#665449" }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#665449",
+                }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px", padding: "12px", background: "#faf7f4", borderRadius: "12px" }}>
-              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #f59e0b, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", fontWeight: 800 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                marginBottom: "20px",
+                padding: "12px",
+                background: "#faf7f4",
+                borderRadius: "12px",
+              }}
+            >
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontSize: "20px",
+                  fontWeight: 800,
+                }}
+              >
                 {(customerUser?.name || "P")[0].toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: "16px", color: "#1a100b" }}>{customerUser?.name || ""}</div>
-                <div style={{ fontSize: "13px", color: "#6f6158" }}>{customerUser?.phone || ""}</div>
-                <div style={{ fontSize: "12px", color: "#ea580c" }}>{customerUser?.email || "priya@example.com"}</div>
+                <div
+                  style={{
+                    fontWeight: 800,
+                    fontSize: "16px",
+                    color: "#1a100b",
+                  }}
+                >
+                  {customerUser?.name || ""}
+                </div>
+                <div style={{ fontSize: "13px", color: "#6f6158" }}>
+                  {customerUser?.phone || ""}
+                </div>
+                <div style={{ fontSize: "12px", color: "#ea580c" }}>
+                  {customerUser?.email || "priya@example.com"}
+                </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13.5px" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                fontSize: "13.5px",
+              }}
+            >
               <div>
-                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Full Name</label>
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: 700,
+                    color: "#4a3b32",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Full Name
+                </label>
                 <input
                   type="text"
                   value={customerUser?.name || ""}
                   onChange={(e) => {
                     const updated = { ...customerUser, name: e.target.value };
                     setCustomerUser(updated);
-                    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                    localStorage.setItem(
+                      CUSTOMER_SESSION_KEY,
+                      JSON.stringify(updated),
+                    );
                   }}
-                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                  style={{
+                    width: "100%",
+                    height: "42px",
+                    padding: "0 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #e0d4cc",
+                    background: "#faf7f4",
+                    boxSizing: "border-box",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Mobile Number</label>
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: 700,
+                    color: "#4a3b32",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Mobile Number
+                </label>
                 <input
                   type="text"
                   value={customerUser?.phone || ""}
                   onChange={(e) => {
                     const updated = { ...customerUser, phone: e.target.value };
                     setCustomerUser(updated);
-                    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                    localStorage.setItem(
+                      CUSTOMER_SESSION_KEY,
+                      JSON.stringify(updated),
+                    );
                   }}
-                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                  style={{
+                    width: "100%",
+                    height: "42px",
+                    padding: "0 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #e0d4cc",
+                    background: "#faf7f4",
+                    boxSizing: "border-box",
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontWeight: 700, color: "#4a3b32", marginBottom: "4px" }}>Email Address</label>
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: 700,
+                    color: "#4a3b32",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Email Address
+                </label>
                 <input
                   type="text"
                   value={customerUser?.email || "priya@example.com"}
                   onChange={(e) => {
                     const updated = { ...customerUser, email: e.target.value };
                     setCustomerUser(updated);
-                    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(updated));
+                    localStorage.setItem(
+                      CUSTOMER_SESSION_KEY,
+                      JSON.stringify(updated),
+                    );
                   }}
-                  style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1.5px solid #e0d4cc", background: "#faf7f4", boxSizing: "border-box" }}
+                  style={{
+                    width: "100%",
+                    height: "42px",
+                    padding: "0 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #e0d4cc",
+                    background: "#faf7f4",
+                    boxSizing: "border-box",
+                  }}
                 />
               </div>
             </div>
@@ -2715,7 +3557,16 @@ export function CustomerLandingPage({
               <button
                 type="button"
                 onClick={() => setShowProfileModal(false)}
-                style={{ flex: 1, height: "42px", background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}
+                style={{
+                  flex: 1,
+                  height: "42px",
+                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
               >
                 Save &amp; Close
               </button>
