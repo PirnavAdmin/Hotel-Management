@@ -3072,8 +3072,6 @@ export function AdminTakeaway({
                   </div>
                 </div>
 
-<<<<<<< HEAD
-=======
                 {/* Payment Method */}
                 <div>
                   <label
@@ -3119,7 +3117,6 @@ export function AdminTakeaway({
                     ))}
                   </div>
                 </div>
->>>>>>> 5420b1137feeb801b6ff25ccbccae8e027c8eced
 
                 {/* Bill Totals */}
                 <div
