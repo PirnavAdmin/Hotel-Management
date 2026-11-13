@@ -254,7 +254,7 @@
       "tipAmount": 0,
       "grandTotal": 1295,
       "paymentMethod": "CARD",
-      "invoiceNo": "INV-TK-20261111100301-744",
+      "invoiceNo": "INV-118",
       "invoiceId": 118,
       "customerName": null,
       "customerPhone": null,
@@ -283,7 +283,7 @@
         }
       ],
       "orderId": 118,
-      "invoiceNumber": "INV-TK-20261111100301-744",
+      "invoiceNumber": "INV-118",
       "taxableAmount": 1200,
       "totalAmount": 1295,
       "paidAmount": 1295,
@@ -318,7 +318,7 @@
       "tipAmount": 0,
       "grandTotal": 697,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-TK-20261111100246-907",
+      "invoiceNo": "INV-117",
       "invoiceId": 117,
       "customerName": null,
       "customerPhone": null,
@@ -341,7 +341,7 @@
         }
       ],
       "orderId": 117,
-      "invoiceNumber": "INV-TK-20261111100246-907",
+      "invoiceNumber": "INV-117",
       "taxableAmount": 640,
       "totalAmount": 697,
       "paidAmount": 697,
@@ -376,7 +376,7 @@
       "tipAmount": 0,
       "grandTotal": 352,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261111-116",
+      "invoiceNo": "INV-116",
       "invoiceId": 116,
       "customerName": null,
       "customerPhone": null,
@@ -393,7 +393,7 @@
         }
       ],
       "orderId": 116,
-      "invoiceNumber": "INV-20261111-116",
+      "invoiceNumber": "INV-116",
       "taxableAmount": 320,
       "totalAmount": 352,
       "paidAmount": 352,
@@ -428,7 +428,7 @@
       "tipAmount": 0,
       "grandTotal": 746,
       "paymentMethod": "upi",
-      "invoiceNo": "INV-001",
+      "invoiceNo": "INV-087",
       "invoiceId": "ord_1793941354840_1a3oa",
       "customerName": null,
       "customerPhone": null,
@@ -498,7 +498,7 @@
     {
       "invoiceId": 34,
       "orderId": 34,
-      "invoiceNumber": "INV-20261104-8907",
+      "invoiceNumber": "INV-034",
       "subtotal": 300,
       "taxableAmount": 300,
       "taxAmount": 15,
@@ -601,7 +601,7 @@
         }
       ],
       "id": 34,
-      "invoiceNo": "INV-20261104-8907",
+      "invoiceNo": "INV-034",
       "server": "Staff",
       "date": "2026-11-04T12:09:28",
       "settledAt": "2026-11-04T12:09:28",
@@ -1364,7 +1364,7 @@
       "tipAmount": 0,
       "grandTotal": 1323,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261103-75",
+      "invoiceNo": "INV-075",
       "settledAt": "2026-11-03T13:19:46",
       "createdAt": "2026-11-03T13:19:46",
       "items": [
@@ -1395,7 +1395,7 @@
       ],
       "invoiceId": 51,
       "orderId": 75,
-      "invoiceNumber": "INV-20261103-75",
+      "invoiceNumber": "INV-075",
       "taxableAmount": 1260,
       "totalAmount": 1323,
       "paidAmount": 1323,
@@ -1443,7 +1443,7 @@
       "tipAmount": 0,
       "grandTotal": 367.5,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261103-72",
+      "invoiceNo": "INV-072",
       "settledAt": "2026-11-03T13:19:00",
       "createdAt": "2026-11-03T13:19:00",
       "items": [
@@ -1456,7 +1456,7 @@
       ],
       "invoiceId": 50,
       "orderId": 72,
-      "invoiceNumber": "INV-20261103-72",
+      "invoiceNumber": "INV-072",
       "taxableAmount": 350,
       "totalAmount": 367.5,
       "paidAmount": 367.5,
@@ -1504,7 +1504,7 @@
       "tipAmount": 0,
       "grandTotal": 294,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261103-71",
+      "invoiceNo": "INV-071",
       "settledAt": "2026-11-03T13:18:59",
       "createdAt": "2026-11-03T13:18:59",
       "items": [
@@ -1517,7 +1517,7 @@
       ],
       "invoiceId": 49,
       "orderId": 71,
-      "invoiceNumber": "INV-20261103-71",
+      "invoiceNumber": "INV-071",
       "taxableAmount": 280,
       "totalAmount": 294,
       "paidAmount": 294,
@@ -1565,7 +1565,7 @@
       "tipAmount": 0,
       "grandTotal": 336,
       "paymentMethod": "CASH",
-      "invoiceNo": "TEST-DI-20261103072117",
+      "invoiceNo": "INV-066",
       "settledAt": "2026-11-03T12:51:19",
       "createdAt": "2026-11-03T12:51:19",
       "items": [
@@ -1578,7 +1578,7 @@
       ],
       "invoiceId": 48,
       "orderId": 66,
-      "invoiceNumber": "TEST-DI-20261103072117",
+      "invoiceNumber": "INV-066",
       "taxableAmount": 320,
       "totalAmount": 336,
       "paidAmount": 336,
@@ -1626,7 +1626,7 @@
       "tipAmount": 0,
       "grandTotal": 720.5,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261102-45",
+      "invoiceNo": "INV-045",
       "settledAt": "2026-11-02T16:10:56",
       "createdAt": "2026-11-02T16:10:56",
       "items": [
@@ -1645,7 +1645,7 @@
       ],
       "invoiceId": 45,
       "orderId": 45,
-      "invoiceNumber": "INV-20261102-45",
+      "invoiceNumber": "INV-045",
       "taxableAmount": 655,
       "totalAmount": 720.5,
       "paidAmount": 720.5,
@@ -1693,7 +1693,7 @@
       "tipAmount": 0,
       "grandTotal": 633.6,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-E2E-1793612356050",
+      "invoiceNo": "INV-033",
       "settledAt": "2026-11-02T15:09:16",
       "createdAt": "2026-11-02T15:09:16",
       "items": [
@@ -1706,7 +1706,7 @@
       ],
       "invoiceId": 33,
       "orderId": 33,
-      "invoiceNumber": "INV-E2E-1793612356050",
+      "invoiceNumber": "INV-033",
       "taxableAmount": 576,
       "totalAmount": 633.6,
       "paidAmount": 633.6,
@@ -1754,7 +1754,7 @@
       "tipAmount": 0,
       "grandTotal": 633.6,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-E2E-1793612202957",
+      "invoiceNo": "INV-031",
       "settledAt": "2026-11-02T15:06:42",
       "createdAt": "2026-11-02T15:06:42",
       "items": [
@@ -1767,7 +1767,7 @@
       ],
       "invoiceId": 31,
       "orderId": 31,
-      "invoiceNumber": "INV-E2E-1793612202957",
+      "invoiceNumber": "INV-031",
       "taxableAmount": 576,
       "totalAmount": 633.6,
       "paidAmount": 633.6,
@@ -1815,7 +1815,7 @@
       "tipAmount": 0,
       "grandTotal": 495,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-TEST-1793611304594",
+      "invoiceNo": "INV-030",
       "settledAt": "2026-11-02T14:51:45",
       "createdAt": "2026-11-02T14:51:45",
       "items": [
@@ -1828,7 +1828,7 @@
       ],
       "invoiceId": 30,
       "orderId": 30,
-      "invoiceNumber": "INV-TEST-1793611304594",
+      "invoiceNumber": "INV-030",
       "taxableAmount": 450,
       "totalAmount": 495,
       "paidAmount": 495,
@@ -1875,7 +1875,7 @@
       "serviceChargeAmount": 0,
       "tipAmount": 0,
       "grandTotal": 830,
-      "invoiceNo": "INV-053",
+      "invoiceNo": "INV-080",
       "settledAt": "02:12 PM",
       "createdAt": "2026-11-03T08:42:06",
       "items": [
@@ -2072,7 +2072,7 @@
       "tipAmount": 0,
       "grandTotal": 378,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261102-115438814",
+      "invoiceNo": "INV-055",
       "settledAt": "2026-11-02T11:54:39",
       "createdAt": "2026-11-02T11:54:39",
       "items": [
@@ -2085,7 +2085,7 @@
       ],
       "invoiceId": 47,
       "orderId": 55,
-      "invoiceNumber": "INV-20261102-115438814",
+      "invoiceNumber": "INV-055",
       "taxableAmount": 360,
       "totalAmount": 378,
       "paidAmount": 378,
@@ -2124,7 +2124,7 @@
       "tipAmount": 0,
       "grandTotal": 493.8,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261102-115438435",
+      "invoiceNo": "INV-054",
       "settledAt": "2026-11-02T11:54:39",
       "createdAt": "2026-11-02T11:54:39",
       "items": [
@@ -2143,7 +2143,7 @@
       ],
       "invoiceId": 46,
       "orderId": 54,
-      "invoiceNumber": "INV-20261102-115438435",
+      "invoiceNumber": "INV-054",
       "taxableAmount": 456,
       "totalAmount": 493.8,
       "paidAmount": 493.8,
@@ -2175,7 +2175,7 @@
     {
       "invoiceId": 44,
       "orderId": 52,
-      "invoiceNumber": "INV-20261102-115022347",
+      "invoiceNumber": "INV-052",
       "subtotal": 360,
       "taxableAmount": 360,
       "taxAmount": 18,
@@ -2199,7 +2199,7 @@
         }
       ],
       "id": 52,
-      "invoiceNo": "INV-20261102-115022347",
+      "invoiceNo": "INV-052",
       "server": "Staff",
       "date": "2026-11-02T11:50:22",
       "settledAt": "2026-11-02T11:50:22",
@@ -3449,7 +3449,7 @@
       "tipAmount": 0,
       "grandTotal": 1854,
       "paymentMethod": "upi",
-      "invoiceNo": "INV-005",
+      "invoiceNo": "INV-035",
       "settledAt": "03:25 PM",
       "createdAt": "03:25 PM",
       "items": [
@@ -4095,7 +4095,7 @@
       "tipAmount": 0,
       "grandTotal": 869,
       "paymentMethod": "upi",
-      "invoiceNo": "INV-005",
+      "invoiceNo": "INV-034",
       "settledAt": "12:21 PM",
       "createdAt": "12:21 PM",
       "items": [
@@ -4353,7 +4353,7 @@
       "tipAmount": 0,
       "grandTotal": 583,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261029-24",
+      "invoiceNo": "INV-024",
       "settledAt": "2026-10-29T11:55:51",
       "createdAt": "2026-10-29T11:55:51",
       "items": [
@@ -4382,7 +4382,7 @@
       ],
       "invoiceId": 24,
       "orderId": 24,
-      "invoiceNumber": "INV-20261029-24",
+      "invoiceNumber": "INV-024",
       "taxableAmount": 530,
       "totalAmount": 583,
       "paidAmount": 583,
@@ -4421,7 +4421,7 @@
       "tipAmount": 0,
       "grandTotal": 495,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261029-23",
+      "invoiceNo": "INV-023",
       "settledAt": "2026-10-29T11:55:45",
       "createdAt": "2026-10-29T11:55:45",
       "items": [
@@ -4439,7 +4439,7 @@
       ],
       "invoiceId": 23,
       "orderId": 23,
-      "invoiceNumber": "INV-20261029-23",
+      "invoiceNumber": "INV-023",
       "taxableAmount": 450,
       "totalAmount": 495,
       "paidAmount": 495,
@@ -4478,7 +4478,7 @@
       "tipAmount": 0,
       "grandTotal": 1188,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261029-22",
+      "invoiceNo": "INV-022",
       "settledAt": "2026-10-29T11:55:43",
       "createdAt": "2026-10-29T11:55:43",
       "items": [
@@ -4496,7 +4496,7 @@
       ],
       "invoiceId": 22,
       "orderId": 22,
-      "invoiceNumber": "INV-20261029-22",
+      "invoiceNumber": "INV-022",
       "taxableAmount": 1080,
       "totalAmount": 1188,
       "paidAmount": 1188,
@@ -4535,7 +4535,7 @@
       "tipAmount": 0,
       "grandTotal": 704,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261027-21",
+      "invoiceNo": "INV-021",
       "settledAt": "2026-10-27T17:26:57",
       "createdAt": "2026-10-27T17:26:57",
       "items": [
@@ -4553,7 +4553,7 @@
       ],
       "invoiceId": 21,
       "orderId": 21,
-      "invoiceNumber": "INV-20261027-21",
+      "invoiceNumber": "INV-021",
       "taxableAmount": 640,
       "totalAmount": 704,
       "paidAmount": 704,
@@ -5060,7 +5060,7 @@
       "tipAmount": 0,
       "grandTotal": 352,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261021-16",
+      "invoiceNo": "INV-016",
       "settledAt": "2026-10-21T11:03:29",
       "createdAt": "2026-10-21T11:03:29",
       "items": [
@@ -5078,8 +5078,8 @@
       ],
       "invoiceId": 16,
       "orderId": 16,
-      "invoiceNumber": "INV-20261021-16",
-      "taxableAmount": 320,
+      "invoiceNumber": "INV-016",
+      "taxableAmount": 288,
       "totalAmount": 352,
       "paidAmount": 352,
       "amountPaid": 316.8,
@@ -5117,7 +5117,7 @@
       "tipAmount": 0,
       "grandTotal": 599.5,
       "paymentMethod": "WALLET",
-      "invoiceNo": "INV-20261021-15",
+      "invoiceNo": "INV-015",
       "settledAt": "2026-10-21T10:59:49",
       "createdAt": "2026-10-21T10:59:49",
       "items": [
@@ -5157,8 +5157,8 @@
       ],
       "invoiceId": 15,
       "orderId": 15,
-      "invoiceNumber": "INV-20261021-15",
-      "taxableAmount": 545,
+      "invoiceNumber": "INV-015",
+      "taxableAmount": 490.5,
       "totalAmount": 599.5,
       "paidAmount": 599.5,
       "amountPaid": 539.55,
@@ -5196,7 +5196,7 @@
       "tipAmount": 0,
       "grandTotal": 550,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261021-14",
+      "invoiceNo": "INV-014",
       "settledAt": "2026-10-21T10:48:02",
       "createdAt": "2026-10-21T10:48:02",
       "items": [
@@ -5214,7 +5214,7 @@
       ],
       "invoiceId": 14,
       "orderId": 14,
-      "invoiceNumber": "INV-20261021-14",
+      "invoiceNumber": "INV-014",
       "taxableAmount": 500,
       "totalAmount": 550,
       "paidAmount": 550,
@@ -5326,7 +5326,7 @@
       "tipAmount": 0,
       "grandTotal": 704,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261021-13",
+      "invoiceNo": "INV-013",
       "settledAt": "2026-10-21T10:42:39",
       "createdAt": "2026-10-21T10:42:39",
       "items": [
@@ -5344,8 +5344,8 @@
       ],
       "invoiceId": 13,
       "orderId": 13,
-      "invoiceNumber": "INV-20261021-13",
-      "taxableAmount": 640,
+      "invoiceNumber": "INV-013",
+      "taxableAmount": 576,
       "totalAmount": 704,
       "paidAmount": 704,
       "amountPaid": 633.6,
@@ -5438,7 +5438,7 @@
       "tipAmount": 0,
       "grandTotal": 550,
       "paymentMethod": "CARD",
-      "invoiceNo": "INV-20261019-12",
+      "invoiceNo": "INV-012",
       "settledAt": "2026-10-19T14:42:36",
       "createdAt": "2026-10-19T14:42:36",
       "items": [
@@ -5478,7 +5478,7 @@
       ],
       "invoiceId": 12,
       "orderId": 12,
-      "invoiceNumber": "INV-20261019-12",
+      "invoiceNumber": "INV-012",
       "taxableAmount": 500,
       "totalAmount": 550,
       "paidAmount": 550,
@@ -5517,7 +5517,7 @@
       "tipAmount": 0,
       "grandTotal": 324.5,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261019-11",
+      "invoiceNo": "INV-011",
       "settledAt": "2026-10-19T10:12:40",
       "createdAt": "2026-10-19T10:12:40",
       "items": [
@@ -5546,7 +5546,7 @@
       ],
       "invoiceId": 11,
       "orderId": 11,
-      "invoiceNumber": "INV-20261019-11",
+      "invoiceNumber": "INV-011",
       "taxableAmount": 295,
       "totalAmount": 324.5,
       "paidAmount": 324.5,
@@ -5585,7 +5585,7 @@
       "tipAmount": 0,
       "grandTotal": 275,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261019-10",
+      "invoiceNo": "INV-010",
       "settledAt": "2026-10-19T09:48:34",
       "createdAt": "2026-10-19T09:48:34",
       "items": [
@@ -5603,7 +5603,7 @@
       ],
       "invoiceId": 10,
       "orderId": 10,
-      "invoiceNumber": "INV-20261019-10",
+      "invoiceNumber": "INV-010",
       "taxableAmount": 250,
       "totalAmount": 275,
       "paidAmount": 275,
@@ -5642,7 +5642,7 @@
       "tipAmount": 0,
       "grandTotal": 1045,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261016-9",
+      "invoiceNo": "INV-009",
       "settledAt": "2026-10-16T13:34:13",
       "createdAt": "2026-10-16T13:34:13",
       "items": [
@@ -5693,7 +5693,7 @@
       ],
       "invoiceId": 9,
       "orderId": 9,
-      "invoiceNumber": "INV-20261016-9",
+      "invoiceNumber": "INV-009",
       "taxableAmount": 950,
       "totalAmount": 1045,
       "paidAmount": 1045,
@@ -5732,7 +5732,7 @@
       "tipAmount": 0,
       "grandTotal": 198,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261016-8",
+      "invoiceNo": "INV-008",
       "settledAt": "2026-10-16T13:27:04",
       "createdAt": "2026-10-16T13:27:04",
       "items": [
@@ -5750,7 +5750,7 @@
       ],
       "invoiceId": 8,
       "orderId": 8,
-      "invoiceNumber": "INV-20261016-8",
+      "invoiceNumber": "INV-008",
       "taxableAmount": 180,
       "totalAmount": 198,
       "paidAmount": 198,
@@ -5789,7 +5789,7 @@
       "tipAmount": 0,
       "grandTotal": 511.5,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261016-7",
+      "invoiceNo": "INV-007",
       "settledAt": "2026-10-16T13:25:26",
       "createdAt": "2026-10-16T13:25:26",
       "items": [
@@ -5818,7 +5818,7 @@
       ],
       "invoiceId": 7,
       "orderId": 7,
-      "invoiceNumber": "INV-20261016-7",
+      "invoiceNumber": "INV-007",
       "taxableAmount": 465,
       "totalAmount": 511.5,
       "paidAmount": 511.5,
@@ -5857,7 +5857,7 @@
       "tipAmount": 0,
       "grandTotal": 709.5,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261016-6",
+      "invoiceNo": "INV-006",
       "settledAt": "2026-10-16T13:09:50",
       "createdAt": "2026-10-16T13:09:50",
       "items": [
@@ -5908,7 +5908,7 @@
       ],
       "invoiceId": 6,
       "orderId": 6,
-      "invoiceNumber": "INV-20261016-6",
+      "invoiceNumber": "INV-006",
       "taxableAmount": 645,
       "totalAmount": 709.5,
       "paidAmount": 709.5,
@@ -5947,7 +5947,7 @@
       "tipAmount": 0,
       "grandTotal": 577.5,
       "paymentMethod": "UPI",
-      "invoiceNo": "INV-20261016-5",
+      "invoiceNo": "INV-005",
       "settledAt": "2026-10-16T12:20:42",
       "createdAt": "2026-10-16T12:20:42",
       "items": [
@@ -5976,7 +5976,7 @@
       ],
       "invoiceId": 5,
       "orderId": 5,
-      "invoiceNumber": "INV-20261016-5",
+      "invoiceNumber": "INV-005",
       "taxableAmount": 525,
       "totalAmount": 577.5,
       "paidAmount": 577.5,
@@ -6105,7 +6105,7 @@
     {
       "invoiceId": 99,
       "orderId": 99,
-      "invoiceNumber": "INV-20261012-1396",
+      "invoiceNumber": "INV-099",
       "subtotal": 500,
       "taxableAmount": 500,
       "taxAmount": 25,
@@ -6122,7 +6122,7 @@
       "paymentMethod": "UPI",
       "items": [],
       "id": 99,
-      "invoiceNo": "INV-20261012-1396",
+      "invoiceNo": "INV-099",
       "server": "Staff",
       "date": "2026-10-12T14:55:45",
       "settledAt": "2026-10-12T14:55:45",
@@ -6156,7 +6156,7 @@
       "tipAmount": 0,
       "grandTotal": 286,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-20261012-4",
+      "invoiceNo": "INV-004",
       "settledAt": "2026-10-12T14:55:37",
       "createdAt": "2026-10-12T14:55:37",
       "items": [
@@ -6174,7 +6174,7 @@
       ],
       "invoiceId": 4,
       "orderId": 4,
-      "invoiceNumber": "INV-20261012-4",
+      "invoiceNumber": "INV-004",
       "taxableAmount": 260,
       "totalAmount": 286,
       "paidAmount": 286,
@@ -6240,7 +6240,8 @@
       "totalAmount": 836,
       "paidAmount": 836,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-214149"
     },
     {
       "id": 3,
@@ -6335,7 +6336,7 @@
       "tipAmount": 0,
       "grandTotal": 1069,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-BLR-2026-0002",
+      "invoiceNo": "INV-002",
       "settledAt": "2026-10-09T20:46:00",
       "createdAt": "2026-10-12T07:40:39",
       "items": [
@@ -6366,7 +6367,7 @@
       ],
       "invoiceId": 2,
       "orderId": 2,
-      "invoiceNumber": "INV-BLR-2026-0002",
+      "invoiceNumber": "INV-002",
       "taxableAmount": 980,
       "totalAmount": 1069,
       "paidAmount": 1069,
@@ -6405,7 +6406,7 @@
       "tipAmount": 0,
       "grandTotal": 2678.5,
       "paymentMethod": "CASH",
-      "invoiceNo": "INV-BLR-2026-0001",
+      "invoiceNo": "INV-001",
       "settledAt": "2026-10-09T20:32:00",
       "createdAt": "2026-10-09T20:32:00",
       "items": [
@@ -6511,7 +6512,7 @@
       ],
       "invoiceId": 1,
       "orderId": 1,
-      "invoiceNumber": "INV-BLR-2026-0001",
+      "invoiceNumber": "INV-001",
       "server": "Staff",
       "date": "2026-10-09T20:32:00",
       "orderTime": "2026-10-09T20:32:00",
@@ -6567,7 +6568,8 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-214148"
     },
     {
       "tableId": 20,
@@ -6606,7 +6608,8 @@
       "totalAmount": 270,
       "paidAmount": 270,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-205227"
     },
     {
       "tableId": 2,
@@ -6654,7 +6657,8 @@
       "totalAmount": 491,
       "paidAmount": 491,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-22530"
     },
     {
       "tableId": 1,
@@ -6702,7 +6706,8 @@
       "totalAmount": 682,
       "paidAmount": 682,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-17200"
     },
     {
       "tableId": 1,
@@ -6743,7 +6748,8 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-1048"
     },
     {
       "tableId": 1,
@@ -6781,7 +6787,8 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-10317"
     },
     {
       "tableId": 4,
@@ -6828,7 +6835,8 @@
       "totalAmount": 627,
       "paidAmount": 627,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-41123"
     },
     {
       "tableId": 2,
@@ -6870,7 +6878,8 @@
       "totalAmount": 627,
       "paidAmount": 627,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-21631"
     },
     {
       "id": "ord_61",
@@ -7017,7 +7026,8 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-19096"
     },
     {
       "id": "ord_62",
@@ -7194,7 +7204,8 @@
       "totalAmount": 275,
       "paidAmount": 275,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-149449"
     },
     {
       "id": "ord_63",
@@ -7350,7 +7361,8 @@
       "totalAmount": 2387,
       "paidAmount": 2387,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-146167"
     },
     {
       "tableId": 15,
@@ -7401,7 +7413,8 @@
       "totalAmount": 1078,
       "paidAmount": 1078,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-151290"
     },
     {
       "tableId": 10,
@@ -7443,7 +7456,8 @@
       "totalAmount": 836,
       "paidAmount": 836,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-100152"
     },
     {
       "tableId": 9,
@@ -7494,7 +7508,8 @@
       "totalAmount": 1416,
       "paidAmount": 1416,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-97380"
     },
     {
       "id": "ord_64",
@@ -8601,7 +8616,8 @@
       "totalAmount": 1232,
       "paidAmount": 1232,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-32627"
     },
     {
       "tableId": 2,
@@ -8643,7 +8659,8 @@
       "totalAmount": 781,
       "paidAmount": 781,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-29822"
     },
     {
       "tableId": 1,
@@ -8676,6 +8693,73 @@
       "totalAmount": 484,
       "paidAmount": 484,
       "status": "Settled",
+      "Status": "Settled",
+      "invoiceNumber": "INV-16245"
+    },
+    {
+      "id": "ord_68",
+      "invoiceId": "ord_68",
+      "orderId": "ord_68",
+      "invoiceNumber": "INV-32627",
+      "invoiceNo": "INV-32627",
+      "tableName": "Table 3",
+      "serverName": "Rajesh K.",
+      "server": "Rajesh K.",
+      "status": "Settled",
+      "subtotal": 1120,
+      "discountAmount": 0,
+      "discountPercent": 0,
+      "taxableAmount": 1120,
+      "taxAmount": 56,
+      "serviceChargeAmount": 0,
+      "tipAmount": 0,
+      "grandTotal": 1232,
+      "totalAmount": 1232,
+      "paidAmount": 1232,
+      "paymentMethod": "upi",
+      "payments": [
+        {
+          "amount": 1232,
+          "paymentMode": "upi",
+          "paidAt": "04:09 PM"
+        }
+      ],
+      "items": [
+        {
+          "id": "bir-1",
+          "name": "Hyderabadi Chicken Dum Biryani",
+          "price": 320,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:50 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "bir-2",
+          "name": "Royal Mutton Dum Biryani",
+          "price": 440,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:50 PM",
+          "kotStatus": "ready"
+        },
+        {
+          "id": "bir-4",
+          "name": "Chicken 65 Biryani",
+          "price": 360,
+          "quantity": 1,
+          "notes": "",
+          "timeAdded": "03:50 PM",
+          "kotStatus": "ready"
+        }
+      ],
+      "createdAt": "04:09 PM",
+      "settledAt": "04:09 PM",
+      "date": "04:09 PM",
+      "orderTime": "04:09 PM",
+      "isPaid": true,
+      "serviceCharge": 0,
+      "total": 1232,
       "Status": "Settled"
     },
     {
@@ -9537,7 +9621,8 @@
       "totalAmount": 1419,
       "paidAmount": 1419,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-24376"
     },
     {
       "id": "ord_71",
@@ -10230,7 +10315,8 @@
       "totalAmount": 1097,
       "paidAmount": 1097,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-58151"
     },
     {
       "id": "ord_72",
@@ -10800,7 +10886,8 @@
       "totalAmount": 649,
       "paidAmount": 649,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-19715"
     },
     {
       "id": "ord_73",
@@ -11508,7 +11595,8 @@
       "totalAmount": 143,
       "paidAmount": 143,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-34455"
     },
     {
       "id": "ord_74",
@@ -13210,7 +13298,8 @@
       "totalAmount": 1326,
       "paidAmount": 1326,
       "status": "Settled",
-      "Status": "Settled"
+      "Status": "Settled",
+      "invoiceNumber": "INV-1048"
     },
     {
       "id": "ord_75",
@@ -15019,72 +15108,8 @@
       "Status": "Settled"
     }
   ],
-  "gourmet_pos_staff_v1": [
-    {
-      "id": 1,
-      "backendStaffId": 1,
-      "name": "Rajesh K.",
-      "role": "Senior Captain",
-      "phone": "+91 98450 11223",
-      "email": "",
-      "shift": "Morning Shift (10 AM - 4 PM)",
-      "monthlySalary": 0,
-      "status": "active"
-    },
-    {
-      "id": 2,
-      "backendStaffId": 2,
-      "name": "Vikram S.",
-      "role": "Head Waiter",
-      "phone": "+91 98450 44556",
-      "email": "",
-      "shift": "Evening Shift (5 PM - 11 PM)",
-      "monthlySalary": 0,
-      "status": "active"
-    },
-    {
-      "id": 3,
-      "backendStaffId": 3,
-      "name": "Ananya R.",
-      "role": "Stewardess",
-      "phone": "+91 98450 77889",
-      "email": "",
-      "shift": "Full Day (11 AM - 11 PM)",
-      "monthlySalary": 0,
-      "status": "active"
-    },
-    {
-      "id": 4,
-      "backendStaffId": 4,
-      "name": "Pooja M.",
-      "role": "Captain",
-      "phone": "+91 98450 99001",
-      "email": "",
-      "shift": "Morning Shift (10 AM - 4 PM)",
-      "monthlySalary": 0,
-      "status": "active"
-    },
-    {
-      "id": 5,
-      "backendStaffId": 5,
-      "name": "Suresh N.",
-      "role": "Server / Waiter",
-      "phone": "+91 98450 33445",
-      "email": "",
-      "shift": "Evening Shift (5 PM - 11 PM)",
-      "monthlySalary": 0,
-      "status": "active"
-    },
-    {
-      "id": 6,
-      "backendStaffId": 6,
-      "name": "Karan D.",
-      "role": "VIP Lounge Captain",
-      "phone": "+91 98450 66778",
-      "email": "",
-      "shift": "Evening Shift (5 PM - 11 PM)",
-      "monthlySalary": 0,
-      "status": "active"
-    }
-  ]
+  "gourmet_pos_staff_v1": [],
+  "gourmet_pos_inventory_purchases_v1": [],
+  "gourmet_pos_tables_v2_inr": [],
+  "gourmet_pos_salary_payments_v1": []
 }
