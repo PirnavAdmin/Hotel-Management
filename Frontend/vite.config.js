@@ -2319,7 +2319,6 @@ export default defineConfig(({ mode }) => {
     env.BACKEND_URL ||
     process.env.VITE_BACKEND_URL ||
     env.VITE_BACKEND_URL ||
-    apiBase ||
     "http://127.0.0.1:5018";
 
   return {
