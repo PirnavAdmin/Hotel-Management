@@ -506,6 +506,8 @@ export function AdminSettings({
         JSON.stringify(settings),
       );
       window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("restaurant-settings-updated"));
+      window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settings }));
 
       if (onSaveSettings) {
         try {

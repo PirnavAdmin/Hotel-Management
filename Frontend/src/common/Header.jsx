@@ -48,32 +48,54 @@ export function Header({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const getStoredLogo = () => {
+  const getStoredSettings = () => {
     try {
-      const s = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
-      return s.logo || "";
+      return JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
     } catch {
-      return "";
+      return {};
     }
   };
+  const getStoredLogo = () => getStoredSettings().logo || "";
+  const getStoredName = () => getStoredSettings().restaurantName || "";
+
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+  const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
+    const stored = getStoredName();
+    if (stored && stored.trim() && stored.trim().toLowerCase() !== "restaurant") return stored.trim();
+    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
+    return stored || restaurantName || "Bhanu Bistro";
+  });
 
   useEffect(() => {
     if (restaurantLogo) setLiveLogo(restaurantLogo);
     else setLiveLogo(getStoredLogo());
-  }, [restaurantLogo]);
+    if (restaurantName && restaurantName.trim().toLowerCase() !== "restaurant") {
+      setLiveRestaurantName(restaurantName.trim());
+    }
+  }, [restaurantLogo, restaurantName]);
 
   useEffect(() => {
-    const handleSettingsUpdate = () => {
-      setLiveLogo(getStoredLogo() || restaurantLogo);
+    const handleSettingsUpdate = (e) => {
+      const fresh = e?.detail || getStoredSettings();
+      if (fresh?.logo) setLiveLogo(fresh.logo);
+      else setLiveLogo(getStoredLogo() || restaurantLogo);
+
+      if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
+        setLiveRestaurantName(fresh.restaurantName.trim());
+      } else {
+        const stored = getStoredName();
+        if (stored && stored.trim().toLowerCase() !== "restaurant") setLiveRestaurantName(stored.trim());
+      }
     };
     window.addEventListener("storage", handleSettingsUpdate);
     window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    window.addEventListener("avsr-settings-updated", handleSettingsUpdate);
     return () => {
       window.removeEventListener("storage", handleSettingsUpdate);
       window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+      window.removeEventListener("avsr-settings-updated", handleSettingsUpdate);
     };
-  }, [restaurantLogo]);
+  }, [restaurantLogo, restaurantName]);
 
   const isUserRoute =
     location.pathname === "/" || location.pathname === "/user";
@@ -265,7 +287,7 @@ export function Header({
                   lineHeight: 1.1,
                 }}
               >
-                {restaurantName || "Restaurant"}
+                {liveRestaurantName || restaurantName || "Bhanu Bistro"}
               </h1>
               <span
                 style={{

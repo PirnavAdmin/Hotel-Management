@@ -13864,5 +13864,14 @@
     "title": "Food Ready to Serve",
     "message": "All dishes for Table-1 are cooked and ready to serve!"
   },
-  "gourmet_pos_salary_payments_v1": []
+  "gourmet_pos_salary_payments_v1": [],
+  "gourmet_pos_settings_v1": {
+    "restaurantName": "Bhanu Bistro",
+    "tagline": "BAR & CAFE",
+    "phone": "+91 98450 12345",
+    "address": "Main Road, Near Tech Park, Hyderabad, India",
+    "gstin": "36AABCA1234F1Z5",
+    "email": "contact@bhanubistro.com",
+    "logo": ""
+  }
 }

@@ -1679,7 +1679,11 @@ export function App() {
     }
 
     const handleStorageChange = (e) => {
-      if (!e.key || !e.newValue) return;
+      if (!e || !e.key) {
+        syncAllFromStorage();
+        return;
+      }
+      if (!e.newValue) return;
 
       if (e.key === STORAGE_KEY_TABLES) {
         try {
@@ -1874,6 +1878,9 @@ export function App() {
 
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("focus", syncAllFromStorage);
+    window.addEventListener("avsr-tables-updated", syncAllFromStorage);
+    window.addEventListener("avsr-orders-updated", syncAllFromStorage);
+    window.addEventListener("avsr-kot-updated", syncAllFromStorage);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") syncAllFromStorage();
     };
@@ -1882,6 +1889,9 @@ export function App() {
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("focus", syncAllFromStorage);
+      window.removeEventListener("avsr-tables-updated", syncAllFromStorage);
+      window.removeEventListener("avsr-orders-updated", syncAllFromStorage);
+      window.removeEventListener("avsr-kot-updated", syncAllFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
       try { localEs?.close(); } catch {}
@@ -3138,6 +3148,16 @@ export function App() {
                 }
               }
             });
+          } else {
+            // Direct item stock matching (e.g. standalone retail, beverage, or direct inventory item)
+            const matchedDirectStock = inventory.find((inv) => {
+              const invName = String(inv.name || "").trim().toLowerCase();
+              return invName && (invName === cleanOrderedName || cleanOrderedName.includes(invName) || invName.includes(cleanOrderedName));
+            });
+            if (matchedDirectStock) {
+              const existingTotal = usageByIngredientId.get(String(matchedDirectStock.id)) || 0;
+              usageByIngredientId.set(String(matchedDirectStock.id), existingTotal + dishCount);
+            }
           }
         });
 
@@ -3202,6 +3222,8 @@ export function App() {
         JSON.stringify(updatedPastOrders),
       );
       pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("avsr-orders-updated", { detail: updatedPastOrders }));
     } catch {}
     const updatedTables = tables.map((t) => {
       const isTarget =
@@ -3999,6 +4021,7 @@ export function App() {
                   <KitchenKOTView
                     tables={tables}
                     pastOrders={pastOrders}
+                    takeawayOrders={pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway"))}
                     menuItems={menuItems}
                     currentTheme={theme}
                     onChangeTheme={setTheme}

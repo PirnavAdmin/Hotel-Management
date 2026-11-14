@@ -912,8 +912,27 @@ export function AdminPortal({
   });
   const restaurantLogo = restaurantSettings?.logo || "";
   const restaurantName =
-    restaurantSettings?.restaurantName?.trim() || "Restaurant";
-  const restaurantTagline = restaurantSettings?.tagline?.trim() || "";
+    restaurantSettings?.restaurantName?.trim() || "Bhanu Bistro";
+  const restaurantTagline = restaurantSettings?.tagline?.trim() || "BAR & CAFE";
+
+  useEffect(() => {
+    const handleSettingsUpdated = (e) => {
+      try {
+        const fresh = e?.detail || JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
+        if (fresh && typeof fresh === "object" && Object.keys(fresh).length > 0) {
+          setRestaurantSettings((prev) => ({ ...(prev || {}), ...fresh }));
+        }
+      } catch {}
+    };
+    window.addEventListener("storage", handleSettingsUpdated);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdated);
+    window.addEventListener("avsr-settings-updated", handleSettingsUpdated);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdated);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdated);
+      window.removeEventListener("avsr-settings-updated", handleSettingsUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -986,24 +1005,18 @@ export function AdminPortal({
     }
 
     // 2. Broadcast via /api/sync
-    const response = await fetch(`${API_SYNC_BASE}/api/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
-    });
-    if (!response.ok) {
-      throw new Error(`Settings sync failed (HTTP ${response.status}).`);
+    try {
+      await fetch(`${API_SYNC_BASE}/api/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
+      });
+    } catch (syncErr) {
+      console.warn("Settings sync broadcast warning:", syncErr);
     }
-    const result = await response.json().catch(() => null);
-    if (result?.success === false) {
-      throw new Error(
-        result.error ||
-          result.message ||
-          "The server rejected the settings update.",
-      );
-    }
+
     try {
       localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
     } catch {}

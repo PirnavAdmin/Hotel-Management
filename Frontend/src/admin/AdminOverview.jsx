@@ -95,11 +95,13 @@ export function AdminOverview({
 
     window.addEventListener("storage", syncFromStorage);
     window.addEventListener("focus", syncFromStorage);
+    window.addEventListener("avsr-orders-updated", syncFromStorage);
     window.addEventListener("avsr-inventory-updated", syncInventory);
 
     return () => {
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener("focus", syncFromStorage);
+      window.removeEventListener("avsr-orders-updated", syncFromStorage);
       window.removeEventListener("avsr-inventory-updated", syncInventory);
     };
   }, []);

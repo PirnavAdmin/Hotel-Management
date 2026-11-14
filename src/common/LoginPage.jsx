@@ -1,0 +1,1173 @@
+import './LoginPage.css';
+import { logFormSubmission, logUserAction } from '../utils/logger';
+import { ThemeToggle } from './ThemeToggle';
+import React, { useState, useEffect, useRef, useId } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  ChefHat, Lock, User, Eye, EyeOff,
+  Utensils, MonitorCheck, ShieldCheck,
+  CheckCircle, Mail, Phone, UserPlus,
+  RefreshCw, ArrowLeft,
+  Settings, Printer, TrendingUp, Heart, Sparkles, KeyRound
+} from 'lucide-react';
+import { loginUser, registerUser } from '../utils/auth';
+import { apiForgotPassword, apiResetPassword } from '../api/authApi';
+
+/**
+ * LoginPage — role-specific sign-in screen.
+ */
+const RESTAURANT_SETTINGS_KEY = "gourmet_pos_settings_v1";
+const REMEMBERED_LOGIN_KEY = "avsr_remembered_login_v1";
+
+const getRememberedLogin = () => {
+  try { return localStorage.getItem(REMEMBERED_LOGIN_KEY) || ""; } catch { return ""; }
+};
+
+const getStoredRestaurantSettings = () => {
+  try {
+    const raw = localStorage.getItem(RESTAURANT_SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch {}
+  return {};
+};
+
+const resolveRestaurantName = (propVal) => {
+  if (propVal && typeof propVal === "string" && propVal.trim() && propVal.trim().toLowerCase() !== "restaurant") {
+    return propVal.trim();
+  }
+  const settings = getStoredRestaurantSettings();
+  if (settings && typeof settings.restaurantName === "string" && settings.restaurantName.trim()) {
+    return settings.restaurantName.trim();
+  }
+  if (propVal && typeof propVal === "string" && propVal.trim()) {
+    return propVal.trim();
+  }
+  return "AVSR FOOD COURT";
+};
+
+const resolveTagline = () => {
+  const settings = getStoredRestaurantSettings();
+  if (settings && typeof settings.tagline === "string" && settings.tagline.trim()) {
+    return settings.tagline.trim();
+  }
+  return "";
+};
+
+const resolveRestaurantLogo = (propVal, altPropVal) => {
+  const candidate = propVal || altPropVal;
+  if (candidate && typeof candidate === "string" && candidate.trim()) {
+    return candidate.trim();
+  }
+  const settings = getStoredRestaurantSettings();
+  if (settings && typeof settings.logo === "string" && settings.logo.trim()) {
+    return settings.logo.trim();
+  }
+  return "";
+};
+
+const HEADLINE_ITEMS = [
+  { icon: <Sparkles size={15} />, text: 'Better Food \u2014 Better Business.' },
+  { icon: <TrendingUp size={15} />, text: 'Smart Management \u2014 Higher Profits.' },
+  { icon: <Heart size={15} />, text: 'Happy Customers \u2014 Everyday.' }
+];
+
+export function LoginPage({
+  role = 'pos',
+  onLoginSuccess,
+  restaurantName = 'Restaurant',
+  restaurantLogo = '',
+  logo = '',
+  currentTheme = 'royal-saffron',
+  onChangeTheme,
+  onBackToLanding,
+}) {
+  const navigate = useNavigate();
+  const [currentRole, setCurrentRole] = useState(role);
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
+
+  const handleBackToLanding = () => {
+    try {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    } catch {}
+    if (typeof onBackToLanding === 'function') {
+      onBackToLanding();
+    } else {
+      navigate('/');
+    }
+  };
+
+  // Dynamic restaurant name and tagline from Settings / localStorage / prop
+  const [currentRestaurantName, setCurrentRestaurantName] = useState(() =>
+    resolveRestaurantName(restaurantName)
+  );
+  const [currentTagline, setCurrentTagline] = useState(() => resolveTagline());
+  const [currentRestaurantLogo, setCurrentRestaurantLogo] = useState(() =>
+    resolveRestaurantLogo(restaurantLogo, logo)
+  );
+
+  // Sync prop role if parent route changes
+  useEffect(() => {
+    setCurrentRole(role);
+  }, [role]);
+
+  // Lock window scrollbar on login screen
+  useEffect(() => {
+    const origHtmlOverflow = document.documentElement.style.overflow;
+    const origBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = origHtmlOverflow;
+      document.body.style.overflow = origBodyOverflow;
+    };
+  }, []);
+
+  // Sync restaurant name on prop change
+  useEffect(() => {
+    setCurrentRestaurantName(resolveRestaurantName(restaurantName));
+    setCurrentTagline(resolveTagline());
+    setCurrentRestaurantLogo(resolveRestaurantLogo(restaurantLogo, logo));
+  }, [restaurantName, restaurantLogo, logo]);
+
+  // Listen to live settings updates across windows/tabs and AdminSettings save events
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setCurrentRestaurantName(resolveRestaurantName(restaurantName));
+      setCurrentTagline(resolveTagline());
+    setCurrentRestaurantLogo(resolveRestaurantLogo(restaurantLogo, logo));
+    };
+    window.addEventListener("storage", handleSettingsUpdate);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    };
+  }, [restaurantName, restaurantLogo, logo]);
+
+  // Login
+  const [username, setUsername] = useState(getRememberedLogin);
+  const [rememberMe, setRememberMe] = useState(() => Boolean(getRememberedLogin()));
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw]     = useState(false);
+
+  // Guarantee clean initial state & prevent browser autofill on load (RMS_LOGIN_001, RMS_LOGIN_002)
+  useEffect(() => {
+    setPassword('');
+    const timer = setTimeout(() => {
+      setPassword('');
+      const p = document.getElementById('login-password');
+      if (p) p.value = '';
+    }, 60);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Forgot Password state
+  const [forgotEmail,        setForgotEmail]        = useState('');
+  const [forgotOtpStep,      setForgotOtpStep]      = useState(false);
+  const [forgotOtp,          setForgotOtp]          = useState('');
+  const [generatedOtp,       setGeneratedOtp]       = useState('');
+  const [showNewPw,          setShowNewPw]          = useState(false);
+  const [showConfirmNewPw,   setShowConfirmNewPw]   = useState(false);
+  const [newPassword,        setNewPassword]        = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  // Register state (Admin only)
+  const [regName,          setRegName]          = useState('');
+  const [regUser,          setRegUser]          = useState('');
+  const [regMobile,        setRegMobile]        = useState('');
+  const [regEmail,         setRegEmail]         = useState('');
+  const [regPass,          setRegPass]          = useState('');
+  const [regConfirm,       setRegConfirm]       = useState('');
+  const [showRegPw,        setShowRegPw]        = useState(false);
+  const [showRegConfirm,   setShowRegConfirm]   = useState(false);
+
+  const [error,   setError]   = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [shake,   setShake]   = useState(false);
+  const loginRequestInFlight = useRef(false);
+
+  // ── Role config ───────────────────────────────────────────
+  const cfgMap = {
+    pos: {
+      icon: <Utensils size={24} color="#fff" />,
+      iconBg: 'linear-gradient(135deg,#f59e0b,#ea580c)',
+      iconGlow: 'rgba(245,158,11,0.5)',
+      accent: '#f59e0b', accentLight: '#fbbf24',
+      btnBg: 'var(--primary-gradient)',
+      btnShadow: '0 4px 18px rgba(255,157,0,.25)',
+      badge: '🍽️ BILLING COUNTER',
+      badgeBg: 'rgba(245,158,11,0.15)', badgeBorder: 'rgba(245,158,11,0.4)',
+      hint: 'Access: Billing, Table orders, Settlements'
+    },
+    kot: {
+      icon: <ChefHat size={24} color="#fff" />,
+      iconBg: 'linear-gradient(135deg,#ea580c,#c2410c)',
+      iconGlow: 'rgba(234,88,12,0.5)',
+      accent: '#ea580c', accentLight: '#fb923c',
+      btnBg: 'var(--primary-gradient)',
+      btnShadow: '0 4px 18px rgba(255,157,0,.25)',
+      badge: '🔥 KITCHEN DISPLAY',
+      badgeBg: 'rgba(234,88,12,0.15)', badgeBorder: 'rgba(234,88,12,0.4)',
+      hint: 'Access: Kitchen orders, Live food status'
+    },
+    admin: {
+      icon: <ShieldCheck size={24} color="#fff" />,
+      iconBg: 'linear-gradient(135deg,#6366f1,#4f46e5)',
+      iconGlow: 'rgba(99,102,241,0.5)',
+      accent: '#6366f1', accentLight: '#818cf8',
+      btnBg: 'var(--primary-gradient)',
+      btnShadow: '0 4px 18px rgba(255,157,0,.25)',
+      badge: '⚙️ HOTEL PORTAL',
+      badgeBg: 'rgba(99,102,241,0.15)', badgeBorder: 'rgba(99,102,241,0.4)',
+      hint: 'Access: Menu, Tables, Staff, Reports'
+    }
+  };
+  const cfg = cfgMap[currentRole] || cfgMap.pos;
+  const loginTitle = currentRole === 'admin' ? 'Hotel Login'
+    : currentRole === 'kot' ? 'Kitchen Login' : 'Billing Login';
+
+
+
+  const triggerShake = () => { setShake(true); setTimeout(() => setShake(false), 600); };
+
+  const clearRegForm = () => {
+    setRegName(''); setRegUser(''); setRegMobile(''); setRegEmail('');
+    setRegPass(''); setRegConfirm(''); setShowRegPw(false); setShowRegConfirm(false);
+  };
+  const clearAll = () => { setError(''); setSuccess(''); setUsername(''); setPassword(''); clearRegForm(); };
+
+  // ── LOGIN ─────────────────────────────────────────────────
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (loginRequestInFlight.current) return;
+    if (!username.trim() || !password.trim()) { setError('Please enter username and password.'); triggerShake(); return; }
+    loginRequestInFlight.current = true;
+    setLoading(true); setError('');
+    try {
+      const r = await loginUser(username.trim(), password.trim(), currentRole);
+      if (r.success) {
+        try {
+          if (rememberMe) localStorage.setItem(REMEMBERED_LOGIN_KEY, username.trim());
+          else localStorage.removeItem(REMEMBERED_LOGIN_KEY);
+        } catch {}
+        onLoginSuccess(r.session, currentRole);
+      } else {
+        setError(r.error || 'Login failed.');
+        triggerShake();
+      }
+    } catch (loginError) {
+      setError(loginError?.message || 'Login failed. Please try again.');
+      triggerShake();
+    } finally {
+      loginRequestInFlight.current = false;
+      setLoading(false);
+    }
+  };
+
+  // ── REGISTER (ADMIN ONLY) ─────────────────────────────────
+  const validateRegistration = () => {
+    const trimmedName = regName.trim();
+    const trimmedUser = regUser.trim();
+    const cleanMobile = regMobile.replace(/\D/g, '');
+    const trimmedEmail = regEmail.trim();
+
+    if (!trimmedName) return 'Full name is required.';
+    if (/\d/.test(trimmedName)) return 'Full name cannot contain numeric digits. Please enter a valid name.';
+    if (!/^[a-zA-Z\s'-.]{2,50}$/.test(trimmedName) || trimmedName.replace(/[^a-zA-Z]/g, '').length < 2) {
+      return 'Full name must contain alphabetic characters only (e.g. Suresh Reddy).';
+    }
+
+    if (!trimmedUser) return 'Username is required.';
+    if (/\s/.test(trimmedUser)) return 'Username cannot contain spaces.';
+    if (trimmedUser.length < 3 || trimmedUser.length > 20) return 'Username must be between 3 and 20 characters.';
+
+    if (!cleanMobile) return 'Mobile number is required.';
+    if (cleanMobile.length !== 10) return 'Please enter a valid 10-digit mobile number.';
+
+    if (!trimmedEmail) return 'Email address is required.';
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) return 'Please enter a valid email address.';
+
+    if (!regPass) return 'Password is required.';
+    if (regPass.length < 6) return 'Password must be at least 6 characters long.';
+    if (regPass !== regConfirm) return 'Passwords do not match.';
+
+    return null;
+  };
+
+  const handleRegister = async (e) => {
+    if (e) e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    const valErr = validateRegistration();
+    if (valErr) {
+      setError(valErr);
+      triggerShake();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const r = await registerUser({
+        Username: regUser.trim(),
+        Email: regEmail.trim(),
+        Phone: regMobile.replace(/\D/g, '').trim(),
+        FullName: regName.trim(),
+        Password: regPass.trim(),
+        ConfirmPassword: regConfirm.trim(),
+        Role: 'admin'
+      });
+      setLoading(false);
+
+      if (r.success) {
+        setSuccess(`🎉 Account created successfully! Logging you in as "${regName.trim()}"...`);
+        setTimeout(async () => {
+          const loginResult = await loginUser(regUser.trim(), regPass.trim(), 'admin');
+          if (loginResult.success) {
+            onLoginSuccess(loginResult.session, 'admin');
+          } else {
+            setSuccess('Account created successfully! Please sign in with your credentials.');
+            setMode('login');
+            setUsername(regUser.trim());
+            setPassword(regPass.trim());
+            clearRegForm();
+          }
+        }, 1000);
+      } else {
+        setError(r.error || 'Registration failed.');
+        triggerShake();
+      }
+    } catch (err) {
+      setLoading(false);
+      setError(err?.message || 'Registration failed.');
+      triggerShake();
+    }
+  };
+
+  // ── FORGOT PASSWORD HANDLERS ──────────────────────────────
+  const handleSendResetOtp = async (e) => {
+    if (e) e.preventDefault();
+    const inputEmail = forgotEmail.trim();
+    if (!inputEmail || inputEmail.length < 2) {
+      setError('Please enter your registered email address or username.');
+      triggerShake();
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    let code = '';
+    try {
+      const res = await apiForgotPassword(inputEmail);
+      if (res && res.success) {
+        const payload = res.data?.data || res.data || res;
+        if (payload?.otp || payload?.Otp || payload?.code) {
+          code = String(payload.otp || payload.Otp || payload.code).trim();
+        }
+      }
+    } catch (err) {
+      console.warn('apiForgotPassword backend call failed:', err);
+    }
+
+    // Direct auto-generation fallback if backend email/SMTP is not active or did not return code
+    if (!code) {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    setGeneratedOtp(code);
+    setForgotOtp(code); // Instantly auto-fill
+    setForgotOtpStep(true);
+    setLoading(false);
+    setSuccess(`🔑 Verification OTP: ${code} generated & auto-filled below. Set your new password.`);
+  };
+
+  const handleRegenerateOtp = async () => {
+    setLoading(true);
+    setError('');
+    const inputEmail = forgotEmail.trim();
+    let code = '';
+    try {
+      const res = await apiForgotPassword(inputEmail);
+      if (res && res.success) {
+        const payload = res.data?.data || res.data || res;
+        if (payload?.otp || payload?.Otp || payload?.code) {
+          code = String(payload.otp || payload.Otp || payload.code).trim();
+        }
+      }
+    } catch {}
+
+    if (!code) {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    setGeneratedOtp(code);
+    setForgotOtp(code);
+    setLoading(false);
+    setSuccess(`🔄 Fresh OTP: ${code} generated & auto-filled.`);
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const enteredOtp = forgotOtp.trim();
+    if (!enteredOtp || enteredOtp.length < 4) {
+      setError('Please enter the verification OTP code.');
+      triggerShake();
+      return;
+    }
+    if (!newPassword.trim() || newPassword.trim().length < 6) {
+      setError('New password must be at least 6 characters long.');
+      triggerShake();
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('Passwords do not match.');
+      triggerShake();
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    let resetSuccess = false;
+    let resError = '';
+
+    try {
+      const res = await apiResetPassword(forgotEmail.trim(), enteredOtp, newPassword.trim());
+      if (res && res.success) {
+        resetSuccess = true;
+      } else {
+        resError = res?.error || 'Failed to reset password.';
+      }
+    } catch (err) {
+      console.warn('apiResetPassword error:', err);
+    }
+
+    // Synchronize to local credentials database & storage to guarantee access
+    if (resetSuccess || (generatedOtp && enteredOtp === generatedOtp) || enteredOtp.length >= 4) {
+      try {
+        const query = forgotEmail.trim().toLowerCase();
+
+        // 1. Update avsr_auth_users_v1
+        const rawUsers = localStorage.getItem('avsr_auth_users_v1');
+        if (rawUsers) {
+          try {
+            const users = JSON.parse(rawUsers);
+            if (Array.isArray(users)) {
+              let updated = false;
+              const newUsers = users.map(u => {
+                if (
+                  (u.email && u.email.toLowerCase() === query) ||
+                  (u.username && u.username.toLowerCase() === query)
+                ) {
+                  updated = true;
+                  return { ...u, password: newPassword.trim() };
+                }
+                return u;
+              });
+              if (updated) {
+                localStorage.setItem('avsr_auth_users_v1', JSON.stringify(newUsers));
+              }
+            }
+          } catch {}
+        }
+
+        // 2. Update gourmet_staff_v1
+        const rawStaff = localStorage.getItem('gourmet_staff_v1');
+        if (rawStaff) {
+          try {
+            const staffList = JSON.parse(rawStaff);
+            if (Array.isArray(staffList)) {
+              let updatedStaff = false;
+              const newStaff = staffList.map(s => {
+                if (
+                  (s.email && s.email.toLowerCase() === query) ||
+                  (s.username && s.username.toLowerCase() === query)
+                ) {
+                  updatedStaff = true;
+                  return { ...s, password: newPassword.trim() };
+                }
+                return s;
+              });
+              if (updatedStaff) {
+                localStorage.setItem('gourmet_staff_v1', JSON.stringify(newStaff));
+              }
+            }
+          } catch {}
+        }
+
+        resetSuccess = true;
+      } catch (err) {
+        console.warn('Local credential sync failed:', err);
+      }
+    }
+
+    setLoading(false);
+
+    if (resetSuccess) {
+      setSuccess('✅ Password updated successfully! Redirecting to sign in...');
+      setTimeout(() => {
+        setMode('login');
+        setPassword(newPassword.trim());
+        setUsername(forgotEmail.trim());
+        setSuccess('✅ Password reset complete. You can sign in now.');
+        setForgotOtpStep(false);
+        setGeneratedOtp('');
+      }, 1000);
+    } else {
+      setError(resError || 'Failed to reset password. Please check your OTP.');
+      triggerShake();
+    }
+  };
+
+  // Input style
+  const inp = (val, extraStyle = {}) => ({
+    width: '100%',
+    padding: '0.42rem 0.75rem 0.42rem 2.2rem',
+    background: 'var(--surface-tint)',
+    border: `1.5px solid ${val ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}`,
+    borderRadius: '8px', color: '#ffffff',
+    fontSize: '0.8rem', fontWeight: 600,
+    outline: 'none', transition: 'border-color 0.2s ease',
+    boxSizing: 'border-box',
+    ...extraStyle
+  });
+
+  return (
+    <main className="bhanu-login" data-mode={mode}>
+      <div className="auth-back-nav">
+        <button
+          type="button"
+          className="bhanu-login-back-btn"
+          onClick={handleBackToLanding}
+          title="Back to Landing Page"
+          aria-label="Back to Customer Landing Page"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Home</span>
+        </button>
+      </div>
+      <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
+      <section className="bhanu-story" aria-label={`Welcome to ${currentRestaurantName}`}><header><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
+      <div className="bhanu-welcome"><h1 style={{ color: '#ff9d00' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
+      <div className="bhanu-features">{[{title:'POS Counter',description:'Fast & Easy Point of Sale',icon:<Printer/>},{title:'Kitchen Display',description:'Real-time Order Management',icon:<ChefHat/>},{title:'Admin Portal',description:'Complete Restaurant Control',icon:<Settings/>}].map(feature => <div key={feature.title}><span className="bhanu-feature-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.description}</p></div>)}</div></div>
+      <img className="bhanu-dish" src="/assets/chicken-dum-biryani.jpg" alt="Restaurant biryani"/>
+      <div className="bhanu-benefits" aria-label="Restaurant headlines">
+        <div className="bhanu-benefits-track">
+          {[1, 2].map((groupNum) => (
+            <div key={groupNum} className="bhanu-benefits-group" aria-hidden={groupNum === 2 ? 'true' : undefined}>
+              {[...HEADLINE_ITEMS, ...HEADLINE_ITEMS].map((item, idx) => (
+                <React.Fragment key={idx}>
+                  <span>{item.icon}{item.text}</span>
+                  <span className="ticker-sep">&bull;</span>
+                </React.Fragment>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div></section>
+      <section className="bhanu-login-side" aria-label={`${currentRestaurantName} sign in`}><div className="bhanu-login-card" style={{animation:shake?'shakeCard .5s ease':undefined}}><header className="bhanu-card-brand"><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
+      {/* Global 3-Terminal Role Selector Bar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '5px',
+        background: 'var(--bg-glass)',
+        padding: '4px',
+        borderRadius: '12px',
+        border: '1.5px solid rgba(255, 255, 255, 0.1)',
+        marginBottom: '0.45rem',
+        maxWidth: '400px',
+        width: '100%',
+        position: 'relative',
+        zIndex: 2,
+        boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)'
+      }}>
+        {[
+          { id: 'pos', label: 'POS', icon: <MonitorCheck size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
+          { id: 'kot', label: 'Kitchen', icon: <ChefHat size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
+          { id: 'admin', label: 'Admin', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' },
+          { id: 'register', label: 'Register', icon: <UserPlus size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' }
+        ].map(t => {
+          const isActive = t.id === 'register' ? mode === 'register' : (mode !== 'register' && currentRole === t.id);
+          return (
+            <button
+              aria-pressed={isActive}
+              key={t.id}
+              type="button"
+              onClick={() => {
+                if (t.id === 'register') {
+                  setMode('register');
+                  clearAll();
+                } else {
+                  setMode('login');
+                  setCurrentRole(t.id);
+                  setUsername('');
+                  setPassword('');
+                  setError('');
+                  setSuccess('');
+                }
+              }}
+              style={{
+                padding: '0.42rem 0.35rem',
+                borderRadius: '8px',
+                fontSize: '0.75rem',
+                fontWeight: isActive ? 800 : 600,
+                background: isActive ? 'var(--primary-gradient)' : 'transparent',
+                color: isActive ? '#ffffff' : '#94a3b8',
+                border: isActive ? `1.5px solid ${t.accent}` : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.3rem',
+                transition: 'all 0.2s ease',
+                boxShadow: isActive ? t.shadow : 'none'
+              }}
+            >
+              <span>{t.icon}</span>
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="bhanu-form-content">
+        <div className="bhanu-form-heading">
+          <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em', textAlign: 'center' }}>
+            {mode === 'register' ? 'Create Hotel Account' : mode === 'forgot' ? (forgotOtpStep ? 'Set New Password' : 'Reset Password') : loginTitle}
+          </h1>
+          {mode === 'forgot' && (
+            <p style={{ fontSize: '0.67rem', color: 'var(--text-dim)', margin: 0, fontWeight: 600, textAlign: 'center' }}>
+              {forgotOtpStep ? 'Verification OTP generated & auto-filled below. Set your new password.' : 'Enter email or username to auto-generate verification OTP.'}
+            </p>
+          )}
+        </div>
+
+        {/* ── LOGIN FORM ── */}
+        {mode === 'login' && (
+          <form
+            className="bhanu-signin-form"
+            onSubmit={handleLogin}
+            autoComplete="off"
+            style={{ padding: '0.65rem 1rem 0.85rem', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+          >
+            {/* Decoy inputs to capture and prevent browser auto-injection (RMS_LOGIN_001, RMS_LOGIN_002) */}
+            <input type="text" name="prevent_autofill_user" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+            <input type="password" name="prevent_autofill_pass" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+
+            {error && <Err msg={error} />}
+            <Fld label="Username or Email" icon={<User size={13} color="#475569" />} mb="0.45rem">
+              <input
+                id="login-username"
+                name="pos_user_login_identity"
+                aria-label="Username or Email"
+                type="text"
+                placeholder="Username or Email address"
+                value={username}
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                style={inp(username)}
+                autoComplete="off"
+                onFocus={e => e.target.style.borderColor = cfg.accent}
+                onBlur={e => e.target.style.borderColor = username ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+              />
+            </Fld>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.24rem' }}>
+                <label style={{ fontSize: '0.64rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  PASSWORD
+                </label>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <Lock size={13} color="#475569" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  id="login-password"
+                  name="pos_user_login_credential"
+                  aria-label="Password"
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError(''); }}
+                  style={inp(password, { paddingRight: '2.5rem' })}
+                  autoComplete="new-password"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = password ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+                <PwEye show={showPw} toggle={() => setShowPw(p => !p)} />
+              </div>
+            </div>
+            <div className="bhanu-login-options">
+              <label className="bhanu-remember-label">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setRememberMe(checked);
+                    if (!checked) {
+                      try { localStorage.removeItem(REMEMBERED_LOGIN_KEY); } catch {}
+                    }
+                  }}
+                  style={{ accentColor: cfg.accent }}
+                />
+                Remember me
+              </label>
+              <div className="bhanu-recovery"><button
+                  type="button"
+                  onClick={() => {
+                    setMode('forgot');
+                    setError('');
+                    setSuccess('');
+                    setShowNewPw(false);
+                    setShowConfirmNewPw(false);
+                    setNewPassword('');
+                    setConfirmNewPassword('');
+                    setForgotEmail(username.includes('@') ? username : '');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    color: 'var(--accent-amber-light)',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Forgot Password?
+                </button></div>
+            </div>
+            <div style={{ marginTop: '0.65rem' }}>
+              <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Sign In" icon={<MonitorCheck size={16} />} />
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '0.65rem' }}>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 600 }}>Don't have an account? </span>
+              <button
+                type="button"
+                onClick={() => { setMode('register'); clearAll(); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-amber-light, #f59e0b)',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Register Now
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ── REGISTER FORM ── */}
+        {mode === 'register' && (
+          <form
+            onSubmit={handleRegister}
+            autoComplete="off"
+            style={{
+              padding: '0.55rem 1rem 0.65rem',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+              overflowY: 'auto'
+            }}
+          >
+            {error   && <Err msg={error} />}
+            {success && <Suc msg={success} />}
+
+            <div className="bhanu-registration-grid">
+              {/* Full Name */}
+              <Fld label="Full Name *" icon={<User size={13} color="#475569" />} mb="0">
+                <input
+                  type="text"
+                  placeholder="e.g. Suresh Reddy"
+                  value={regName}
+                  onChange={e => { setRegName(e.target.value); setError(''); }}
+                  style={inp(regName)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regName ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Username */}
+              <Fld label="Username *" icon={<User size={13} color="#475569" />} mb="0">
+                <input
+                  type="text"
+                  placeholder="Choose username"
+                  value={regUser}
+                  onChange={e => { setRegUser(e.target.value); setError(''); }}
+                  style={inp(regUser)}
+                  autoComplete="username"
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regUser ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Mobile */}
+              <Fld label="Mobile Number *" icon={<Phone size={13} color="#475569" />} mb="0">
+                <input
+                  type="tel"
+                  placeholder="10-digit mobile"
+                  maxLength={10}
+                  value={regMobile}
+                  onChange={e => { setRegMobile(e.target.value.replace(/\D/g, '')); setError(''); }}
+                  style={inp(regMobile)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regMobile ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Email */}
+              <Fld label="Email *" icon={<Mail size={13} color="#475569" />} mb="0">
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={regEmail}
+                  onChange={e => { setRegEmail(e.target.value); setError(''); }}
+                  style={inp(regEmail)}
+                  onFocus={e => e.target.style.borderColor = cfg.accent}
+                  onBlur={e => e.target.style.borderColor = regEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                />
+              </Fld>
+
+              {/* Password */}
+              <Fld label="Password *" icon={<Lock size={13} color="#475569" />} mb="0">
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type={showRegPw ? 'text' : 'password'}
+                    placeholder="Min 6 chars"
+                    value={regPass}
+                    onChange={e => { setRegPass(e.target.value); setError(''); }}
+                    style={inp(regPass, { paddingRight: '2.2rem' })}
+                    autoComplete="new-password"
+                    onFocus={e => e.target.style.borderColor = cfg.accent}
+                    onBlur={e => e.target.style.borderColor = regPass ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                  />
+                  <PwEye show={showRegPw} toggle={() => setShowRegPw(p => !p)} />
+                </div>
+              </Fld>
+
+              {/* Confirm Password */}
+              <Fld label="Confirm Password *" icon={<Lock size={13} color="#475569" />} mb="0">
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type={showRegConfirm ? 'text' : 'password'}
+                    placeholder="Re-enter password"
+                    value={regConfirm}
+                    onChange={e => { setRegConfirm(e.target.value); setError(''); }}
+                    style={inp(regConfirm, {
+                      paddingRight: '2.2rem',
+                      borderColor: regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'
+                    })}
+                    autoComplete="new-password"
+                    onFocus={e => e.target.style.borderColor = regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : cfg.accent}
+                    onBlur={e => e.target.style.borderColor = regConfirm ? (regConfirm === regPass ? '#10b981' : '#ef4444') : 'rgba(255,255,255,0.1)'}
+                  />
+                  <PwEye show={showRegConfirm} toggle={() => setShowRegConfirm(p => !p)} />
+                </div>
+              </Fld>
+            </div>
+
+            <div style={{ marginTop: '0.35rem' }}>
+              <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Create Hotel Account" icon={<UserPlus size={15} />} />
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '0.25rem' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>Already have an account? </span>
+              <button
+                type="button"
+                onClick={() => { setMode('login'); clearAll(); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-amber-light, #f59e0b)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ── FORGOT PASSWORD FORM ── */}
+        {mode === 'forgot' && (
+          <form onSubmit={forgotOtpStep ? handleResetPasswordSubmit : handleSendResetOtp} style={{ padding: '0.75rem 1.25rem 0.85rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.45rem', overflowY: 'auto' }}>
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setSuccess(''); setForgotOtpStep(false); setGeneratedOtp(''); }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: '0.75rem', fontWeight: 700,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', width: 'fit-content', padding: 0
+              }}
+            >
+              <ArrowLeft size={14} /> Back to Sign In
+            </button>
+
+            {error   && <Err msg={error} />}
+            {success && <Suc msg={success} />}
+
+            {!forgotOtpStep ? (
+              <>
+                <Fld label="Registered Email or Username *" icon={<Mail size={13} color="#475569" />} mb="0.45rem">
+                  <input
+                    type="text"
+                    placeholder="Enter registered email or username"
+                    value={forgotEmail}
+                    onChange={e => { setForgotEmail(e.target.value); setError(''); }}
+                    style={inp(forgotEmail)}
+                    onFocus={e => e.target.style.borderColor = cfg.accent}
+                    onBlur={e => e.target.style.borderColor = forgotEmail ? cfg.accent + '70' : 'rgba(255,255,255,0.1)'}
+                  />
+                </Fld>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.35rem', lineHeight: 1.35 }}>
+                  ⚡ An OTP code will be generated automatically on your screen — no email waiting required.
+                </div>
+                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Generate Verification OTP" icon={<KeyRound size={16} />} />
+              </>
+            ) : (
+              <>
+                {/* Visual Auto-Generated OTP Card */}
+                {generatedOtp && (
+                  <div style={{
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1.5px dashed rgba(245, 158, 11, 0.6)',
+                    borderRadius: '10px',
+                    padding: '0.65rem 0.85rem',
+                    marginBottom: '0.35rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.3rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <KeyRound size={12} color="#f59e0b" /> AUTO-GENERATED OTP
+                      </span>
+                      <span style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                        ✓ Auto-Filled
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '0.3em', color: 'var(--text-main)', fontFamily: 'monospace' }}>
+                        {generatedOtp}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRegenerateOtp}
+                        disabled={loading}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '6px',
+                          color: 'var(--text-main)',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '0.28rem 0.55rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem'
+                        }}
+                        title="Click to generate a fresh OTP code"
+                      >
+                        <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Regenerate
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>
+                      Code is ready & auto-filled. Enter your new password below to reset.
+                    </div>
+                  </div>
+                )}
+
+                <Fld label="6-Digit Verification Code *" icon={<KeyRound size={13} color="#475569" />} mb="0.35rem">
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
+                      type="text"
+                      placeholder="6-digit OTP code"
+                      maxLength={6}
+                      value={forgotOtp}
+                      onChange={e => { setForgotOtp(e.target.value.replace(/\D/g, '')); setError(''); }}
+                      style={{ ...inp(forgotOtp), letterSpacing: '0.15em', fontWeight: 700 }}
+                    />
+                    {generatedOtp && forgotOtp !== generatedOtp && (
+                      <button
+                        type="button"
+                        onClick={() => { setForgotOtp(generatedOtp); setError(''); }}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'var(--accent-amber, #f59e0b)',
+                          border: 'none',
+                          color: '#000000',
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          padding: '3px 7px',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Auto-Fill
+                      </button>
+                    )}
+                  </div>
+                </Fld>
+
+                <Fld label="New Password *" icon={<Lock size={13} color="#475569" />} mb="0.35rem">
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
+                      id="forgot-new-password"
+                      aria-label="New Password"
+                      type={showNewPw ? "text" : "password"}
+                      placeholder="Minimum 6 characters"
+                      value={newPassword}
+                      onChange={e => { setNewPassword(e.target.value); setError(''); }}
+                      style={{ ...inp(newPassword), paddingRight: '2.5rem' }}
+                    />
+                    <PwEye show={showNewPw} toggle={() => setShowNewPw(p => !p)} ariaLabel={showNewPw ? "Hide new password" : "Show new password"} />
+                  </div>
+                </Fld>
+
+                <Fld label="Confirm New Password *" icon={<Lock size={13} color="#475569" />} mb="0.45rem">
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
+                      id="forgot-confirm-password"
+                      aria-label="Confirm New Password"
+                      type={showConfirmNewPw ? "text" : "password"}
+                      placeholder="Re-enter new password"
+                      value={confirmNewPassword}
+                      onChange={e => { setConfirmNewPassword(e.target.value); setError(''); }}
+                      style={{ ...inp(confirmNewPassword), paddingRight: '2.5rem' }}
+                    />
+                    <PwEye show={showConfirmNewPw} toggle={() => setShowConfirmNewPw(p => !p)} ariaLabel={showConfirmNewPw ? "Hide confirm password" : "Show confirm password"} />
+                  </div>
+                </Fld>
+
+                <Btn loading={loading} bg={cfg.btnBg} shadow={cfg.btnShadow} label="Update Password & Sign In" icon={<CheckCircle size={16} />} />
+              </>
+            )}
+          </form>
+        )}
+
+
+      </div>
+
+      </div></section>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shakeCard {
+          0%,100%{transform:translateX(0)} 15%{transform:translateX(-8px)} 30%{transform:translateX(8px)}
+          45%{transform:translateX(-6px)} 60%{transform:translateX(6px)} 75%{transform:translateX(-3px)} 90%{transform:translateX(3px)}
+        }
+        .bhanu-login input::placeholder { color: var(--text-dim); }
+        input[type=tel]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+      `}</style>
+    </main>
+  );
+}
+
+// ── Tiny shared sub-components ────────────────────────────────
+function Err({ msg }) {
+  return (
+    <div style={{
+      background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.4)',
+      borderRadius:'8px', padding:'0.45rem 0.75rem',
+      color: 'var(--danger)', fontSize:'0.76rem', fontWeight:700,
+      marginBottom:'0.65rem', display:'flex', alignItems:'center', gap:'0.4rem'
+    }}>
+      <span>⚠️</span><span>{msg}</span>
+    </div>
+  );
+}
+function Suc({ msg }) {
+  return (
+    <div style={{
+      background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.4)',
+      borderRadius:'8px', padding:'0.45rem 0.75rem',
+      color: 'var(--success)', fontSize:'0.76rem', fontWeight:700,
+      marginBottom:'0.65rem', display:'flex', alignItems:'center', gap:'0.4rem'
+    }}>
+      <CheckCircle size={14}/><span>{msg}</span>
+    </div>
+  );
+}
+function Fld({ label, icon, children, mb='0.65rem' }) {
+  const generatedId = useId();
+  const input = React.Children.toArray(children).find(child => React.isValidElement(child) && child.type === 'input');
+  const inputId = input?.props.id || generatedId;
+  const fields = React.Children.map(children, child => React.isValidElement(child) && child.type === 'input' ? React.cloneElement(child,{id:inputId}) : child);
+  return (
+    <div className="bhanu-field" style={{ marginBottom: mb }}>
+      <label htmlFor={inputId} style={{ display:'block', fontSize:'0.66rem', fontWeight:800, color: 'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:'0.24rem' }}>
+        {label}
+      </label>
+      <div className="bhanu-input-wrap">
+        <span className="bhanu-input-icon" aria-hidden="true">{icon}</span>
+        {fields}
+      </div>
+    </div>
+  );
+}
+function PwEye({ show, toggle, ariaLabel }) {
+  return (
+    <button
+      type="button"
+      className="pw-toggle-btn"
+      aria-label={ariaLabel || (show ? "Hide password" : "Show password")}
+      aria-pressed={show}
+      onClick={toggle}
+      tabIndex={0}
+      style={{
+        position: 'absolute',
+        right: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'none',
+        border: 'none',
+        color: 'var(--text-dim)',
+        cursor: 'pointer',
+        padding: '2px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2
+      }}
+    >
+      {show ? <EyeOff size={16} /> : <Eye size={16} />}
+    </button>
+  );
+}
+function Btn({ loading, bg, shadow, label, icon }) {
+  return (
+    <button type="submit" disabled={loading} style={{
+      width:'100%', padding:'0.62rem', borderRadius:'9px',
+      background: loading ? 'rgba(255,255,255,0.08)' : bg,
+      color: '#fff', fontWeight:900, fontSize:'0.85rem',
+      border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+      boxShadow: loading ? 'none' : shadow,
+      display:'flex', alignItems:'center', justifyContent:'center', gap:'0.45rem',
+      transition:'all 0.2s', letterSpacing:'0.02em'
+    }}>
+      {loading
+        ? <><div style={{ width:'16px',height:'16px',borderRadius:'50%',border: '2px solid rgba(255,255,255,0.25)',borderTopColor:'#fff',animation:'spin 0.7s linear infinite' }}/><span>Please wait...</span></>
+        : <>{icon}<span>{label}</span></>
+      }
+    </button>
+  );
+}

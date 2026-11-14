@@ -335,6 +335,15 @@ export function AdminReports({
     }
   }, [inventory]);
 
+  const [localOrdersFallback, setLocalOrdersFallback] = useState(() => {
+    try {
+      const raw = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     const handleUpdate = (e) => {
       if (Array.isArray(e.detail) && e.detail.length > 0)
@@ -348,24 +357,43 @@ export function AdminReports({
             setLiveInventory(normalizeInventoryList(parsed));
           }
         } catch {}
+      } else if (e.key === 'gourmet_pos_past_orders_v2_inr' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setLocalOrdersFallback(parsed);
+        } catch {}
       }
     };
+    const handleOrdersUpdate = (e) => {
+      if (Array.isArray(e.detail)) setLocalOrdersFallback(e.detail);
+      else {
+        try {
+          const raw = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
+          if (raw) setLocalOrdersFallback(JSON.parse(raw));
+        } catch {}
+      }
+    };
+
     window.addEventListener('avsr-inventory-updated', handleUpdate);
+    window.addEventListener('avsr-orders-updated', handleOrdersUpdate);
+    window.addEventListener('avsr-invoices-updated', handleOrdersUpdate);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('avsr-inventory-updated', handleUpdate);
+      window.removeEventListener('avsr-orders-updated', handleOrdersUpdate);
+      window.removeEventListener('avsr-invoices-updated', handleOrdersUpdate);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
   const ordersData = useMemo(() => {
-    const sourceList = Array.isArray(invoicesData)
+    const sourceList = (Array.isArray(invoicesData) && invoicesData.length > 0)
       ? invoicesData
-      : (Array.isArray(pastOrders) ? pastOrders : []);
+      : ((Array.isArray(pastOrders) && pastOrders.length > 0) ? pastOrders : localOrdersFallback);
     const sorted = sortOrdersBySettlementTime(dedupeOrders(sourceList));
     if (!isBarMode) return sorted;
     return sorted.filter(isBarOrder);
-  }, [invoicesData, pastOrders, isBarMode]);
+  }, [invoicesData, pastOrders, localOrdersFallback, isBarMode]);
 
   const handleSelectPeriod = (periodId) => {
     setFilterPeriod(periodId);

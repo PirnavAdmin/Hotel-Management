@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChefHat,
   LayoutDashboard,
   Utensils,
+  ShoppingBag,
   Armchair,
   Users,
   Package,
   FileText,
   BarChart3,
+  CalendarDays,
   ShieldCheck,
   Settings,
   Wine,
@@ -16,12 +18,7 @@ import {
   GlassWater,
   Sparkles,
   ReceiptText,
-  Truck,
-  Calendar,
-  Tag,
-  Key,
   Clock,
-  UserCheck,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -43,6 +40,7 @@ export function AdminSidebar({
   onClose,
   onLogout,
   menuCount = 0,
+  takeawayCount = 0,
   tablesCount = 0,
   staffCount = 0,
   activeKOTCount = 0,
@@ -53,6 +51,55 @@ export function AdminSidebar({
   activeBarTab = "",
   setActiveBarTab,
 }) {
+  const getStoredSettings = () => {
+    try {
+      return JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+    } catch {
+      return {};
+    }
+  };
+
+  const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredSettings().logo || "");
+  const [liveName, setLiveName] = useState(() => {
+    const sName = getStoredSettings().restaurantName;
+    if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant") return sName.trim();
+    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
+    return sName || restaurantName || "Bhanu Bistro";
+  });
+  const [liveTagline, setLiveTagline] = useState(() => {
+    return getStoredSettings().tagline || restaurantTagline || "BAR & CAFE";
+  });
+
+  useEffect(() => {
+    if (restaurantLogo) setLiveLogo(restaurantLogo);
+    else setLiveLogo(getStoredSettings().logo || "");
+
+    if (restaurantName && restaurantName.trim().toLowerCase() !== "restaurant") {
+      setLiveName(restaurantName.trim());
+    }
+    if (restaurantTagline) setLiveTagline(restaurantTagline);
+  }, [restaurantLogo, restaurantName, restaurantTagline]);
+
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      const fresh = e?.detail || getStoredSettings();
+      if (fresh?.logo) setLiveLogo(fresh.logo);
+      else setLiveLogo(getStoredSettings().logo || restaurantLogo);
+
+      if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
+        setLiveName(fresh.restaurantName.trim());
+      }
+      if (fresh?.tagline) setLiveTagline(fresh.tagline);
+    };
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("restaurant-settings-updated", handleUpdate);
+    window.addEventListener("avsr-settings-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleUpdate);
+      window.removeEventListener("avsr-settings-updated", handleUpdate);
+    };
+  }, [restaurantLogo, restaurantName, restaurantTagline]);
   const navSections = [
     {
       title: "MAIN MENU",
@@ -81,6 +128,17 @@ export function AdminSidebar({
           badge: staffCount,
         },
         {
+          id: "takeaway",
+          label: "Takeaway Orders",
+          icon: ShoppingBag,
+          badge: takeawayCount > 0 ? takeawayCount : null,
+        },
+        {
+          id: "reservations",
+          label: "Table Reservations",
+          icon: CalendarDays,
+        },
+        {
           id: "kot",
           label: "Kitchen KOT",
           icon: ChefHat,
@@ -103,21 +161,6 @@ export function AdminSidebar({
           icon: ReceiptText,
         },
         {
-          id: "delivery",
-          label: "Delivery Orders",
-          icon: Truck,
-        },
-        {
-          id: "reservations",
-          label: "Reservations",
-          icon: Calendar,
-        },
-        {
-          id: "suppliers",
-          label: "Suppliers & PO",
-          icon: Package,
-        },
-        {
           id: "reports",
           label: "Reports",
           icon: BarChart3,
@@ -131,21 +174,6 @@ export function AdminSidebar({
           id: "customers",
           label: "Customers",
           icon: Users,
-        },
-        {
-          id: "attendance",
-          label: "Attendance",
-          icon: UserCheck,
-        },
-        {
-          id: "promotions",
-          label: "Promotions",
-          icon: Tag,
-        },
-        {
-          id: "roles",
-          label: "Roles & RBAC",
-          icon: Key,
         },
         {
           id: "logins",
@@ -228,10 +256,10 @@ export function AdminSidebar({
             flexShrink: 0,
           }}
         >
-          {restaurantLogo ? (
+          {liveLogo ? (
             <img
-              src={restaurantLogo}
-              alt="Restaurant logo"
+              src={liveLogo}
+              alt={liveName || "Restaurant logo"}
               style={{
                 width: "100%",
                 height: "100%",
@@ -256,7 +284,7 @@ export function AdminSidebar({
             }}
           >
             <span style={{ color: "var(--text-main)", letterSpacing: "0.2px" }}>
-              {restaurantName}
+              {liveName || "Bhanu Bistro"}
             </span>
           </div>
           <div
@@ -269,8 +297,8 @@ export function AdminSidebar({
             }}
           >
             {portalMode === "bar"
-              ? `${restaurantTagline || "Heaven Food"} \u2022 Bar`
-              : restaurantTagline || "Heaven Food"}
+              ? `${liveTagline || "BAR & CAFE"} \u2022 Bar`
+              : liveTagline || "BAR & CAFE"}
           </div>
         </div>
       </div>
