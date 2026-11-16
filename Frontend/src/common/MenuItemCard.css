@@ -1,0 +1,166 @@
+/* Shared Dine In and Takeaway menu card design. */
+.pos-menu-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.pos-menu-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.65);
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.24);
+}
+.pos-menu-card.is-unavailable { opacity: 0.58; cursor: not-allowed; border-color: rgba(239, 68, 68, 0.25); box-shadow: none; }
+.pos-menu-card.is-unavailable:hover { transform: none; border-color: rgba(239, 68, 68, 0.35); box-shadow: none; }
+.pos-menu-card.is-unavailable:hover .pos-menu-card-image img { transform: none; }
+.pos-menu-card.has-qty { border: 1.5px solid var(--accent-amber); box-shadow: 0 5px 16px rgba(245, 158, 11, 0.18); }
+.pos-menu-card-image {
+  position: relative;
+  flex: 0 0 92px;
+  height: 92px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+}
+.pos-menu-card-image-img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
+.pos-menu-card-image-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: .25; pointer-events: none; }
+.pos-menu-card-unavailable-overlay { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; background: var(--bg-glass); backdrop-filter: blur(1.5px); pointer-events: none; }
+.pos-menu-card-unavailable-overlay span,.pos-menu-unavailable-label {
+  padding: 3px 9px;
+  border: 1px solid rgba(239, 68, 68, .35);
+  border-radius: 6px;
+  background: rgba(220, 38, 38, .95);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.pos-menu-card-unavailable-overlay span { box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+.pos-menu-unavailable-label { background: rgba(239, 68, 68, .12); color: var(--danger); box-shadow: none; }
+.pos-menu-card-content {
+  display: flex;
+  min-width: 0;
+  min-height: 112px;
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: .4rem;
+  padding: .5rem .6rem .55rem;
+}
+.pos-menu-card-information { min-width: 0; }
+.pos-menu-card-title-row {
+  display: flex;
+  min-width: 0;
+  min-height: 2.2em;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .25rem;
+}
+.pos-menu-card-title {
+  display: -webkit-box;
+  min-width: 0;
+  max-height: 2.36em;
+  overflow: hidden;
+  margin: 0;
+  color: var(--text-main);
+  font-size: .76rem;
+  font-weight: 800;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.pos-menu-card-spice { display: flex; flex: 0 0 auto; color: var(--danger); }
+.pos-menu-card-description {
+  display: -webkit-box;
+  min-height: 1.6em;
+  max-height: 2.6em;
+  overflow: hidden;
+  margin: .2rem 0 0;
+  color: var(--text-muted);
+  font-size: .62rem;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.pos-menu-card-footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: .35rem;
+  margin-top: auto;
+  padding-top: .4rem;
+  border-top: 1px solid var(--border-subtle);
+}
+.pos-menu-card:hover .pos-menu-card-image img { transform: scale(1.045); }
+.pos-menu-card-price { flex: 0 0 auto; color: var(--accent-amber-light); font-size: .82rem; font-weight: 800; white-space: nowrap; }
+.pos-menu-add {
+  display: flex;
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .15rem;
+  padding: .25rem .45rem;
+  border: 0;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, .28);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 800;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+.pos-menu-add:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.pos-menu-qty {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .18rem;
+  padding: 2px 3px;
+  border: 1px solid var(--accent-amber);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+}
+.pos-menu-qty button { display: flex; width: 21px; height: 21px; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 4px; transition: background 140ms ease, transform 140ms ease; }
+.pos-menu-qty button:hover { transform: scale(1.05); }
+.pos-menu-qty button:first-child { background: var(--surface-tint); color: var(--text-main); }
+.pos-menu-qty button:last-child { background: var(--accent-amber); color: #000; }
+.pos-menu-qty-count { min-width: 17px; color: var(--accent-amber-light); font-size: .76rem; font-weight: 800; text-align: center; }
+.pos-menu-badge {
+  position: absolute; top: 5px; left: 5px; z-index: 2;
+  display: flex; align-items: center; gap: 3px; padding: 2px 4px;
+  border: 1px solid rgba(var(--surface-rgb), .1); border-radius: 3px;
+  background: rgba(0,0,0,.78); backdrop-filter: blur(4px); color: #fff;
+  font-size: .54rem; font-weight: 700;
+}
+.pos-menu-dietary-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.pos-menu-dietary-dot.is-veg { background: #10b981; }
+.pos-menu-dietary-dot.is-non-veg { background: #ef4444; }
+.pos-menu-chef {
+  position: absolute; top: 5px; right: 5px; z-index: 2;
+  display: flex; max-width: calc(100% - 10px); align-items: center; justify-content: center;
+  padding: 3px; border-radius: 4px; background: linear-gradient(135deg, #f59e0b, #ea580c);
+  box-shadow: 0 2px 5px rgba(0,0,0,.35); color: #fff;
+}
+.pos-menu-time {
+  position: absolute; right: 5px; bottom: 5px; z-index: 2;
+  display: flex; align-items: center; gap: 2px; padding: 1px 4px; border-radius: 3px;
+  background: rgba(0,0,0,.76); color: #fff; font-size: .52rem;
+}
+
+@media (max-width: 760px) {
+  .pos-menu-card-image { height: 84px; flex-basis: 84px; }
+  .pos-menu-card-title { font-size: .72rem; }
+  .pos-menu-card-description { font-size: .59rem; }
+}
+@media (max-width: 420px) {
+  .pos-menu-card-price { font-size: .82rem; }
+  .pos-menu-add { padding: .25rem .42rem; font-size: .62rem; }
+}

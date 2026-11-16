@@ -758,7 +758,7 @@ textarea {
   }
 
   .responsive-order-detail-layout {
-    height: calc(100dvh - 64px) !important;
+    height: calc(100dvh - 136px) !important;
     min-height: 0 !important;
   }
 

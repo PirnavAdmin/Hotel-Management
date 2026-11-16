@@ -2342,6 +2342,12 @@ export default defineConfig(({ mode }) => {
         ],
       },
       proxy: {
+        "/hubs": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
         "^/__backend_api": {
           target: backendTarget,
           changeOrigin: true,

@@ -30,6 +30,7 @@ import {
   isDrinkItem,
 } from "../kot/orderRouting";
 import { getBusinessDayKey } from "../utils/invoiceCounter";
+import { subscribeToRealtimeEvents } from "../realtime/realtimeService";
 
 function safeText(value) {
   return String(value ?? "").replace(
@@ -130,7 +131,7 @@ export function BarBOTView({
     };
   }, []);
 
-  // Poll active backend tickets & summary
+  // Load active tickets initially, then refresh only for actual backend BOT events.
   const fetchTickets = useCallback(async () => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
@@ -174,8 +175,23 @@ export function BarBOTView({
 
   useEffect(() => {
     fetchTickets();
-    const interval = setInterval(fetchTickets, 5000);
-    return () => clearInterval(interval);
+    const botEvents = new Set([
+      "ReceiveNewBOT", "ReceiveBarKotCreated", "ReceiveBarKotUpdated",
+      "ReceiveBarKotTableUpdated", "ReceiveBarKotItemUpdated", "BarKotCancelled",
+    ]);
+    let timer;
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (!botEvents.has(name)) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(fetchTickets, 180);
+    });
+    const refreshOnReconnect = () => fetchTickets();
+    window.addEventListener("avsr:realtime-reconnected", refreshOnReconnect);
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", refreshOnReconnect);
+    };
   }, [fetchTickets]);
 
   // The backend BOT ticket feed is authoritative; table state supplies labels only.

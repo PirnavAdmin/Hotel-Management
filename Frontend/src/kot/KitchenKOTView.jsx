@@ -36,6 +36,7 @@ import { createMenuItemLookup, findMenuItem, isBeverageCategory, isDrinkItem } f
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { SkeletonOrderTicket } from "../common/Skeletons";
+import { subscribeToRealtimeEvents } from "../realtime/realtimeService";
 import {
   parseTimeToSeconds,
   formatElapsedTimer,
@@ -134,10 +135,29 @@ export function KitchenKOTView({
     };
     refreshKitchenTicketsRef.current = refresh;
     refresh();
-    const intervalId = window.setInterval(refresh, 7000);
+    const syncEventNames = new Set([
+      "ReceiveNewKOT", "KotOrderCreated", "KotOrderUpdated", "KotOrderCancelled",
+      "KotItemAdded", "KotItemUpdated", "KotItemDeleted", "ReceiveNewBOT",
+      "ReceiveBarKotCreated", "BarKotCancelled", "ReceiveBarKotUpdated",
+      "ReceiveBarKotTableUpdated", "ReceiveBarKotItemUpdated",
+    ]);
+    let refreshTimer = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        refreshKitchenTicketsRef.current?.();
+      }, 160);
+    };
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (syncEventNames.has(name)) scheduleRefresh();
+    });
+    window.addEventListener("avsr:realtime-reconnected", scheduleRefresh);
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", scheduleRefresh);
       refreshKitchenTicketsRef.current = null;
     };
   }, []);

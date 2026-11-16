@@ -41,6 +41,7 @@ import {
   apiGetAdminTakeawayInvoice,
 } from "../api/takeawayAdminApi";
 import { ReceiptModal, formatOrderNumber } from "../user/ReceiptModal";
+import { subscribeToRealtimeEvents } from "../realtime/realtimeService";
 
 function getTakeawayOrderTotal(order) {
   return Number(order?.totalAmount ?? order?.grandTotal ?? order?.amount ?? 0);
@@ -109,7 +110,7 @@ export function AdminTakeaway({
     };
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = async ({ quiet = false } = {}) => {
     setIsRefreshing(true);
     try {
       const [ordersResult, summaryResult] = await Promise.all([
@@ -121,7 +122,7 @@ export function AdminTakeaway({
       setOrders((Array.isArray(ordersResult.data) ? ordersResult.data : []).map(normalizeOrder));
       setSummary(summaryResult.data || null);
     } catch (error) {
-      alert(error?.message || "Could not load takeaway orders.");
+      if (!quiet) alert(error?.message || "Could not load takeaway orders.");
     } finally {
       setIsRefreshing(false);
     }
@@ -129,6 +130,27 @@ export function AdminTakeaway({
   useEffect(() => {
     handleRefresh();
   }, []);  // --- Filtering & Tab State ---
+  useEffect(() => {
+    let timer = null;
+    const scheduleRefresh = () => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        handleRefresh({ quiet: true });
+      }, 180);
+    };
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (["TakeawayOrderCreated", "TakeawayStatusUpdated", "TakeawayOrderCancelled", "KotOrderUpdated", "KotItemUpdated"].includes(name)) {
+        scheduleRefresh();
+      }
+    });
+    window.addEventListener("avsr:realtime-reconnected", scheduleRefresh);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", scheduleRefresh);
+    };
+  }, []);
   const [activeTabStatus, setActiveTabStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");

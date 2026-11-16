@@ -348,6 +348,7 @@ export function setSession(session, token = null) {
       logoutUser();
     }
   } catch {}
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("avsr-auth-changed"));
 }
 
 export function logoutUser() {
@@ -368,6 +369,7 @@ export function logoutUser() {
       sessionStorage.removeItem(key);
     });
   } catch {}
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("avsr-auth-changed"));
 }
 
 export function isAllowedForRoute(session, route) {
