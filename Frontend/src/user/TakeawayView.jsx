@@ -1,9 +1,6 @@
 import { SearchableSelect } from "../common/SearchableSelect";
-<<<<<<< HEAD
 import "./TakeawayView.css";
-=======
 import "../common/MenuCatalogLayout.css";
->>>>>>> d419e0ff97fae54e8a8ad3afd35afe8785610836
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircle2, Clock, ChefHat, LoaderCircle, RefreshCw, Eye, ReceiptText, Send } from "lucide-react";
@@ -213,7 +210,6 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   useEffect(() => {
     refreshTakeawayOrders();
     refreshTakeawayHistory();
-<<<<<<< HEAD
     let refreshTimer = null;
     let shouldRefreshHistory = false;
     const scheduleOrderRefresh = (includeHistory = false) => {
@@ -232,28 +228,22 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
       }
     });
     const handleReconnect = () => scheduleOrderRefresh(true);
-    window.addEventListener("avsr:realtime-reconnected", handleReconnect);
-    return () => {
-      if (refreshTimer) window.clearTimeout(refreshTimer);
-      unsubscribe();
-      window.removeEventListener("avsr:realtime-reconnected", handleReconnect);
-=======
-    const intervalId = window.setInterval(refreshTakeawayOrders, 4000);
-
     const handleSync = () => {
-      refreshTakeawayOrders();
-      refreshTakeawayHistory();
+      scheduleOrderRefresh(true);
     };
+
+    window.addEventListener("avsr:realtime-reconnected", handleReconnect);
     window.addEventListener("avsr-takeaway-updated", handleSync);
     window.addEventListener("avsr-kot-updated", handleSync);
     window.addEventListener("storage", handleSync);
 
     return () => {
-      window.clearInterval(intervalId);
+      if (refreshTimer) window.clearTimeout(refreshTimer);
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", handleReconnect);
       window.removeEventListener("avsr-takeaway-updated", handleSync);
       window.removeEventListener("avsr-kot-updated", handleSync);
       window.removeEventListener("storage", handleSync);
->>>>>>> d419e0ff97fae54e8a8ad3afd35afe8785610836
     };
   }, []);
 
