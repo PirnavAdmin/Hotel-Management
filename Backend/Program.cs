@@ -46,15 +46,14 @@ try
     using var testConn = new MySqlConnector.MySqlConnection(connectionString);
     testConn.Open();
 }
-catch (MySqlConnector.MySqlException ex) when (ex.Number == 1045) // Access Denied
+catch (MySqlConnector.MySqlException ex)
 {
-    Console.WriteLine("[Database] Configured credentials failed (Error 1045: Access Denied). Attempting fallback credentials...");
+    Console.WriteLine($"[Database] Configured credentials failed ({ex.Message}). Attempting fallback credentials...");
     var fallbackCandidates = new[]
     {
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
+        "Server=localhost;Port=3306;Database=hoteldb;User=hoteldbuser;Password=Pirnav@2026;CharSet=utf8mb4;",
         "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
         "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=Mamatha@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
         "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=root;CharSet=utf8mb4;",
         "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=;CharSet=utf8mb4;"
     };
