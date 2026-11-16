@@ -83,10 +83,12 @@ import {
 import {
   apiAdjustStock,
   apiCreateInventoryPurchase,
+  apiGetInventory,
   apiGetInventoryPurchases,
 } from "./api/inventoryApi";
 import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymentApi";
-import { API_BASE_URL, API_SYNC_BASE } from "./api/apiConfig";
+import { API_SYNC_BASE } from "./api/apiConfig";
+import { getRealtimeConnectionStatus, subscribeToSseMessages, subscribeToRealtimeEvents } from "./realtime/realtimeService";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
 import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
@@ -579,8 +581,6 @@ export function App() {
     };
     loadInitialSettings();
 
-    let localEvents = null;
-    let remoteEvents = null;
     const handleSettingsMsg = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -588,23 +588,11 @@ export function App() {
       } catch {}
     };
 
-    try {
-      localEvents = new EventSource("/api/events");
-      localEvents.onmessage = handleSettingsMsg;
-    } catch {}
-
-    if (!import.meta.env.DEV && API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-      try {
-        remoteEvents = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
-        remoteEvents.onmessage = handleSettingsMsg;
-        remoteEvents.onerror = () => { try { remoteEvents?.close(); } catch {} };
-      } catch {}
-    }
+    const unsubscribe = subscribeToSseMessages(handleSettingsMsg);
 
     return () => {
       active = false;
-      try { localEvents?.close(); } catch {}
-      try { remoteEvents?.close(); } catch {}
+      unsubscribe();
     };
   }, []);
 
@@ -1416,6 +1404,7 @@ export function App() {
 
     // 1. Fetch initial network DB state on startup (same-origin host with fallback)
     const fetchInitialDbState = async () => {
+      if (!getRealtimeConnectionStatus().connected) return;
       const data = await requestSharedNetworkState();
       if (!data || isCancelled) return;
         if (!data) return;
@@ -1499,17 +1488,18 @@ export function App() {
     };
     fetchInitialDbState();
 
-    // 2. Connect to realtime SSE stream push for instant multi-device updates
-    let localEs = null;
-    let remoteEs = null;
-
+    // 2. Subscribe to the app-wide SSE connection. The provider owns the
+    // single EventSource and reconnect lifecycle for this authenticated session.
     const handleSseMessage = (e) => {
         try {
           const parsedMsg = JSON.parse(e.data);
+          if (parsedMsg.type === "connected" || parsedMsg.type === "heartbeat") return;
           const payload = parsedMsg.payload;
           if (!payload) return;
 
-          const incomingTables = payload.tables ?? payload.data?.tables ?? payload[STORAGE_KEY_TABLES];
+          const incomingTables = (parsedMsg.type === "SYNC_TABLES" || parsedMsg.type === "SYNC") && Array.isArray(payload)
+            ? payload
+            : payload.tables ?? payload.data?.tables ?? payload[STORAGE_KEY_TABLES];
         if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
             const clean = mergeIncomingTables(incomingTables, freshDel);
@@ -1518,11 +1508,15 @@ export function App() {
               localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
             } catch {}
           }
-          const incomingOrders = payload.pastOrders ?? payload[STORAGE_KEY_ORDERS];
+          const incomingOrders = (parsedMsg.type === "SYNC_ORDERS" || parsedMsg.type === "SYNC") && Array.isArray(payload)
+            ? payload
+            : payload.pastOrders ?? payload[STORAGE_KEY_ORDERS];
           if (Array.isArray(incomingOrders)) {
             setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
           }
-          const incomingMenu = payload.menuItems ?? payload[STORAGE_KEY_MENU];
+          const incomingMenu = (parsedMsg.type === "SYNC_MENU" || parsedMsg.type === "SYNC") && Array.isArray(payload)
+            ? payload
+            : payload.menuItems ?? payload[STORAGE_KEY_MENU];
           if (Array.isArray(incomingMenu)) {
             let savedMenuForRecipes = [];
             try {
@@ -1662,21 +1656,71 @@ export function App() {
               showToast(`🔔 Table ${tblId}: Food is READY to be served!`);
             }
           }
+          if (["KOT_CREATED", "KOT_STATUS_UPDATED", "KOT_ITEM_UPDATED"].includes(parsedMsg.type)) {
+            window.dispatchEvent(new CustomEvent("avsr:kot-updated", { detail: { type: parsedMsg.type, payload } }));
+          }
         } catch {}
       };
 
-    try {
-      localEs = new EventSource("/api/events");
-      localEs.onmessage = handleSseMessage;
-    } catch {}
+    const unsubscribeSse = subscribeToSseMessages(handleSseMessage);
 
-    if (!import.meta.env.DEV && API_BASE_URL && typeof window !== "undefined" && !window.location.origin.includes(API_BASE_URL.replace(/https?:\/\//, ""))) {
-      try {
-        remoteEs = new EventSource(`${API_BASE_URL.replace(/\/$/, "")}/api/events`);
-        remoteEs.onmessage = handleSseMessage;
-        remoteEs.onerror = () => { try { remoteEs?.close(); } catch {} };
-      } catch {}
-    }
+    const handleRealtimeEvent = ({ name, payload }) => {
+      if (name === "OrderUpdated" && payload?.tableId != null && Array.isArray(payload.items)) {
+        setTables((current) => current.map((table) => String(table.id) === String(payload.tableId)
+          ? { ...table, items: payload.items, grandTotal: payload.grandTotal ?? table.grandTotal }
+          : table));
+      } else if (name === "TableStatusUpdated" && payload?.tableId != null) {
+        setTables((current) => current.map((table) => String(table.id) === String(payload.tableId)
+          ? { ...table, status: payload.status ?? table.status, activeKOTCount: payload.activeKOTCount ?? table.activeKOTCount, grandTotal: payload.orderTotal ?? table.grandTotal }
+          : table));
+      } else if (name === "KitchenStatusAlert" && payload && typeof payload === "object") {
+        const alert = sanitizeKitchenAlert({
+          id: payload.id || `realtime-${payload.tableId ?? "order"}-${payload.type || "status"}-${payload.title || "update"}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
+          read: false,
+          ...payload,
+        });
+        setKitchenNotifications((previous) => {
+          if (previous.some((notification) => String(notification.id) === String(alert.id))) return previous;
+          const updated = [alert, ...previous].slice(0, 40);
+          try { localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+        setActiveKitchenAlert(alert);
+        if (alert.type === "cooking_completed") sounds.playBell();
+        else sounds.playAddItem();
+      } else if (name === "ReceiveInvoiceUpdated") {
+        window.dispatchEvent(new CustomEvent("avsr-invoices-updated", { detail: payload }));
+      }
+    };
+    const unsubscribeRealtime = subscribeToRealtimeEvents(handleRealtimeEvent);
+    window.addEventListener("avsr:realtime-reconnected", fetchInitialDbState);
+    let inventoryRefreshTimer = null;
+    const scheduleInventoryRefresh = () => {
+      if (inventoryRefreshTimer) window.clearTimeout(inventoryRefreshTimer);
+      inventoryRefreshTimer = window.setTimeout(async () => {
+        inventoryRefreshTimer = null;
+        try {
+          const response = await apiGetInventory();
+          const rows = Array.isArray(response?.data?.data)
+            ? response.data.data
+            : Array.isArray(response?.data)
+              ? response.data
+              : Array.isArray(response?.inventory)
+                ? response.inventory
+                : null;
+          if (!response?.success || !rows) return;
+          localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(rows));
+          window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: rows }));
+        } catch {}
+      }, 180);
+    };
+    const handleInventoryRealtime = ({ name }) => {
+      if (["ReceiveInventoryCreated", "ReceiveInventoryUpdated", "ReceiveInventoryDeleted"].includes(name)) {
+        scheduleInventoryRefresh();
+      }
+    };
+    const unsubscribeInventoryRealtime = subscribeToRealtimeEvents(handleInventoryRealtime);
 
     const handleStorageChange = (e) => {
       if (!e || !e.key) {
@@ -1894,8 +1938,11 @@ export function App() {
       window.removeEventListener("avsr-kot-updated", syncAllFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
-      try { localEs?.close(); } catch {}
-      try { remoteEs?.close(); } catch {}
+      unsubscribeSse();
+      unsubscribeRealtime();
+      unsubscribeInventoryRealtime();
+      if (inventoryRefreshTimer) window.clearTimeout(inventoryRefreshTimer);
+      window.removeEventListener("avsr:realtime-reconnected", fetchInitialDbState);
     };
   }, []);
 

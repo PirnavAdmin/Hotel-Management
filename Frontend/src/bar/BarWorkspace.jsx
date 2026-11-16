@@ -47,6 +47,7 @@ import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import { BAR_CATEGORIES, BAR_DRINK_SUBCATEGORIES, mergeBarDrinkCategories, normalizeBarDrinkCategory } from "./barDrinkCategories";
 import { BAR_INVENTORY_CATEGORIES, isLegacyBarInventoryCategory, normalizeBarInventoryCategory } from "./barInventoryCategories";
 import { BAR_SERVING_MEASURES, mergeBarServingMeasures, normalizeBarServingMeasure } from "./barServingMeasures";
+import { subscribeToRealtimeEvents } from "../realtime/realtimeService";
 export { BAR_CATEGORIES } from "./barDrinkCategories";
 export { BAR_SERVING_MEASURES };
 
@@ -4538,17 +4539,22 @@ function BarTablesView({
   // Fetch live bar tables from backend API
   useEffect(() => {
     let isMounted = true;
-    apiGetBarTables()
-      .then((res) => {
+    const refreshTables = () => {
+      apiGetBarTables().then((res) => {
         if (!isMounted) return;
         const fetched = res?.data || res?.tables;
         if (Array.isArray(fetched) && fetched.length > 0) {
           setLiveBarTables(fetched);
         }
-      })
-      .catch((err) => {
+      }).catch((err) => {
         console.warn("[BarTablesView] apiGetBarTables offline/fallback:", err?.message);
       });
+    };
+    refreshTables();
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (["ReceiveBarTableCreated", "ReceiveBarTableUpdated", "ReceiveBarTableDeleted"].includes(name)) refreshTables();
+    });
+    window.addEventListener("avsr:realtime-reconnected", refreshTables);
 
     apiGetBarTableAreas()
       .then((res) => {
@@ -4563,6 +4569,8 @@ function BarTablesView({
 
     return () => {
       isMounted = false;
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", refreshTables);
     };
   }, []);
 
@@ -5871,7 +5879,7 @@ function BarStaffView({
 
   useEffect(() => {
     let isMounted = true;
-    apiGetBarStaffFilterOptions()
+    const refreshStaffOptions = () => apiGetBarStaffFilterOptions()
       .then((res) => {
         if (!isMounted) return;
         if (res?.success && res?.data) {
@@ -5881,6 +5889,11 @@ function BarStaffView({
       .catch((err) => {
         console.warn("[BarStaffView] apiGetBarStaffFilterOptions error:", err?.message);
       });
+    refreshStaffOptions();
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (["ReceiveBarStaffCreated", "ReceiveBarStaffUpdated", "ReceiveBarStaffDeleted"].includes(name)) refreshStaffOptions();
+    });
+    window.addEventListener("avsr:realtime-reconnected", refreshStaffOptions);
 
     apiGetAssignableTables()
       .then((res) => {
@@ -5896,6 +5909,8 @@ function BarStaffView({
 
     return () => {
       isMounted = false;
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", refreshStaffOptions);
     };
   }, []);
 
@@ -7336,8 +7351,22 @@ export function BarWorkspace({
   useEffect(() => {
     if (route === "bar-overview") {
       loadBarOverview();
-      const timer = window.setInterval(loadBarOverview, 15000);
-      return () => window.clearInterval(timer);
+      const overviewEvents = new Set([
+        "ReceiveBarDrinkCreated", "ReceiveBarDrinkUpdated", "ReceiveBarDrinkDeleted",
+        "ReceiveBarTableCreated", "ReceiveBarTableUpdated", "ReceiveBarTableDeleted",
+        "ReceiveBarStaffCreated", "ReceiveBarStaffUpdated", "ReceiveBarStaffDeleted",
+        "ReceiveBarKotUpdated", "ReceiveBarKotTableUpdated", "ReceiveBarKotItemUpdated",
+        "ReceiveInventoryCreated", "ReceiveInventoryUpdated", "ReceiveInventoryDeleted",
+        "ReceiveInvoiceUpdated",
+      ]);
+      const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+        if (overviewEvents.has(name)) loadBarOverview();
+      });
+      window.addEventListener("avsr:realtime-reconnected", loadBarOverview);
+      return () => {
+        unsubscribe();
+        window.removeEventListener("avsr:realtime-reconnected", loadBarOverview);
+      };
     }
   }, [route, loadBarOverview]);
 
@@ -7386,6 +7415,14 @@ export function BarWorkspace({
 
   useEffect(() => {
     loadBarDrinks();
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (["ReceiveBarDrinkCreated", "ReceiveBarDrinkUpdated", "ReceiveBarDrinkDeleted"].includes(name)) loadBarDrinks();
+    });
+    window.addEventListener("avsr:realtime-reconnected", loadBarDrinks);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", loadBarDrinks);
+    };
   }, [loadBarDrinks]);
 
   // Requirement 2: Automatic synchronization between Dine Menu and Drinks Menu
@@ -7588,8 +7625,24 @@ export function BarWorkspace({
   }, []);
   useEffect(() => {
     loadOrders();
-    const timer = window.setInterval(loadOrders, 15000);
-    return () => window.clearInterval(timer);
+    const orderEvents = new Set([
+      "OrderUpdated", "TableStatusUpdated", "TakeawayOrderCreated",
+      "TakeawayStatusUpdated", "TakeawayOrderCancelled", "KotOrderUpdated",
+      "KotOrderCancelled", "KotItemAdded", "KotItemUpdated", "KotItemDeleted",
+    ]);
+    let timer;
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      if (!orderEvents.has(name)) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(loadOrders, 180);
+    });
+    const refreshOnReconnect = () => loadOrders();
+    window.addEventListener("avsr:realtime-reconnected", refreshOnReconnect);
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", refreshOnReconnect);
+    };
   }, [loadOrders]);
   useEffect(() => { setInventory(Array.isArray(sharedInventory) ? sharedInventory : []); }, [sharedInventory]);
   const loadInventory = useCallback(async () => {

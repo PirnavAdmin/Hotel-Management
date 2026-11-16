@@ -74,7 +74,8 @@ import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateIngredient } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
-import { API_BASE_URL, API_SYNC_BASE, openOptionalEventStream } from "../api/apiConfig";
+import { API_SYNC_BASE } from "../api/apiConfig";
+import { subscribeToSseMessages } from "../realtime/realtimeService";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -977,22 +978,19 @@ export function AdminPortal({
       })
       .catch(() => {});
 
-    const events = openOptionalEventStream();
-    if (events) {
-      events.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          const settings =
-            message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
-            message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
-          if (settings) applySettings(settings);
-        } catch {}
-      };
-    }
+    const unsubscribe = subscribeToSseMessages((event) => {
+      try {
+        const message = JSON.parse(event.data);
+        const settings =
+          message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
+        if (settings) applySettings(settings);
+      } catch {}
+    });
 
     return () => {
       active = false;
-      events?.close();
+      unsubscribe();
     };
   }, []);
 

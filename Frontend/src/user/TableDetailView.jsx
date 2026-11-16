@@ -1732,6 +1732,7 @@ import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper
 import { SkeletonMenuCard, SkeletonText, SkeletonAvatar, SkeletonButton } from "../common/Skeletons";
 import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 import MenuItemVisual from "../common/MenuItemVisual";
+import { MenuItemCard } from "../common/MenuItemCard";
 import "../common/MenuCatalogLayout.css";
 
 const CATEGORY_ICONS = {
@@ -1996,8 +1997,8 @@ export function TableDetailView({
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "calc(100vh - 68px)",
-        minHeight: "600px",
+        height: "calc(100dvh - 112px)",
+        minHeight: "0",
         overflow: "hidden",
       }}
     >
@@ -2010,7 +2011,7 @@ export function TableDetailView({
           min-height: 0;
           overflow-y: auto;
           overflow-x: auto;
-          padding: 0.65rem;
+          padding: 0.45rem;
           background: var(--bg-primary);
         }
 
@@ -2018,7 +2019,9 @@ export function TableDetailView({
           width: 100%;
           border-collapse: collapse;
           text-align: left;
-          font-size: 0.84rem;
+          min-width: 760px;
+          table-layout: fixed;
+          font-size: 0.8rem;
           background: var(--bg-secondary);
         }
 
@@ -2033,12 +2036,12 @@ export function TableDetailView({
         }
 
         .pos-menu-table th {
-          padding: 0.65rem 0.85rem;
+          padding: 0.45rem 0.6rem;
           white-space: nowrap;
         }
 
         .pos-menu-table td {
-          padding: 0.65rem 0.85rem;
+          padding: 0.45rem 0.6rem;
           border-bottom: 1px solid var(--border-subtle);
           vertical-align: middle;
         }
@@ -2073,208 +2076,68 @@ export function TableDetailView({
           overflow-y: auto;
           padding: 0.5rem;
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 126px), 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
           grid-auto-rows: min-content;
-          gap: 0.4rem;
+          gap: 0.55rem;
           align-content: start;
           background: var(--bg-primary);
         }
 
-        .pos-menu-card {
-          background: var(--bg-secondary);
-          border-radius: 8px;
-          border: 1px solid var(--border-subtle);
-          box-shadow: var(--shadow-sm);
-          transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+        .pos-menu-table-add {
+          min-height: 32px !important;
+          padding: 0.35rem 0.65rem !important;
+          border-radius: 7px !important;
+          font-size: 0.76rem !important;
         }
 
-        .pos-menu-card:hover {
-          transform: translateY(-2px);
-          border-color: rgba(245, 158, 11, 0.65);
-          box-shadow: 0 7px 18px rgba(0,0,0,0.24);
+        .pos-table-menu-toolbar {
+          flex-wrap: nowrap !important;
+          gap: 0.45rem !important;
+          overflow-x: auto;
+          padding: 0.55rem 0.75rem !important;
+          scrollbar-width: thin;
         }
 
-        .pos-menu-card.is-unavailable {
-          opacity: 0.58;
-          cursor: not-allowed;
-          border-color: rgba(239, 68, 68, 0.25);
-          box-shadow: none;
+        .pos-table-menu-toolbar > * { flex: 0 0 auto; }
+        .pos-table-menu-toolbar button { min-height: 32px !important; padding: 0.35rem 0.55rem !important; }
+        .pos-table-menu-toolbar input,
+        .pos-table-menu-toolbar select { height: 36px !important; font-size: 0.78rem !important; }
+        .pos-menu-search-control {
+          flex: 1 1 180px !important;
+          min-width: 150px !important;
+          max-width: 320px !important;
         }
+        .pos-menu-category-filter { max-width: 180px; }
+        .pos-menu-category-filter select { max-width: 180px; }
+        .pos-menu-dietary-filters { flex-wrap: nowrap !important; gap: 0.25rem !important; }
 
-        .pos-menu-card.is-unavailable:hover {
-          transform: none !important;
-          border-color: rgba(239, 68, 68, 0.35) !important;
-          box-shadow: none !important;
-        }
+        .pos-table-info-strip { padding: 0.45rem 0.9rem !important; gap: 0.55rem !important; }
+        .pos-table-info-strip > div { gap: 0.55rem !important; }
+        .pos-categories-sidebar { width: 168px !important; }
+        .pos-categories-header { padding: 0.7rem !important; }
+        .pos-categories-list { padding: 0.35rem !important; gap: 0.15rem; }
+        .pos-category-btn { min-height: 36px; padding: 0.45rem 0.55rem !important; }
 
-        .pos-menu-card.is-unavailable:hover .pos-menu-card-image img {
-          transform: none !important;
-        }
-
-        .pos-menu-card.has-qty {
-          border: 1.5px solid var(--accent-amber);
-          box-shadow: 0 5px 16px rgba(245, 158, 11, 0.18);
-        }
-
-        .pos-menu-card-image {
-          background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
-        }
-
-        .pos-menu-card:hover .pos-menu-card-image img {
-          transform: scale(1.045);
-        }
-
-        .pos-menu-card-title-row {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 0.25rem;
-          min-width: 0;
-        }
-
-        .pos-menu-card-title {
-          margin: 0;
-          font-size: 0.76rem;
-          font-weight: 800;
-          color: var(--text-main);
-          line-height: 1.18;
-        }
-
-        .pos-menu-card-description {
-          font-size: 0.62rem;
-          color: var(--text-muted);
-        }
-
-        .pos-menu-card-price {
-          font-size: 0.82rem;
-          font-weight: 800;
-          color: var(--accent-amber-light);
-          white-space: nowrap;
-          flex: 0 0 auto;
-        }
-
-        .pos-menu-add {
-          flex: 0 0 auto;
-          display: flex;
-          align-items: center;
-          gap: 0.15rem;
-          padding: 0.25rem 0.45rem;
-          min-height: 24px;
-          border-radius: 4px;
-          background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-          color: #fff;
-          font-weight: 800;
-          font-size: 0.65rem;
-          box-shadow: 0 2px 6px rgba(245, 158, 11, 0.28);
-          transition: transform 140ms ease, filter 140ms ease;
-        }
-
-        .pos-menu-add:hover {
-          filter: brightness(1.08);
-          transform: translateY(-1px);
-        }
-
-        .pos-menu-qty {
-          flex: 0 0 auto;
-          display: flex;
-          align-items: center;
-          gap: 0.18rem;
-          background: var(--bg-tertiary);
-          padding: 2px 3px;
-          border-radius: 6px;
-          border: 1px solid var(--accent-amber);
-        }
-
-        .pos-menu-qty button {
-          width: 21px;
-          height: 21px;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background 140ms ease, transform 140ms ease;
-        }
-
-        .pos-menu-qty button:hover {
-          transform: scale(1.05);
-        }
-
-        .pos-menu-qty-count {
-          font-weight: 800;
-          font-size: 0.76rem;
-          min-width: 17px;
-          text-align: center;
-          color: var(--accent-amber-light);
-        }
-
-        .pos-menu-badge {
-          position: absolute;
-          top: 5px;
-          left: 5px;
-          z-index: 2;
-          background: rgba(0,0,0,0.78);
-          backdrop-filter: blur(4px);
-          padding: 2px 4px;
-          border-radius: 3px;
-          display: flex;
-          align-items: center;
-          gap: 3px;
-          font-size: 0.54rem;
-          font-weight: 700;
-          color: #fff;
-          border: 1px solid rgba(var(--surface-rgb),0.1);
-        }
-
-        .pos-menu-chef {
-          position: absolute;
-          top: 5px;
-          right: 5px;
-          z-index: 2;
-          max-width: calc(100% - 10px);
-          background: linear-gradient(135deg, #f59e0b, #ea580c);
-          color: #fff;
-          padding: 3px;
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.35);
-        }
-
-        .pos-menu-time {
-          position: absolute;
-          bottom: 5px;
-          right: 5px;
-          z-index: 2;
-          background: rgba(0,0,0,0.76);
-          color: #fff;
-          padding: 1px 4px;
-          border-radius: 3px;
-          font-size: 0.52rem;
-          display: flex;
-          align-items: center;
-          gap: 2px;
+        @media (max-width: 1100px) {
+          .responsive-order-detail-layout { height: calc(100dvh - 112px); }
+          .pos-categories-sidebar { width: 145px !important; }
+          .pos-menu-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 155px), 1fr)); }
         }
 
         @media (max-width: 760px) {
-          .pos-menu-card-title {
-            font-size: 0.72rem;
+          .responsive-order-detail-layout { height: calc(100dvh - 150px) !important; }
+          .pos-table-info-strip { padding: 0.4rem 0.55rem !important; }
+          .pos-table-menu-toolbar { gap: 0.35rem !important; }
+          .pos-categories-sidebar {
+            width: 100% !important; height: auto !important; max-height: 52px !important;
+            border-right: none !important; border-bottom: 1px solid var(--border-subtle) !important;
+            flex-direction: row !important; overflow-x: auto !important; white-space: nowrap !important;
+            padding: 0.35rem 0.5rem !important; display: flex !important; flex-shrink: 0 !important;
           }
-
-          .pos-menu-card-description {
-            font-size: 0.59rem;
-          }
-        }
-
-        @media (max-width: 420px) {
-          .pos-menu-card-price {
-            font-size: 0.82rem;
-          }
-
-          .pos-menu-add {
-            padding: 0.25rem 0.42rem;
-            font-size: 0.62rem;
-          }
+          .pos-categories-header { display: none !important; }
+          .pos-categories-list { flex-direction: row !important; gap: 0.35rem !important; padding: 0 !important; }
+          .pos-category-btn { width: auto !important; min-height: 30px; padding: 0.35rem 0.7rem !important; border-radius: 20px !important; }
+          .pos-menu-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr)); }
         }
 
         @keyframes cartPulse {
@@ -2294,6 +2157,7 @@ export function TableDetailView({
 
       {/* Top Table Switcher Strip & Table Info Bar */}
       <div
+        className="pos-table-info-strip"
         style={{
           background: "var(--bg-secondary)",
           borderBottom: "1px solid var(--border-subtle)",
@@ -2974,13 +2838,13 @@ export function TableDetailView({
         >
           {/* Menu Search Bar */}
           <div
-            className="menu-catalog-controls"
+            className="menu-catalog-controls pos-table-menu-toolbar"
             style={{
-              padding: "0.85rem 1.25rem",
+              padding: "0.55rem 0.75rem",
               borderBottom: "1px solid var(--border-subtle)",
               display: "flex",
               alignItems: "center",
-              flexWrap: "wrap",
+              flexWrap: "nowrap",
               gap: "0.65rem",
               background: "var(--bg-secondary)",
               flexShrink: 0,
@@ -3038,6 +2902,7 @@ export function TableDetailView({
 
             {/* Search Input */}
             <div
+              className="pos-menu-search-control"
               style={{
                 position: "relative",
                 flex: "1 1 260px",
@@ -3048,7 +2913,7 @@ export function TableDetailView({
               <Search
                 size={16}
                 color="var(--text-dim)"
-                style={{ position: "absolute", left: "12px", top: "12px" }}
+                style={{ position: "absolute", left: "12px", top: "10px" }}
               />
               <input
                 type="text"
@@ -3086,7 +2951,7 @@ export function TableDetailView({
             </div>
 
             {/* Category Select Filter */}
-            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <div className="pos-menu-category-filter" style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -3115,6 +2980,7 @@ export function TableDetailView({
             <div
               role="group"
               aria-label="Filter dishes"
+              className="pos-menu-dietary-filters"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -3257,8 +3123,8 @@ export function TableDetailView({
                       {Array.from({ length: 6 }, (_, index) => (
                         <tr key={index}>
                           <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                              <SkeletonAvatar size={48} />
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
+                              <SkeletonAvatar size={40} />
                               <div style={{ flex: 1 }}>
                                 <SkeletonText width="50%" height="0.95rem" />
                                 <div style={{ marginTop: "4px" }}><SkeletonText width="80%" height="0.72rem" /></div>
@@ -3350,13 +3216,13 @@ export function TableDetailView({
                           >
                             {/* Dish Name */}
                             <td>
-                              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
                                 <div
                                   style={{
                                     position: "relative",
-                                    width: "48px",
-                                    height: "48px",
-                                    minWidth: "48px",
+                                    width: "40px",
+                                    height: "40px",
+                                    minWidth: "40px",
                                     borderRadius: "8px",
                                     overflow: "hidden",
                                     background: "var(--bg-tertiary)",
@@ -3508,6 +3374,7 @@ export function TableDetailView({
                               ) : currentQty === 0 ? (
                                 <button
                                   type="button"
+                                  className="pos-menu-table-add"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAddItem(item);
@@ -3667,247 +3534,21 @@ export function TableDetailView({
                 </div>
               ) : (
                 filteredMenuItems.map((item) => {
-                  const isAvailable = item.isAvailable !== false;
                   const currentQty = getItemQuantityInCart(item.id);
-
                   return (
-                    <div
+                    <MenuItemCard
                       key={item.id}
-                      className={`pos-menu-card ${currentQty > 0 ? "has-qty" : ""} ${!isAvailable ? "is-unavailable" : ""}`}
-                      onClick={() => {
-                        if (!isAvailable) return;
-                        handleOpenItemModal(item);
+                      item={item}
+                      quantity={currentQty}
+                      orderMode={orderMode}
+                      onOpen={handleOpenItemModal}
+                      onAdd={handleAddItem}
+                      onQuantityChange={(menuItem, nextQuantity) => {
+                        if (nextQuantity < currentQty) sounds.playRemoveItem();
+                        else sounds.playAddItem();
+                        onUpdateItemQuantity(table.id, menuItem.id, nextQuantity);
                       }}
-                      style={{
-                        cursor: isAvailable ? "pointer" : "not-allowed",
-                        opacity: isAvailable ? 1 : 0.6,
-                        filter: isAvailable ? "none" : "grayscale(25%)",
-                        position: "relative",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      {/* Item Image with culinary tags */}
-                      <div className="pos-menu-card-image" style={{ position: "relative" }}>
-                        {orderMode === "bar" ? <MenuItemVisual item={item} className="pos-menu-card-image-img" style={{ position: "absolute", inset: 0, zIndex: 1, filter: isAvailable ? "none" : "grayscale(35%)" }} /> : (
-                          <img
-                            src={getMenuItemImage(item)}
-                            alt={item.name}
-                            loading="lazy"
-                            className="pos-menu-card-image-img"
-                            onError={(e) => handleDishImageError(e, item)}
-                            style={{
-                              filter: isAvailable ? "none" : "grayscale(35%)",
-                            }}
-                          />
-                        )}
-
-                        {/* Fallback Icon when image loading */}
-                        {orderMode !== "bar" && <div
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            zIndex: 0,
-                            opacity: 0.25,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            pointerEvents: "none",
-                          }}
-                        >
-                          <Utensils size={36} color="var(--accent-amber)" />
-                        </div>}
-
-                        {/* Unavailable Overlay Badge */}
-                        {!isAvailable && (
-                          <div
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              background: "var(--bg-glass)",
-                              backdropFilter: "blur(1.5px)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              zIndex: 2,
-                              pointerEvents: "none",
-                            }}
-                          >
-                            <span
-                              style={{
-                                background: "rgba(220, 38, 38, 0.95)",
-                                color: "#ffffff",
-                                fontSize: "0.72rem",
-                                fontWeight: 800,
-                                padding: "3px 9px",
-                                borderRadius: "6px",
-                                letterSpacing: "0.06em",
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              Unavailable
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Veg / Non-Veg Indicator badge */}
-                        <div className="pos-menu-badge">
-                          <span
-                            style={{
-                              width: "7px",
-                              height: "7px",
-                              borderRadius: "50%",
-                              background: (item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "#10b981" : "#ef4444",
-                              display: "inline-block",
-                            }}
-                          />
-                          <span>{(item.dietaryType?.toUpperCase() === "VEG" || item.isVeg) ? "VEG" : "NON-VEG"}</span>
-                        </div>
-
-                        {/* Chef Special Badge */}
-                        {Boolean(item.isChefSpecial || item.isChefsSpecial) && (
-                          <div className="pos-menu-chef" title="Chef's Pick">
-                            <Sparkles size={11} />
-                          </div>
-                        )}
-
-                        {/* Prep time badge */}
-                        <div className="pos-menu-time">
-                          <Clock size={10} />
-                          <span>{item.prepTime}</span>
-                        </div>
-                      </div>
-
-                      {/* Item Content with Title, Description, and Actions */}
-                      <div className="pos-menu-card-content">
-                        <div>
-                          <div className="pos-menu-card-title-row">
-                            <h4
-                              className="pos-menu-card-title"
-                              style={{
-                                color: isAvailable ? "var(--text-main)" : "var(--text-dim)",
-                              }}
-                            >
-                              {item.name}
-                            </h4>
-                            {item.spiceLevel > 0 && (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  color: "var(--danger)",
-                                  flexShrink: 0,
-                                  opacity: isAvailable ? 1 : 0.4,
-                                }}
-                                title={`Spicy Level: ${item.spiceLevel}`}
-                              >
-                                {[...Array(item.spiceLevel)].map((_, i) => (
-                                  <Flame key={i} size={11} fill="#ef4444" />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          <p
-                            className="pos-menu-card-description"
-                            style={{
-                              color: isAvailable ? "var(--text-muted)" : "var(--text-dim)",
-                            }}
-                          >
-                            {item.description}
-                          </p>
-                        </div>
-
-                        {/* Price in Rupees and Add / Quantity Control */}
-                        <div className="pos-menu-card-footer">
-                          <span
-                            className="font-mono pos-menu-card-price"
-                            style={{
-                              color: isAvailable ? "var(--accent-amber)" : "var(--text-dim)",
-                            }}
-                          >
-                            {formatCurrency(item.price)}
-                          </span>
-
-                          {/* Interactive Add or Qty Controller */}
-                          {!isAvailable ? (
-                            <span
-                              style={{
-                                fontSize: "0.72rem",
-                                fontWeight: 700,
-                                color: "var(--danger)",
-                                background: "rgba(239, 68, 68, 0.12)",
-                                border: "1px solid rgba(239, 68, 68, 0.35)",
-                                borderRadius: "6px",
-                                padding: "4px 9px",
-                                cursor: "not-allowed",
-                              }}
-                              title="This item is currently unavailable"
-                            >
-                              Unavailable
-                            </span>
-                          ) : currentQty === 0 ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddItem(item);
-                              }}
-                              className="pos-menu-add"
-                              title="Add to Cart"
-                            >
-                              <Plus size={13} />
-                              <span>Add</span>
-                            </button>
-                          ) : (
-                            <div
-                              className="pos-menu-qty"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  sounds.playRemoveItem();
-                                  onUpdateItemQuantity(
-                                    table.id,
-                                    item.id,
-                                    currentQty - 1,
-                                  );
-                                }}
-                                style={{
-                                  background: "var(--surface-tint)",
-                                  color: "var(--text-main)",
-                                  border: "none",
-                                }}
-                              >
-                                <Minus size={12} />
-                              </button>
-
-                              <span className="font-mono pos-menu-qty-count">
-                                {currentQty}
-                              </span>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  sounds.playAddItem();
-                                  onUpdateItemQuantity(
-                                    table.id,
-                                    item.id,
-                                    currentQty + 1,
-                                  );
-                                }}
-                                style={{
-                                  background: "var(--accent-amber)",
-                                  color: "#000000",
-                                  border: "none",
-                                }}
-                              >
-                                <Plus size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    />
                   );
                 })
               )}

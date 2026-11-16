@@ -11,25 +11,6 @@ export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_
 export const API_SYNC_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
-// Keep development SSE on Vite for LAN state broadcasts; production uses the API.
-const EVENTS_URL = import.meta.env.DEV
-  ? "/api/events"
-  : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;
-
-export function openOptionalEventStream() {
-  if (typeof EventSource === "undefined") return null;
-
-  try {
-    const stream = new EventSource(EVENTS_URL);
-    // EventSource retries automatically. This stream is an optional UI sync
-    // enhancement, so stop after a failure instead of retrying indefinitely.
-    stream.onerror = () => stream.close();
-    return stream;
-  } catch {
-    return null;
-  }
-}
-
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
 };

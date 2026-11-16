@@ -35,6 +35,7 @@ import {
   apiUpdateCustomer,
   apiDeleteCustomer,
 } from "../../api/customerApi";
+import { subscribeToRealtimeEvents } from "../../realtime/realtimeService";
 
 const STORAGE_KEY_CUSTOMERS = "bhanu_bistro_customers_v1";
 
@@ -376,6 +377,20 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
   useEffect(() => {
     fetchCustomers(true);
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
+      // No customer mutation event is emitted by the current backend. Reconnect
+      // is the only safe point to refresh this cached directory.
+      if (name === "SYNC") fetchCustomers(true);
+    });
+    const onReconnect = () => fetchCustomers(true);
+    window.addEventListener("avsr:realtime-reconnected", onReconnect);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", onReconnect);
+    };
+  }, [searchQuery]);
 
   // Filtered & Sorted Customers
   const filteredCustomers = useMemo(() => {

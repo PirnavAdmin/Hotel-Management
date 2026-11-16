@@ -1,4 +1,5 @@
 const ACTION_SELECTOR = "button, [role=\"button\"]";
+const EXISTING_LOADING_INDICATOR = ".app-loading-spinner, .takeaway-spinner, .auth-spinner, .animate-spin, [data-loading-indicator]";
 
 function makeSpinner() {
   const spinner = document.createElement("span");
@@ -21,7 +22,7 @@ export function installButtonLoading() {
 
     if (loading) {
       if (!state) {
-        const spinner = makeSpinner();
+        const spinner = button.querySelector(EXISTING_LOADING_INDICATOR) ? null : makeSpinner();
         state = {
           count: 0,
           wasDisabled: Boolean(button.disabled),
@@ -29,7 +30,7 @@ export function installButtonLoading() {
           spinner,
         };
         states.set(button, state);
-        button.insertBefore(spinner, button.firstChild);
+        if (spinner) button.insertBefore(spinner, button.firstChild);
         button.disabled = true;
         button.setAttribute("aria-busy", "true");
       }
@@ -41,7 +42,7 @@ export function installButtonLoading() {
     state.count = Math.max(0, state.count - 1);
     if (state.count > 0) return;
 
-    state.spinner.remove();
+    state.spinner?.remove();
     button.disabled = state.wasDisabled;
     if (state.wasBusy === null) button.removeAttribute("aria-busy");
     else button.setAttribute("aria-busy", state.wasBusy);
