@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,15 +19,18 @@ public class AccountingController : ControllerBase
     private readonly AccountingService _accountingService;
     private readonly ExportService _exportService;
     private readonly ILogger<AccountingController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public AccountingController(
         AccountingService accountingService,
         ExportService exportService,
-        ILogger<AccountingController> logger)
+        ILogger<AccountingController> logger,
+        IRealtimeSyncService realtimeSync)
     {
         _accountingService = accountingService;
         _exportService = exportService;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     // ============================================================
@@ -99,6 +103,17 @@ public class AccountingController : ControllerBase
         try
         {
             var data = await _accountingService.OpenOrUpdateDailyShiftAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "dailyRegister:opened",
+                Module = "Accounting",
+                Action = "shiftOpened",
+                BranchId = 1,
+                RecordId = data.BusinessDate.ToString(),
+                Data = data
+            });
+
             return Ok(new
             {
                 success = true,
@@ -129,6 +144,17 @@ public class AccountingController : ControllerBase
         try
         {
             var data = await _accountingService.ReconcileDailyShiftAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "dailyRegister:reconciled",
+                Module = "Accounting",
+                Action = data.ShiftStatus == "Closed" ? "shiftClosed" : "reconciled",
+                BranchId = 1,
+                RecordId = data.BusinessDate.ToString(),
+                Data = data
+            });
+
             return Ok(new
             {
                 success = true,
@@ -158,6 +184,17 @@ public class AccountingController : ControllerBase
         try
         {
             var data = await _accountingService.ReopenDailyShiftAsync(dto ?? new ReopenDailyRegisterRequestDto());
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "dailyRegister:reopened",
+                Module = "Accounting",
+                Action = "shiftReopened",
+                BranchId = 1,
+                RecordId = data.BusinessDate.ToString(),
+                Data = data
+            });
+
             return Ok(new
             {
                 success = true,
@@ -265,6 +302,17 @@ public class AccountingController : ControllerBase
         try
         {
             var created = await _accountingService.CreateChartOfAccountAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "account:created",
+                Module = "Accounting",
+                Action = "created",
+                BranchId = 1,
+                RecordId = created.AccountId.ToString(),
+                Data = created
+            });
+
             return StatusCode(201, new
             {
                 success = true,
@@ -302,6 +350,16 @@ public class AccountingController : ControllerBase
             if (updated == null)
                 return NotFound(new { success = false, message = $"Ledger account with ID {id} not found." });
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "account:updated",
+                Module = "Accounting",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -335,6 +393,16 @@ public class AccountingController : ControllerBase
             var (deleted, message) = await _accountingService.DeleteChartOfAccountAsync(id);
             if (!deleted)
                 return NotFound(new { success = false, message });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "account:deleted",
+                Module = "Accounting",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = new { accountId = id, message }
+            });
 
             return Ok(new { success = true, message });
         }
@@ -536,6 +604,31 @@ public class AccountingController : ControllerBase
         try
         {
             var created = await _accountingService.CreateJournalVoucherAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "journalEntry:created",
+                Module = "Accounting",
+                Action = "created",
+                BranchId = 1,
+                RecordId = created.VoucherId.ToString(),
+                Data = created
+            });
+
+            if (string.Equals(created.VoucherType, "Expense", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(created.VoucherType, "PettyCash", StringComparison.OrdinalIgnoreCase))
+            {
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "expense:created",
+                    Module = "Expenses",
+                    Action = "created",
+                    BranchId = 1,
+                    RecordId = created.VoucherId.ToString(),
+                    Data = created
+                });
+            }
+
             return StatusCode(201, new
             {
                 success = true,
@@ -570,6 +663,16 @@ public class AccountingController : ControllerBase
             if (updated == null)
                 return NotFound(new { success = false, message = $"Journal voucher with ID {id} not found." });
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "journalEntry:voided",
+                Module = "Accounting",
+                Action = "voided",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -595,6 +698,16 @@ public class AccountingController : ControllerBase
             bool deleted = await _accountingService.DeleteJournalVoucherAsync(id);
             if (!deleted)
                 return NotFound(new { success = false, message = $"Journal voucher with ID {id} not found." });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "journalEntry:deleted",
+                Module = "Accounting",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = new { voucherId = id }
+            });
 
             return Ok(new { success = true, message = $"Journal voucher {id} deleted successfully." });
         }

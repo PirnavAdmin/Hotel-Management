@@ -22,17 +22,20 @@ public class UsersController : ControllerBase
     private readonly AppDbContext _context;
     private readonly LoginManagementService _loginManagementService;
     private readonly ILogger<UsersController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public UsersController(
         SpService spService,
         AppDbContext context,
         LoginManagementService loginManagementService,
-        ILogger<UsersController> logger)
+        ILogger<UsersController> logger,
+        IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
         _context = context;
         _loginManagementService = loginManagementService;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     [HttpGet]
@@ -119,6 +122,16 @@ public class UsersController : ControllerBase
 
             await _spService.ExecuteNonQueryAsync("sp_UpdateUserPassword", parameters);
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "user:passwordChanged",
+                Module = "Users",
+                Action = "passwordChanged",
+                BranchId = 1,
+                RecordId = user.UserId.ToString(),
+                Data = new { userId = user.UserId, username = user.UserName }
+            });
+
             _logger.LogInformation("Password updated successfully for user {UserId}", id);
             return Ok(new { success = true, message = "Password updated successfully." });
         }
@@ -146,6 +159,16 @@ public class UsersController : ControllerBase
 
             var user = users[0];
             await _spService.ExecuteNonQueryAsync("sp_DeleteUser", new Dictionary<string, object?> { { "p_user_id", user.UserId } });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "user:deleted",
+                Module = "Users",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = user.UserId.ToString(),
+                Data = new { userId = user.UserId, username = user.UserName }
+            });
 
             _logger.LogInformation("User {UserId} soft-deleted successfully.", id);
             return Ok(new { success = true, message = "User deleted successfully." });
@@ -176,6 +199,19 @@ public class UsersController : ControllerBase
         };
 
         var result = await _loginManagementService.CreateLoginAsync(dto);
+
+        if (result != null)
+        {
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "user:created",
+                Module = "Users",
+                Action = "created",
+                BranchId = 1,
+                Data = result
+            });
+        }
+
         return Ok(result);
     }
 
@@ -223,7 +259,28 @@ public class UsersController : ControllerBase
             user.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "User details updated successfully.", data = user });
+            var sanitizedUser = new
+            {
+                userId = user.UserId,
+                userName = user.UserName,
+                fullName = user.FullName,
+                email = user.Email,
+                phone = user.Phone,
+                roleId = user.RoleId,
+                updatedAt = user.UpdatedAt
+            };
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "user:updated",
+                Module = "Users",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = user.UserId.ToString(),
+                Data = sanitizedUser
+            });
+
+            return Ok(new { success = true, message = "User details updated successfully.", data = sanitizedUser });
         }
         catch (Exception ex)
         {

@@ -1,13 +1,17 @@
-// In Vite development, point every LAN client at the API on the same host
-// serving the frontend, instead of allowing separate .env tunnel URLs to split data.
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ||
-  ""
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
+const configuredReservationApiBase =
+  import.meta.env.VITE_RESERVATION_API_BASE_URL || configuredApiBase;
 
-).trim().replace(/\/$/, "");
+// Browser-to-API traffic stays same-origin through a reverse proxy.
+// During development, Vite forwards requests to the backend,
+// or gracefully falls back to local server-db.json when offline so data is NEVER lost.
+export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
+export const RESERVATION_API_BASE_URL = configuredReservationApiBase.trim().replace(/\/$/, "");
+export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
+export const API_SYNC_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
+export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
-// The Vite dev server provides its own same-origin SSE endpoint for local
-// cross-tab/device synchronization. Production can use the configured API.
+// Keep development SSE on Vite for LAN state broadcasts; production uses the API.
 const EVENTS_URL = import.meta.env.DEV
   ? "/api/events"
   : `${API_BASE_URL.replace(/\/$/, "")}/api/events`;
@@ -28,22 +32,25 @@ export function openOptionalEventStream() {
 
 const DEFAULT_HEADERS = {
   "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true",
 };
 
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const { remoteOnly = false, ...requestOptions } = options;
+  const { remoteOnly = false, baseUrl, skipDefaultAuth = false, ...requestOptions } = options;
+  const requestBase = String(baseUrl || "").trim().replace(/\/$/, "");
+  const url = requestBase
+    ? `${requestBase}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
+    : apiUrl(endpoint);
 
   try {
     const token =
-      typeof localStorage !== "undefined"
+      !skipDefaultAuth && typeof localStorage !== "undefined"
         ? localStorage.getItem("avsr_jwt_token")
         : null;
 
     const headers = {
+      ...(remoteOnly && import.meta.env.DEV && !requestBase ? { "X-Remote-Only": "true" } : {}),
       ...DEFAULT_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
@@ -57,18 +64,19 @@ async function performApiRequest(endpoint, options = {}) {
     let res;
     try {
       res = await fetch(url, config);
-      if (!remoteOnly && API_BASE_URL && (!res.ok && (res.status === 403 || res.status >= 500))) {
+      if (!remoteOnly && !res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
         try {
-          const localRes = await fetch(endpoint, config);
-          if (localRes.ok) {
-            res = localRes;
-          }
+          const fallbackRes = await fetch(endpoint, config);
+          if (fallbackRes.ok) res = fallbackRes;
         } catch {}
       }
     } catch (fetchErr) {
-      if (API_BASE_URL && !remoteOnly) {
-        console.warn(`[apiClient] ${API_BASE_URL} unreachable, falling back to local endpoint: ${endpoint}`);
-        res = await fetch(endpoint, config);
+      if (!remoteOnly && url !== endpoint) {
+        try {
+          res = await fetch(endpoint, config);
+        } catch {
+          throw fetchErr;
+        }
       } else {
         throw fetchErr;
       }
@@ -122,6 +130,14 @@ async function performApiRequest(endpoint, options = {}) {
         error: displayError,
         rawError: errorText,
         status: res.status,
+        retryAfterSeconds: (() => {
+          const retryAfter = res.headers.get("Retry-After");
+          if (!retryAfter) return undefined;
+          const seconds = Number(retryAfter);
+          if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds));
+          const retryAt = Date.parse(retryAfter);
+          return Number.isNaN(retryAt) ? undefined : Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+        })(),
       };
     }
 
@@ -131,23 +147,10 @@ async function performApiRequest(endpoint, options = {}) {
       return { success: true, data: null };
     }
 
-    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html') || text.includes('ERR_NGROK')) {
-      if (API_BASE_URL) {
-        try {
-          const localRes = await fetch(endpoint, config);
-          const localText = await localRes.text();
-          if (localRes.ok && !localText.trim().startsWith('<') && !localText.includes('ERR_NGROK')) {
-            const data = JSON.parse(localText);
-            return { success: true, data };
-          }
-        } catch {}
-      }
-      const isNgrok = text.includes('ngrok') || text.includes('ERR_NGROK') || (API_BASE_URL && API_BASE_URL.includes('ngrok'));
+    if (text.trim().startsWith('<') || res.headers.get('content-type')?.includes('text/html')) {
       const isViteFallback = text.includes('<!doctype html>') || text.includes('<div id="root">');
       let msg = `Backend API returned HTML instead of JSON (HTTP ${res.status}).`;
-      if (isNgrok) {
-        msg = 'The ngrok backend tunnel is offline or expired. Make sure ngrok and your backend server are running.';
-      } else if (isViteFallback) {
+      if (isViteFallback) {
         msg = `The backend API server is offline or route ${endpoint} is unhandled.`;
       }
       return {
@@ -183,13 +186,19 @@ export function apiClient(endpoint, options = {}) {
 
   let token = "";
   try {
-    token = typeof localStorage !== "undefined"
+    token = !options.skipDefaultAuth && typeof localStorage !== "undefined"
       ? localStorage.getItem("avsr_jwt_token") || ""
       : "";
   } catch {
     // The request layer still supports environments where storage is blocked.
   }
-  const key = `${API_BASE_URL}${endpoint}|${token}`;
+  const key = JSON.stringify({
+    url: `${options.baseUrl || API_BASE_URL}${endpoint}`,
+    token,
+    remoteOnly: Boolean(options.remoteOnly),
+    skipDefaultAuth: Boolean(options.skipDefaultAuth),
+    headers: options.headers || {},
+  });
   const existing = inFlightGetRequests.get(key);
   if (existing) return existing;
 

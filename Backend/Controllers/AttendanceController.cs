@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,12 @@ namespace HMS.Controllers;
 public class AttendanceController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public AttendanceController(SpService spService)
+    public AttendanceController(SpService spService, IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
+        _realtimeSync = realtimeSync;
     }
 
     [AllowAnonymous]
@@ -64,6 +67,16 @@ public class AttendanceController : ControllerBase
             Shift = shift
         };
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "attendance:checkedIn",
+            Module = "Attendance",
+            Action = "checkedIn",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = attendance
+        });
+
         return Ok(new
         {
             success = true,
@@ -84,11 +97,23 @@ public class AttendanceController : ControllerBase
 
         await _spService.ExecuteNonQueryAsync("sp_CheckOutAttendance", parameters);
 
+        var checkOutData = new { attendanceId = request.AttendanceId, staffId = request.StaffId, checkOut = DateTime.UtcNow };
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "attendance:checkedOut",
+            Module = "Attendance",
+            Action = "checkedOut",
+            BranchId = 1,
+            RecordId = request.AttendanceId.ToString(),
+            Data = checkOutData
+        });
+
         return Ok(new
         {
             success = true,
             message = "Employee checked out successfully.",
-            data = new { attendanceId = request.AttendanceId, staffId = request.StaffId, checkOut = DateTime.UtcNow }
+            data = checkOutData
         });
     }
 

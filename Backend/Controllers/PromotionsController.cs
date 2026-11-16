@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,12 @@ namespace HMS.Controllers;
 public class PromotionsController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public PromotionsController(SpService spService)
+    public PromotionsController(SpService spService, IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
+        _realtimeSync = realtimeSync;
     }
 
     [AllowAnonymous]
@@ -66,6 +69,16 @@ public class PromotionsController : ControllerBase
             IsActive = true
         };
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "promotion:created",
+            Module = "Promotions",
+            Action = "created",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = promotion
+        });
+
         return Ok(new
         {
             success = true,
@@ -92,6 +105,16 @@ public class PromotionsController : ControllerBase
 
         var parameters = new Dictionary<string, object?> { { "p_promotion_id", numericId } };
         await _spService.ExecuteNonQueryAsync("sp_DeletePromotion", parameters);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "promotion:deleted",
+            Module = "Promotions",
+            Action = "deleted",
+            BranchId = 1,
+            RecordId = numericId.ToString(),
+            Data = new { promotionId = numericId }
+        });
 
         return Ok(new
         {

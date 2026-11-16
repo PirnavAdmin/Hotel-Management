@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,17 +19,20 @@ public class SalariesController : ControllerBase
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
     private readonly ILogger<SalariesController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public SalariesController(
         SalaryService salaryService,
         ReportingExportService reportingExportService,
         ExportService exportService,
-        ILogger<SalariesController> logger)
+        ILogger<SalariesController> logger,
+        IRealtimeSyncService realtimeSync)
     {
         _salaryService = salaryService;
         _reportingExportService = reportingExportService;
         _exportService = exportService;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     /// <summary>
@@ -55,6 +59,17 @@ public class SalariesController : ControllerBase
         try
         {
             var payment = await _salaryService.RecordSalaryPaymentAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "salaryPayment:completed",
+                Module = "Salaries",
+                Action = "paymentRecorded",
+                BranchId = 1,
+                RecordId = payment.PaymentId.ToString(),
+                Data = payment
+            });
+
             return StatusCode(201, new
             {
                 success = true,

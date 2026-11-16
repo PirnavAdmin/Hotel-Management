@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,10 +23,12 @@ public class SalaryPaymentsController : ControllerBase
     };
 
     private readonly AppDbContext _context;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public SalaryPaymentsController(AppDbContext context)
+    public SalaryPaymentsController(AppDbContext context, IRealtimeSyncService realtimeSync)
     {
         _context = context;
+        _realtimeSync = realtimeSync;
     }
 
     [AllowAnonymous]
@@ -112,6 +115,16 @@ public class SalaryPaymentsController : ControllerBase
 
         _context.SalaryPayments.Add(payment);
         await _context.SaveChangesAsync();
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "salaryPayment:completed",
+            Module = "Salaries",
+            Action = "paymentRecorded",
+            BranchId = 1,
+            RecordId = payment.PaymentId.ToString(),
+            Data = payment
+        });
 
         return CreatedAtAction(nameof(GetSalaryPayment), new { id = payment.PaymentId }, new
         {

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,16 @@ namespace HMS.Controllers;
 public class MenuItemsController : ControllerBase
 {
     private readonly MenuItemService _menuItemService;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<MenuItemsController> _logger;
 
-    public MenuItemsController(MenuItemService menuItemService, ILogger<MenuItemsController> logger)
+    public MenuItemsController(
+        MenuItemService menuItemService,
+        IRealtimeSyncService realtimeSync,
+        ILogger<MenuItemsController> logger)
     {
         _menuItemService = menuItemService;
+        _realtimeSync = realtimeSync;
         _logger = logger;
     }
 
@@ -157,6 +163,17 @@ public class MenuItemsController : ControllerBase
         try
         {
             var created = await _menuItemService.CreateCategoryAsync(request);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "category:created",
+                Module = "Menu",
+                Action = "created",
+                BranchId = 1,
+                RecordId = request.Name,
+                Data = created
+            });
+
             return Ok(new
             {
                 success = true,
@@ -206,6 +223,17 @@ public class MenuItemsController : ControllerBase
         try
         {
             var created = await _menuItemService.CreateMenuItemAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "menu:created",
+                Module = "Menu",
+                Action = "created",
+                BranchId = 1,
+                RecordId = created.MenuItemId.ToString(),
+                Data = created
+            });
+
             return CreatedAtAction(nameof(GetMenuItemById), new { id = created.MenuItemId }, new
             {
                 success = true,
@@ -238,6 +266,17 @@ public class MenuItemsController : ControllerBase
             {
                 return NotFound(new { success = false, message = $"Menu item with ID {id} not found." });
             }
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "menu:updated",
+                Module = "Menu",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -264,6 +303,27 @@ public class MenuItemsController : ControllerBase
             {
                 return NotFound(new { success = false, message = $"Menu item with ID {id} not found." });
             }
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "menu:availabilityChanged",
+                Module = "Menu",
+                Action = "availabilityChanged",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "menu:updated",
+                Module = "Menu",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -300,6 +360,16 @@ public class MenuItemsController : ControllerBase
                 return NotFound(new { success = false, message = $"Menu item with ID {id} not found." });
             }
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "menu:updated",
+                Module = "Menu",
+                Action = "specialStatusChanged",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -334,6 +404,17 @@ public class MenuItemsController : ControllerBase
         try
         {
             var success = await _menuItemService.DeleteMenuItemAsync(numericId);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "menu:deleted",
+                Module = "Menu",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = numericId.ToString(),
+                Data = new { menuItemId = numericId }
+            });
+
             return Ok(new { success = true, message = "Menu item deleted successfully." });
         }
         catch (Exception ex)
@@ -351,6 +432,17 @@ public class MenuItemsController : ControllerBase
         try
         {
             var success = await _menuItemService.DeleteCategoryAsync(name);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "category:deleted",
+                Module = "Menu",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = name,
+                Data = new { categoryName = name }
+            });
+
             return Ok(new { success = true, message = $"Category '{name}' deleted successfully." });
         }
         catch (Exception ex)

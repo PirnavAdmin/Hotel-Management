@@ -1,5 +1,6 @@
 using System;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,11 +14,13 @@ public class StaffController : ControllerBase
 {
     private readonly StaffService _staffService;
     private readonly ILogger<StaffController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public StaffController(StaffService staffService, ILogger<StaffController> logger)
+    public StaffController(StaffService staffService, ILogger<StaffController> logger, IRealtimeSyncService realtimeSync)
     {
         _staffService = staffService;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     // GET /api/v1/staff
@@ -82,6 +85,16 @@ public class StaffController : ControllerBase
             var created = await _staffService.CreateStaffAsync(dto);
             _logger.LogInformation("Staff person successfully created with ID: {StaffId}", created.StaffId);
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "staff:created",
+                Module = "Staff",
+                Action = "created",
+                BranchId = 1,
+                RecordId = created.StaffId.ToString(),
+                Data = created
+            });
+
             return CreatedAtAction(nameof(GetStaffById), new { id = created.StaffId }, new
             {
                 success = true,
@@ -116,6 +129,17 @@ public class StaffController : ControllerBase
                 _logger.LogWarning("Staff person ID {Id} not found for update.", id);
                 return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
             }
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "staff:updated",
+                Module = "Staff",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -151,6 +175,17 @@ public class StaffController : ControllerBase
 
             _logger.LogInformation("Deleting staff person ID: {Id}", numericId);
             var success = await _staffService.DeleteStaffAsync(numericId);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "staff:deleted",
+                Module = "Staff",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = numericId.ToString(),
+                Data = new { staffId = numericId }
+            });
+
             return Ok(new { success = true, message = "Staff member removed successfully." });
         }
         catch (Exception ex)

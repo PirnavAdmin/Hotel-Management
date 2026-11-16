@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -26,6 +27,7 @@ public class StateController : ControllerBase
     private readonly InventoryService _inventoryService;
     private readonly ITableLockService _tableLockService;
     private readonly ISseBroadcaster _sseBroadcaster;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<StateController> _logger;
 
     public StateController(
@@ -37,6 +39,7 @@ public class StateController : ControllerBase
         InventoryService inventoryService,
         ITableLockService tableLockService,
         ISseBroadcaster sseBroadcaster,
+        IRealtimeSyncService realtimeSync,
         ILogger<StateController> logger)
     {
         _spService = spService;
@@ -47,6 +50,7 @@ public class StateController : ControllerBase
         _inventoryService = inventoryService;
         _tableLockService = tableLockService;
         _sseBroadcaster = sseBroadcaster;
+        _realtimeSync = realtimeSync;
         _logger = logger;
     }
 
@@ -236,8 +240,16 @@ public class StateController : ControllerBase
                 }
             }
 
-            // Real-time broadcast to all connected clients over SSE!
+            // Real-time broadcast to all connected clients over SSE & SignalR!
             await _sseBroadcaster.BroadcastAsync("SYNC", syncPayload);
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "state:synced",
+                Module = "State",
+                Action = "synced",
+                BranchId = 1,
+                Data = syncPayload
+            });
 
             return Ok(new
             {

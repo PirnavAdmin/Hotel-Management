@@ -1,0 +1,53 @@
+/* Table Reservation Flow Styles */
+.table-reservation-flow {
+  color-scheme: light;
+}
+
+.table-reservation-flow input,
+.table-reservation-flow select,
+.table-reservation-flow textarea {
+  color: #1f1610 !important;
+  color-scheme: light !important;
+  -webkit-text-fill-color: #1f1610 !important;
+  font-family: inherit;
+}
+
+.table-reservation-flow input::placeholder,
+.table-reservation-flow textarea::placeholder {
+  color: #786c62 !important;
+  -webkit-text-fill-color: #786c62 !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
+}
+
+.table-reservation-flow input::-webkit-input-placeholder,
+.table-reservation-flow textarea::-webkit-input-placeholder {
+  color: #786c62 !important;
+  -webkit-text-fill-color: #786c62 !important;
+  opacity: 1 !important;
+}
+
+.table-reservation-flow input::-moz-placeholder,
+.table-reservation-flow textarea::-moz-placeholder {
+  color: #786c62 !important;
+  opacity: 1 !important;
+}
+
+.table-reservation-flow input:-ms-input-placeholder,
+.table-reservation-flow textarea:-ms-input-placeholder {
+  color: #786c62 !important;
+}
+
+/* Calendar icon inside native input[type="date"] */
+.table-reservation-flow input[type="date"] {
+  color-scheme: light !important;
+}
+
+/* Focus styles for inputs in reservation flow */
+.table-reservation-flow input:focus,
+.table-reservation-flow select:focus,
+.table-reservation-flow textarea:focus {
+  border-color: #ea580c !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+}

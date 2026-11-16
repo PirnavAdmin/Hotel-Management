@@ -1,5 +1,9 @@
 import { SearchableSelect } from "../common/SearchableSelect";
+<<<<<<< HEAD
 import "./TakeawayView.css";
+=======
+import "../common/MenuCatalogLayout.css";
+>>>>>>> d419e0ff97fae54e8a8ad3afd35afe8785610836
 import React, { useEffect, useId, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircle2, Clock, ChefHat, LoaderCircle, RefreshCw, Eye, ReceiptText, Send } from "lucide-react";
@@ -120,34 +124,73 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     });
   }, [takeawayHistory, historySearch, historyStatus, historyDatePreset, historyDateFrom, historyDateTo]);
 
+  const getLocalTakeawayOrders = () => {
+    try {
+      const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+
   const refreshTakeawayOrders = async () => {
+    const localList = getLocalTakeawayOrders();
+    const normalizedLocal = localList.map((order) => ({
+      ...order,
+      id: order.id ?? order.orderId ?? order.invoiceNo,
+      orderId: order.orderId ?? order.id ?? order.invoiceNo,
+      orderNumber: order.invoiceNo ?? order.orderNumber ?? `TAK-${order.id}`,
+      status: order.kotStatus ?? order.status ?? "received",
+      customerName: order.customerName || order.guestName || "Takeaway Guest",
+      customerPhone: order.customerPhone || order.phone || "",
+      grandTotal: Number(order.grandTotal ?? order.totalAmount ?? order.total ?? 0),
+      items: (order.items || []).map((item) => ({
+        ...item,
+        name: item.name ?? item.dishName ?? "Item",
+        quantity: Number(item.quantity ?? item.qty ?? 1),
+        price: Number(item.price ?? item.unitPrice ?? 0),
+        kotStatus: item.kotStatus ?? "received",
+        kotId: item.kotId ?? null,
+      })),
+    }));
+
     try {
       const result = await apiGetTakeawayOrders();
-      if (!result?.success || !Array.isArray(result.data)) {
-        setOrderNotice(result?.error || "Could not load takeaway orders from the server.");
+      if (result?.success && Array.isArray(result.data)) {
+        setOrderNotice("");
+        const serverOrders = result.data.map((order) => ({
+          ...order,
+          id: order.id ?? order.Id ?? order.orderId ?? order.OrderId,
+          orderId: order.orderId ?? order.OrderId ?? order.id ?? order.Id,
+          orderNumber: order.orderNumber ?? order.OrderNumber,
+          status: order.status ?? order.Status ?? order.orderStatus ?? order.OrderStatus,
+          customerName: order.customerName ?? order.CustomerName,
+          customerPhone: order.customerPhone ?? order.CustomerPhone ?? order.phoneNumber ?? order.PhoneNumber,
+          grandTotal: order.grandTotal ?? order.GrandTotal ?? order.totalAmount ?? order.TotalAmount,
+          items: (order.items ?? order.Items ?? []).map((item) => ({
+            ...item,
+            name: item.name ?? item.Name,
+            quantity: item.quantity ?? item.Quantity,
+            price: item.price ?? item.Price ?? item.unitPrice ?? item.UnitPrice,
+            kotStatus: item.kotStatus ?? item.KotStatus,
+            kotId: item.kotId ?? item.KotId,
+          })),
+        }));
+
+        const seenKeys = new Set(serverOrders.map((o) => String(o.orderNumber || o.id || o.orderId)));
+        const combined = [
+          ...serverOrders,
+          ...normalizedLocal.filter((o) => !seenKeys.has(String(o.orderNumber || o.id || o.orderId))),
+        ];
+        setTakeawayOrders(combined);
         return;
       }
+    } catch {}
+
+    // Fallback: Display local orders immediately
+    if (normalizedLocal.length > 0) {
+      setTakeawayOrders(normalizedLocal);
       setOrderNotice("");
-      setTakeawayOrders(result.data.map((order) => ({
-        ...order,
-        id: order.id ?? order.Id ?? order.orderId ?? order.OrderId,
-        orderId: order.orderId ?? order.OrderId ?? order.id ?? order.Id,
-        orderNumber: order.orderNumber ?? order.OrderNumber,
-        status: order.status ?? order.Status ?? order.orderStatus ?? order.OrderStatus,
-        customerName: order.customerName ?? order.CustomerName,
-        customerPhone: order.customerPhone ?? order.CustomerPhone ?? order.phoneNumber ?? order.PhoneNumber,
-        grandTotal: order.grandTotal ?? order.GrandTotal ?? order.totalAmount ?? order.TotalAmount,
-        items: (order.items ?? order.Items ?? []).map((item) => ({
-          ...item,
-          name: item.name ?? item.Name,
-          quantity: item.quantity ?? item.Quantity,
-          price: item.price ?? item.Price ?? item.unitPrice ?? item.UnitPrice,
-          kotStatus: item.kotStatus ?? item.KotStatus,
-          kotId: item.kotId ?? item.KotId,
-        })),
-      })));
-    } catch (error) {
-      setOrderNotice(error?.message || "Could not load takeaway orders from the server.");
     }
   };
 
@@ -170,6 +213,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   useEffect(() => {
     refreshTakeawayOrders();
     refreshTakeawayHistory();
+<<<<<<< HEAD
     let refreshTimer = null;
     let shouldRefreshHistory = false;
     const scheduleOrderRefresh = (includeHistory = false) => {
@@ -193,6 +237,23 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
       if (refreshTimer) window.clearTimeout(refreshTimer);
       unsubscribe();
       window.removeEventListener("avsr:realtime-reconnected", handleReconnect);
+=======
+    const intervalId = window.setInterval(refreshTakeawayOrders, 4000);
+
+    const handleSync = () => {
+      refreshTakeawayOrders();
+      refreshTakeawayHistory();
+    };
+    window.addEventListener("avsr-takeaway-updated", handleSync);
+    window.addEventListener("avsr-kot-updated", handleSync);
+    window.addEventListener("storage", handleSync);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("avsr-takeaway-updated", handleSync);
+      window.removeEventListener("avsr-kot-updated", handleSync);
+      window.removeEventListener("storage", handleSync);
+>>>>>>> d419e0ff97fae54e8a8ad3afd35afe8785610836
     };
   }, []);
 

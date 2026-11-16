@@ -1,0 +1,152 @@
+.beverage-illustration {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 110%, color-mix(in srgb, var(--bev-accent) 25%, transparent), transparent 66%),
+    linear-gradient(145deg, color-mix(in srgb, var(--bg-tertiary) 86%, var(--bev-accent)), var(--bg-secondary));
+  color: var(--bev-accent);
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.menu-item-visual { position: relative; display: block; overflow: hidden; flex: 0 0 auto; }
+.menu-item-visual-image { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: cover; }
+
+.beverage-illustration::before {
+  position: absolute;
+  inset: auto 15% 8%;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bev-accent) 28%, transparent);
+  filter: blur(6px);
+  content: "";
+  animation: beverage-glow 3.4s ease-in-out infinite;
+}
+
+.beverage-illustration svg { position: relative; z-index: 1; width: min(78%, 150px); height: 100%; overflow: visible; }
+.beverage-illustration-beer { --bev-accent: #f59e0b; }
+.beverage-illustration-hot-drink { --bev-accent: #c08457; }
+.beverage-illustration-mojito { --bev-accent: #34d399; }
+.beverage-illustration-cocktail { --bev-accent: #f472b6; }
+.beverage-illustration-mocktail { --bev-accent: #a3e635; }
+.beverage-illustration-soft-drink { --bev-accent: #38bdf8; }
+.beverage-illustration-juice { --bev-accent: #fb923c; }
+.beverage-illustration-wine { --bev-accent: #be123c; }
+.beverage-illustration-vodka { --bev-accent: #93c5fd; }
+.beverage-illustration-spirits { --bev-accent: #d6a756; }
+.beverage-illustration-water { --bev-accent: #7dd3fc; }
+.beverage-illustration-other { --bev-accent: #fbbf24; }
+.beverage-animation-shot { --bev-accent: #e879f9; }
+.beverage-animation-lemonade { --bev-accent: #facc15; }
+.beverage-animation-iced-tea, .beverage-animation-cold-coffee { --bev-accent: #c08457; }
+.beverage-animation-hot-chocolate, .beverage-animation-coffee, .beverage-animation-tea { --bev-accent: #a16207; }
+.beverage-animation-milkshake, .beverage-animation-dairy { --bev-accent: #f9a8d4; }
+.beverage-animation-smoothie, .beverage-animation-coconut { --bev-accent: #4ade80; }
+.beverage-animation-energy { --bev-accent: #22d3ee; }
+.beverage-animation-sports { --bev-accent: #60a5fa; }
+.beverage-animation-slushie { --bev-accent: #c084fc; }
+.beverage-animation-whiskey, .beverage-animation-rum-brandy { --bev-accent: #d97706; }
+.beverage-animation-vodka-gin { --bev-accent: #93c5fd; }
+.beverage-animation-generic { --bev-accent: #fbbf24; }
+.beverage-animation-shot svg { animation: beverage-shot-pulse 2.4s ease-in-out infinite; }
+.beverage-animation-lemonade svg, .beverage-animation-smoothie svg { animation: beverage-sip-sway 3.2s ease-in-out infinite; }
+.beverage-animation-iced-tea svg, .beverage-animation-cold-coffee svg { animation: beverage-cold-condense 3.4s ease-in-out infinite; }
+.beverage-animation-hot-chocolate svg, .beverage-animation-tea svg { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--bev-accent) 55%, transparent)); }
+.beverage-animation-milkshake svg, .beverage-animation-dairy svg { animation: beverage-shake 2.8s ease-in-out infinite; }
+.beverage-animation-energy svg { animation: beverage-energy 1.8s ease-in-out infinite; }
+.beverage-animation-sports svg { animation: beverage-sports 3s ease-in-out infinite; }
+.beverage-animation-slushie svg, .beverage-animation-coconut svg { animation: beverage-cold-condense 3s ease-in-out infinite; }
+.beverage-animation-vodka-gin svg, .beverage-animation-whiskey svg, .beverage-animation-rum-brandy svg { animation: beverage-spirit-glint 3.6s ease-in-out infinite; }
+
+.beverage-illustration .bev-glass-outline,
+.beverage-illustration .bev-cup-saucer { fill: none; stroke: color-mix(in srgb, var(--text-main) 70%, transparent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.beverage-illustration .bev-glass-shine { fill: none; stroke: rgba(255,255,255,.8); stroke-width: 2.4; stroke-linecap: round; opacity: .75; }
+.beverage-illustration .bev-beer-liquid { fill: #f59e0b; }
+.beverage-illustration .bev-beer-foam { fill: #fff4d7; transform-origin: center bottom; animation: beverage-foam 2.2s ease-in-out infinite; }
+.beverage-illustration .bev-bubble { fill: rgba(255,255,255,.82); transform-box: fill-box; transform-origin: center; animation: beverage-bubble 2.8s ease-in infinite; }
+.beverage-illustration .bubble-two { animation-delay: .7s; }
+.beverage-illustration .bubble-three { animation-delay: 1.35s; }
+.beverage-illustration .bev-cup-rim { fill: #9a5b32; stroke: rgba(255,255,255,.55); stroke-width: 1.4; }
+.beverage-illustration .bev-cup-handle { fill: none; stroke: color-mix(in srgb, var(--text-main) 70%, transparent); stroke-width: 5; }
+.beverage-illustration .bev-coffee { fill: #e7c29c; stroke: rgba(255,255,255,.68); stroke-width: 1.5; }
+.beverage-illustration .bev-steam { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; opacity: 0; animation: beverage-steam 2.5s ease-out infinite; }
+.beverage-illustration .steam-two { animation-delay: .55s; }
+.beverage-illustration .steam-three { animation-delay: 1.1s; }
+.beverage-illustration .bev-mojito-liquid { fill: rgba(52,211,153,.65); }
+.beverage-illustration .bev-mint { fill: #4ade80; stroke: #bbf7d0; stroke-width: 1; transform-origin: 70px 35px; animation: beverage-mint 3s ease-in-out infinite; }
+.beverage-illustration .bev-mint-vein { fill: none; stroke: #dcfce7; stroke-width: 1.3; stroke-linecap: round; }
+.beverage-illustration .bev-lime { fill: #bef264; stroke: #ecfccb; stroke-width: 2; }
+.beverage-illustration .bev-lime-center { fill: #4d7c0f; }
+.beverage-illustration .bev-straw { fill: none; stroke: #fb923c; stroke-width: 4; stroke-linecap: round; }
+.beverage-illustration .bev-vodka-liquid { fill: rgba(147,197,253,.62); }
+.beverage-illustration .bev-vodka-wave { fill: none; stroke: #dbeafe; stroke-width: 2; animation: beverage-wave 2.8s ease-in-out infinite; }
+.beverage-illustration .bev-ice { fill: rgba(239,248,255,.8); stroke: rgba(255,255,255,.9); stroke-width: 1.5; animation: beverage-ice 3.2s ease-in-out infinite; }
+.beverage-illustration .ice-two { animation-delay: -.8s; }
+.beverage-illustration .bev-juice { fill: #fb923c; }
+.beverage-illustration .bev-citrus { fill: #facc15; stroke: #fef08a; stroke-width: 1.5; }
+.beverage-illustration .bev-citrus-line { fill: none; stroke: #fff7ae; stroke-width: 1; }
+.beverage-illustration .bev-cocktail-liquid { fill: rgba(244,114,182,.7); transform-origin: 80px 50px; animation: beverage-cocktail-sway 3.6s ease-in-out infinite; }
+.beverage-illustration .bev-cocktail-glass { fill: none; stroke: color-mix(in srgb, var(--text-main) 75%, transparent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.beverage-illustration .bev-cocktail-pick { stroke: #fef3c7; stroke-width: 2; stroke-linecap: round; }
+.beverage-illustration .bev-cocktail-cherry { fill: #ef4444; stroke: #fecaca; stroke-width: 1.5; }
+.beverage-illustration .bev-cocktail-cherry-stem { fill: #84cc16; }
+.beverage-illustration .bev-cocktail-citrus { fill: #facc15; stroke: #fef08a; stroke-width: 1; }
+.beverage-illustration .bev-cocktail-citrus-line { stroke: #fff7ae; stroke-width: 1; }
+.beverage-illustration .bev-mocktail-base { fill: rgba(34,197,94,.5); }
+.beverage-illustration .bev-mocktail-layer { fill: rgba(250,204,21,.72); animation: beverage-mocktail-layer 3s ease-in-out infinite; }
+.beverage-illustration .bev-mocktail-orange { fill: #fb923c; stroke: #ffedd5; stroke-width: 1.5; }
+.beverage-illustration .bev-mocktail-orange-line { stroke: #fff7ed; stroke-width: 1; }
+.beverage-illustration .bev-mocktail-leaf { fill: #65a30d; stroke: #d9f99d; stroke-width: 1; transform-origin: 70px 36px; animation: beverage-mint 3s ease-in-out infinite; }
+.beverage-illustration .bev-can-body { fill: #0ea5e9; stroke: rgba(255,255,255,.8); stroke-width: 2; transform-origin: center; animation: beverage-can 3.8s ease-in-out infinite; }
+.beverage-illustration .bev-can-top, .beverage-illustration .bev-can-bottom { fill: #cbd5e1; stroke: #f8fafc; stroke-width: 1.2; }
+.beverage-illustration .bev-can-tab { fill: #64748b; }
+.beverage-illustration .bev-can-label { fill: rgba(15,23,42,.26); }
+.beverage-illustration .bev-can-swoosh { fill: none; stroke: #e0f2fe; stroke-width: 4; stroke-linecap: round; }
+.beverage-illustration .bev-fizz { fill: #e0f2fe; animation: beverage-fizz 2s ease-in infinite; }
+.beverage-illustration .fizz-two { animation-delay: .5s; }.beverage-illustration .fizz-three { animation-delay: 1s; }.beverage-illustration .fizz-four { animation-delay: 1.5s; }
+.beverage-illustration .bev-wine-liquid { fill: #9f1239; transform-origin: 80px 44px; animation: beverage-wine-slosh 3.4s ease-in-out infinite; }
+.beverage-illustration .bev-wine-glass { fill: none; stroke: color-mix(in srgb, var(--text-main) 75%, transparent); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.beverage-illustration .bev-wine-glint { fill: #fecdd3; animation: beverage-glint 2.5s ease-in-out infinite; }
+.beverage-illustration .bev-spirit-liquid { fill: rgba(214,167,86,.75); }
+.beverage-illustration .bev-spirit-glass { fill: none; stroke: color-mix(in srgb, var(--text-main) 75%, transparent); stroke-width: 2.4; stroke-linejoin: round; }
+.beverage-illustration .bev-spirit-wave { fill: none; stroke: #ffedbb; stroke-width: 2; animation: beverage-wave 3s ease-in-out infinite; }
+.beverage-illustration .bev-spirit-ice { fill: rgba(239,248,255,.8); stroke: rgba(255,255,255,.9); stroke-width: 1.5; animation: beverage-ice 3.4s ease-in-out infinite; }
+.beverage-illustration .bev-water-liquid { fill: rgba(56,189,248,.26); }
+.beverage-illustration .bev-water-glass { fill: none; stroke: color-mix(in srgb, var(--text-main) 75%, transparent); stroke-width: 2.4; stroke-linejoin: round; }
+.beverage-illustration .bev-water-ripple { fill: none; stroke: #e0f2fe; stroke-width: 1.6; transform-origin: center; animation: beverage-ripple 2.6s ease-out infinite; }
+.beverage-illustration .ripple-two { animation-delay: 1.3s; }
+.beverage-illustration .bev-water-drop { fill: #bae6fd; animation: beverage-drop 2.8s ease-in-out infinite; }
+.beverage-illustration .bev-other-liquid { fill: color-mix(in srgb, var(--bev-accent) 55%, #38bdf8); }
+.beverage-illustration .bev-other-straw { fill: none; stroke: var(--bev-accent); stroke-width: 4; stroke-linecap: round; }
+.beverage-illustration .bev-other-star { fill: #fef3c7; animation: beverage-sparkle 2.4s ease-in-out infinite; }
+
+@keyframes beverage-bubble { 0% { opacity: 0; transform: translateY(7px) scale(.72); } 30% { opacity: .9; } 100% { opacity: 0; transform: translateY(-15px) scale(1); } }
+@keyframes beverage-foam { 0%,100% { transform: translateY(0) scaleX(1); } 50% { transform: translateY(-1px) scaleX(1.025); } }
+@keyframes beverage-steam { 0% { opacity: 0; transform: translateY(8px); } 25% { opacity: .72; } 100% { opacity: 0; transform: translateY(-10px); } }
+@keyframes beverage-mint { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(5deg); } }
+@keyframes beverage-wave { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+@keyframes beverage-ice { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-2px) rotate(2deg); } }
+@keyframes beverage-glow { 0%,100% { opacity: .45; transform: scaleX(.75); } 50% { opacity: .9; transform: scaleX(1); } }
+@keyframes beverage-cocktail-sway { 0%,100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+@keyframes beverage-mocktail-layer { 0%,100% { opacity: .78; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-1px); } }
+@keyframes beverage-can { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
+@keyframes beverage-fizz { 0% { opacity: 0; transform: translateY(6px) scale(.65); } 35% { opacity: .9; } 100% { opacity: 0; transform: translateY(-12px) scale(1.05); } }
+@keyframes beverage-wine-slosh { 0%,100% { transform: skewX(-1deg) scaleY(1); } 50% { transform: skewX(1deg) scaleY(.96); } }
+@keyframes beverage-glint { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes beverage-ripple { 0% { opacity: .9; transform: scaleX(.7); } 100% { opacity: 0; transform: scaleX(1.3); } }
+@keyframes beverage-drop { 0%,100% { transform: translateY(0); opacity: .8; } 50% { transform: translateY(3px); opacity: 1; } }
+@keyframes beverage-sparkle { 0%,100% { opacity: .45; transform: scale(.86); } 50% { opacity: 1; transform: scale(1.12); } }
+@keyframes beverage-shot-pulse { 0%,100% { transform: translateY(0) scale(.96); } 50% { transform: translateY(-3px) scale(1.02); } }
+@keyframes beverage-sip-sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes beverage-cold-condense { 0%,100% { filter: drop-shadow(0 0 1px #bae6fd); } 50% { filter: drop-shadow(0 0 6px #bae6fd); } }
+@keyframes beverage-shake { 0%,88%,100% { transform: rotate(0); } 91% { transform: rotate(-2deg); } 95% { transform: rotate(2deg); } }
+@keyframes beverage-energy { 0%,100% { transform: translateY(0); filter: drop-shadow(0 0 2px #22d3ee); } 50% { transform: translateY(-2px); filter: drop-shadow(0 0 8px #22d3ee); } }
+@keyframes beverage-sports { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.025); } }
+@keyframes beverage-spirit-glint { 0%,100% { filter: drop-shadow(0 0 0 transparent); } 50% { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--bev-accent) 65%, transparent)); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .beverage-illustration *, .beverage-illustration::before { animation: none !important; }
+}

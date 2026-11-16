@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,17 +18,20 @@ public class TablesController : ControllerBase
     private readonly TableService _tableService;
     private readonly ITableLockService _tableLockService;
     private readonly ISseBroadcaster _sseBroadcaster;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<TablesController> _logger;
 
     public TablesController(
         TableService tableService,
         ITableLockService tableLockService,
         ISseBroadcaster sseBroadcaster,
+        IRealtimeSyncService realtimeSync,
         ILogger<TablesController> logger)
     {
         _tableService = tableService;
         _tableLockService = tableLockService;
         _sseBroadcaster = sseBroadcaster;
+        _realtimeSync = realtimeSync;
         _logger = logger;
     }
 
@@ -98,6 +102,16 @@ public class TablesController : ControllerBase
         var allLocks = _tableLockService.GetAllActiveLocks();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLE_LOCKS", allLocks);
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "tableLock:acquired",
+            Module = "Tables",
+            Action = "lockAcquired",
+            BranchId = 1,
+            RecordId = id,
+            Data = result.LockedBy
+        });
+
         return Ok(new
         {
             success = true,
@@ -114,6 +128,16 @@ public class TablesController : ControllerBase
         var released = _tableLockService.ReleaseLock(id, userId);
         var allLocks = _tableLockService.GetAllActiveLocks();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLE_LOCKS", allLocks);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "tableLock:released",
+            Module = "Tables",
+            Action = "lockReleased",
+            BranchId = 1,
+            RecordId = id,
+            Data = new { tableId = id, releasedBy = userId, locks = allLocks }
+        });
 
         return Ok(new
         {
@@ -163,6 +187,16 @@ public class TablesController : ControllerBase
             var tables = await _tableService.GetTablesAsync();
             await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "table:created",
+                Module = "Tables",
+                Action = "created",
+                BranchId = created.BranchId,
+                RecordId = created.TableId.ToString(),
+                Data = created
+            });
+
             return CreatedAtAction(nameof(GetTableById), new { id = created.TableId }, new
             {
                 success = true,
@@ -211,6 +245,16 @@ public class TablesController : ControllerBase
 
             var tables = await _tableService.GetTablesAsync();
             await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "table:updated",
+                Module = "Tables",
+                Action = "updated",
+                BranchId = updated.BranchId,
+                RecordId = updated.TableId.ToString(),
+                Data = updated
+            });
 
             return Ok(new
             {
@@ -264,6 +308,16 @@ public class TablesController : ControllerBase
         var tables = await _tableService.GetTablesAsync();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "table:statusChanged",
+            Module = "Tables",
+            Action = "statusChanged",
+            BranchId = updated?.BranchId ?? 1,
+            RecordId = table.TableId.ToString(),
+            Data = updated ?? (object)new { tableId = table.TableId, status = dto.Status }
+        });
+
         return Ok(new
         {
             success = true,
@@ -289,6 +343,16 @@ public class TablesController : ControllerBase
         var tables = await _tableService.GetTablesAsync();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "table:deleted",
+            Module = "Tables",
+            Action = "deleted",
+            BranchId = 1,
+            RecordId = id,
+            Data = new { tableId = id }
+        });
+
         return Ok(new { success = true, message = "Table removed successfully." });
     }
 
@@ -312,6 +376,16 @@ public class TablesController : ControllerBase
         var tables = await _tableService.GetTablesAsync();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "table:statusChanged",
+            Module = "Tables",
+            Action = "transferred",
+            BranchId = 1,
+            RecordId = dto.SourceTableId.ToString(),
+            Data = new { sourceTableId = dto.SourceTableId, targetTableId = dto.TargetTableId, message = result.Message }
+        });
+
         return Ok(new { success = true, message = result.Message });
     }
 
@@ -331,6 +405,16 @@ public class TablesController : ControllerBase
 
         var tables = await _tableService.GetTablesAsync();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "table:statusChanged",
+            Module = "Tables",
+            Action = "vacated",
+            BranchId = updated?.BranchId ?? 1,
+            RecordId = existing.TableId.ToString(),
+            Data = updated ?? (object)new { tableId = existing.TableId, status = "available" }
+        });
 
         return Ok(new
         {

@@ -20,17 +20,20 @@ public class CustomersController : ControllerBase
     private readonly CustomerAuthService _customerAuthService;
     private readonly TakeawayService _takeawayService;
     private readonly ReservationService _reservationService;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public CustomersController(
         SpService spService,
         CustomerAuthService customerAuthService,
         TakeawayService takeawayService,
-        ReservationService reservationService)
+        ReservationService reservationService,
+        IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
         _customerAuthService = customerAuthService;
         _takeawayService = takeawayService;
         _reservationService = reservationService;
+        _realtimeSync = realtimeSync;
     }
 
     // ============================================================
@@ -253,6 +256,16 @@ public class CustomersController : ControllerBase
             long customerId = await _spService.ExecuteScalarAsync<long>("sp_CreateCustomer", parameters);
             var customer = (await GetCustomerByIdObject(customerId))!;
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "customer:created",
+                Module = "Customer",
+                Action = "created",
+                BranchId = 1,
+                RecordId = customerId.ToString(),
+                Data = customer
+            });
+
             return CreatedAtAction(nameof(GetCustomerById), new { id = customerId }, new
             {
                 success = true,
@@ -296,6 +309,16 @@ public class CustomersController : ControllerBase
         await _spService.ExecuteNonQueryAsync("sp_UpdateCustomer", parameters);
         var updated = await GetCustomerByIdObject(id);
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "customer:updated",
+            Module = "Customer",
+            Action = "updated",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = updated
+        });
+
         return Ok(new
         {
             success = true,
@@ -322,6 +345,16 @@ public class CustomersController : ControllerBase
 
         var parameters = new Dictionary<string, object?> { { "p_customer_id", numericId } };
         await _spService.ExecuteNonQueryAsync("sp_DeleteCustomer", parameters);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "customer:deleted",
+            Module = "Customer",
+            Action = "deleted",
+            BranchId = 1,
+            RecordId = numericId.ToString(),
+            Data = new { customerId = numericId }
+        });
 
         return Ok(new
         {

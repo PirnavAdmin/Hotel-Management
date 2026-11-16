@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using HMS.DTOs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,13 +16,16 @@ public class RestaurantSettingsController : ControllerBase
 {
     private readonly RestaurantSettingsService _settingsService;
     private readonly ILogger<RestaurantSettingsController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public RestaurantSettingsController(
         RestaurantSettingsService settingsService,
-        ILogger<RestaurantSettingsController> logger)
+        ILogger<RestaurantSettingsController> logger,
+        IRealtimeSyncService realtimeSync)
     {
         _settingsService = settingsService;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     /// <summary>
@@ -87,6 +91,16 @@ public class RestaurantSettingsController : ControllerBase
             _logger.LogInformation("HTTP PUT restaurant-settings: Updating restaurant name to '{RestaurantName}'", dto.RestaurantName.Trim());
 
             var savedSettings = await _settingsService.SaveSettingsAsync(dto);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "restaurantSetting:updated",
+                Module = "Settings",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = "1",
+                Data = savedSettings
+            });
 
             return Ok(new
             {

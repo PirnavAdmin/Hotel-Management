@@ -231,16 +231,22 @@ async function loadLiveInvoiceRecords() {
   const invoices = extractInvoiceRecords(invoiceResponse);
   const orders = extractSettledOrderRecords(orderResponse);
 
-  const liveRecords = mergeLiveInvoiceRecords(invoices || [], orders || []);
+  let localOrders = [];
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_past_orders_v2_inr") : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) localOrders = parsed.filter(isSettledSaleRecord);
+    }
+  } catch {}
+
+  const allOrders = [...(orders || []), ...localOrders];
+  const liveRecords = mergeLiveInvoiceRecords(invoices || [], allOrders);
   const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(liveRecords)).filter(
     (record) => !["void", "cancelled"].includes(String(record.status || record.Status || "").toLowerCase()),
   );
-  const error = invoices === null && orders === null
+  const error = invoices === null && orders === null && cleanRecords.length === 0
     ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
-    : invoices === null
-    ? `Invoice records could not be loaded (${invoiceResponse?.error || "invoice service unavailable"}); showing settled POS orders.`
-    : orders === null
-    ? `POS order history could not be loaded (${orderResponse?.error || "order history service unavailable"}); invoice details may be incomplete.`
     : "";
 
   return {

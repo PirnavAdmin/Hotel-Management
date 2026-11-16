@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Hubs;
+using HMS.Models;
 using HMS.Services;
 
 [ApiController]
@@ -14,13 +15,16 @@ public class KitchenController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public KitchenController(
         AppDbContext context,
-        IHubContext<PosHub> hubContext)
+        IHubContext<PosHub> hubContext,
+        IRealtimeSyncService realtimeSync)
     {
         _context = context;
         _hubContext = hubContext;
+        _realtimeSync = realtimeSync;
     }
 
     [HttpGet("active-tickets")]
@@ -233,6 +237,24 @@ public class KitchenController : ControllerBase
             await _context.SaveChangesAsync();
             await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, item.OrderId);
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "kot:itemUpdated",
+                Module = "Kitchen",
+                Action = "itemUpdated",
+                BranchId = item.Order?.OutletId > 0 ? item.Order.OutletId : 1,
+                RecordId = item.Id.ToString(),
+                Data = new
+                {
+                    itemId = item.Id,
+                    orderId = item.OrderId,
+                    dishName = item.Name,
+                    kotStatus = item.KotStatus,
+                    tableId = item.Order?.TableId,
+                    tableName = item.Order?.TableName
+                }
+            }, EventScope.Station, "kitchen");
+
             if (item.Order != null)
             {
                 await _hubContext.Clients
@@ -333,6 +355,23 @@ public class KitchenController : ControllerBase
         await _context.SaveChangesAsync();
         await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "kot:statusChanged",
+            Module = "Kitchen",
+            Action = "startCooking",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new
+            {
+                orderId = order.Id,
+                batch = batch,
+                tableId = order.TableId,
+                tableName = order.TableName,
+                status = "cooking"
+            }
+        }, EventScope.Station, "kitchen");
+
         await _hubContext.Clients
             .Group("floor")
             .SendAsync(
@@ -422,6 +461,23 @@ public class KitchenController : ControllerBase
 
         await _context.SaveChangesAsync();
         await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "kot:statusChanged",
+            Module = "Kitchen",
+            Action = "cookingCompleted",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new
+            {
+                orderId = order.Id,
+                batch = batch,
+                tableId = order.TableId,
+                tableName = order.TableName,
+                status = "ready"
+            }
+        }, EventScope.Station, "kitchen");
 
         await _hubContext.Clients
             .Group("floor")

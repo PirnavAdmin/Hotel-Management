@@ -173,6 +173,50 @@ export function CustomerLandingPage({
   kitchenNotifications = [],
   onClearNotifications,
 }) {
+  const getStoredSettings = () => {
+    try {
+      return JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+    } catch {
+      return {};
+    }
+  };
+  const getStoredLogo = () => getStoredSettings().logo || "";
+  const getStoredName = () => getStoredSettings().restaurantName || "";
+
+  const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+  const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
+    const sName = getStoredName();
+    if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant") return sName.trim();
+    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
+    return sName || restaurantName || "Bhanu Bistro";
+  });
+
+  useEffect(() => {
+    setLiveLogo(restaurantLogo || getStoredLogo());
+    if (restaurantName && restaurantName.trim().toLowerCase() !== "restaurant") {
+      setLiveRestaurantName(restaurantName.trim());
+    }
+  }, [restaurantLogo, restaurantName]);
+
+  useEffect(() => {
+    const handleSettingsUpdate = (e) => {
+      const fresh = e?.detail || getStoredSettings();
+      if (fresh?.logo) setLiveLogo(fresh.logo);
+      else setLiveLogo(getStoredLogo() || restaurantLogo);
+
+      if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
+        setLiveRestaurantName(fresh.restaurantName.trim());
+      }
+    };
+    window.addEventListener("storage", handleSettingsUpdate);
+    window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    window.addEventListener("avsr-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("storage", handleSettingsUpdate);
+      window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+      window.removeEventListener("avsr-settings-updated", handleSettingsUpdate);
+    };
+  }, [restaurantLogo, restaurantName]);
   // --- Cart & Navigation State ---
   const [cart, setCart] = useState({});
   // Customer Authentication & Profile State (Frontend-Only)
@@ -1398,10 +1442,10 @@ export function CustomerLandingPage({
                 navigateScreen("home");
               }}
             >
-              {restaurantLogo ? (
+              {liveLogo ? (
                 <img
                   className="customer-brand-logo"
-                  src={restaurantLogo}
+                  src={liveLogo}
                   alt=""
                 />
               ) : (
@@ -1410,7 +1454,7 @@ export function CustomerLandingPage({
                 </span>
               )}
               <span>
-                <strong>{restaurantName}</strong>
+                <strong>{liveRestaurantName || restaurantName}</strong>
                 <small>
                   {activeScreen === "menu"
                     ? "Takeaway Ordering"
@@ -1714,7 +1758,7 @@ export function CustomerLandingPage({
           <section className="customer-hero" id="home">
             <div className="customer-hero-content">
               <h1>
-                Welcome to <span>{restaurantName}</span>
+                Welcome to <span>{liveRestaurantName || restaurantName}</span>
               </h1>
               <p className="customer-hero-links">
                 <a

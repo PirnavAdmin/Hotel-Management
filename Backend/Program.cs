@@ -148,6 +148,17 @@ builder.Services
 
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
+
             OnTokenValidated = async context =>
             {
                 var scope = context.Principal?.FindFirstValue("tokenScope");
@@ -317,6 +328,7 @@ builder.Services.AddScoped<ReportingExportService>();
 builder.Services.AddScoped<AccountingService>();
 builder.Services.AddSingleton<ISseBroadcaster, SseBroadcaster>();
 builder.Services.AddSingleton<ITableLockService, TableLockService>();
+builder.Services.AddSingleton<IRealtimeSyncService, RealtimeSyncService>();
 builder.Services.AddSignalR();
 
 // ============================================================

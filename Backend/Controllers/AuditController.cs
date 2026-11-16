@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using HMS.Data;
 using HMS.DTOs;
+using HMS.Models;
+using HMS.Services;
 
 namespace HMS.Controllers;
 
@@ -18,11 +20,13 @@ public class AuditController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ILogger<AuditController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public AuditController(AppDbContext context, ILogger<AuditController> logger)
+    public AuditController(AppDbContext context, ILogger<AuditController> logger, IRealtimeSyncService realtimeSync)
     {
         _context = context;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     /// <summary>
@@ -180,6 +184,23 @@ public class AuditController : ControllerBase
 
                 await cmd.ExecuteNonQueryAsync();
             }
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "audit:created",
+                Module = "Audit",
+                Action = request.Action.Trim(),
+                BranchId = 1,
+                RecordId = request.RecordId,
+                Data = new
+                {
+                    action = request.Action,
+                    tableName = request.TableName,
+                    recordId = request.RecordId,
+                    userId = request.UserId,
+                    ipAddress = request.IpAddress
+                }
+            });
 
             return Ok(new { success = true, message = "Audit log recorded successfully." });
         }

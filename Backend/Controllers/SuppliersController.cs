@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,12 @@ namespace HMS.Controllers;
 public class SuppliersController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public SuppliersController(SpService spService)
+    public SuppliersController(SpService spService, IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
+        _realtimeSync = realtimeSync;
     }
 
     [AllowAnonymous]
@@ -65,6 +68,16 @@ public class SuppliersController : ControllerBase
             CreatedAt = DateTime.UtcNow
         };
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "supplier:created",
+            Module = "Suppliers",
+            Action = "created",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = supplier
+        });
+
         return Ok(new
         {
             success = true,
@@ -91,6 +104,16 @@ public class SuppliersController : ControllerBase
 
         var parameters = new Dictionary<string, object?> { { "p_supplier_id", numericId } };
         await _spService.ExecuteNonQueryAsync("sp_DeleteSupplier", parameters);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "supplier:deleted",
+            Module = "Suppliers",
+            Action = "deleted",
+            BranchId = 1,
+            RecordId = numericId.ToString(),
+            Data = new { supplierId = numericId }
+        });
 
         return Ok(new
         {
@@ -146,6 +169,16 @@ public class SuppliersController : ControllerBase
             UpdatedAt = DateTime.UtcNow
         };
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "purchaseOrder:created",
+            Module = "Suppliers",
+            Action = "created",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = po
+        });
+
         return Ok(new
         {
             success = true,
@@ -171,11 +204,23 @@ public class SuppliersController : ControllerBase
 
         await _spService.ExecuteNonQueryAsync("sp_UpdatePoStatus", parameters);
 
+        var updatedPo = new { poId = id, status = request.Status.Trim().ToUpper() };
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "purchaseOrder:statusChanged",
+            Module = "Suppliers",
+            Action = "statusChanged",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = updatedPo
+        });
+
         return Ok(new
         {
             success = true,
             message = "Purchase order status updated successfully.",
-            data = new { poId = id, status = request.Status.Trim().ToUpper() }
+            data = updatedPo
         });
     }
 
