@@ -1,5 +1,6 @@
 using HMS.DTOs;
 using HMS.Hubs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,11 +14,16 @@ public class KotOrderItemsController : ControllerBase
 {
     private readonly KotService _kotService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public KotOrderItemsController(KotService kotService, IHubContext<PosHub> hubContext)
+    public KotOrderItemsController(
+        KotService kotService,
+        IHubContext<PosHub> hubContext,
+        IRealtimeSyncService realtimeSync)
     {
         _kotService = kotService;
         _hubContext = hubContext;
+        _realtimeSync = realtimeSync;
     }
 
     // GET /api/v1/kot-order-items?orderId={orderId}&status={status}
@@ -71,6 +77,16 @@ public class KotOrderItemsController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemAdded", created);
             await _hubContext.Clients.All.SendAsync("KotItemAdded", created);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "kot:itemAdded",
+                Module = "Kitchen",
+                Action = "itemAdded",
+                BranchId = 1,
+                RecordId = created.OrderItemId.ToString(),
+                Data = created
+            }, EventScope.Station, "kitchen");
         }
         catch { }
 
@@ -98,6 +114,16 @@ public class KotOrderItemsController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "kot:itemUpdated",
+                Module = "Kitchen",
+                Action = "itemUpdated",
+                BranchId = 1,
+                RecordId = updated.OrderItemId.ToString(),
+                Data = updated
+            }, EventScope.Station, "kitchen");
         }
         catch { }
 
@@ -124,6 +150,16 @@ public class KotOrderItemsController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
             await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "kot:itemUpdated",
+                Module = "Kitchen",
+                Action = "itemUpdated",
+                BranchId = 1,
+                RecordId = updated.OrderItemId.ToString(),
+                Data = updated
+            }, EventScope.Station, "kitchen");
         }
         catch { }
 
@@ -150,6 +186,16 @@ public class KotOrderItemsController : ControllerBase
         {
             await _hubContext.Clients.Group("kitchen").SendAsync("KotItemDeleted", new { itemId = id });
             await _hubContext.Clients.All.SendAsync("KotItemDeleted", new { itemId = id });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "kot:itemDeleted",
+                Module = "Kitchen",
+                Action = "itemDeleted",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = new { itemId = id }
+            }, EventScope.Station, "kitchen");
         }
         catch { }
 

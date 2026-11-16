@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,12 @@ namespace HMS.Controllers;
 public class DeliveryController : ControllerBase
 {
     private readonly SpService _spService;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public DeliveryController(SpService spService)
+    public DeliveryController(SpService spService, IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
+        _realtimeSync = realtimeSync;
     }
 
     [AllowAnonymous]
@@ -75,6 +78,16 @@ public class DeliveryController : ControllerBase
             CreatedAt = DateTime.UtcNow
         };
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "delivery:created",
+            Module = "Delivery",
+            Action = "dispatched",
+            BranchId = 1,
+            RecordId = deliveryId.ToString(),
+            Data = delivery
+        });
+
         return Ok(new
         {
             success = true,
@@ -100,11 +113,23 @@ public class DeliveryController : ControllerBase
 
         await _spService.ExecuteNonQueryAsync("sp_UpdateDeliveryStatus", parameters);
 
+        var updateData = new { deliveryId = id, deliveryStatus = request.Status.Trim().ToUpper() };
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "delivery:statusChanged",
+            Module = "Delivery",
+            Action = "statusChanged",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = updateData
+        });
+
         return Ok(new
         {
             success = true,
             message = "Delivery status updated successfully.",
-            data = new { deliveryId = id, deliveryStatus = request.Status.Trim().ToUpper() }
+            data = updateData
         });
     }
 

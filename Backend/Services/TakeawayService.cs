@@ -37,6 +37,7 @@ public class TakeawayService
     private readonly AppDbContext _context;
     private readonly SpService _spService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly IConfiguration _configuration;
     private readonly ILogger<TakeawayService> _logger;
 
@@ -48,12 +49,14 @@ public class TakeawayService
         AppDbContext context,
         SpService spService,
         IHubContext<PosHub> hubContext,
+        IRealtimeSyncService realtimeSync,
         IConfiguration configuration,
         ILogger<TakeawayService> logger)
     {
         _context = context;
         _spService = spService;
         _hubContext = hubContext;
+        _realtimeSync = realtimeSync;
         _configuration = configuration;
         _logger = logger;
     }
@@ -742,6 +745,24 @@ public class TakeawayService
             try
             {
                 await _hubContext.Clients.Group("floor").SendAsync("TakeawayOrderCreated", orderCreatedBroadcast);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "takeaway:created",
+                    Module = "Takeaway",
+                    Action = "created",
+                    BranchId = 1,
+                    RecordId = response.OrderId.ToString(),
+                    Data = response
+                });
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "order:created",
+                    Module = "Orders",
+                    Action = "created",
+                    BranchId = 1,
+                    RecordId = response.OrderId.ToString(),
+                    Data = response
+                });
             }
             catch { }
         }
@@ -899,6 +920,39 @@ public class TakeawayService
                 orderStatus = order.Status,
                 fulfillmentStatus = order.FulfillmentStatus,
                 updatedAt = order.UpdatedAt
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "takeaway:statusChanged",
+                Module = "Takeaway",
+                Action = "statusChanged",
+                BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                RecordId = order.Id.ToString(),
+                Data = new
+                {
+                    orderId = order.Id,
+                    orderNumber = order.OrderNumber,
+                    orderStatus = order.Status,
+                    fulfillmentStatus = order.FulfillmentStatus,
+                    updatedAt = order.UpdatedAt
+                }
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "order:statusChanged",
+                Module = "Orders",
+                Action = "statusChanged",
+                BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                RecordId = order.Id.ToString(),
+                Data = new
+                {
+                    orderId = order.Id,
+                    orderNumber = order.OrderNumber,
+                    status = order.Status,
+                    fulfillmentStatus = order.FulfillmentStatus
+                }
             });
         }
         catch { }
@@ -1578,6 +1632,55 @@ public class TakeawayService
         }
         catch { }
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "payment:completed",
+            Module = "Payments",
+            Action = "completed",
+            BranchId = 1,
+            RecordId = payment.PaymentId.ToString(),
+            Data = new
+            {
+                paymentId = payment.PaymentId,
+                invoiceId = invoice.InvoiceId,
+                orderId = invoice.OrderId,
+                amount = payAmount,
+                paymentMethod = paymentMethod,
+                transactionReference = txnRef,
+                isFullyPaid = fullyPaid
+            }
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "invoice:updated",
+            Module = "Invoices",
+            Action = "paymentRecorded",
+            BranchId = 1,
+            RecordId = invoice.InvoiceId.ToString(),
+            Data = new
+            {
+                invoiceId = invoice.InvoiceId,
+                invoiceNumber = invoice.InvoiceNumber,
+                status = invoice.Status,
+                paidAmount = invoice.PaidAmount,
+                dueAmount = Math.Max(0m, invoice.TotalAmount - invoice.PaidAmount)
+            }
+        });
+
+        if (fullyPaid && order != null)
+        {
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "takeaway:statusChanged",
+                Module = "Takeaway",
+                Action = "settled",
+                BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                RecordId = order.Id.ToString(),
+                Data = new { orderId = order.Id, status = "Settled" }
+            });
+        }
+
         return new TakeawayPaymentResultDto
         {
             Success = true,
@@ -2052,7 +2155,7 @@ public class TakeawayService
 
                 try
                 {
-                    await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", new
+                    var kotPayload = new
                     {
                         kotId = kot.Id,
                         kotNumber = kot.KotNumber,
@@ -2064,7 +2167,18 @@ public class TakeawayService
                         status = "Queued",
                         orderTime = order.CreatedAt,
                         items = allKitchen.Select(i => new { i.Id, i.Name, i.Quantity, i.Notes }).ToList()
-                    });
+                    };
+                    await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", kotPayload);
+
+                    await _realtimeSync.PublishAsync(new RealtimeEvent
+                    {
+                        EventType = "kot:created",
+                        Module = "Kitchen",
+                        Action = "created",
+                        BranchId = 1,
+                        RecordId = kot.Id.ToString(),
+                        Data = kotPayload
+                    }, EventScope.Station, "kitchen");
                 }
                 catch { }
             }
@@ -2140,6 +2254,16 @@ public class TakeawayService
                     };
                     await _hubContext.Clients.Group("bar").SendAsync("ReceiveNewBOT", botPayload);
                     await _hubContext.Clients.All.SendAsync("ReceiveBarKotCreated", botPayload);
+
+                    await _realtimeSync.PublishAsync(new RealtimeEvent
+                    {
+                        EventType = "bot:created",
+                        Module = "Bar",
+                        Action = "created",
+                        BranchId = 1,
+                        RecordId = botId.ToString(),
+                        Data = botPayload
+                    }, EventScope.Station, "bar");
                 }
                 catch { }
             }
@@ -2757,6 +2881,26 @@ public class TakeawayService
                 await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderCancelled", cancelPayload);
                 await _hubContext.Clients.Group("bar").SendAsync("BarBotCancelled", cancelPayload);
                 await _hubContext.Clients.All.SendAsync("BarKotCancelled", cancelPayload);
+
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "takeaway:cancelled",
+                    Module = "Takeaway",
+                    Action = "cancelled",
+                    BranchId = 1,
+                    RecordId = targetOrderId.ToString(),
+                    Data = cancelPayload
+                });
+
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "order:cancelled",
+                    Module = "Orders",
+                    Action = "cancelled",
+                    BranchId = 1,
+                    RecordId = targetOrderId.ToString(),
+                    Data = cancelPayload
+                });
             }
             catch { }
         }

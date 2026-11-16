@@ -1,6 +1,7 @@
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
+using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,12 @@ namespace HMS.Controllers;
 public class InventoryPurchasesController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IRealtimeSyncService _realtimeSync;
 
-    public InventoryPurchasesController(AppDbContext context)
+    public InventoryPurchasesController(AppDbContext context, IRealtimeSyncService realtimeSync)
     {
         _context = context;
+        _realtimeSync = realtimeSync;
     }
 
     [AllowAnonymous]
@@ -78,6 +81,34 @@ public class InventoryPurchasesController : ControllerBase
 
         _context.InventoryPurchaseRecords.Add(purchase);
         await _context.SaveChangesAsync();
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "purchase:created",
+            Module = "Inventory",
+            Action = "created",
+            BranchId = 1,
+            RecordId = purchase.PurchaseId.ToString(),
+            Data = purchase
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "stock:updated",
+            Module = "Inventory",
+            Action = "purchaseAdded",
+            BranchId = 1,
+            RecordId = purchase.ItemId?.ToString() ?? purchase.PurchaseId.ToString(),
+            Data = new
+            {
+                purchaseId = purchase.PurchaseId,
+                itemId = purchase.ItemId,
+                name = purchase.Name,
+                quantity = purchase.Quantity,
+                unit = purchase.Unit,
+                department = purchase.Department
+            }
+        });
 
         return CreatedAtAction(nameof(GetPurchases), new { department = purchase.Department }, new
         {

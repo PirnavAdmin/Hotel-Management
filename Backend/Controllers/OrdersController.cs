@@ -20,6 +20,7 @@ public class OrdersController : ControllerBase
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<OrdersController> _logger;
 
     public OrdersController(
@@ -28,6 +29,7 @@ public class OrdersController : ControllerBase
         ReportingExportService reportingExportService,
         ExportService exportService,
         IHubContext<PosHub> hubContext,
+        IRealtimeSyncService realtimeSync,
         ILogger<OrdersController> logger)
     {
         _context = context;
@@ -35,6 +37,7 @@ public class OrdersController : ControllerBase
         _reportingExportService = reportingExportService;
         _exportService = exportService;
         _hubContext = hubContext;
+        _realtimeSync = realtimeSync;
         _logger = logger;
     }
 
@@ -87,6 +90,17 @@ public class OrdersController : ControllerBase
         order.FulfillmentStatus = "PickedUp";
         order.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "takeaway:statusChanged",
+            Module = "Takeaway",
+            Action = "statusChanged",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, status = order.Status, fulfillmentStatus = order.FulfillmentStatus }
+        });
+
         return Ok(new { success = true, message = "Takeaway order dispatched.", orderId = order.Id, fulfillmentStatus = order.FulfillmentStatus });
     }
 
@@ -339,6 +353,26 @@ public class OrdersController : ControllerBase
                 takeawayDto.InvoiceId = invoiceId;
                 takeawayDto.InvoiceNo = assignedInvoiceNo;
             }
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "takeaway:created",
+                Module = "Takeaway",
+                Action = "created",
+                BranchId = takeawayOrder.OutletId > 0 ? takeawayOrder.OutletId : 1,
+                RecordId = takeawayOrder.Id.ToString(),
+                Data = takeawayDto
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "order:created",
+                Module = "Orders",
+                Action = "created",
+                BranchId = takeawayOrder.OutletId > 0 ? takeawayOrder.OutletId : 1,
+                RecordId = takeawayOrder.Id.ToString(),
+                Data = takeawayDto
+            });
 
             return Ok(new
             {
@@ -672,7 +706,37 @@ public class OrdersController : ControllerBase
                     grandTotal = order.GrandTotal
                 });
 
-        return Ok(MapToOrderDto(order));
+        var finalOrderDto = MapToOrderDto(order);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = isNewOrder ? "order:created" : "order:updated",
+            Module = "Orders",
+            Action = isNewOrder ? "created" : "updated",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = finalOrderDto
+        });
+
+        if (table != null)
+        {
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "table:statusChanged",
+                Module = "Tables",
+                Action = "statusChanged",
+                BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                RecordId = table.Id.ToString(),
+                Data = new
+                {
+                    tableId = table.Id,
+                    status = table.Status,
+                    orderTotal = order.GrandTotal
+                }
+            });
+        }
+
+        return Ok(finalOrderDto);
     }
 
 
@@ -800,7 +864,19 @@ public class OrdersController : ControllerBase
                     grandTotal = order.GrandTotal
                 });
 
-        return Ok(MapToOrderDto(order));
+        var updatedOrderDto = MapToOrderDto(order);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:updated",
+            Module = "Orders",
+            Action = "updated",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = updatedOrderDto
+        });
+
+        return Ok(updatedOrderDto);
     }
 
 
@@ -871,7 +947,29 @@ public class OrdersController : ControllerBase
                     grandTotal = order.GrandTotal
                 });
 
-        return Ok(MapToOrderDto(order));
+        var itemRemovedDto = MapToOrderDto(order);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:itemDeleted",
+            Module = "Orders",
+            Action = "itemDeleted",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, itemId, order = itemRemovedDto }
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:updated",
+            Module = "Orders",
+            Action = "updated",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = itemRemovedDto
+        });
+
+        return Ok(itemRemovedDto);
     }
 
     [HttpDelete("{id}")]
@@ -887,7 +985,30 @@ public class OrdersController : ControllerBase
         order.IsActive = false;
         order.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        return Ok(new { success = true, message = "Order cancelled/deleted successfully.", data = MapToOrderDto(order) });
+
+        var cancelledDto = MapToOrderDto(order);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:deleted",
+            Module = "Orders",
+            Action = "deleted",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, status = "Cancelled" }
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:statusChanged",
+            Module = "Orders",
+            Action = "cancelled",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, status = "Cancelled" }
+        });
+
+        return Ok(new { success = true, message = "Order cancelled/deleted successfully.", data = cancelledDto });
     }
 
     [HttpPost("{id}/cancel")]
@@ -995,6 +1116,15 @@ public class OrdersController : ControllerBase
             try
             {
                 await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", kotData);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "kot:created",
+                    Module = "Kitchen",
+                    Action = "created",
+                    BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                    RecordId = kot.Id.ToString(),
+                    Data = kotData
+                }, EventScope.Station, "kitchen");
             }
             catch { }
 
@@ -1094,6 +1224,15 @@ public class OrdersController : ControllerBase
             {
                 await _hubContext.Clients.Group("bar").SendAsync("ReceiveNewBOT", botData);
                 await _hubContext.Clients.All.SendAsync("ReceiveBarKotCreated", botData);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "bot:created",
+                    Module = "Bar",
+                    Action = "created",
+                    BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                    RecordId = botId.ToString(),
+                    Data = botData
+                }, EventScope.Station, "bar");
             }
             catch { }
 
@@ -1126,6 +1265,21 @@ public class OrdersController : ControllerBase
                         status = table.Status,
                         activeKOTCount = activeCount,
                         orderTotal = order.GrandTotal
+                    });
+                    await _realtimeSync.PublishAsync(new RealtimeEvent
+                    {
+                        EventType = "table:statusChanged",
+                        Module = "Tables",
+                        Action = "statusChanged",
+                        BranchId = order.OutletId > 0 ? order.OutletId : 1,
+                        RecordId = table.Id.ToString(),
+                        Data = new
+                        {
+                            tableId = table.Id,
+                            status = table.Status,
+                            activeKOTCount = activeCount,
+                            orderTotal = order.GrandTotal
+                        }
                     });
                 }
             }
@@ -1291,6 +1445,54 @@ public class OrdersController : ControllerBase
             settledDto.InvoiceNo = !string.IsNullOrWhiteSpace(request?.InvoiceNumber)
                 ? request.InvoiceNumber.Trim()
                 : $"INV-{DateTime.UtcNow:yyyyMMdd}-{order.Id}";
+        }
+
+        long branchId = order.OutletId > 0 ? order.OutletId : 1;
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:statusChanged",
+            Module = "Orders",
+            Action = "settled",
+            BranchId = branchId,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, status = "Settled", invoiceId = invoiceId, invoiceNumber = settledDto.InvoiceNo }
+        });
+
+        if (order.TableId.HasValue)
+        {
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "table:statusChanged",
+                Module = "Tables",
+                Action = "statusChanged",
+                BranchId = branchId,
+                RecordId = order.TableId.Value.ToString(),
+                Data = new { tableId = order.TableId.Value, status = "vacant", activeKOTCount = 0, orderTotal = 0 }
+            });
+        }
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "payment:completed",
+            Module = "Payments",
+            Action = "completed",
+            BranchId = branchId,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, amount = order.GrandTotal, paymentMethod = request?.PaymentMethod ?? order.PaymentMethod ?? "Cash", invoiceId }
+        });
+
+        if (invoiceId > 0)
+        {
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "invoice:created",
+                Module = "Invoices",
+                Action = "created",
+                BranchId = branchId,
+                RecordId = invoiceId.ToString(),
+                Data = new { invoiceId, invoiceNumber = settledDto.InvoiceNo, orderId = order.Id, totalAmount = order.GrandTotal }
+            });
         }
 
         return Ok(new
@@ -1653,7 +1855,7 @@ public class OrdersController : ControllerBase
                 order.TipAmount,
 
             GrandTotal =
-                order.GrandTotal,
+                order.GrandTotal,
             InvoiceNo =
                 order.InvoiceNo,
 
@@ -1686,7 +1888,7 @@ public class OrdersController : ControllerBase
     {
         bool isBar = item.BotId.HasValue && item.BotId.Value > 0;
         return new OrderItemDto
-        {
+        {
             OrderId =
                 item.OrderId,
 
@@ -1753,6 +1955,16 @@ public class OrdersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:updated",
+            Module = "Orders",
+            Action = "guestsUpdated",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, guests = order.Guests }
+        });
+
         return Ok(new { success = true, message = $"Guest count updated to {request.Guests}.", guests = order.Guests });
     }
 
@@ -1801,6 +2013,32 @@ public class OrdersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:discountApplied",
+            Module = "Orders",
+            Action = "discountApplied",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new
+            {
+                orderId = order.Id,
+                discountPercent = order.DiscountPercent,
+                discountAmount = order.DiscountAmount,
+                grandTotal = order.GrandTotal
+            }
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:updated",
+            Module = "Orders",
+            Action = "updated",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = MapToOrderDto(order)
+        });
+
         return Ok(new
         {
             success = true,
@@ -1828,6 +2066,16 @@ public class OrdersController : ControllerBase
         item.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:itemUpdated",
+            Module = "Orders",
+            Action = "notesUpdated",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = new { orderId = id, itemId = itemId, notes = item.Notes }
+        });
 
         return Ok(new { success = true, message = "Cooking instructions updated.", notes = item.Notes });
     }
@@ -1866,6 +2114,22 @@ public class OrdersController : ControllerBase
         order.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:updated",
+            Module = "Orders",
+            Action = "serviceChargeUpdated",
+            BranchId = order.OutletId > 0 ? order.OutletId : 1,
+            RecordId = order.Id.ToString(),
+            Data = new
+            {
+                orderId = order.Id,
+                serviceChargePercent = order.ServiceChargePercent,
+                serviceChargeAmount = order.ServiceChargeAmount,
+                grandTotal = order.GrandTotal
+            }
+        });
 
         return Ok(new
         {

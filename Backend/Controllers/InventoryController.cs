@@ -23,6 +23,7 @@ public class InventoryController : ControllerBase
     private readonly InventoryService _inventoryService;
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<InventoryController> _logger;
 
     public InventoryController(
@@ -30,12 +31,14 @@ public class InventoryController : ControllerBase
         InventoryService inventoryService,
         ReportingExportService reportingExportService,
         ExportService exportService,
+        IRealtimeSyncService realtimeSync,
         ILogger<InventoryController> logger)
     {
         _spService = spService;
         _inventoryService = inventoryService;
         _reportingExportService = reportingExportService;
         _exportService = exportService;
+        _realtimeSync = realtimeSync;
         _logger = logger;
     }
 
@@ -215,6 +218,17 @@ public class InventoryController : ControllerBase
             if (items.Count == 1 && result.Items.Count == 1)
             {
                 var first = result.Items[0];
+
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "inventory:created",
+                    Module = "Inventory",
+                    Action = first.Action ?? "created",
+                    BranchId = 1,
+                    RecordId = first.Id.ToString(),
+                    Data = first
+                });
+
                 return CreatedAtAction(nameof(GetIngredientById), new { id = first.Id }, new
                 {
                     success = true,
@@ -234,6 +248,19 @@ public class InventoryController : ControllerBase
             }
 
             // Batch creation: return 200 OK with full summary
+            foreach (var itm in result.Items)
+            {
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "inventory:created",
+                    Module = "Inventory",
+                    Action = itm.Action ?? "created",
+                    BranchId = 1,
+                    RecordId = itm.Id.ToString(),
+                    Data = itm
+                });
+            }
+
             return Ok(new
             {
                 success = result.Success,
@@ -297,11 +324,22 @@ public class InventoryController : ControllerBase
 
             if (result.Items.Count > 0)
             {
+                var updatedItem = result.Items[0];
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "inventory:updated",
+                    Module = "Inventory",
+                    Action = "updated",
+                    BranchId = 1,
+                    RecordId = id.ToString(),
+                    Data = updatedItem
+                });
+
                 return Ok(new
                 {
                     success = true,
                     message = "Ingredient updated successfully.",
-                    data = result.Items[0]
+                    data = updatedItem
                 });
             }
 
@@ -327,6 +365,16 @@ public class InventoryController : ControllerBase
             _logger.LogInformation("Deleting ingredient {IngredientId}", id);
             var parameters = new Dictionary<string, object?> { { "p_id", id } };
             await _spService.ExecuteNonQueryAsync("sp_DeleteIngredient", parameters);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "inventory:deleted",
+                Module = "Inventory",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = new { id }
+            });
 
             return Ok(new
             {
@@ -392,6 +440,22 @@ public class InventoryController : ControllerBase
 
             var list = await _spService.ExecuteQueryAsync("sp_GetIngredientById", MapIngredientFromReader, new Dictionary<string, object?> { { "p_id", request.IngredientId } });
             var updated = list.FirstOrDefault();
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "stock:updated",
+                Module = "Inventory",
+                Action = "adjusted",
+                BranchId = 1,
+                RecordId = request.IngredientId.ToString(),
+                Data = new
+                {
+                    ingredientId = request.IngredientId,
+                    quantityChange = request.QuantityChange,
+                    reason = request.Reason,
+                    updated = updated
+                }
+            });
 
             return Ok(new
             {

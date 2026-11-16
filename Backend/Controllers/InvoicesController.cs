@@ -22,6 +22,7 @@ public class InvoicesController : ControllerBase
     private readonly SpService _spService;
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<InvoicesController> _logger;
 
     public InvoicesController(
@@ -29,12 +30,14 @@ public class InvoicesController : ControllerBase
         SpService spService,
         ReportingExportService reportingExportService,
         ExportService exportService,
+        IRealtimeSyncService realtimeSync,
         ILogger<InvoicesController> logger)
     {
         _context = context;
         _spService = spService;
         _reportingExportService = reportingExportService;
         _exportService = exportService;
+        _realtimeSync = realtimeSync;
         _logger = logger;
     }
 
@@ -164,6 +167,16 @@ public class InvoicesController : ControllerBase
 
             var populated = await GetInvoiceByIdObject(invoice.InvoiceId);
 
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "invoice:created",
+                Module = "Invoices",
+                Action = "created",
+                BranchId = 1,
+                RecordId = invoice.InvoiceId.ToString(),
+                Data = populated
+            });
+
             return CreatedAtAction(nameof(GetInvoiceById), new { id = invoice.InvoiceId }, new
             {
                 success = true,
@@ -241,6 +254,38 @@ public class InvoicesController : ControllerBase
             await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "payment:completed",
+                Module = "Payments",
+                Action = "completed",
+                BranchId = 1,
+                RecordId = payment.PaymentId.ToString(),
+                Data = new
+                {
+                    paymentId = payment.PaymentId,
+                    invoiceId = id,
+                    orderId = invoice.OrderId,
+                    amount = request.Amount,
+                    paymentMode = mode,
+                    paymentMethod = paymentMethod,
+                    status = invoice.Status,
+                    totalPaid = totalPaid,
+                    totalAmount = invoice.TotalAmount
+                }
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "invoice:updated",
+                Module = "Invoices",
+                Action = "paymentRecorded",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -441,6 +486,27 @@ public class InvoicesController : ControllerBase
         }
 
         var updated = await GetInvoiceByIdObject(id);
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "invoice:settled",
+            Module = "Invoices",
+            Action = "settled",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = updated
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "payment:completed",
+            Module = "Payments",
+            Action = "completed",
+            BranchId = 1,
+            RecordId = id.ToString(),
+            Data = new { invoiceId = id, amount = due, paymentMode = "CASH", status = "PAID" }
+        });
+
         return Ok(new
         {
             success = true,
@@ -482,6 +548,17 @@ public class InvoicesController : ControllerBase
             await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "invoice:updated",
+                Module = "Invoices",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -515,6 +592,17 @@ public class InvoicesController : ControllerBase
             await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "invoice:statusChanged",
+                Module = "Invoices",
+                Action = "statusChanged",
+                BranchId = 1,
+                RecordId = id.ToString(),
+                Data = updated
+            });
+
             return Ok(new
             {
                 success = true,
@@ -599,6 +687,16 @@ public class InvoicesController : ControllerBase
             invoice.Status = "VOID";
             invoice.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "invoice:deleted",
+                Module = "Invoices",
+                Action = "deleted",
+                BranchId = 1,
+                RecordId = numericId.ToString(),
+                Data = new { invoiceId = numericId, status = "VOID" }
+            });
         }
 
         return Ok(new

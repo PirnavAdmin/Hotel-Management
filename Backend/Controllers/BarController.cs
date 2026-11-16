@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Hubs;
+using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,7 @@ public class BarController : ControllerBase
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
     private readonly IHubContext<PosHub> _hubContext;
+    private readonly IRealtimeSyncService _realtimeSync;
     private readonly ILogger<BarController> _logger;
 
     public BarController(
@@ -29,6 +31,7 @@ public class BarController : ControllerBase
         ReportingExportService reportingExportService,
         ExportService exportService,
         IHubContext<PosHub> hubContext,
+        IRealtimeSyncService realtimeSync,
         ILogger<BarController> logger)
     {
         _barService = barService;
@@ -36,7 +39,25 @@ public class BarController : ControllerBase
         _reportingExportService = reportingExportService;
         _exportService = exportService;
         _hubContext = hubContext;
+        _realtimeSync = realtimeSync;
         _logger = logger;
+    }
+
+    private async Task PublishBarEventAsync(string eventType, string action, string recordId, object? data, EventScope scope = EventScope.Restaurant, string? target = null)
+    {
+        try
+        {
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = eventType,
+                Module = "Bar",
+                Action = action,
+                BranchId = 1,
+                RecordId = recordId,
+                Data = data
+            }, scope, target);
+        }
+        catch { }
     }
 
     #region Unified Screen Feed (All Bar Screens Together)
@@ -172,7 +193,20 @@ public class BarController : ControllerBase
             var created = await _barService.CreateBarDrinkAsync(dto);
 
             // Real-time broadcast
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkCreated", created); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkCreated", created);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "bar:drinkCreated",
+                    Module = "Bar",
+                    Action = "created",
+                    BranchId = 1,
+                    RecordId = created.MenuItemId.ToString(),
+                    Data = created
+                });
+            }
+            catch { }
 
             return CreatedAtAction(nameof(GetBarDrinkById), new { id = created.MenuItemId }, new
             {
@@ -218,7 +252,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated);
+            await PublishBarEventAsync("bar:drinkUpdated", "updated", updated.MenuItemId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -258,7 +297,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated);
+            await PublishBarEventAsync("bar:drinkUpdated", "updated", updated.MenuItemId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -298,7 +342,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkDeleted", drinkId); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkDeleted", drinkId);
+            await PublishBarEventAsync("bar:drinkDeleted", "deleted", drinkId.ToString(), new { drinkId });
+        }
+        catch { }
 
         return Ok(new
         {
@@ -337,7 +386,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Drink with ID {drinkId} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarDrinkUpdated", updated);
+            await PublishBarEventAsync("bar:drinkUpdated", "updated", updated.MenuItemId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -444,7 +498,12 @@ public class BarController : ControllerBase
         {
             var created = await _barService.CreateBarTableAsync(dto);
 
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarTableCreated", created); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarTableCreated", created);
+                await PublishBarEventAsync("bar:tableCreated", "created", created.TableId.ToString(), created);
+            }
+            catch { }
 
             return CreatedAtAction(nameof(GetBarTableById), new { id = created.TableId }, new
             {
@@ -473,7 +532,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Table with ID {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarTableUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarTableUpdated", updated);
+            await PublishBarEventAsync("bar:tableUpdated", "updated", updated.TableId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -496,7 +560,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Table with ID {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarTableUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarTableUpdated", updated);
+            await PublishBarEventAsync("bar:tableUpdated", "updated", updated.TableId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -536,7 +605,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Table with ID {tableId} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarTableDeleted", tableId); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarTableDeleted", tableId);
+            await PublishBarEventAsync("bar:tableDeleted", "deleted", tableId.ToString(), new { tableId });
+        }
+        catch { }
 
         return Ok(new
         {
@@ -631,7 +705,12 @@ public class BarController : ControllerBase
         {
             var created = await _barService.CreateBarStaffAsync(dto);
 
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarStaffCreated", created); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarStaffCreated", created);
+                await PublishBarEventAsync("bar:staffCreated", "created", created.StaffId.ToString(), created);
+            }
+            catch { }
 
             return CreatedAtAction(nameof(GetBarStaffById), new { id = created.StaffId }, new
             {
@@ -672,7 +751,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarStaffUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarStaffUpdated", updated);
+            await PublishBarEventAsync("bar:staffUpdated", "updated", updated.StaffId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -700,7 +784,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarStaffUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarStaffUpdated", updated);
+            await PublishBarEventAsync("bar:staffUpdated", "updated", updated.StaffId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -728,7 +817,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Staff member with ID {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarStaffDeleted", staffId); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarStaffDeleted", staffId);
+            await PublishBarEventAsync("bar:staffDeleted", "deleted", staffId.ToString(), new { staffId });
+        }
+        catch { }
 
         return Ok(new
         {
@@ -855,7 +949,12 @@ public class BarController : ControllerBase
                 return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
             }
 
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated);
+                await PublishBarEventAsync("bot:updated", "statusChanged", updated.BotId.ToString(), updated, EventScope.Station, "bar");
+            }
+            catch { }
 
             return Ok(new
             {
@@ -885,7 +984,12 @@ public class BarController : ControllerBase
                 return NotFound(new { success = false, message = $"Bar BOT ticket {id} not found." });
             }
 
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarKotUpdated", updated);
+                await PublishBarEventAsync("bot:updated", "statusChanged", updated.BotId.ToString(), updated, EventScope.Station, "bar");
+            }
+            catch { }
 
             return Ok(new
             {
@@ -913,7 +1017,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"No active beverage orders found for Table {tableId}." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotTableUpdated", new { tableId, status = "ready" }); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveBarKotTableUpdated", new { tableId, status = "ready" });
+            await PublishBarEventAsync("table:statusChanged", "ready", tableId.ToString(), new { tableId, status = "ready" });
+        }
+        catch { }
 
         return Ok(new
         {
@@ -939,7 +1048,12 @@ public class BarController : ControllerBase
                 return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
             }
 
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated);
+                await PublishBarEventAsync("bot:itemUpdated", "statusChanged", updated.OrderItemId.ToString(), updated, EventScope.Station, "bar");
+            }
+            catch { }
 
             return Ok(new
             {
@@ -969,7 +1083,12 @@ public class BarController : ControllerBase
                 return NotFound(new { success = false, message = $"Bar BOT item {orderItemId} not found." });
             }
 
-            try { await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveBarKotItemUpdated", updated);
+                await PublishBarEventAsync("bot:itemUpdated", "statusChanged", updated.OrderItemId.ToString(), updated, EventScope.Station, "bar");
+            }
+            catch { }
 
             return Ok(new
             {
@@ -1116,7 +1235,12 @@ public class BarController : ControllerBase
         if (items.Count == 1 && result.Items.Count == 1)
         {
             var created = result.Items[0];
-            try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created); } catch { }
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveInventoryCreated", created);
+                await PublishBarEventAsync("inventory:created", "created", created.Id.ToString(), created);
+            }
+            catch { }
 
             return CreatedAtAction(nameof(GetBarInventoryItemById), new { id = created.Id }, new
             {
@@ -1155,7 +1279,13 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Inventory item {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", updated);
+            await PublishBarEventAsync("inventory:updated", "updated", updated.Id.ToString(), updated);
+            await PublishBarEventAsync("stock:updated", "stockAdjusted", updated.Id.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -1178,7 +1308,13 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Inventory item {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", updated);
+            await PublishBarEventAsync("inventory:updated", "updated", updated.Id.ToString(), updated);
+            await PublishBarEventAsync("stock:updated", "stockAdjusted", updated.Id.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -1210,7 +1346,13 @@ public class BarController : ControllerBase
             return BadRequest(new { success = false, message = errorMsg });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item);
+            await PublishBarEventAsync("inventory:updated", "consumed", item.Id.ToString(), item);
+            await PublishBarEventAsync("stock:updated", "stockConsumed", item.Id.ToString(), item);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -1233,7 +1375,13 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Inventory item {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", updated);
+            await PublishBarEventAsync("inventory:updated", "updated", updated.Id.ToString(), updated);
+            await PublishBarEventAsync("stock:updated", "stockAdjusted", updated.Id.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {
@@ -1256,7 +1404,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Inventory item {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInventoryDeleted", id); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveInventoryDeleted", id);
+            await PublishBarEventAsync("inventory:deleted", "deleted", id.ToString(), new { id });
+        }
+        catch { }
 
         return Ok(new
         {
@@ -1356,7 +1509,12 @@ public class BarController : ControllerBase
             return NotFound(new { success = false, message = $"Invoice {id} not found." });
         }
 
-        try { await _hubContext.Clients.All.SendAsync("ReceiveInvoiceUpdated", updated); } catch { }
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveInvoiceUpdated", updated);
+            await PublishBarEventAsync("invoice:updated", "updated", updated.InvoiceId.ToString(), updated);
+        }
+        catch { }
 
         return Ok(new
         {

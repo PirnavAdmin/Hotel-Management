@@ -36,15 +36,18 @@ public class ReservationsController : ControllerBase
     private readonly SpService _spService;
     private readonly ReservationService _reservationService;
     private readonly ILogger<ReservationsController> _logger;
+    private readonly IRealtimeSyncService _realtimeSync;
 
     public ReservationsController(
         SpService spService,
         ReservationService reservationService,
-        ILogger<ReservationsController> logger)
+        ILogger<ReservationsController> logger,
+        IRealtimeSyncService realtimeSync)
     {
         _spService = spService;
         _reservationService = reservationService;
         _logger = logger;
+        _realtimeSync = realtimeSync;
     }
 
     private ReservationCallerContext GetCaller()
@@ -402,6 +405,20 @@ public class ReservationsController : ControllerBase
         {
             var caller = GetCaller();
             var (reservation, alreadyProcessed) = await _reservationService.CreateReservationAsync(request, caller);
+
+            if (!alreadyProcessed)
+            {
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "reservation:created",
+                    Module = "Reservations",
+                    Action = "created",
+                    BranchId = reservation.BranchId,
+                    RecordId = reservation.ReservationId.ToString(),
+                    Data = reservation
+                });
+            }
+
             return StatusCode(alreadyProcessed ? StatusCodes.Status200OK : StatusCodes.Status201Created, new
             {
                 success = true,
@@ -462,6 +479,17 @@ public class ReservationsController : ControllerBase
         {
             var caller = GetCaller();
             var result = await _reservationService.ModifyReservationAsync(reservationId, request, caller);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "reservation:updated",
+                Module = "Reservations",
+                Action = "updated",
+                BranchId = 1,
+                RecordId = reservationId,
+                Data = result
+            });
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -484,6 +512,17 @@ public class ReservationsController : ControllerBase
         {
             var caller = GetCaller();
             var result = await _reservationService.CancelReservationAsync(reservationId, request, caller);
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "reservation:cancelled",
+                Module = "Reservations",
+                Action = "cancelled",
+                BranchId = 1,
+                RecordId = reservationId,
+                Data = result
+            });
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -528,6 +567,26 @@ public class ReservationsController : ControllerBase
             {
                 return BadRequest(result);
             }
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "reservation:paymentCompleted",
+                Module = "Reservations",
+                Action = "paymentCompleted",
+                BranchId = 1,
+                RecordId = reservationId,
+                Data = result
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "payment:completed",
+                Module = "Payments",
+                Action = "advancePaymentCompleted",
+                BranchId = 1,
+                RecordId = reservationId,
+                Data = result
+            });
 
             return Ok(result);
         }
@@ -589,6 +648,30 @@ public class ReservationsController : ControllerBase
             {
                 return BadRequest(result);
             }
+
+            if (result.Success)
+            {
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "reservation:paymentCompleted",
+                    Module = "Reservations",
+                    Action = "webhookPaymentCompleted",
+                    BranchId = 1,
+                    RecordId = request.ReservationId?.ToString() ?? request.GatewayOrderId ?? "webhook",
+                    Data = result
+                });
+
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "payment:completed",
+                    Module = "Payments",
+                    Action = "webhookPaymentCompleted",
+                    BranchId = 1,
+                    RecordId = request.ReservationId?.ToString() ?? request.GatewayOrderId ?? "webhook",
+                    Data = result
+                });
+            }
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -646,11 +729,23 @@ public class ReservationsController : ControllerBase
             "UPDATE reservations SET status = @stat, updated_at = UTC_TIMESTAMP() WHERE reservation_id = @rid;",
             new Dictionary<string, object?> { { "@stat", normalized.ToLowerInvariant() }, { "@rid", numericId } });
 
+        var statusData = new { reservationId = numericId, status = normalized.ToLowerInvariant() };
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "reservation:statusChanged",
+            Module = "Reservations",
+            Action = "statusChanged",
+            BranchId = 1,
+            RecordId = numericId.ToString(),
+            Data = statusData
+        });
+
         return Ok(new
         {
             success = true,
             message = result?.Message ?? "Reservation status updated successfully.",
-            data = new { reservationId = numericId, status = normalized.ToLowerInvariant() }
+            data = statusData
         });
     }
 
@@ -687,6 +782,16 @@ public class ReservationsController : ControllerBase
 
         var results = await _spService.ExecuteQueryAsync("sp_manage_reservations", MapSpOperationResult, parameters);
         var result = results.Count > 0 ? results[0] : null;
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "reservation:cancelled",
+            Module = "Reservations",
+            Action = "deleted",
+            BranchId = 1,
+            RecordId = numericId.ToString(),
+            Data = new { reservationId = numericId }
+        });
 
         return Ok(new
         {
