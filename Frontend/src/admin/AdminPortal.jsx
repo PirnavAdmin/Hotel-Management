@@ -2062,13 +2062,13 @@ export function AdminPortal({
   const activeTakeawayKOTCount = allTakeawayKOTList.filter(
     (t) => !t.items.every((i) => i.kotStatus === "served" || i.kotStatus === "ready"),
   ).length;
-  const activeKOTCount =
-    tablesWithOrders.filter(
-      (t) =>
-        !t.items.every(
-          (i) => i.kotStatus === "served" || i.kotStatus === "ready",
-        ),
-    ).length + activeTakeawayKOTCount;
+  const dineInKOTCount = tablesWithOrders.filter(
+    (t) =>
+      !t.items.every(
+        (i) => i.kotStatus === "served" || i.kotStatus === "ready",
+      ),
+  ).length;
+  const activeKOTCount = dineInKOTCount;
 
   return (
     <div
@@ -2131,6 +2131,7 @@ export function AdminPortal({
           tablesCount={tables.length}
           staffCount={staffList.length}
           activeKOTCount={activeKOTCount}
+          takeawayCount={activeTakeawayKOTCount}
           restaurantLogo={restaurantLogo}
           restaurantName={restaurantName}
           restaurantTagline={restaurantTagline}
@@ -4633,7 +4634,7 @@ export function AdminPortal({
                               transition: "all 0.15s ease",
                             }}
                           >
-                            🍳 Kitchen KOT ({tablesWithOrders.filter(t => (t.items || []).some(i => !isDrinkItem(i))).length})
+                            🍳 Dine-In KOT ({tablesWithOrders.filter(t => (t.items || []).some(i => !isDrinkItem(i))).length})
                           </button>
                           <button
                             type="button"
@@ -4803,7 +4804,9 @@ export function AdminPortal({
                               fontWeight: 600,
                             }}
                           >
-                            All Active Orders ({tables.filter((t) => (t.items || []).some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i))).length} Tables + {allTakeawayKOTList.length} Takeaways)
+                            {adminKotStation === "takeaway"
+                              ? `All Active Takeaways (${allTakeawayKOTList.length} Orders)`
+                              : `All Active Dine-In Tables (${tables.filter((t) => (t.items || []).some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i))).length} Tables)`}
                           </span>
                         )}
                       </div>
@@ -5344,13 +5347,7 @@ export function AdminPortal({
                           return foodItems.length > 0;
                         });
 
-                        if (adminKotTableFilter === "takeaway") {
-                          return allTakeawayKOTList;
-                        }
-                        if (adminKotTableFilter !== "all") {
-                          return dineInList;
-                        }
-                        return [...dineInList, ...allTakeawayKOTList];
+                        return dineInList;
                       })();
 
                       const activeKotModalTable = selectedKotModalTable

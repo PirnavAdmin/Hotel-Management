@@ -84,7 +84,14 @@ export function KitchenKOTView({
   menuItems = [],
   takeawayOrders = [],
 }) {
-  const currentStation = activeStation || station;
+  const [internalStation, setInternalStation] = useState(station || "kitchen");
+  const currentStation = activeStation || internalStation;
+  const handleStationChange = (newStation) => {
+    setInternalStation(newStation);
+    if (typeof onStationChange === "function") {
+      onStationChange(newStation);
+    }
+  };
   const menuLookup = useMemo(() => createMenuItemLookup(menuItems), [menuItems]);
   const isBarStation = currentStation === "bar";
 
@@ -718,22 +725,33 @@ export function KitchenKOTView({
       tables.some((table) => String(table.id) === String(ticket.id));
   });
 
-  // Merge tickets: Table tickets + Takeaway tickets + API tickets (deduplicated)
+  // Merge tickets: Table tickets + Takeaway tickets + API tickets (deduplicated based on station)
   const mergedActiveMap = new Map();
-  tableTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
-  takeawayTickets.forEach((t) => {
-    mergedActiveMap.set(String(t.uniqueKey), t);
-  });
-  apiTickets.forEach((t) => {
-    const key = String(t.uniqueKey);
-    const tableKey = `table-${t.id}`;
-    if (String(t.orderType).toLowerCase() === "takeaway") {
-      const existing = mergedActiveMap.get(key);
-      mergedActiveMap.set(key, { ...(existing || {}), ...t });
-    } else if (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey)) {
-      mergedActiveMap.set(key, t);
-    }
-  });
+  if (currentStation === "takeaway") {
+    // Strictly Takeaway station:
+    takeawayTickets.forEach((t) => {
+      mergedActiveMap.set(String(t.uniqueKey), t);
+    });
+    apiTickets.forEach((t) => {
+      if (String(t.orderType).toLowerCase() === "takeaway") {
+        const key = String(t.uniqueKey);
+        const existing = mergedActiveMap.get(key);
+        mergedActiveMap.set(key, { ...(existing || {}), ...t });
+      }
+    });
+  } else {
+    // Strictly Dine-in Table station:
+    tableTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
+    apiTickets.forEach((t) => {
+      if (String(t.orderType).toLowerCase() !== "takeaway") {
+        const key = String(t.uniqueKey);
+        const tableKey = `table-${t.id}`;
+        if (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey)) {
+          mergedActiveMap.set(key, t);
+        }
+      }
+    });
+  }
 
   const activeTickets = Array.from(mergedActiveMap.values());
 
@@ -1421,30 +1439,36 @@ export function KitchenKOTView({
                   >
                     KITCHEN DISPLAY SYSTEM (KDS)
                   </span>
-                  {onStationChange && (
-                    <div
-                      className="kds-station-toggle"
-                      role="tablist"
-                      aria-label="KOT Station switcher"
+                  <div
+                    className="kds-station-toggle"
+                    role="tablist"
+                    aria-label="KOT Station switcher"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={currentStation === "kitchen"}
+                      onClick={() => handleStationChange("kitchen")}
                     >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={currentStation === "kitchen"}
-                        onClick={() => onStationChange("kitchen")}
-                      >
-                        🍳 Kitchen KOT
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={currentStation === "bar"}
-                        onClick={() => onStationChange("bar")}
-                      >
-                        🍸 Bar BOT
-                      </button>
-                    </div>
-                  )}
+                      🍳 Dine-In KOT ({tableTickets.length})
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={currentStation === "takeaway"}
+                      onClick={() => handleStationChange("takeaway")}
+                    >
+                      🥡 Takeaway KOT ({takeawayTickets.length})
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={currentStation === "bar"}
+                      onClick={() => handleStationChange("bar")}
+                    >
+                      🍸 Bar BOT
+                    </button>
+                  </div>
                 </div>
                 <p
                   style={{
@@ -1453,7 +1477,11 @@ export function KitchenKOTView({
                     marginTop: "2px",
                   }}
                 >
-                  {isBarStation ? "Live Bar Order Tickets · Active POS beverage orders awaiting preparation" : "Live Kitchen Order Tickets · Active POS orders awaiting preparation"}
+                  {isBarStation
+                    ? "Live Bar Order Tickets · Active POS beverage orders awaiting preparation"
+                    : currentStation === "takeaway"
+                    ? "Live Takeaway Order Tickets · Active pickup orders awaiting preparation"
+                    : "Live Dine-In Table Order Tickets · Active table orders awaiting preparation"}
                 </p>
               </div>
             </div>
