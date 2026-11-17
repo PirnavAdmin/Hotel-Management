@@ -2146,11 +2146,7 @@ export function TableView({
                           flexShrink: 0,
                         }}
                       >
-<<<<<<< HEAD
                         {getTableBadgeText(table)}
-=======
-                        T{table.tableNumberNumeric || table.tableNumber || getTableSortNumber(table) || table.id}
->>>>>>> 7710c42c2eade4ca12e912a22c9380ef27aa7502
                       </span>
                       <h3
                         style={{

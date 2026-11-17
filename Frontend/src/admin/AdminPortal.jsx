@@ -1755,18 +1755,15 @@ export function AdminPortal({
       });
     }
 
-    const isPureDigits = /^\d+$/.test(rawName);
+    const formattedName = rawName || (editingTable ? (editingTable.name || `Table-${editingTable.id}`) : `Table-${chosenId}`);
 
     if (editingTable) {
-      const formattedName = isPureDigits
-        ? `Table-${rawName}`
-        : (rawName || editingTable.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
         id: editingTable.id,
-        name: formattedName,
-        tableName: formattedName,
-        tableNumber: formattedName,
+        name: rawName || editingTable.name || `Table-${editingTable.id}`,
+        tableName: rawName || editingTable.tableName || `Table-${editingTable.id}`,
+        tableNumber: rawName || editingTable.tableNumber || String(editingTable.id),
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
         server: assignedServer,
@@ -1774,14 +1771,12 @@ export function AdminPortal({
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
       const chosenId = maxId + 1;
-      const formattedName = isPureDigits
-        ? `Table-${rawName}`
-        : (rawName || `Table-${chosenId}`);
+      const newName = rawName || `Table-${chosenId}`;
       onAddTable({
         id: chosenId,
-        name: formattedName,
-        tableName: formattedName,
-        tableNumber: formattedName,
+        name: newName,
+        tableName: newName,
+        tableNumber: newName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 4,
         status: "vacant",
@@ -3550,34 +3545,16 @@ export function AdminPortal({
                                 }}
                               >
                                 {/* Col 1: Table # */}
-                                <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                  <div
-                                    style={{
-                                      width: "28px",
-                                      height: "28px",
-                                      borderRadius: "6px",
-                                      background: "rgba(245, 158, 11, 0.15)",
-                                      color: "var(--accent-amber-light)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontWeight: 800,
-                                      fontSize: "0.8rem",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    <span>T{tbl.tableNumberNumeric || tbl.tableNumber || getTableSortNumber(tbl) || tbl.id}</span>
-                                    <span>{getTableBadgeText(tbl)}</span>
-                                  </div>
+                                <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                   <span
                                     style={{
                                       fontWeight: 700,
                                       color: "var(--text-main)",
-                                      fontSize: "0.88rem",
+                                      fontSize: "0.92rem",
                                       whiteSpace: "normal",
                                     }}
                                   >
-                                    {tbl.name || `Table ${tbl.id}`}
+                                    {tbl.name || tbl.tableName || tbl.tableNumber || `Table ${tbl.id}`}
                                   </span>
                                 </div>
 
