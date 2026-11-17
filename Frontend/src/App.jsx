@@ -2665,22 +2665,43 @@ export function App() {
       }
       return;
     }
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
+
+    const cleanTableId = String(tableId).replace(/^table-/, "");
+    const isTableMatch = (t) =>
+      String(t.id) === String(tableId) ||
+      String(t.id) === cleanTableId ||
+      `table-${t.id}` === String(tableId) ||
+      String(t.backendTableId ?? "") === String(tableId) ||
+      String(t.backendTableId ?? "") === cleanTableId ||
+      (t.name && String(t.name).trim().toLowerCase() === String(tableId).trim().toLowerCase()) ||
+      (t.tableName && String(t.tableName).trim().toLowerCase() === String(tableId).trim().toLowerCase());
+
+    const tbl = tables.find(isTableMatch);
     const itemObj =
       itemId && tbl && Array.isArray(tbl.items)
-        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
+        ? tbl.items.find((i) =>
+            String(i.menuItemId ?? "") === String(itemId) ||
+            String(i.id ?? "") === String(itemId) ||
+            String(i.orderItemId ?? "") === String(itemId) ||
+            (i.name && String(i.name).trim().toLowerCase() === String(itemId).trim().toLowerCase()),
+          )
         : null;
     const itemName = itemObj ? itemObj.name : null;
 
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
-        if (String(t.id) !== String(tableId)) return t;
+        if (!isTableMatch(t)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
           if ((i.isBarItem || i.isBarDrink) && !["ready", "served", "completed"].includes(String(status).toLowerCase())) return i;
           if (itemId) {
-            return String(i.menuItemId ?? i.id ?? i.orderItemId) === String(itemId) ? { ...i, kotStatus: status, kotSent: true } : i;
+            const matchesThisItem =
+              String(i.menuItemId ?? "") === String(itemId) ||
+              String(i.id ?? "") === String(itemId) ||
+              String(i.orderItemId ?? "") === String(itemId) ||
+              (i.name && String(i.name).trim().toLowerCase() === String(itemId).trim().toLowerCase());
+            return matchesThisItem ? { ...i, kotStatus: status, kotSent: true } : i;
           }
           if (i.isBarItem || i.isBarDrink) return i;
           // Table-level status change

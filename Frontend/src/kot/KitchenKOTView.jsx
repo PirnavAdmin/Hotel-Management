@@ -875,35 +875,63 @@ export function KitchenKOTView({
     if (!ticket) return;
 
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
-    const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
+    const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId) || String(item.menuItemId) === String(itemId));
 
-    if (ticket.backendOrderId) {
-      try {
-        if (itemId != null && (!targetItem || !Number.isFinite(Number(targetItem.id)))) {
-          reportKitchenActionError({ error: "Kitchen item has no saved order-item ID." }, "Start cooking");
-          return;
-        }
-        const result = targetItem && Number.isFinite(Number(targetItem.id))
-          ? await apiUpdateKitchenItemStatus(targetItem.id, "cooking")
-          : await apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch);
-        if (result?.success === false || result?.data?.success === false) {
-          reportKitchenActionError(result, "Start cooking");
-          return;
-        }
-      } catch (error) {
-        reportKitchenActionError({ error: error?.message }, "Start cooking");
-        return;
-      }
-    }
+    const nowTimeStr = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
+    // 1. Immediately update selectedDetailTicket in modal state for real-time responsiveness
+    setSelectedDetailTicket((prev) => {
+      if (!prev) return prev;
+      const matchesModal =
+        prev.uniqueKey === ticketKey ||
+        String(prev.id) === String(ticket.id) ||
+        `table-${prev.id}` === String(ticketKey) ||
+        (prev.name && ticket.name && prev.name.trim().toLowerCase() === ticket.name.trim().toLowerCase());
+      if (!matchesModal) return prev;
+
+      return {
+        ...prev,
+        cookingStartedAt: prev.cookingStartedAt || nowTimeStr,
+        items: (prev.items || []).map((it) => {
+          if (!itemId || String(it.id) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+            return { ...it, kotStatus: "cooking" };
+          }
+          return it;
+        }),
+      };
+    });
+
+    // 2. Immediately update local orders/tables state
     if (isTakeaway) {
       updateLocalTakeawayItemStatus(ticketKey, itemId, "cooking");
       onUpdateItemKotStatus?.(ticketKey, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     } else {
+      const cleanKey = String(ticketKey).replace(/^table-/, "");
       const localTableId = tables.find((table) =>
-        String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
+        String(table.backendTableId ?? table.id) === String(ticket.backendTableId) ||
+        String(table.id) === String(ticket.id) ||
+        String(table.id) === cleanKey ||
+        `table-${table.id}` === String(ticketKey) ||
+        (table.name && ticket.name && table.name.trim().toLowerCase() === ticket.name.trim().toLowerCase())
       )?.id ?? ticket.id;
       onUpdateItemKotStatus?.(localTableId, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    }
+
+    // 3. Asynchronously attempt backend sync without blocking the kitchen staff UI
+    if (ticket.backendOrderId && Number.isFinite(Number(ticket.backendOrderId))) {
+      try {
+        if (itemId != null && targetItem && Number.isFinite(Number(targetItem.id))) {
+          await apiUpdateKitchenItemStatus(targetItem.id, "cooking");
+        } else if (itemId == null) {
+          await apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch);
+        }
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn("[Kitchen] Offline fallback used for start-cooking:", error?.message);
+      }
     }
 
     refreshKitchenTicketsRef.current?.();
@@ -932,28 +960,9 @@ export function KitchenKOTView({
     const willAllBeReady =
       !itemId ||
       (currentTable?.items &&
-        currentTable.items.every((i) => String(i.id) === String(itemId) || isItemCompleted(i)));
+        currentTable.items.every((i) => String(i.id) === String(itemId) || String(i.menuItemId) === String(itemId) || isItemCompleted(i)));
     const isTakeaway = String(currentTable.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
-    const targetItem = itemId && currentTable.items.find((item) => String(item.id) === String(itemId));
-
-    if (currentTable.backendOrderId) {
-      try {
-        if (itemId != null && (!targetItem || !Number.isFinite(Number(targetItem.id)))) {
-          reportKitchenActionError({ error: "Kitchen item has no saved order-item ID." }, "Complete preparation");
-          return;
-        }
-        const result = targetItem && Number.isFinite(Number(targetItem.id))
-          ? await apiUpdateKitchenItemStatus(targetItem.id, "ready")
-          : await apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch);
-        if (result?.success === false || result?.data?.success === false) {
-          reportKitchenActionError(result, "Complete preparation");
-          return;
-        }
-      } catch (error) {
-        reportKitchenActionError({ error: error?.message }, "Complete preparation");
-        return;
-      }
-    }
+    const targetItem = itemId && currentTable.items.find((item) => String(item.id) === String(itemId) || String(item.menuItemId) === String(itemId));
 
     if (willAllBeReady && durationStr) {
       setCompletedTimers((prev) => ({
@@ -964,16 +973,58 @@ export function KitchenKOTView({
       }));
     }
 
+    // 1. Immediately update modal ticket state
+    setSelectedDetailTicket((prev) => {
+      if (!prev) return prev;
+      const matchesModal =
+        prev.uniqueKey === ticketKey ||
+        String(prev.id) === String(currentTable.id) ||
+        `table-${prev.id}` === String(ticketKey) ||
+        (prev.name && currentTable.name && prev.name.trim().toLowerCase() === currentTable.name.trim().toLowerCase());
+      if (!matchesModal) return prev;
+
+      return {
+        ...prev,
+        completedAt: willAllBeReady ? (prev.completedAt || nowTimeStr) : prev.completedAt,
+        completedDuration: willAllBeReady ? (prev.completedDuration || durationStr) : prev.completedDuration,
+        items: (prev.items || []).map((it) => {
+          if (!itemId || String(it.id) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+            return { ...it, kotStatus: "ready" };
+          }
+          return it;
+        }),
+      };
+    });
+
+    // 2. Immediately update local tables / takeaway orders
     if (isTakeaway) {
       updateLocalTakeawayItemStatus(ticketKey, itemId, "ready");
       onUpdateItemKotStatus?.(ticketKey, "ready", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
       onCompleteTableKot?.(ticketKey, targetItem?.menuItemId ?? targetItem?.id ?? itemId, durationStr, nowTimeStr);
     } else {
+      const cleanKey = String(ticketKey).replace(/^table-/, "");
       const localTableId = tables.find((table) =>
-        String(table.backendTableId ?? table.id) === String(currentTable.backendTableId),
+        String(table.backendTableId ?? table.id) === String(currentTable.backendTableId) ||
+        String(table.id) === String(currentTable.id) ||
+        String(table.id) === cleanKey ||
+        `table-${table.id}` === String(ticketKey) ||
+        (table.name && currentTable.name && table.name.trim().toLowerCase() === currentTable.name.trim().toLowerCase())
       )?.id ?? currentTable.id;
       onCompleteTableKot?.(localTableId, targetItem?.menuItemId ?? targetItem?.id ?? itemId, durationStr, nowTimeStr);
       onUpdateItemKotStatus?.(localTableId, "ready", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    }
+
+    // 3. Asynchronously sync backend if available
+    if (currentTable.backendOrderId && Number.isFinite(Number(currentTable.backendOrderId))) {
+      try {
+        if (itemId != null && targetItem && Number.isFinite(Number(targetItem.id))) {
+          await apiUpdateKitchenItemStatus(targetItem.id, "ready");
+        } else if (itemId == null) {
+          await apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch);
+        }
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn("[Kitchen] Offline fallback used for complete preparation:", error?.message);
+      }
     }
 
     refreshKitchenTicketsRef.current?.();
@@ -991,35 +1042,62 @@ export function KitchenKOTView({
     });
 
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
-    const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
+    const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId) || String(item.menuItemId) === String(itemId));
 
-    if (ticket.backendOrderId) {
-      const targetItems = itemId
-        ? ticket.items.filter((item) => String(item.id) === String(itemId))
-        : ticket.items.filter((item) => !isItemCompleted(item));
-      try {
-        const results = await Promise.all(targetItems
-          .filter((item) => Number.isFinite(Number(item.id)))
-          .map((item) => apiUpdateKitchenItemStatus(item.id, "queued")));
-        const failure = results.find((result) => result?.success === false || result?.data?.success === false);
-        if (failure) {
-          reportKitchenActionError(failure, "Reset item");
-          return;
-        }
-      } catch (error) {
-        reportKitchenActionError({ error: error?.message }, "Reset item");
-        return;
-      }
-    }
+    // 1. Immediately update modal ticket state
+    setSelectedDetailTicket((prev) => {
+      if (!prev) return prev;
+      const matchesModal =
+        prev.uniqueKey === ticketKey ||
+        String(prev.id) === String(ticket.id) ||
+        `table-${prev.id}` === String(ticketKey) ||
+        (prev.name && ticket.name && prev.name.trim().toLowerCase() === ticket.name.trim().toLowerCase());
+      if (!matchesModal) return prev;
 
+      return {
+        ...prev,
+        cookingStartedAt: null,
+        completedAt: null,
+        completedDuration: null,
+        items: (prev.items || []).map((it) => {
+          if (!itemId || String(it.id) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+            return { ...it, kotStatus: "received" };
+          }
+          return it;
+        }),
+      };
+    });
+
+    // 2. Immediately update local tables / takeaway
     if (isTakeaway) {
       updateLocalTakeawayItemStatus(ticketKey, itemId, "received");
       onUpdateItemKotStatus?.(ticketKey, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     } else {
+      const cleanKey = String(ticketKey).replace(/^table-/, "");
       const localTableId = tables.find((table) =>
-        String(table.backendTableId ?? table.id) === String(ticket.backendTableId),
+        String(table.backendTableId ?? table.id) === String(ticket.backendTableId) ||
+        String(table.id) === String(ticket.id) ||
+        String(table.id) === cleanKey ||
+        `table-${table.id}` === String(ticketKey) ||
+        (table.name && ticket.name && table.name.trim().toLowerCase() === ticket.name.trim().toLowerCase())
       )?.id ?? ticket.id;
       onUpdateItemKotStatus?.(localTableId, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
+    }
+
+    // 3. Asynchronously sync backend if available
+    if (ticket.backendOrderId && Number.isFinite(Number(ticket.backendOrderId))) {
+      try {
+        const targetItems = itemId
+          ? ticket.items.filter((item) => String(item.id) === String(itemId) || String(item.menuItemId) === String(itemId))
+          : ticket.items.filter((item) => !isItemCompleted(item));
+        await Promise.all(
+          targetItems
+            .filter((item) => Number.isFinite(Number(item.id)))
+            .map((item) => apiUpdateKitchenItemStatus(item.id, "queued")),
+        );
+      } catch (error) {
+        if (import.meta.env.DEV) console.warn("[Kitchen] Offline fallback used for reset item:", error?.message);
+      }
     }
 
     refreshKitchenTicketsRef.current?.();
