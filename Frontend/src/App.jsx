@@ -3977,42 +3977,6 @@ export function App() {
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
               <>
-                <div
-                  className="kot-route-toolbar"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    gap: 8,
-                    padding: "6px 20px",
-                    background: "var(--bg-primary, #0b1120)",
-                    borderBottom: "1px solid var(--border-subtle, #243044)",
-                  }}
-                >
-                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveView("tables");
-                        navigate("/");
-                      }}
-                      style={{
-                        minHeight: 34,
-                        padding: "0 14px",
-                        borderRadius: 7,
-                        border: "1px solid var(--border-subtle, #243044)",
-                        background: "var(--bg-secondary, #111b2b)",
-                        color: "var(--text-muted, #94a3b8)",
-                        fontSize: "0.8rem",
-                        fontWeight: 650,
-                        cursor: "pointer",
-                      }}
-                    >
-                      ← Back to Floor
-                    </button>
-                  </div>
-                </div>
-
                   <KitchenKOTView
                     tables={tables}
                     pastOrders={pastOrders}

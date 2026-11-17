@@ -1045,7 +1045,43 @@ textarea {
 .kds-main-header { box-sizing: border-box; }
 .kds-main-header-brand { flex: 1 1 560px; min-width: 0; }
 .kds-main-header-title-line { min-width: 0; }
-.kds-station-toggle { flex: 0 0 auto; white-space: nowrap; }
+.kds-station-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  white-space: nowrap;
+}
+.kds-station-toggle > button {
+  display: inline-flex;
+  min-height: 32px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.kds-station-toggle > button[aria-selected="true"] {
+  background: var(--accent-amber);
+  color: #fff;
+}
+.kds-station-toggle > button:focus-visible { outline: none; box-shadow: none; }
 .kds-main-header-utilities { min-width: 0; }
 @media (max-width: 1100px) {
   .kds-main-header-brand { flex-basis: 100%; }
@@ -1056,7 +1092,6 @@ textarea {
   .kds-main-header-brand { align-items: flex-start !important; gap: 0.65rem !important; }
   .kds-main-header-title-line { column-gap: 0.45rem !important; }
   .kds-main-header-utilities { column-gap: 0.45rem !important; }
-  .kds-station-toggle button { padding-inline: 0.55rem !important; }
 }
 
 .menu-items-table tbody > tr:not(.menu-admin-item-row) {
