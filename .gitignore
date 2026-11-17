@@ -32,4 +32,9 @@ Desktop.ini
 Thumbs.db
 
 # Local environment variables and secrets
+.env
+.env.*
+!.env.example
+server-db.json
+**/server-db.json
 

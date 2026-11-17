@@ -632,62 +632,6 @@ export function LoginPage({
         })}
       </div>
 
-      {/* Centered Register Pill in the Middle */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: '100%',
-        maxWidth: '400px',
-        marginBottom: '0.45rem',
-        marginTop: '0.1rem',
-        position: 'relative',
-        zIndex: 2,
-      }}>
-        <button
-          type="button"
-          onClick={() => {
-            if (mode === 'register') {
-              setMode('login');
-            } else {
-              setMode('register');
-              clearAll();
-            }
-          }}
-          style={{
-            padding: '0.4rem 1.25rem',
-            borderRadius: '20px',
-            fontSize: '0.76rem',
-            fontWeight: mode === 'register' ? 800 : 650,
-            background: mode === 'register' ? 'var(--primary-gradient)' : 'rgba(255, 255, 255, 0.05)',
-            color: mode === 'register' ? '#ffffff' : 'var(--text-main, #dbe4f0)',
-            border: mode === 'register' ? '1.5px solid #ff9d00' : '1px solid rgba(255, 255, 255, 0.14)',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.4rem',
-            transition: 'all 0.2s ease',
-            boxShadow: mode === 'register' ? '0 4px 14px rgba(245,158,11,0.35)' : 'none',
-          }}
-          onMouseEnter={(e) => {
-            if (mode !== 'register') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.borderColor = '#f59e0b';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (mode !== 'register') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.14)';
-            }
-          }}
-        >
-          <UserPlus size={15} color={mode === 'register' ? '#ffffff' : '#f59e0b'} />
-          <span>{mode === 'register' ? '← Back to Login' : 'Register New Hotel Account'}</span>
-        </button>
-      </div>
-
       <div className="bhanu-form-content">
         <div className="bhanu-form-heading">
           <h1 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-main)', margin: '0 0 2px', letterSpacing: '-0.02em', textAlign: 'center' }}>
