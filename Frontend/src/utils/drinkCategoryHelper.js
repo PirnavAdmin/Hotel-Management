@@ -4,6 +4,20 @@
  */
 
 export const FOOD_CATEGORY_KEYWORDS = [
+  "pizza",
+  "pizzas",
+  "veg pizzas",
+  "non-veg pizzas",
+  "half and half pizza",
+  "mini pizza combos",
+  "sandwiches",
+  "sandwich",
+  "pasta",
+  "pastas",
+  "signature pastas",
+  "appetisers",
+  "appetiser",
+  "lunch menu",
   "biryani",
   "curries",
   "curry",
@@ -143,6 +157,12 @@ export const ALCOHOLIC_KEYWORDS = [
   "alcoholic beverages",
 ];
 
+export function isCafeDineBeverageCategory(category) {
+  if (!category || typeof category !== "string") return false;
+  const s = category.trim().toLowerCase();
+  return /^(cold beverages|hot beverages|cafe beverages|soft drinks)$/i.test(s);
+}
+
 /**
  * Returns true if the given category represents a food category (not a drink).
  * @param {string|null|undefined} category
@@ -151,6 +171,7 @@ export const ALCOHOLIC_KEYWORDS = [
 export function isFoodCategory(category) {
   if (!category || typeof category !== "string") return false;
   const normalized = category.trim().toLowerCase();
+  if (isCafeDineBeverageCategory(normalized)) return true;
   return FOOD_CATEGORY_KEYWORDS.some(
     (kw) => normalized === kw || normalized.includes(kw)
   );

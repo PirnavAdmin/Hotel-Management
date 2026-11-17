@@ -17,7 +17,7 @@ const unwrap = async (request) => {
     ? { ...result, data: payload.data }
     : result;
 };
-const remote = { remoteOnly: true };
+const remote = {};
 
 export const apiGetAdminTakeawayOrders = (params = {}) =>
   unwrap(apiClient(`${BASE}/orders${queryString(params)}`, remote));

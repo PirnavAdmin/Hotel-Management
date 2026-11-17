@@ -680,7 +680,12 @@ export function App() {
         if (Array.isArray(parsed)) {
           // Strictly exclude bar-specific drinks from Dine menu items
           const dineItems = parsed.filter((item) => !isDrinkItem(item));
-          if (dineItems.length === 0) return MENU_ITEMS;
+          if (dineItems.length === 0 || (MENU_ITEMS.length > 0 && dineItems.length < MENU_ITEMS.length)) {
+            try {
+              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(MENU_ITEMS));
+            } catch {}
+            return MENU_ITEMS;
+          }
           if (dineItems.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(dineItems));
@@ -885,7 +890,10 @@ export function App() {
         try {
           localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
         } catch {}
-        const normalizedMenu = backendMenu
+        const effectiveBackendMenu = (backendMenu.length === 1 && String(backendMenu[0]?.dishName || backendMenu[0]?.name || "").trim().toLowerCase() === "biryani")
+          ? MENU_ITEMS
+          : (backendMenu.length === 0 ? MENU_ITEMS : backendMenu);
+        const normalizedMenu = effectiveBackendMenu
           .filter((item) => !item.isBarItem && !item.isBarDrink)
           .map((item) => {
           const previous = localMenu.find((saved) =>
@@ -2591,7 +2599,7 @@ export function App() {
   // 2. Kitchen KDS Action: Start cooking or update status
   const handleUpdateItemKotStatus = (tableId, status, itemId = null) => {
     // Handle Takeaway order status update
-    if (String(tableId).startsWith("takeaway-") || String(tableId).toLowerCase() === "takeaway") {
+    if (String(tableId).startsWith("takeaway-") || String(tableId).toLowerCase() === "takeaway" || tableId === "TAKEAWAY") {
       const takeawayKey = String(tableId).replace(/^takeaway-/, "");
       setPastOrders((prev) => {
         const next = prev.map((ord) => {
@@ -2634,6 +2642,27 @@ export function App() {
 
       window.dispatchEvent(new CustomEvent("avsr-takeaway-updated"));
       window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
+
+      const cleanLabel = `Takeaway #${takeawayKey}`;
+      if (status === "cooking") {
+        triggerKitchenNotification({
+          tableId,
+          tableName: cleanLabel,
+          type: "cooking_started",
+          title: "🔥 Takeaway Cooking Started",
+          message: `Chef started cooking takeaway order #${takeawayKey}!`,
+        });
+        showToast(`🔥 ${cleanLabel}: Chef started cooking!`);
+      } else if (status === "ready") {
+        triggerKitchenNotification({
+          tableId,
+          tableName: cleanLabel,
+          type: "cooking_completed",
+          title: "🥡 Takeaway Ready for Pickup",
+          message: `${cleanLabel} is prepared! Ready for customer handover/pickup.`,
+        });
+        showToast(`✅ ${cleanLabel}: Marked Ready for Pickup!`);
+      }
       return;
     }
     const tbl = tables.find((t) => String(t.id) === String(tableId));
@@ -2777,11 +2806,8 @@ export function App() {
     completedDuration = null,
     completedAt = null,
   ) => {
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
-    const itemObj =
-      itemId && tbl && Array.isArray(tbl.items)
-        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
-        : null;
+    const isTakeaway = String(tableId).startsWith("takeaway-") || String(tableId).toLowerCase() === "takeaway" || tableId === "TAKEAWAY";
+    const takeawayId = String(tableId).replace(/^takeaway-/, "");
     const nowTimeStr =
       completedAt ||
       new Date().toLocaleTimeString([], {
@@ -2789,6 +2815,48 @@ export function App() {
         minute: "2-digit",
         hour12: true,
       });
+
+    if (isTakeaway) {
+      try {
+        const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
+        const list = raw ? JSON.parse(raw) : [];
+        const nextList = list.map((ord) => {
+          const match = String(ord.id) === takeawayId || String(ord.orderId) === takeawayId || String(ord.invoiceNo) === takeawayId;
+          if (!match) return ord;
+          const nextItems = (ord.items || []).map((it) => {
+            if (itemId && String(it.menuItemId ?? it.id) !== String(itemId)) return it;
+            return { ...it, kotStatus: "ready", kotSent: true };
+          });
+          return {
+            ...ord,
+            items: nextItems,
+            fulfillmentStatus: "Ready",
+            completedAt: nowTimeStr,
+            completedDuration: completedDuration || ord.completedDuration || "",
+          };
+        });
+        localStorage.setItem("gourmet_pos_takeaway_orders", JSON.stringify(nextList));
+        window.dispatchEvent(new CustomEvent("avsr-takeaway-updated"));
+        window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
+      } catch {}
+
+      const cleanLabel = `Takeaway #${takeawayId}`;
+      triggerKitchenNotification({
+        tableId,
+        tableName: cleanLabel,
+        type: "cooking_completed",
+        title: "🥡 Takeaway Ready for Pickup",
+        message: `${cleanLabel} order preparation completed! Ready for customer handover/pickup.`,
+      });
+      showToast(`✅ ${cleanLabel}: Order preparation completed! Ready for pickup.`);
+      return;
+    }
+
+    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const itemObj =
+      itemId && tbl && Array.isArray(tbl.items)
+        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
+        : null;
 
     let targetUpdatedTable = null;
     setTables((prevTables) => {
@@ -4135,6 +4203,7 @@ export function App() {
               onBarOrderItemStatusUpdated={handleBarOrderItemStatusUpdated}
               onSetMenuSpecial={handleSetMenuSpecial}
               tables={tables}
+              takeawayOrders={pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway"))}
               sharedRecordLoad={sharedRecordLoad}
               onAddTable={handleAddTable}
               onUpdateTable={handleUpdateTable}

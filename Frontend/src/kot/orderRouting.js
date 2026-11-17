@@ -82,7 +82,13 @@ export function isDrinkItem(item, menuLookup = null, barDrinksList = []) {
 
   // 1. Explicit bar drink flags
   if (item.isBarDrink === true || item.isBarItem === true) return true;
-  if (item.drinkType || item.alcoholPct != null || item.abv != null || item.alcoholContent != null || item.servingMeasure || item.servingVolume || item.measure) return true;
+  if (item.alcoholPct != null || item.abv != null || item.alcoholContent != null) return true;
+
+  // Restaurant cafe beverages (Cold Beverages, Hot Beverages) belong to the dine restaurant menu, not bar-only
+  const rawCatEarly = String(item.category || item.categoryName || item.dishCategory || "").trim();
+  if (/^(cold beverages|hot beverages)$/i.test(rawCatEarly)) return false;
+
+  if (item.drinkType || item.servingMeasure || item.servingVolume || item.measure) return true;
 
   // 2. Section check
   const section = String(item.section || item.menuSection || item.itemType || "").trim().toLowerCase();

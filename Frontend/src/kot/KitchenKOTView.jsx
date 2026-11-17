@@ -648,32 +648,48 @@ export function KitchenKOTView({
     const backendTableId = ticket.tableId ?? ticket.TableId ?? orderId;
     const ticketName = ticket.tableName || ticket.TableName || "";
     const orderTime = ticket.orderTime || ticket.OrderTime || ticket.createdAt || ticket.CreatedAt || ticket.orderReceivedAt;
-    const localTable = tables.find((table) => {
-      const idMatches = [table.backendTableId, table.tableId, table.id]
-        .filter((id) => id !== undefined && id !== null)
-        .some((id) => String(id) === String(backendTableId));
-      const ticketLabel = normalizeTableLabel(ticketName);
-      const tableLabels = [table.name, table.tableName, table.tableNumber]
-        .map(normalizeTableLabel)
-        .filter(Boolean);
-      return idMatches || (ticketLabel && tableLabels.includes(ticketLabel));
-    });
-    const tableId = localTable?.id ?? backendTableId;
+    const rawOrderType = ticket.orderType || ticket.OrderType || "";
+    const isTakeaway =
+      String(rawOrderType).toLowerCase() === "takeaway" ||
+      String(ticketName).toLowerCase().includes("takeaway") ||
+      String(ticket.section || ticket.sectionArea || "").toLowerCase().includes("takeaway") ||
+      ticket.tableId === 0 ||
+      ticket.TableId === 0;
+    const orderType = isTakeaway ? "Takeaway" : (rawOrderType || "DineIn");
+
+    // CRITICAL: NEVER match a dining table if this is a Takeaway order!
+    const localTable = !isTakeaway
+      ? tables.find((table) => {
+          const idMatches = [table.backendTableId, table.tableId, table.id]
+            .filter((id) => id !== undefined && id !== null)
+            .some((id) => String(id) === String(backendTableId));
+          const ticketLabel = normalizeTableLabel(ticketName);
+          const tableLabels = [table.name, table.tableName, table.tableNumber]
+            .map(normalizeTableLabel)
+            .filter(Boolean);
+          return idMatches || (ticketLabel && tableLabels.includes(ticketLabel));
+        })
+      : null;
+
+    const tableId = isTakeaway ? `takeaway-${orderId}` : (localTable?.id ?? backendTableId);
     const batch = Number(ticket.kotBatch) || 1;
-    const orderType = ticket.orderType || ticket.OrderType || "DineIn";
+    const displayName = isTakeaway
+      ? `Takeaway #${ticket.orderNumber || ticket.OrderNumber || ticket.invoiceNo || orderId}`
+      : (localTable?.name || ticketName || `Table ${tableId}`);
+
     return {
       id: tableId,
-      backendTableId,
+      backendTableId: isTakeaway ? 0 : backendTableId,
       backendOrderId: orderId,
       orderType,
       kotBatch: batch,
       ticketStatus: ticket.ticketStatus || ticket.TicketStatus || ticket.status || ticket.Status,
-      name: localTable?.name || ticketName || `Table ${tableId}`,
-      section: ticket.section || ticket.sectionArea || "Main Hall",
-      server: ticket.serverName || "Server",
+      name: displayName,
+      section: isTakeaway ? "Takeaway" : (ticket.section || ticket.sectionArea || "Main Hall"),
+      server: ticket.serverName || (isTakeaway ? "Takeaway Counter" : "Server"),
       orderTime: orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      priority: ticket.priority || "normal",
-      uniqueKey: String(orderType).toLowerCase() === "takeaway"
+      priority: isTakeaway ? "urgent" : (ticket.priority || "normal"),
+      uniqueKey: isTakeaway
         ? `takeaway-${orderId}`
         : `active-${orderId}-${batch}`,
       isPaid: false,
@@ -705,19 +721,16 @@ export function KitchenKOTView({
   // Merge tickets: Table tickets + Takeaway tickets + API tickets (deduplicated)
   const mergedActiveMap = new Map();
   tableTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
-  const apiTakeawayOrderIds = new Set(apiTickets
-    .filter((ticket) => String(ticket.orderType).toLowerCase() === "takeaway")
-    .map((ticket) => String(ticket.backendOrderId)));
-  const hasAuthoritativeKitchenList = !isBarStation && !isKitchenLoading && !kitchenApiError;
   takeawayTickets.forEach((t) => {
-    const orderId = String(t.backendOrderId ?? "");
-    if (hasAuthoritativeKitchenList && orderId && !apiTakeawayOrderIds.has(orderId)) return;
     mergedActiveMap.set(String(t.uniqueKey), t);
   });
   apiTickets.forEach((t) => {
     const key = String(t.uniqueKey);
     const tableKey = `table-${t.id}`;
-    if (String(t.orderType).toLowerCase() === "takeaway" || (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey))) {
+    if (String(t.orderType).toLowerCase() === "takeaway") {
+      const existing = mergedActiveMap.get(key);
+      mergedActiveMap.set(key, { ...(existing || {}), ...t });
+    } else if (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey)) {
       mergedActiveMap.set(key, t);
     }
   });
@@ -772,8 +785,10 @@ export function KitchenKOTView({
 
   // Filtered tickets based on selected table number, status, and search query
   const ticketsMatchingOtherFilters = allKitchenTickets.filter((t) => {
-    // 1. Table Number Filter: When user or admin clicks on a table number, show only that table
-    if (selectedTableFilter !== "all") {
+    // 1. Table Number or Takeaway Filter:
+    if (selectedTableFilter === "takeaway") {
+      if (String(t.orderType).toLowerCase() !== "takeaway") return false;
+    } else if (selectedTableFilter !== "all") {
       const matchId = String(t.id) === String(selectedTableFilter);
       const matchName =
         t.name &&
@@ -1005,18 +1020,20 @@ export function KitchenKOTView({
 
   // Selected table specific data when a single table is isolated
   const singleSelectedTable =
-    selectedTableFilter !== "all"
-      ? tables.find(
-          (t) =>
-            String(t.id) === String(selectedTableFilter) ||
-            t.name === selectedTableFilter,
-        ) ||
-        allKitchenTickets.find(
-          (t) =>
-            String(t.id) === String(selectedTableFilter) ||
-            t.name === selectedTableFilter,
-        )
-      : null;
+    selectedTableFilter === "takeaway"
+      ? { name: "Takeaway Orders", id: "takeaway" }
+      : selectedTableFilter !== "all"
+        ? tables.find(
+            (t) =>
+              String(t.id) === String(selectedTableFilter) ||
+              t.name === selectedTableFilter,
+          ) ||
+          allKitchenTickets.find(
+            (t) =>
+              String(t.id) === String(selectedTableFilter) ||
+              t.name === selectedTableFilter,
+          )
+        : null;
 
   // Keep primary card text readable in both dark and light themes.
   const isLightTheme = currentTheme === "light-bistro";
@@ -1764,7 +1781,7 @@ export function KitchenKOTView({
                     cursor: "pointer",
                   }}
                 >
-                  <span>All Tables</span>
+                  <span>All Tables & Orders</span>
                   <span
                     style={{
                       color: "var(--accent-amber-light)",
@@ -1775,6 +1792,60 @@ export function KitchenKOTView({
                     {allKitchenTickets.length}
                   </span>
                 </button>
+                {/* Takeaway Orders Filter */}
+                {(() => {
+                  const takeawayTicketsList = allKitchenTickets.filter(
+                    (t) => String(t.orderType).toLowerCase() === "takeaway",
+                  );
+                  const isSelected = selectedTableFilter === "takeaway";
+                  return (
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={isSelected}
+                      onClick={() => {
+                        setSelectedTableFilter("takeaway");
+                        setIsTableFilterOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.55rem",
+                        padding: "0.55rem 0.65rem",
+                        border: "none",
+                        borderRadius: "5px",
+                        background: isSelected
+                          ? "rgba(245, 158, 11, 0.18)"
+                          : "transparent",
+                        color: isLightTheme ? "#1f2937" : "var(--text-main)",
+                        fontSize: "0.8rem",
+                        fontWeight: isSelected ? 800 : 700,
+                        fontFamily: "inherit",
+                        textAlign: "left",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span style={{ fontSize: "0.95rem" }}>🥡</span>
+                      <span style={{ flex: 1, fontWeight: 800 }}>Takeaway Orders</span>
+                      {takeawayTicketsList.length > 0 && (
+                        <span
+                          style={{
+                            background: "rgba(249, 115, 22, 0.2)",
+                            color: "#f97316",
+                            border: "1px solid rgba(249, 115, 22, 0.4)",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                            padding: "1px 6px",
+                            borderRadius: "10px",
+                          }}
+                        >
+                          {takeawayTicketsList.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
                 {tables.slice().sort(compareTablesNaturally).map((table) => {
                   const matchingTickets = allKitchenTickets.filter(
                     (ticket) =>
@@ -2230,8 +2301,12 @@ export function KitchenKOTView({
             let statusBadgeBg = "rgba(234, 88, 12, 0.22)";
             let statusBadgeBorder = "rgba(234, 88, 12, 0.55)";
 
+            const isTakeawayModal = String(modalTicket.orderType).toLowerCase() === "takeaway" ||
+              String(modalTicket.section).toLowerCase() === "takeaway" ||
+              String(modalTicket.name).toLowerCase().includes("takeaway");
+
             if (allServed) {
-              statusBadgeText = "PREPARATION COMPLETED";
+              statusBadgeText = isTakeawayModal ? "READY FOR PICKUP" : "PREPARATION COMPLETED";
               statusBadgeColor = "var(--success)";
               statusBadgeBg = "rgba(16, 185, 129, 0.22)";
               statusBadgeBorder = "rgba(16, 185, 129, 0.55)";
@@ -2309,7 +2384,9 @@ export function KitchenKOTView({
                     >
                       <div
                         style={{
-                          background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                          background: isTakeawayModal
+                            ? "linear-gradient(135deg, #f97316, #ea580c)"
+                            : "linear-gradient(135deg, #f59e0b, #ea580c)",
                           color: "#ffffff",
                           padding: "0.4rem 0.75rem",
                           borderRadius: "8px",
@@ -2332,9 +2409,9 @@ export function KitchenKOTView({
                             opacity: 0.9,
                           }}
                         >
-                          TABLE
+                          {isTakeawayModal ? "TAKEOUT" : "TABLE"}
                         </span>
-                        <span>{modalTicket.name.replace(/Table\s*/i, "")}</span>
+                        <span>{isTakeawayModal ? "PICKUP" : modalTicket.name.replace(/Table\s*/i, "")}</span>
                       </div>
 
                       <div>
@@ -3014,9 +3091,13 @@ export function KitchenKOTView({
                         >
                           <CheckCircle2 size={15} />
                           <span>
-                            {modalPreparedCount > 0
-                              ? `Mark Remaining Prepared (${modalTotalCount - modalPreparedCount})`
-                              : "Mark All Prepared"}
+                            {isTakeawayModal
+                              ? (modalPreparedCount > 0
+                                  ? `Mark Remaining Ready for Pickup (${modalTotalCount - modalPreparedCount})`
+                                  : "Mark Ready for Pickup")
+                              : (modalPreparedCount > 0
+                                  ? `Mark Remaining Prepared (${modalTotalCount - modalPreparedCount})`
+                                  : "Mark All Prepared")}
                           </span>
                         </button>
                       )}
