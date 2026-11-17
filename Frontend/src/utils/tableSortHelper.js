@@ -28,6 +28,28 @@ export const compareTablesNaturally = (a, b) => {
 
 export const formatTableDisplayName = (table) => {
   if (!table) return "Table";
+  const raw = String(table.name || table.tableName || table.tableNumber || "").trim();
+  if (raw) {
+    if (/^\d+$/.test(raw)) return `Table-${raw}`;
+    return raw;
+  }
   const num = getTableSortNumber(table);
-  return num > 0 ? `Table-${num}` : String(table.name || table.tableName || `Table ${table.id || ""}`);
+  return num > 0 ? `Table-${num}` : `Table ${table.id || ""}`;
+};
+
+export const getTableBadgeText = (table) => {
+  if (!table) return "T";
+  const raw = String(table.name || table.tableName || table.tableNumber || "").trim();
+  if (!raw) return `T${table.id || 1}`;
+
+  const tableMatch = raw.match(/^(?:table|t)\s*[-–—]?\s*(\d+)$/i);
+  if (tableMatch) return `T${tableMatch[1]}`;
+  if (/^\d+$/.test(raw)) return `T${raw}`;
+
+  const prefixNumMatch = raw.match(/^([A-Za-z]+)\s*[-–—]?\s*(\d+)$/);
+  if (prefixNumMatch) {
+    return `${prefixNumMatch[1].charAt(0).toUpperCase()}${prefixNumMatch[2]}`;
+  }
+
+  return raw.slice(0, 2).toUpperCase();
 };

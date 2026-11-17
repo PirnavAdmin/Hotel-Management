@@ -41,7 +41,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
+import { getTableSortNumber, compareTablesNaturally, getTableBadgeText } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
@@ -1706,7 +1706,8 @@ export function AdminPortal({
 
   const handleSaveTable = (e) => {
     e.preventDefault();
-    if (!tableForm.name.trim()) return;
+    const rawName = String(tableForm.name || "").trim();
+    if (!rawName) return;
 
     if (tableForm.section) {
       saveCustomSection(tableForm.section);
@@ -1723,13 +1724,15 @@ export function AdminPortal({
       });
     }
 
+    const isPureDigits = /^\d+$/.test(rawName);
+
     if (editingTable) {
-      const parsedNum = parseInt(String(tableForm.name || "").replace(/\D/g, ""), 10);
-      const targetNum = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : getTableSortNumber(editingTable);
-      const formattedName = targetNum > 0 ? `Table-${targetNum}` : (tableForm.name || `Table-${editingTable.id}`);
+      const formattedName = isPureDigits
+        ? `Table-${rawName}`
+        : (rawName || editingTable.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
-        id: targetNum > 0 ? targetNum : editingTable.id,
+        id: editingTable.id,
         name: formattedName,
         tableName: formattedName,
         tableNumber: formattedName,
@@ -1738,13 +1741,16 @@ export function AdminPortal({
         server: assignedServer,
       });
     } else {
-      const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
-      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
-      const formattedName = `Table-${parsedNum || chosenId}`;
+      const chosenId = maxId + 1;
+      const formattedName = isPureDigits
+        ? `Table-${rawName}`
+        : (rawName || `Table-${chosenId}`);
       onAddTable({
         id: chosenId,
         name: formattedName,
+        tableName: formattedName,
+        tableNumber: formattedName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 4,
         status: "vacant",
@@ -3529,7 +3535,7 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
-                                    <span>T{getTableSortNumber(tbl) || (tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id)}</span>
+                                    <span>{getTableBadgeText(tbl)}</span>
                                   </div>
                                   <span
                                     style={{
@@ -6938,6 +6944,7 @@ export function AdminPortal({
               <input
                 type="text"
                 required
+                placeholder="e.g. spin-1, Table-5, VIP-1"
                 value={tableForm.name}
                 onChange={(e) =>
                   setTableForm({ ...tableForm, name: e.target.value })

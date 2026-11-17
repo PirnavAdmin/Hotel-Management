@@ -101,9 +101,9 @@ public class CreateTableDto : IValidatableObject
         {
             yield return new ValidationResult("Table Number / Identifier is required and cannot be empty.", new[] { nameof(TableNumber), nameof(TableName) });
         }
-        else if (resolvedNumber.Length > 20)
+        else if (resolvedNumber.Length > 50)
         {
-            yield return new ValidationResult("Table Number / Identifier must not exceed 20 characters.", new[] { nameof(TableNumber), nameof(TableName) });
+            yield return new ValidationResult("Table Number / Identifier must not exceed 50 characters.", new[] { nameof(TableNumber), nameof(TableName) });
         }
 
         if (CapacityChairs < 1 || CapacityChairs > 50)
@@ -209,9 +209,9 @@ public class UpdateTableDto : IValidatableObject
         {
             yield return new ValidationResult("Table Number / Identifier is required and cannot be empty.", new[] { nameof(TableNumber), nameof(TableName) });
         }
-        else if (resolvedNumber.Length > 20)
+        else if (resolvedNumber.Length > 50)
         {
-            yield return new ValidationResult("Table Number / Identifier must not exceed 20 characters.", new[] { nameof(TableNumber), nameof(TableName) });
+            yield return new ValidationResult("Table Number / Identifier must not exceed 50 characters.", new[] { nameof(TableNumber), nameof(TableName) });
         }
 
         if (CapacityChairs < 1 || CapacityChairs > 50)
