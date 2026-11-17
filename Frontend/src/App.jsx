@@ -825,11 +825,15 @@ export function App() {
           { preserveCachedOrders: false, preserveCachedDefinitions: false },
         );
         const ordersResponse = await apiGetActiveOrders();
-        const activeOrders = ordersResponse?.success && Array.isArray(ordersResponse.data)
-          ? ordersResponse.data
-          : ordersResponse?.success && Array.isArray(ordersResponse.data?.orders)
-            ? ordersResponse.data.orders
-            : null;
+        const activeOrders = Array.isArray(ordersResponse)
+          ? ordersResponse
+          : ordersResponse?.success && Array.isArray(ordersResponse.data)
+            ? ordersResponse.data
+            : ordersResponse?.success && Array.isArray(ordersResponse.data?.orders)
+              ? ordersResponse.data.orders
+              : Array.isArray(ordersResponse?.orders)
+                ? ordersResponse.orders
+                : null;
         if (!activeOrders) {
           throw new Error(
             ordersResponse?.error ||
@@ -882,7 +886,7 @@ export function App() {
           localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
         } catch {}
         const normalizedMenu = backendMenu
-          .filter((item) => !isDrinkItem(item))
+          .filter((item) => !item.isBarItem && !item.isBarDrink)
           .map((item) => {
           const previous = localMenu.find((saved) =>
             String(saved.id) === String(item.menuItemId ?? item.id) ||
@@ -1458,7 +1462,7 @@ export function App() {
         if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
           setMenuItems((prev) => {
             if (prev && prev.length > 0) return prev;
-            const normalizedMenu = incomingMenu.filter((item) => !isDrinkItem(item)).map(normalizeMenuItem);
+            const normalizedMenu = incomingMenu.filter((item) => !item.isBarItem && !item.isBarDrink).map(normalizeMenuItem);
             try {
               localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
             } catch {}
@@ -1553,7 +1557,7 @@ export function App() {
             } catch {}
             setMenuItems((prev) => {
               const currentList = prev && prev.length > 0 ? prev : savedMenuForRecipes;
-              const normalizedMenu = incomingMenu.filter((m) => !isDrinkItem(m)).map((m) => {
+              const normalizedMenu = incomingMenu.filter((m) => !m.isBarItem && !m.isBarDrink).map((m) => {
                 const existing = currentList.find(
                   (item) =>
                     String(item.id) === String(m.menuItemId || m.id) ||
