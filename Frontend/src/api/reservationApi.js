@@ -130,6 +130,20 @@ export const apiGetReservationDetails = (
 ) => guestRequest(`${BASE}/${encodeURIComponent(id)}`, {}, token);
 export const apiGetCustomerProfile = () =>
   guestRequest("/api/v1/customers/me", {}, getReservationCustomerToken());
+export const apiGetCustomerDashboard = () =>
+  guestRequest("/api/v1/customers/me/dashboard", {}, getReservationCustomerToken());
+export const apiGetCustomerBookingHistory = (params = {}) =>
+  guestRequest(
+    `/api/v1/customers/me/bookings${queryString(params)}`,
+    {},
+    getReservationCustomerToken(),
+  );
+export const apiGetCustomerVisitHistory = (params = {}) =>
+  guestRequest(
+    `/api/v1/customers/me/visit-history${queryString(params)}`,
+    {},
+    getReservationCustomerToken(),
+  );
 export const apiGetMyCustomerOrders = ({
   page = 1,
   pageSize = 20,

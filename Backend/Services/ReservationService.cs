@@ -1438,23 +1438,40 @@ public class ReservationService
         string targetPhoneKey = PhoneKey(targetPhone);
         string suffix = targetPhoneKey.Length >= 4 ? targetPhoneKey[^4..] : targetPhoneKey;
 
-        var candidates = await _context.Reservations
-            .AsNoTracking()
-            .Where(r =>
-                (caller.CustomerId.HasValue && r.CustomerId == caller.CustomerId.Value) ||
-                (!string.IsNullOrEmpty(suffix) && r.Phone != null && r.Phone.Contains(suffix)))
-            .OrderByDescending(r => r.ReservationDate)
-            .ThenByDescending(r => r.ReservationTime)
-            .ThenByDescending(r => r.ReservationId)
-            .ToListAsync();
+        List<Reservation> candidates;
+        List<Reservation> owned;
 
-        var owned = candidates
-            .Where(r =>
-                (caller.CustomerId.HasValue && r.CustomerId == caller.CustomerId.Value) ||
-                ((!caller.CustomerId.HasValue || r.CustomerId == null) &&
-                 !string.IsNullOrWhiteSpace(targetPhoneKey) &&
-                 PhoneKey(r.Phone) == targetPhoneKey))
-            .ToList();
+        if (caller.CustomerId.HasValue && caller.CustomerId.Value > 0)
+        {
+            candidates = await _context.Reservations
+                .AsNoTracking()
+                .Where(r => r.CustomerId == caller.CustomerId.Value)
+                .OrderByDescending(r => r.ReservationDate)
+                .ThenByDescending(r => r.ReservationTime)
+                .ThenByDescending(r => r.ReservationId)
+                .ToListAsync();
+
+            owned = candidates;
+        }
+        else
+        {
+            candidates = await _context.Reservations
+                .AsNoTracking()
+                .Where(r =>
+                    !r.CustomerId.HasValue &&
+                    !string.IsNullOrEmpty(suffix) && r.Phone != null && r.Phone.Contains(suffix))
+                .OrderByDescending(r => r.ReservationDate)
+                .ThenByDescending(r => r.ReservationTime)
+                .ThenByDescending(r => r.ReservationId)
+                .ToListAsync();
+
+            owned = candidates
+                .Where(r =>
+                    !r.CustomerId.HasValue &&
+                    !string.IsNullOrWhiteSpace(targetPhoneKey) &&
+                    PhoneKey(r.Phone) == targetPhoneKey)
+                .ToList();
+        }
 
         var tableMap = await LoadTableLookupAsync(owned.Where(r => r.TableId.HasValue).Select(r => r.TableId!.Value).Distinct());
         var resIds = owned.Select(r => r.ReservationId).ToList();

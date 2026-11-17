@@ -419,12 +419,6 @@ export function CustomerAuthFlow({
     } finally {
       setBusy(false);
     }
-    const response = result.data?.data || result.data;
-    setOtpDigits(["", "", "", "", "", ""]);
-    setCurrentGeneratedOtp(import.meta.env.DEV && response?.devOtp ? String(response.devOtp) : "");
-    setResendTimer(response?.resendAfterSeconds ?? 30);
-    setOtpError("");
-    setOtpMessage(response?.message || "OTP resend request was accepted. Check your inbox and Spam/Junk folder.");
   };
 
   // Screen 4: Send Reset Link

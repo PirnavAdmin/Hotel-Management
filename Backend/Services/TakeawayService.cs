@@ -2296,8 +2296,8 @@ public class TakeawayService
 
         var items = await LoadTakeawayOrderListItemsAsync(null, null, customerId, suffix);
         IEnumerable<TakeawayOrderListItemDto> filtered = items.Where(d =>
-            d.CustomerId == customerId ||
-            (!d.CustomerId.HasValue &&
+            (customerId > 0 && d.CustomerId == customerId) ||
+            (customerId <= 0 && !d.CustomerId.HasValue &&
              !string.IsNullOrEmpty(targetPhoneKey) &&
              CustomerAuthService.NormalizePhoneKey(d.CustomerPhone) == targetPhoneKey));
 

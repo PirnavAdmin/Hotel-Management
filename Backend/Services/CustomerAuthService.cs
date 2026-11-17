@@ -1445,7 +1445,333 @@ public class CustomerAuthService
             throw new CustomerForbiddenException("Customer account is not verified.", requiresVerification: true);
         }
 
-        return MapProfileDto(customer);
+        var dto = MapProfileDto(customer);
+        var stats = await CalculateCustomerStatisticsAsync(customerId);
+        dto.TotalVisits = stats.TotalVisits;
+        dto.TotalAmountSpent = stats.TotalAmountSpent;
+        dto.PreviousVisit = stats.PreviousVisit;
+        dto.PreviousVisitDate = stats.PreviousVisitDate;
+        dto.LastBooking = stats.LastBooking;
+        dto.LastBookingDate = stats.LastBookingDate;
+        dto.CustomerType = stats.CustomerType;
+        dto.WelcomeMessage = stats.WelcomeMessage;
+        dto.TotalOrders = stats.TotalOrders;
+        dto.TotalReservations = stats.TotalReservations;
+        return dto;
+    }
+
+    public async Task<CustomerStatisticsDto> CalculateCustomerStatisticsAsync(long customerId)
+    {
+        var stats = new CustomerStatisticsDto
+        {
+            TotalVisits = 0,
+            TotalAmountSpent = 0.00m,
+            PreviousVisit = "No previous visits",
+            PreviousVisitDate = null,
+            LastBooking = "No bookings found",
+            LastBookingDate = null,
+            CustomerType = "New Customer",
+            WelcomeMessage = "Welcome! You haven't completed any stays with us yet.",
+            TotalOrders = 0,
+            TotalReservations = 0,
+            LoyaltyPoints = 0
+        };
+
+        if (customerId <= 0)
+        {
+            return stats;
+        }
+
+        var customer = await _context.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.CustomerId == customerId && c.DeletedAt == null);
+
+        if (customer != null)
+        {
+            stats.LoyaltyPoints = customer.LoyaltyPoints;
+        }
+
+        // 1. Fetch reservations strictly belonging to this authenticated customer
+        var reservations = await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.CustomerId == customerId)
+            .OrderByDescending(r => r.ReservationDate)
+            .ThenByDescending(r => r.ReservationTime)
+            .ToListAsync();
+
+        stats.TotalReservations = reservations.Count;
+
+        // Valid completed stays
+        var completedReservations = reservations
+            .Where(r => string.Equals(r.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(r.Status, "CHECKED_OUT", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        stats.TotalVisits = completedReservations.Count;
+
+        // Non-cancelled reservations
+        var nonCancelledReservations = reservations
+            .Where(r => !string.Equals(r.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(r.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // 2. Fetch payments for customer's reservations
+        var reservationIds = nonCancelledReservations.Select(r => r.ReservationId).ToList();
+        decimal totalSpentFromReservations = 0.00m;
+
+        if (reservationIds.Count > 0)
+        {
+            var payments = await _context.ReservationPayments
+                .AsNoTracking()
+                .Where(p => reservationIds.Contains(p.ReservationId) &&
+                            (p.CustomerId == null || p.CustomerId == customerId))
+                .ToListAsync();
+
+            // Calculate paid per reservation avoiding double counting
+            foreach (var r in nonCancelledReservations)
+            {
+                var resPayments = payments.Where(p => p.ReservationId == r.ReservationId).ToList();
+                if (resPayments.Count > 0)
+                {
+                    decimal paidViaGateway = resPayments
+                        .Where(p => (string.Equals(p.PaymentStatus, "success", StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(p.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase)) &&
+                                    !string.Equals(p.PaymentType, "REFUND", StringComparison.OrdinalIgnoreCase))
+                        .Sum(p => p.Amount);
+
+                    decimal refunded = resPayments
+                        .Where(p => string.Equals(p.PaymentType, "REFUND", StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(p.PaymentStatus, "refunded", StringComparison.OrdinalIgnoreCase))
+                        .Sum(p => p.Amount);
+
+                    decimal netResPaid = Math.Max(0.00m, paidViaGateway - refunded);
+                    totalSpentFromReservations += netResPaid;
+                }
+                else
+                {
+                    // Fallback to r.PaidAmount - r.RefundAmount if recorded directly on reservation row
+                    decimal netRowPaid = Math.Max(0.00m, r.PaidAmount - r.RefundAmount);
+                    totalSpentFromReservations += netRowPaid;
+                }
+            }
+        }
+
+        // 3. Fetch takeaway / dine-in orders strictly belonging to this authenticated customer
+        var orders = await _context.Orders
+            .AsNoTracking()
+            .Where(o => o.CustomerId == customerId && !o.IsDeleted)
+            .ToListAsync();
+
+        stats.TotalOrders = orders.Count;
+
+        decimal totalSpentFromOrders = 0.00m;
+        var nonCancelledOrders = orders
+            .Where(o => !string.Equals(o.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(o.Status, "Void", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var orderIds = nonCancelledOrders.Select(o => o.Id).ToList();
+        if (orderIds.Count > 0)
+        {
+            var invoices = await _context.Invoices
+                .AsNoTracking()
+                .Where(i => orderIds.Contains(i.OrderId) && !string.Equals(i.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+                .ToListAsync();
+
+            var invoiceIds = invoices.Select(i => i.InvoiceId).ToList();
+            var invoicePayments = await _context.InvoicePayments
+                .AsNoTracking()
+                .Where(ip => invoiceIds.Contains(ip.InvoiceId) &&
+                             (string.Equals(ip.PaymentStatus, "success", StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(ip.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase)))
+                .ToListAsync();
+
+            foreach (var inv in invoices)
+            {
+                var pays = invoicePayments.Where(ip => ip.InvoiceId == inv.InvoiceId).ToList();
+                if (pays.Count > 0)
+                {
+                    totalSpentFromOrders += pays.Sum(p => p.AmountPaid > 0 ? p.AmountPaid : p.Amount);
+                }
+                else if (string.Equals(inv.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+                {
+                    totalSpentFromOrders += inv.PaidAmount > 0 ? inv.PaidAmount : inv.TotalAmount;
+                }
+                else if (inv.PaidAmount > 0)
+                {
+                    totalSpentFromOrders += inv.PaidAmount;
+                }
+            }
+        }
+
+        stats.TotalAmountSpent = Math.Round(totalSpentFromReservations + totalSpentFromOrders, 2);
+
+        // 4. Previous Visit Date (Latest completed checkout date)
+        var latestCompleted = completedReservations.FirstOrDefault();
+        if (latestCompleted != null)
+        {
+            stats.PreviousVisit = latestCompleted.ReservationDate.ToString("dd MMM yyyy");
+            stats.PreviousVisitDate = latestCompleted.ReservationDate;
+        }
+        else
+        {
+            stats.PreviousVisit = "No previous visits";
+            stats.PreviousVisitDate = null;
+        }
+
+        // 5. Last Booking
+        var latestBooking = reservations.FirstOrDefault();
+        if (latestBooking != null)
+        {
+            string bNum = !string.IsNullOrWhiteSpace(latestBooking.ReservationNumber)
+                ? latestBooking.ReservationNumber
+                : $"RES-{latestBooking.ReservationId}";
+            stats.LastBooking = $"Booking #{bNum} ({latestBooking.ReservationDate:dd MMM yyyy})";
+            stats.LastBookingDate = latestBooking.ReservationDate;
+        }
+        else
+        {
+            stats.LastBooking = "No bookings found";
+            stats.LastBookingDate = null;
+        }
+
+        // 6. Customer Type & Professional Welcome Message
+        if (stats.TotalVisits == 0)
+        {
+            stats.CustomerType = "New Customer";
+            stats.WelcomeMessage = "Welcome! You haven't completed any stays with us yet.";
+        }
+        else
+        {
+            stats.CustomerType = "Returning Customer";
+            stats.WelcomeMessage = $"Welcome back! You have completed {stats.TotalVisits} visit(s) with us.";
+        }
+
+        return stats;
+    }
+
+    public async Task<CustomerDashboardDto> GetCustomerDashboardAsync(long customerId)
+    {
+        var profile = await GetProfileAsync(customerId);
+        var stats = await CalculateCustomerStatisticsAsync(customerId);
+
+        // Fetch recent bookings (up to 5) strictly for this customer
+        var recentReservations = await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.CustomerId == customerId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(5)
+            .ToListAsync();
+
+        var tableIds = recentReservations.Where(r => r.TableId.HasValue).Select(r => r.TableId!.Value).Distinct().ToList();
+        var tableMap = await _context.RestaurantTables
+            .AsNoTracking()
+            .Where(t => tableIds.Contains(t.TableId))
+            .ToDictionaryAsync(t => t.TableId, t => t.TableName ?? $"Table {t.TableNumber}");
+
+        var recentBookings = recentReservations.Select(r => new CustomerBookingSummaryDto
+        {
+            ReservationId = r.ReservationId,
+            ReservationNumber = !string.IsNullOrWhiteSpace(r.ReservationNumber) ? r.ReservationNumber : $"RES-{r.ReservationId}",
+            ReservationDate = r.ReservationDate,
+            ReservationTime = r.ReservationTime.ToString(@"hh\:mm"),
+            GuestsCount = r.GuestsCount,
+            Status = r.Status,
+            PaymentStatus = r.PaymentStatus,
+            TotalAmount = r.ReservationAmount,
+            PaidAmount = r.PaidAmount,
+            TableName = r.TableId.HasValue && tableMap.TryGetValue(r.TableId.Value, out var tn) ? tn : null,
+            CreatedAt = r.CreatedAt
+        }).ToList();
+
+        // Fetch visit history (completed stays, up to 10) strictly for this customer
+        var completedReservations = await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.CustomerId == customerId &&
+                        (r.Status == "COMPLETED" || r.Status == "Completed" || r.Status == "CHECKED_OUT"))
+            .OrderByDescending(r => r.ReservationDate)
+            .ThenByDescending(r => r.ReservationTime)
+            .Take(10)
+            .ToListAsync();
+
+        var visitHistory = completedReservations.Select(r => new CustomerVisitRecordDto
+        {
+            VisitId = r.ReservationId,
+            VisitNumber = !string.IsNullOrWhiteSpace(r.ReservationNumber) ? r.ReservationNumber : $"VST-{r.ReservationId}",
+            VisitDate = r.ReservationDate,
+            CompletedAt = r.ModifiedAt ?? r.UpdatedAt,
+            VisitType = "Hotel Stay / Dine-In",
+            AmountSpent = Math.Max(0.00m, r.PaidAmount - r.RefundAmount),
+            Status = "COMPLETED",
+            GuestsCount = r.GuestsCount,
+            Details = $"Completed stay for {r.GuestsCount} guests."
+        }).ToList();
+
+        return new CustomerDashboardDto
+        {
+            Customer = profile,
+            Statistics = stats,
+            RecentBookings = recentBookings,
+            VisitHistory = visitHistory
+        };
+    }
+
+    public async Task<List<CustomerBookingSummaryDto>> GetCustomerBookingsAsync(long customerId)
+    {
+        if (customerId <= 0) return new List<CustomerBookingSummaryDto>();
+
+        var reservations = await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.CustomerId == customerId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        var tableIds = reservations.Where(r => r.TableId.HasValue).Select(r => r.TableId!.Value).Distinct().ToList();
+        var tableMap = await _context.RestaurantTables
+            .AsNoTracking()
+            .Where(t => tableIds.Contains(t.TableId))
+            .ToDictionaryAsync(t => t.TableId, t => t.TableName ?? $"Table {t.TableNumber}");
+
+        return reservations.Select(r => new CustomerBookingSummaryDto
+        {
+            ReservationId = r.ReservationId,
+            ReservationNumber = !string.IsNullOrWhiteSpace(r.ReservationNumber) ? r.ReservationNumber : $"RES-{r.ReservationId}",
+            ReservationDate = r.ReservationDate,
+            ReservationTime = r.ReservationTime.ToString(@"hh\:mm"),
+            GuestsCount = r.GuestsCount,
+            Status = r.Status,
+            PaymentStatus = r.PaymentStatus,
+            TotalAmount = r.ReservationAmount,
+            PaidAmount = r.PaidAmount,
+            TableName = r.TableId.HasValue && tableMap.TryGetValue(r.TableId.Value, out var tn) ? tn : null,
+            CreatedAt = r.CreatedAt
+        }).ToList();
+    }
+
+    public async Task<List<CustomerVisitRecordDto>> GetCustomerVisitHistoryAsync(long customerId)
+    {
+        if (customerId <= 0) return new List<CustomerVisitRecordDto>();
+
+        var completedReservations = await _context.Reservations
+            .AsNoTracking()
+            .Where(r => r.CustomerId == customerId &&
+                        (r.Status == "COMPLETED" || r.Status == "Completed" || r.Status == "CHECKED_OUT"))
+            .OrderByDescending(r => r.ReservationDate)
+            .ThenByDescending(r => r.ReservationTime)
+            .ToListAsync();
+
+        return completedReservations.Select(r => new CustomerVisitRecordDto
+        {
+            VisitId = r.ReservationId,
+            VisitNumber = !string.IsNullOrWhiteSpace(r.ReservationNumber) ? r.ReservationNumber : $"VST-{r.ReservationId}",
+            VisitDate = r.ReservationDate,
+            CompletedAt = r.ModifiedAt ?? r.UpdatedAt,
+            VisitType = "Hotel Stay / Dine-In",
+            AmountSpent = Math.Max(0.00m, r.PaidAmount - r.RefundAmount),
+            Status = "COMPLETED",
+            GuestsCount = r.GuestsCount,
+            Details = $"Completed stay for {r.GuestsCount} guests."
+        }).ToList();
     }
 
     public static bool IsCustomerAuthPrincipal(ClaimsPrincipal? user)

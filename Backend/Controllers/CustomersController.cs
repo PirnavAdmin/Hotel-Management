@@ -84,6 +84,137 @@ public class CustomersController : ControllerBase
     }
 
     [Authorize(Roles = "Customer")]
+    [HttpGet("me/dashboard")]
+    [Tags("Customer Portal")]
+    public async Task<IActionResult> GetMyDashboard()
+    {
+        try
+        {
+            if (!CustomerAuthService.IsCustomerAuthPrincipal(User))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "Full customer portal authentication is required."
+                });
+            }
+
+            if (!long.TryParse(User.FindFirstValue("customerId"), out var customerId) || customerId <= 0)
+            {
+                return Unauthorized(new { success = false, message = "Invalid customer session claims." });
+            }
+
+            var dashboard = await _customerAuthService.GetCustomerDashboardAsync(customerId);
+            return Ok(new
+            {
+                success = true,
+                message = "Customer dashboard retrieved successfully.",
+                data = dashboard
+            });
+        }
+        catch (CustomerForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message, requiresVerification = ex.RequiresVerification });
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Failed to retrieve customer dashboard: {ex.Message}" });
+        }
+    }
+
+    [Authorize(Roles = "Customer")]
+    [HttpGet("me/bookings")]
+    [Tags("Customer Portal")]
+    public async Task<IActionResult> GetMyBookings()
+    {
+        try
+        {
+            if (!CustomerAuthService.IsCustomerAuthPrincipal(User))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "Full customer portal authentication is required."
+                });
+            }
+
+            if (!long.TryParse(User.FindFirstValue("customerId"), out var customerId) || customerId <= 0)
+            {
+                return Unauthorized(new { success = false, message = "Invalid customer session claims." });
+            }
+
+            var bookings = await _customerAuthService.GetCustomerBookingsAsync(customerId);
+            return Ok(new
+            {
+                success = true,
+                message = "Customer bookings retrieved successfully.",
+                count = bookings.Count,
+                data = bookings
+            });
+        }
+        catch (CustomerForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message, requiresVerification = ex.RequiresVerification });
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Failed to retrieve customer bookings: {ex.Message}" });
+        }
+    }
+
+    [Authorize(Roles = "Customer")]
+    [HttpGet("me/visit-history")]
+    [Tags("Customer Portal")]
+    public async Task<IActionResult> GetMyVisitHistory()
+    {
+        try
+        {
+            if (!CustomerAuthService.IsCustomerAuthPrincipal(User))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "Full customer portal authentication is required."
+                });
+            }
+
+            if (!long.TryParse(User.FindFirstValue("customerId"), out var customerId) || customerId <= 0)
+            {
+                return Unauthorized(new { success = false, message = "Invalid customer session claims." });
+            }
+
+            var visitHistory = await _customerAuthService.GetCustomerVisitHistoryAsync(customerId);
+            return Ok(new
+            {
+                success = true,
+                message = "Customer visit history retrieved successfully.",
+                count = visitHistory.Count,
+                data = visitHistory
+            });
+        }
+        catch (CustomerForbiddenException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message, requiresVerification = ex.RequiresVerification });
+        }
+        catch (CustomerNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Failed to retrieve customer visit history: {ex.Message}" });
+        }
+    }
+
+    [Authorize(Roles = "Customer")]
     [HttpGet("me/orders")]
     [Tags("Customer Portal")]
     public async Task<IActionResult> GetMyOrders(

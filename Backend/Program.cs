@@ -528,6 +528,23 @@ app.UseAuthorization();
 
 app.UseMiddleware<CustomerAdminIsolationMiddleware>();
 
+app.MapGet("/", (HttpContext context) =>
+{
+    var accept = context.Request.Headers.Accept.ToString();
+    if (accept.Contains("text/html", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Redirect("/swagger");
+    }
+    return Results.Ok(new
+    {
+        status = "Healthy",
+        service = "Hotel Management System (HMS) API",
+        version = "v1",
+        documentation = "/swagger",
+        timestamp = DateTime.UtcNow
+    });
+});
+
 app.MapControllers();
 app.MapHub<HMS.Hubs.PosHub>("/hubs/pos");
 

@@ -2890,9 +2890,16 @@ function Step6MyReservations({
             }}
           >
             <p
-              style={{ fontSize: "14px", fontWeight: 600, margin: "0 0 10px" }}
+              style={{ fontSize: "15px", fontWeight: 700, margin: "0 0 6px", color: "#1f1610" }}
             >
-              {reservations.length > 0 ? "No matching reservations found" : "No reservations found"}
+              {reservations.length > 0
+                ? "No matching reservations found"
+                : "Welcome! You haven't completed any stays with us yet."}
+            </p>
+            <p style={{ fontSize: "12.5px", color: "#786c62", margin: "0 0 14px" }}>
+              {reservations.length > 0
+                ? "Try adjusting your search or filters."
+                : "No bookings found. Plan your first visit by booking a table below."}
             </p>
             {reservations.length > 0 ? (
               <button

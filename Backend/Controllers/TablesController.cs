@@ -357,6 +357,7 @@ public class TablesController : ControllerBase
     }
 
     // POST /api/Tables/transfer or /api/v1/tables/transfer
+    [AllowAnonymous]
     [HttpPost("transfer")]
     public async Task<IActionResult> TransferTable([FromBody] TransferTableRequestDto dto)
     {
@@ -390,6 +391,7 @@ public class TablesController : ControllerBase
     }
 
     // POST /api/v1/tables/{id}/vacate OR /api/Tables/{id}/vacate
+    [AllowAnonymous]
     [HttpPost("{id}/vacate")]
     public async Task<IActionResult> VacateTable(string id)
     {
@@ -402,6 +404,7 @@ public class TablesController : ControllerBase
         _logger.LogInformation("Vacating table {Id} ({TableName})", existing.TableId, existing.TableName);
         var updated = await _tableService.UpdateTableStatusAsync(existing.TableId, "available");
         _tableLockService.ReleaseLock(id);
+        _tableLockService.ReleaseLock(existing.TableId.ToString());
 
         var tables = await _tableService.GetTablesAsync();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);

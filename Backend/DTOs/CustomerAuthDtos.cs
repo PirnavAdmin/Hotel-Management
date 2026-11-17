@@ -222,6 +222,69 @@ public class CustomerProfileDto
     public int LoyaltyPoints { get; set; }
     public long? RegisteredBranchId { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Statistical & History Fields
+    public int TotalVisits { get; set; } = 0;
+    public decimal TotalAmountSpent { get; set; } = 0.00m;
+    public string PreviousVisit { get; set; } = "No previous visits";
+    public DateTime? PreviousVisitDate { get; set; }
+    public string LastBooking { get; set; } = "No bookings found";
+    public DateTime? LastBookingDate { get; set; }
+    public string CustomerType { get; set; } = "New Customer";
+    public string WelcomeMessage { get; set; } = "Welcome! You haven't completed any stays with us yet.";
+    public int TotalOrders { get; set; } = 0;
+    public int TotalReservations { get; set; } = 0;
+}
+
+public class CustomerDashboardDto
+{
+    public CustomerProfileDto Customer { get; set; } = new();
+    public CustomerStatisticsDto Statistics { get; set; } = new();
+    public List<CustomerBookingSummaryDto> RecentBookings { get; set; } = new();
+    public List<CustomerVisitRecordDto> VisitHistory { get; set; } = new();
+}
+
+public class CustomerStatisticsDto
+{
+    public int TotalVisits { get; set; } = 0;
+    public decimal TotalAmountSpent { get; set; } = 0.00m;
+    public string PreviousVisit { get; set; } = "No previous visits";
+    public DateTime? PreviousVisitDate { get; set; }
+    public string LastBooking { get; set; } = "No bookings found";
+    public DateTime? LastBookingDate { get; set; }
+    public string CustomerType { get; set; } = "New Customer";
+    public string WelcomeMessage { get; set; } = "Welcome! You haven't completed any stays with us yet.";
+    public int TotalOrders { get; set; } = 0;
+    public int TotalReservations { get; set; } = 0;
+    public int LoyaltyPoints { get; set; } = 0;
+}
+
+public class CustomerBookingSummaryDto
+{
+    public long ReservationId { get; set; }
+    public string ReservationNumber { get; set; } = string.Empty;
+    public DateTime ReservationDate { get; set; }
+    public string ReservationTime { get; set; } = string.Empty;
+    public int GuestsCount { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string PaymentStatus { get; set; } = string.Empty;
+    public decimal TotalAmount { get; set; }
+    public decimal PaidAmount { get; set; }
+    public string? TableName { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class CustomerVisitRecordDto
+{
+    public long VisitId { get; set; }
+    public string VisitNumber { get; set; } = string.Empty;
+    public DateTime VisitDate { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string VisitType { get; set; } = "Dine-In / Stay";
+    public decimal AmountSpent { get; set; }
+    public string Status { get; set; } = "COMPLETED";
+    public int GuestsCount { get; set; }
+    public string? Details { get; set; }
 }
 
 public class CustomerRegisterResponseDto

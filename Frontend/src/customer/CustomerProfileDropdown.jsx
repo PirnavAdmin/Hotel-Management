@@ -31,9 +31,17 @@ export function CustomerProfileDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const displayName = customerUser?.name || "Priya Sharma";
-  const displayPhone = customerUser?.phone || "+91 98765 43210";
-  const avatarLetter = (displayName[0] || "P").toUpperCase();
+  const displayName =
+    customerUser?.fullName ||
+    customerUser?.name ||
+    customerUser?.customer?.fullName ||
+    "Customer";
+  const displayPhone =
+    customerUser?.mobileNumber ||
+    customerUser?.phone ||
+    customerUser?.customer?.phone ||
+    "";
+  const avatarLetter = (displayName[0] || "C").toUpperCase();
 
   // Close when clicking outside
   useEffect(() => {
