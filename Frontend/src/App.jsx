@@ -3217,16 +3217,12 @@ export function App() {
         message: `Takeaway order #${settlementData.invoiceNo} was sent to the kitchen.`,
       });
     } else {
-<<<<<<< HEAD
+      if (dineInSettlementInFlightRef.current) return false;
+      dineInSettlementInFlightRef.current = true;
+
       // Settle dine-in order and vacate table in backend
       const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
       const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
-=======
-      // Do not create a local invoice or vacate the table until the shared API
-      // confirms that the order and payment were saved.
-      if (dineInSettlementInFlightRef.current) return false;
-      dineInSettlementInFlightRef.current = true;
->>>>>>> c7580dc86f4d03461005e84f0dfe5810b366b736
       try {
         const currentResult = await apiGetOrderForTable(backendTableId).catch(() => null);
         let orderData = currentResult?.success
@@ -3275,22 +3271,17 @@ export function App() {
             paymentMethod: enrichedSettlement.paymentMethod,
             invoiceNumber: enrichedSettlement.invoiceNo,
           }).catch(() => null);
+          settledOrderIdsRef.current?.add(String(backendOrderId));
+          try {
+            localStorage.setItem(
+              STORAGE_KEY_SETTLED_ORDER_IDS,
+              JSON.stringify(Array.from(settledOrderIdsRef.current || []).slice(-500)),
+            );
+          } catch {}
+          tableRefreshGenerationRef.current += 1;
           enrichedSettlement.backendOrderId = backendOrderId;
           enrichedSettlement.billingSessionId = String(backendOrderId);
         }
-<<<<<<< HEAD
-=======
-        settledOrderIdsRef.current.add(String(backendOrderId));
-        try {
-          localStorage.setItem(
-            STORAGE_KEY_SETTLED_ORDER_IDS,
-            JSON.stringify(Array.from(settledOrderIdsRef.current).slice(-500)),
-          );
-        } catch {}
-        tableRefreshGenerationRef.current += 1;
-        enrichedSettlement.backendOrderId = backendOrderId;
-        enrichedSettlement.billingSessionId = String(backendOrderId);
->>>>>>> c7580dc86f4d03461005e84f0dfe5810b366b736
 
         // Always vacate table in backend
         apiVacateTable(backendTableId).catch(() => {});
@@ -3298,20 +3289,13 @@ export function App() {
         apiUnlockTable(backendTableId).catch(() => {});
         dineInBackendTableVacated = true;
       } catch (error) {
-<<<<<<< HEAD
         console.warn("Backend dine-in order settlement sync warning:", error);
         apiVacateTable(backendTableId).catch(() => {});
         apiUpdateTableStatus(backendTableId, "vacant").catch(() => {});
         apiUnlockTable(backendTableId).catch(() => {});
         dineInBackendTableVacated = true;
-=======
-        dineInSettlementInFlightRef.current = false;
-        const errorMessage = `Payment was not completed in the shared system: ${error?.message || "Could not reach the backend."}`;
-        showToast(errorMessage);
-        return errorMessage;
       } finally {
         dineInSettlementInFlightRef.current = false;
->>>>>>> c7580dc86f4d03461005e84f0dfe5810b366b736
       }
     }
 
