@@ -99,6 +99,11 @@ export function CustomCreatableDropdown({
           ...selectStyle,
         }}
       >
+        {!value && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
         {/* If current value is custom and not yet in normalizedOptions, include it */}
         {value && !valueExists && !isCustomMode && (
           <option value={value}>{value}</option>

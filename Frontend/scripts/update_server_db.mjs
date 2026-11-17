@@ -9,7 +9,6 @@ const dbPath = path.resolve(__dirname, '..', 'server-db.json');
 const mapping = {
   "spicy prawns biryani": "/assets/biryani/prawns-biryani.jpg",
   "crispy corn salt & pepper": "/assets/starters/crispy-corn.jpg",
-  "crispy corn salt \u0026 pepper": "/assets/starters/crispy-corn.jpg",
   "crispy corn": "/assets/starters/crispy-corn.jpg",
   "apollo fish fry": "/assets/starters/apollo-fish.jpg",
   "apollo fish": "/assets/starters/apollo-fish.jpg",

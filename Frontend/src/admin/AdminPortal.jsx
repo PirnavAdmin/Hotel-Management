@@ -42,7 +42,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { getTableSortNumber, compareTablesNaturally, getTableBadgeText } from "../utils/tableSortHelper";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
@@ -113,7 +113,7 @@ export function isDisallowedItemName(raw) {
   if (standardAllowed.includes(s)) return false;
 
   // Reject dishes with "with", "w/", "(", ")", numbers
-  if (/\b(with|w\/)\b/i.test(s) || /[\(\)\d]/.test(s)) return true;
+  if (/\b(with|w\/)\b/i.test(s) || /[()\d]/.test(s)) return true;
 
   // Specific food and drink items that must never appear in category dropdowns
   const dishKeywords = [
@@ -332,7 +332,7 @@ export function getApproximateIngredientMrp(rawName = "", unit = "KG") {
   } else if (normalizedUnit === "g") {
     rate = rate / 1000;
   } else if (normalizedUnit === "L") {
-    rate = rate;
+    // Already in per-litre rate
   }
 
   return Number(rate.toFixed(2));
