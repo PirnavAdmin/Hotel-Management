@@ -101,7 +101,7 @@ export function AdminHeader({
 
   return (
     <header
-      className="admin-header no-print"
+      className={`admin-header no-print${showModeToggle ? " has-mode-toggle" : ""}`}
       style={{
         height: "76px",
         minHeight: "76px",

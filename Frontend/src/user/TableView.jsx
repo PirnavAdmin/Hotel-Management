@@ -1410,7 +1410,7 @@ export function TableView({
         tServer.toLowerCase() === serverFilter.toLowerCase();
 
       // 4. Table Number Dropdown Filter
-      const tNum = String(t.tableNumber || t.name || "").toLowerCase();
+      const tNum = String(t.tableNumberNumeric || t.tableNumber || t.name || "").toLowerCase();
       const matchesTableDropdown =
         tableFilter === "all" ||
         String(t.id) === String(tableFilter) ||
@@ -1422,7 +1422,7 @@ export function TableView({
       const q = searchQuery.trim().toLowerCase();
       if (q) {
         const tIdStr = String(t.id || "");
-        const tName = String(t.tableNumber || t.name || "").toLowerCase();
+        const tName = String(t.tableName || t.name || t.tableNumber || "").toLowerCase();
         const tSec = String(t.section ?? "").toLowerCase();
         const sName = tServer.toLowerCase();
 
@@ -2146,7 +2146,7 @@ export function TableView({
                           flexShrink: 0,
                         }}
                       >
-                        T{getTableSortNumber(table) || (table.name ? table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : table.id)}
+                        T{table.tableNumberNumeric || table.tableNumber || getTableSortNumber(table) || table.id}
                       </span>
                       <h3
                         style={{
@@ -3158,7 +3158,7 @@ export function TableView({
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ color: "var(--text-dim)" }}>Table No:</span>
                         <span style={{ color: "var(--text-main)", fontWeight: 700, fontSize: "0.88rem" }}>
-                          T{selectedSeatTable.name ? selectedSeatTable.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : selectedSeatTable.id}
+                          T{selectedSeatTable.tableNumberNumeric || selectedSeatTable.tableNumber || getTableSortNumber(selectedSeatTable) || selectedSeatTable.id}
                         </span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

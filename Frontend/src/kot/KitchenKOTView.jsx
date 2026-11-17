@@ -1023,10 +1023,15 @@ export function KitchenKOTView({
           width: 100%;
           min-width: 0;
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 260px));
+          grid-template-columns: repeat(5, minmax(0, 1fr));
           gap: 0.85rem;
-          align-items: start;
+          align-items: stretch;
         }
+
+        @media (max-width: 1500px) { .kot-cards-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        @media (max-width: 1100px) { .kot-cards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 800px) { .kot-cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 560px) { .kot-cards-grid { grid-template-columns: minmax(0, 1fr); } }
 
         .kot-cards-grid--single {
           grid-template-columns: minmax(0, min(100%, 260px));
@@ -1042,9 +1047,10 @@ export function KitchenKOTView({
           box-sizing: border-box;
           padding: 0.55rem 0.65rem;
           display: grid;
-          grid-template-rows: auto auto auto;
+          grid-template-rows: minmax(58px, 1fr) auto auto;
           gap: 0.4rem;
-          align-content: start;
+          align-content: stretch;
+          min-height: 164px;
         }
 
         .kot-compact-header {
@@ -1053,6 +1059,7 @@ export function KitchenKOTView({
           align-items: center;
           column-gap: 0.45rem;
           min-width: 0;
+          min-height: 58px;
         }
 
         .kot-compact-leading {
@@ -1111,6 +1118,10 @@ export function KitchenKOTView({
           font-size: 0.82rem;
           line-height: 1.15;
           min-width: 0;
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+          overflow: hidden;
           overflow-wrap: anywhere;
           word-break: normal;
         }
@@ -1120,6 +1131,9 @@ export function KitchenKOTView({
           color: var(--text-muted);
           font-size: 0.69rem;
           line-height: 1.15;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .kot-compact-status {
@@ -1166,8 +1180,9 @@ export function KitchenKOTView({
         }
 
         .kot-compact-view-button {
-          justify-self: start;
-          align-self: start;
+          justify-self: stretch;
+          align-self: end;
+          width: 100%;
           min-height: 29px;
           padding: 0.3rem 0.7rem;
           border: 1px solid var(--border-card);
@@ -1218,9 +1233,9 @@ export function KitchenKOTView({
           }
 
           .kot-cards-grid {
-            grid-template-columns: minmax(0, min(100%, 260px));
-            justify-content: center;
-            gap: 0.75rem !important;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          justify-content: stretch;
+          gap: 0.75rem !important;
           }
 
           .kot-order-card {
@@ -1237,6 +1252,10 @@ export function KitchenKOTView({
           .kot-compact-status { gap: 0.3rem; font-size: 0.68rem; }
           .kot-compact-title { font-size: 0.81rem; }
           .kot-compact-order-number { font-size: 0.66rem; }
+        }
+
+        @media (max-width: 560px) {
+          .kot-cards-grid { grid-template-columns: minmax(0, 1fr) !important; }
         }
 
         @media (max-width: 360px) {
@@ -1259,6 +1278,7 @@ export function KitchenKOTView({
       >
         {/* ================= 1. KOT TOP NAVIGATION & HEADER ================= */}
         <div
+          className="kds-main-header"
           style={{
             background: "var(--bg-secondary)",
             backdropFilter: "blur(12px)",
@@ -1276,7 +1296,7 @@ export function KitchenKOTView({
           }}
         >
           {/* Left: Brand Title */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div className="kds-main-header-brand" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
             >
@@ -1304,10 +1324,13 @@ export function KitchenKOTView({
               )}
               <div>
                 <div
+                  className="kds-main-header-title-line"
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "0.6rem",
+                    flexWrap: "wrap",
+                    rowGap: "0.45rem",
                   }}
                 >
                   <h1
@@ -1338,6 +1361,7 @@ export function KitchenKOTView({
                   </span>
                   {onStationChange && (
                     <div
+                      className="kds-station-toggle"
                       role="tablist"
                       aria-label="KOT Station switcher"
                       style={{
@@ -1346,8 +1370,8 @@ export function KitchenKOTView({
                         background: "var(--bg-tertiary)",
                         border: "1px solid var(--border-subtle)",
                         borderRadius: "8px",
-                        padding: "2px",
-                        gap: "2px",
+                        padding: "3px",
+                        gap: "4px",
                       }}
                     >
                       <button
@@ -1356,12 +1380,14 @@ export function KitchenKOTView({
                         aria-selected={currentStation === "kitchen"}
                         onClick={() => onStationChange("kitchen")}
                         style={{
-                          padding: "3px 10px",
-                          borderRadius: "6px",
+                          minHeight: 32,
+                          boxSizing: "border-box",
+                          padding: "0 11px",
+                          borderRadius: "7px",
                           border: "none",
                           background: currentStation === "kitchen" ? "var(--accent-amber)" : "transparent",
                           color: currentStation === "kitchen" ? "#ffffff" : "var(--text-muted)",
-                          fontSize: "0.72rem",
+                          fontSize: "0.76rem",
                           fontWeight: 800,
                           cursor: "pointer",
                           transition: "all 0.15s ease",
@@ -1375,12 +1401,14 @@ export function KitchenKOTView({
                         aria-selected={currentStation === "bar"}
                         onClick={() => onStationChange("bar")}
                         style={{
-                          padding: "3px 10px",
-                          borderRadius: "6px",
+                          minHeight: 32,
+                          boxSizing: "border-box",
+                          padding: "0 11px",
+                          borderRadius: "7px",
                           border: "none",
                           background: currentStation === "bar" ? "var(--accent-amber)" : "transparent",
                           color: currentStation === "bar" ? "#ffffff" : "var(--text-muted)",
-                          fontSize: "0.72rem",
+                          fontSize: "0.76rem",
                           fontWeight: 800,
                           cursor: "pointer",
                           transition: "all 0.15s ease",
@@ -1398,7 +1426,7 @@ export function KitchenKOTView({
                     marginTop: "2px",
                   }}
                 >
-                  Live Kitchen Order Tickets • Active POS orders awaiting preparation
+                  {isBarStation ? "Live Bar Order Tickets · Active POS beverage orders awaiting preparation" : "Live Kitchen Order Tickets · Active POS orders awaiting preparation"}
                 </p>
               </div>
             </div>
@@ -1406,6 +1434,7 @@ export function KitchenKOTView({
 
           {/* Right Controls: Date & Time, Theme Toggle, Profile Dropdown (Identical sequence to Admin & POS) */}
           <div
+            className="kds-main-header-utilities"
             style={{
               display: "flex",
               alignItems: "center",

@@ -5,7 +5,8 @@ export async function apiGetTables(options = {}) {
 }
 
 export async function apiCreateTable(tableData) {
-  const tableNum = String(tableData.tableNumber || tableData.name || tableData.tableName || "").trim();
+  const tableNum = String(tableData.tableNumber || tableData.id || "").trim();
+  const tableName = String(tableData.name || tableData.tableName || tableNum).trim();
   const branch = Number(tableData.branchId) || 1;
   const section = String(tableData.section || tableData.sectionArea || tableData.location || "Main Hall").trim();
   const cap = parseInt(tableData.capacity || tableData.capacityChairs || 4, 10);
@@ -17,8 +18,8 @@ export async function apiCreateTable(tableData) {
     method: 'POST',
     body: JSON.stringify({
       tableNumber: tableNum,
-      tableName: tableNum,
-      name: tableNum,
+      tableName,
+      name: tableName,
       branchId: branch,
       sectionArea: section,
       section: section,
@@ -35,7 +36,8 @@ export async function apiCreateTable(tableData) {
 }
 
 export async function apiUpdateTable(id, tableData) {
-  const tableNum = String(tableData.tableNumber || tableData.name || tableData.tableName || "").trim();
+  const tableNum = String(tableData.tableNumber || tableData.id || id || "").trim();
+  const tableName = String(tableData.name || tableData.tableName || tableNum).trim();
   const branch = Number(tableData.branchId) || 1;
   const section = String(tableData.section || tableData.sectionArea || tableData.location || "Main Hall").trim();
   const cap = parseInt(tableData.capacity || tableData.capacityChairs || 4, 10);
@@ -54,8 +56,8 @@ export async function apiUpdateTable(id, tableData) {
     method: 'PUT',
     body: JSON.stringify({
       tableNumber: tableNum,
-      tableName: tableNum,
-      name: tableNum,
+      tableName,
+      name: tableName,
       branchId: branch,
       sectionArea: section,
       section: section,

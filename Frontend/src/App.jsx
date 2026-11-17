@@ -18,7 +18,6 @@ import {
 import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
 import { TableReservationFlow } from "./reservation";
 import { TakeawayView } from "./user/TakeawayView";
-import { BarBOTView } from "./bar/BarBOTView";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
@@ -426,7 +425,10 @@ const mergeIncomingTables = (
       }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = `Table-${num || targetId}`;
+      const cleanName = rawName || String(table.tableNumber || table.number || `Table-${num || targetId}`).trim();
+      const cleanNumber = String(
+        table.tableNumberNumeric ?? table.number ?? num ?? targetId,
+      ).trim();
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
       const hasActiveItems =
@@ -465,6 +467,9 @@ const mergeIncomingTables = (
         ...table,
         id: targetId,
         name: cleanName,
+        tableName: cleanName,
+        tableNumber: cleanNumber,
+        tableNumberNumeric: cleanNumber,
         backendTableId:
           table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
         section:
@@ -2486,7 +2491,7 @@ export function App() {
           const createResult = await apiCreateOrder({
             tableId: backendTableId,
             tableName,
-            tableNumber: String(tbl?.tableNumber ?? tbl?.name ?? tableName),
+            tableNumber: String(tbl?.tableNumberNumeric ?? tbl?.tableNumber ?? tbl?.id ?? tableId),
             serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
             guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
             status: "Active",
@@ -3973,64 +3978,17 @@ export function App() {
             <ErrorBoundary>
               <>
                 <div
-                  role="tablist"
-                  aria-label="Kitchen and bar order tickets"
+                  className="kot-route-toolbar"
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
-                    padding: "10px 20px",
+                    justifyContent: "flex-end",
+                    gap: 8,
+                    padding: "6px 20px",
                     background: "var(--bg-primary, #0b1120)",
                     borderBottom: "1px solid var(--border-subtle, #243044)",
-                    flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {[
-                      { id: "kitchen", label: "🍳 Kitchen KOT" },
-                      { id: "bar", label: "🍸 Bar BOT" },
-                    ].map((station) => (
-                      <button
-                        key={station.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeKotStation === station.id}
-                        onClick={() => setActiveKotStation(station.id)}
-                        style={{
-                          minHeight: 38,
-                          padding: "0 18px",
-                          borderRadius: 9,
-                          border: `1.5px solid ${
-                            activeKotStation === station.id
-                              ? "#f59e0b"
-                              : "var(--border-subtle, #243044)"
-                          }`,
-                          background:
-                            activeKotStation === station.id
-                              ? "rgba(245, 158, 11, 0.18)"
-                              : "var(--bg-secondary, #111b2b)",
-                          color:
-                            activeKotStation === station.id
-                              ? "#fbbf24"
-                              : "var(--text-main, #dbe4f0)",
-                          font: "inherit",
-                          fontWeight: 750,
-                          fontSize: "0.86rem",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          boxShadow:
-                            activeKotStation === station.id
-                              ? "0 0 12px rgba(245, 158, 11, 0.25)"
-                              : "none",
-                          transition: "all 0.15s ease",
-                        }}
-                      >
-                        <span>{station.label}</span>
-                      </button>
-                    ))}
-                  </div>
                   <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
                     <button
                       type="button"
@@ -4055,16 +4013,6 @@ export function App() {
                   </div>
                 </div>
 
-                {activeKotStation === "bar" ? (
-                  <BarBOTView
-                    tables={tables}
-                    menuItems={menuItems}
-                    staffList={staffList}
-                    barDrinks={barMenuItems}
-                    onUpdateItemKotStatus={handleUpdateItemKotStatus}
-                    onCompleteTableKot={handleCompleteTableKot}
-                  />
-                ) : (
                   <KitchenKOTView
                     tables={tables}
                     pastOrders={pastOrders}
@@ -4083,7 +4031,6 @@ export function App() {
                     restaurantName={restaurantSettings.restaurantName}
                     restaurantLogo={restaurantSettings.logo}
                   />
-                )}
               </>
             </ErrorBoundary>
           ) : (
