@@ -1346,13 +1346,16 @@ public class BarController : ControllerBase
             return BadRequest(new { success = false, message = errorMsg });
         }
 
-        try
+        if (item != null)
         {
-            await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item);
-            await PublishBarEventAsync("inventory:updated", "consumed", item.Id.ToString(), item);
-            await PublishBarEventAsync("stock:updated", "stockConsumed", item.Id.ToString(), item);
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveInventoryUpdated", item);
+                await PublishBarEventAsync("inventory:updated", "consumed", item.Id.ToString(), item);
+                await PublishBarEventAsync("stock:updated", "stockConsumed", item.Id.ToString(), item);
+            }
+            catch { }
         }
-        catch { }
 
         return Ok(new
         {
