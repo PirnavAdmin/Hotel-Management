@@ -1024,7 +1024,8 @@ export function KitchenKOTView({
           min-width: 0;
           display: grid;
           grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 0.85rem;
+          column-gap: 0.85rem;
+          row-gap: 0.7rem;
           align-items: stretch;
         }
 
@@ -1045,28 +1046,27 @@ export function KitchenKOTView({
 
         .kot-order-card--compact {
           box-sizing: border-box;
-          padding: 0.55rem 0.65rem;
-          display: grid;
-          grid-template-rows: minmax(58px, 1fr) auto auto;
-          gap: 0.4rem;
-          align-content: stretch;
-          min-height: 164px;
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+          padding: 0.4rem 0.55rem;
+          min-height: 0;
         }
 
         .kot-compact-header {
           display: grid;
           grid-template-columns: minmax(0, 1fr) max-content;
           align-items: center;
-          column-gap: 0.45rem;
+          column-gap: 0.3rem;
           min-width: 0;
-          min-height: 58px;
+          min-height: 0;
         }
 
         .kot-compact-leading {
           display: grid;
           grid-template-columns: 66px minmax(0, 1fr);
           align-items: center;
-          column-gap: 0.45rem;
+          column-gap: 0.3rem;
           min-width: 0;
         }
 
@@ -1108,10 +1108,7 @@ export function KitchenKOTView({
         .kot-compact-title,
         .kot-compact-order-number {
           display: block;
-          overflow: visible;
-          text-overflow: unset;
-          white-space: normal;
-          overflow-wrap: anywhere;
+          min-width: 0;
         }
 
         .kot-compact-title {
@@ -1127,10 +1124,11 @@ export function KitchenKOTView({
         }
 
         .kot-compact-order-number {
-          margin-top: 2px;
+          margin-top: 1px;
           color: var(--text-muted);
           font-size: 0.69rem;
           line-height: 1.15;
+          max-width: 100%;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -1161,9 +1159,9 @@ export function KitchenKOTView({
           display: grid;
           grid-template-columns: minmax(0, 1fr) auto;
           align-items: center;
-          gap: 0.6rem;
+          gap: 0.4rem;
           min-width: 0;
-          min-height: 16px;
+          min-height: 0;
           color: var(--text-muted);
           font-size: 0.72rem;
           line-height: 1.2;
@@ -1181,10 +1179,11 @@ export function KitchenKOTView({
 
         .kot-compact-view-button {
           justify-self: stretch;
-          align-self: end;
+          align-self: stretch;
+          margin-top: auto;
           width: 100%;
-          min-height: 29px;
-          padding: 0.3rem 0.7rem;
+          min-height: 27px;
+          padding: 0.25rem 0.65rem;
           border: 1px solid var(--border-card);
           border-radius: 7px;
           background: var(--bg-tertiary);
@@ -1235,7 +1234,7 @@ export function KitchenKOTView({
           .kot-cards-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           justify-content: stretch;
-          gap: 0.75rem !important;
+          gap: 0.65rem !important;
           }
 
           .kot-order-card {
@@ -1243,12 +1242,11 @@ export function KitchenKOTView({
           }
 
           .kot-order-card--compact {
-            padding: 0.55rem 0.65rem;
-            grid-template-rows: auto auto auto;
+            padding: 0.4rem 0.55rem;
           }
 
-          .kot-compact-header { column-gap: 0.4rem; }
-          .kot-compact-leading { grid-template-columns: 66px minmax(0, 1fr); column-gap: 0.4rem; }
+          .kot-compact-header { column-gap: 0.3rem; }
+          .kot-compact-leading { grid-template-columns: 66px minmax(0, 1fr); column-gap: 0.3rem; }
           .kot-compact-status { gap: 0.3rem; font-size: 0.68rem; }
           .kot-compact-title { font-size: 0.81rem; }
           .kot-compact-order-number { font-size: 0.66rem; }
@@ -1364,34 +1362,12 @@ export function KitchenKOTView({
                       className="kds-station-toggle"
                       role="tablist"
                       aria-label="KOT Station switcher"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        background: "var(--bg-tertiary)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: "8px",
-                        padding: "3px",
-                        gap: "4px",
-                      }}
                     >
                       <button
                         type="button"
                         role="tab"
                         aria-selected={currentStation === "kitchen"}
                         onClick={() => onStationChange("kitchen")}
-                        style={{
-                          minHeight: 32,
-                          boxSizing: "border-box",
-                          padding: "0 11px",
-                          borderRadius: "7px",
-                          border: "none",
-                          background: currentStation === "kitchen" ? "var(--accent-amber)" : "transparent",
-                          color: currentStation === "kitchen" ? "#ffffff" : "var(--text-muted)",
-                          fontSize: "0.76rem",
-                          fontWeight: 800,
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
                       >
                         🍳 Kitchen KOT
                       </button>
@@ -1400,19 +1376,6 @@ export function KitchenKOTView({
                         role="tab"
                         aria-selected={currentStation === "bar"}
                         onClick={() => onStationChange("bar")}
-                        style={{
-                          minHeight: 32,
-                          boxSizing: "border-box",
-                          padding: "0 11px",
-                          borderRadius: "7px",
-                          border: "none",
-                          background: currentStation === "bar" ? "var(--accent-amber)" : "transparent",
-                          color: currentStation === "bar" ? "#ffffff" : "var(--text-muted)",
-                          fontSize: "0.76rem",
-                          fontWeight: 800,
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                        }}
                       >
                         🍸 Bar BOT
                       </button>
@@ -2113,7 +2076,7 @@ export function KitchenKOTView({
                           <span>{isTakeawayOrder ? "ORDER" : formatCleanTableNum(tbl.name, tbl.id)}</span>
                         </span>
                         <div className="kot-compact-copy">
-                          <strong className="kot-compact-title">{isTakeawayOrder ? "Takeaway Order" : formatCleanTableName(tbl.name, tbl.id)}</strong>
+                          {!isTakeawayOrder && <strong className="kot-compact-title">{formatCleanTableName(tbl.name, tbl.id)}</strong>}
                           <span className="kot-compact-order-number">Order #{tbl.backendOrderId ?? tbl.id}</span>
                         </div>
                       </div>
