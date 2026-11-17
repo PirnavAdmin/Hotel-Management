@@ -1758,14 +1758,11 @@ export function AdminPortal({
     const isPureDigits = /^\d+$/.test(rawName);
 
     if (editingTable) {
-      const enteredName = tableForm.name.trim();
       const formattedName = isPureDigits
         ? `Table-${rawName}`
         : (rawName || editingTable.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
-        name: enteredName,
-        tableName: enteredName,
         id: editingTable.id,
         name: formattedName,
         tableName: formattedName,
@@ -1776,17 +1773,12 @@ export function AdminPortal({
       });
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
-      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
-      const enteredName = tableForm.name.trim();
       const chosenId = maxId + 1;
       const formattedName = isPureDigits
         ? `Table-${rawName}`
         : (rawName || `Table-${chosenId}`);
       onAddTable({
         id: chosenId,
-        name: enteredName,
-        tableName: enteredName,
-        tableNumber: String(chosenId),
         name: formattedName,
         tableName: formattedName,
         tableNumber: formattedName,
