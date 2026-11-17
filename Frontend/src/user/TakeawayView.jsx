@@ -228,6 +228,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
       }
     });
     const handleReconnect = () => scheduleOrderRefresh(true);
+    const intervalId = window.setInterval(refreshTakeawayOrders, 4000);
     const handleSync = () => {
       scheduleOrderRefresh(true);
     };
@@ -239,8 +240,9 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
 
     return () => {
       if (refreshTimer) window.clearTimeout(refreshTimer);
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
       window.removeEventListener("avsr:realtime-reconnected", handleReconnect);
+      window.clearInterval(intervalId);
       window.removeEventListener("avsr-takeaway-updated", handleSync);
       window.removeEventListener("avsr-kot-updated", handleSync);
       window.removeEventListener("storage", handleSync);

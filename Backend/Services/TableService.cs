@@ -31,6 +31,7 @@ public class TableService
             { "p_table_id", null },
             { "p_branch_id", targetBranch },
             { "p_table_number", null },
+            { "p_table_name", null },
             { "p_capacity", null },
             { "p_location", null },
             { "p_qr_code_url", null },
@@ -94,9 +95,8 @@ public class TableService
 
     public async Task<TableResponseDto> CreateTableAsync(CreateTableDto dto)
     {
-        var resolvedNumber = !string.IsNullOrWhiteSpace(dto.TableNumber) 
-            ? dto.TableNumber.Trim() 
-            : (!string.IsNullOrWhiteSpace(dto.TableName) ? dto.TableName.Trim() : (dto.Name?.Trim() ?? string.Empty));
+        var resolvedNumber = !string.IsNullOrWhiteSpace(dto.TableNumber) ? dto.TableNumber.Trim() : (dto.Number?.Trim() ?? string.Empty);
+        var resolvedName = !string.IsNullOrWhiteSpace(dto.TableName) ? dto.TableName.Trim() : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : resolvedNumber);
 
         if (string.IsNullOrWhiteSpace(resolvedNumber))
         {
@@ -170,6 +170,7 @@ public class TableService
             { "p_table_id", null },
             { "p_branch_id", branchId },
             { "p_table_number", resolvedNumber },
+            { "p_table_name", resolvedName },
             { "p_capacity", capacity },
             { "p_location", location },
             { "p_qr_code_url", dto.QrCodeUrl },
@@ -215,9 +216,8 @@ public class TableService
             return null;
         }
 
-        var resolvedNumber = !string.IsNullOrWhiteSpace(dto.TableNumber) 
-            ? dto.TableNumber.Trim() 
-            : (!string.IsNullOrWhiteSpace(dto.TableName) ? dto.TableName.Trim() : existing.TableNumber);
+        var resolvedNumber = !string.IsNullOrWhiteSpace(dto.TableNumber) ? dto.TableNumber.Trim() : existing.TableNumber;
+        var resolvedName = !string.IsNullOrWhiteSpace(dto.TableName) ? dto.TableName.Trim() : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : existing.TableName);
 
         if (resolvedNumber.Length > 50)
         {
@@ -280,6 +280,7 @@ public class TableService
             { "p_table_id", id },
             { "p_branch_id", branchId },
             { "p_table_number", resolvedNumber },
+            { "p_table_name", resolvedName },
             { "p_capacity", capacity },
             { "p_location", location },
             { "p_qr_code_url", dto.QrCodeUrl },
@@ -321,6 +322,7 @@ public class TableService
             { "p_table_id", id },
             { "p_branch_id", null },
             { "p_table_number", null },
+            { "p_table_name", null },
             { "p_capacity", null },
             { "p_location", null },
             { "p_qr_code_url", null },
@@ -356,6 +358,7 @@ public class TableService
             { "p_table_id", id },
             { "p_branch_id", null },
             { "p_table_number", null },
+            { "p_table_name", null },
             { "p_capacity", null },
             { "p_location", null },
             { "p_qr_code_url", null },
@@ -459,7 +462,7 @@ public class TableService
         var rawTableName = HasColumn(reader, "table_name") && !reader.IsDBNull(reader.GetOrdinal("table_name")) ? reader.GetString(reader.GetOrdinal("table_name")).Trim() : string.Empty;
 
         var tableNumber = !string.IsNullOrWhiteSpace(rawTableNum) ? rawTableNum : (!string.IsNullOrWhiteSpace(rawTableName) ? rawTableName : $"T-{tableId}");
-        var tableName = !string.IsNullOrWhiteSpace(rawTableNum) ? rawTableNum : (!string.IsNullOrWhiteSpace(rawTableName) ? rawTableName : tableNumber);
+        var tableName = !string.IsNullOrWhiteSpace(rawTableName) ? rawTableName : tableNumber;
 
         var sectionArea = HasColumn(reader, "section_area") && !reader.IsDBNull(reader.GetOrdinal("section_area"))
             ? reader.GetString(reader.GetOrdinal("section_area"))

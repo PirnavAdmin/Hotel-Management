@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Eye,
   Package,
   FileText,
   BarChart3,
@@ -74,6 +75,7 @@ import { BarWorkspace } from "../bar/BarWorkspace";
 import { BarBOTView } from "../bar/BarBOTView";
 import { apiGetInventory, apiCreateIngredient } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
+import { apiGetOrder } from "../api/orderApi";
 import { API_SYNC_BASE } from "../api/apiConfig";
 import { subscribeToSseMessages } from "../realtime/realtimeService";
 import {
@@ -714,6 +716,35 @@ export function AdminPortal({
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const [selectedKotModalTable, setSelectedKotModalTable] = useState(null);
+  const [orderDetailsTarget, setOrderDetailsTarget] = useState(null);
+  const [orderDetails, setOrderDetails] = useState(null);
+  const [orderDetailsLoading, setOrderDetailsLoading] = useState(false);
+  const [orderDetailsError, setOrderDetailsError] = useState("");
+  const orderDetailsRequestRef = useRef(0);
+  const handleViewOrderDetails = async (table) => {
+    const requestId = ++orderDetailsRequestRef.current;
+    const orderId = table?.activeOrderId ?? table?.backendOrderId ?? table?.items?.find((item) => item?.orderId)?.orderId;
+    setOrderDetailsTarget({ table, orderId });
+    setOrderDetails(null);
+    setOrderDetailsError("");
+    if (orderId == null || orderId === "") {
+      setOrderDetailsError("This order does not have an API order ID.");
+      return;
+    }
+    setOrderDetailsLoading(true);
+    try {
+      const response = await apiGetOrder(orderId);
+      const payload = response?.data?.data ?? response?.data?.order ?? response?.data;
+      if (!response?.success || !payload || response?.data?.success === false) {
+        throw new Error(response?.error || response?.data?.message || "Could not load order details.");
+      }
+      if (orderDetailsRequestRef.current === requestId) setOrderDetails(payload);
+    } catch (error) {
+      if (orderDetailsRequestRef.current === requestId) setOrderDetailsError(error?.message || "Could not load order details.");
+    } finally {
+      if (orderDetailsRequestRef.current === requestId) setOrderDetailsLoading(false);
+    }
+  };
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
@@ -1727,11 +1758,14 @@ export function AdminPortal({
     const isPureDigits = /^\d+$/.test(rawName);
 
     if (editingTable) {
+      const enteredName = tableForm.name.trim();
       const formattedName = isPureDigits
         ? `Table-${rawName}`
         : (rawName || editingTable.name || `Table-${editingTable.id}`);
       onUpdateTable({
         ...editingTable,
+        name: enteredName,
+        tableName: enteredName,
         id: editingTable.id,
         name: formattedName,
         tableName: formattedName,
@@ -1742,12 +1776,17 @@ export function AdminPortal({
       });
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
+      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
+      const enteredName = tableForm.name.trim();
       const chosenId = maxId + 1;
       const formattedName = isPureDigits
         ? `Table-${rawName}`
         : (rawName || `Table-${chosenId}`);
       onAddTable({
         id: chosenId,
+        name: enteredName,
+        tableName: enteredName,
+        tableNumber: String(chosenId),
         name: formattedName,
         tableName: formattedName,
         tableNumber: formattedName,
@@ -3535,6 +3574,7 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                   >
+                                    <span>T{tbl.tableNumberNumeric || tbl.tableNumber || getTableSortNumber(tbl) || tbl.id}</span>
                                     <span>{getTableBadgeText(tbl)}</span>
                                   </div>
                                   <span
@@ -5273,8 +5313,8 @@ export function AdminPortal({
                               const firstItem = activeItems[0];
                               const moreCount = activeItems.length - 1;
 
-                              const tableNum = tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id;
-                              const tableNameDisplay = tbl.name ? (tbl.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i) ? `Table ${tableNum}` : tbl.name) : `Table ${tbl.id}`;
+                              const tableNum = tbl.tableNumberNumeric || tbl.tableNumber || getTableSortNumber(tbl) || tbl.id;
+                              const tableNameDisplay = tbl.tableName || tbl.name || `Table ${tableNum}`;
 
                               return (
                                 <div
@@ -5514,6 +5554,32 @@ export function AdminPortal({
                                     <span>View Items / Cook</span>
                                     <ChevronRight size={13} />
                                   </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewOrderDetails(tbl);
+                                    }}
+                                    style={{
+                                      width: "100%",
+                                      padding: "0.42rem 0.6rem",
+                                      borderRadius: "6px",
+                                      background: "var(--bg-tertiary)",
+                                      border: "1px solid var(--border-focus)",
+                                      color: "var(--text-main)",
+                                      fontWeight: 750,
+                                      fontSize: "0.74rem",
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "0.35rem",
+                                    }}
+                                    title="View API order details"
+                                  >
+                                    <Eye size={14} />
+                                    <span>View Order</span>
+                                  </button>
                                 </div>
                               );
                             })}
@@ -5576,7 +5642,7 @@ export function AdminPortal({
                                         fontSize: "0.95rem",
                                       }}
                                     >
-                                      T{activeKotModalTable.name ? activeKotModalTable.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : activeKotModalTable.id}
+                                      T{activeKotModalTable.tableNumberNumeric || activeKotModalTable.tableNumber || getTableSortNumber(activeKotModalTable) || activeKotModalTable.id}
                                     </div>
                                     <div>
                                       <h3
@@ -5981,6 +6047,71 @@ export function AdminPortal({
                     })()}
                     </>
                   )}
+                  </div>
+                )}
+
+                {orderDetailsTarget && (
+                  <div
+                    onClick={() => setOrderDetailsTarget(null)}
+                    style={{ position: "fixed", inset: 0, zIndex: 10020, background: "var(--modal-overlay, rgba(0,0,0,0.72))", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+                  >
+                    <section
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Order details"
+                      onClick={(event) => event.stopPropagation()}
+                      style={{ width: "min(100%, 620px)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", background: "var(--bg-secondary)", border: "1.5px solid var(--accent-amber)", borderRadius: "14px", boxShadow: "0 25px 60px rgba(0,0,0,0.65)" }}
+                    >
+                      <header style={{ padding: "0.9rem 1.1rem", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+                        <div>
+                          <h3 style={{ margin: 0, color: "var(--text-main)", fontSize: "1.05rem", fontWeight: 850 }}>Order Details</h3>
+                          <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                            T{orderDetails?.tableNumber ?? orderDetails?.TableNumber ?? orderDetailsTarget.table?.tableNumberNumeric ?? orderDetailsTarget.table?.tableNumber ?? orderDetailsTarget.table?.id} · {orderDetails?.tableName ?? orderDetails?.TableName ?? orderDetailsTarget.table?.tableName ?? orderDetailsTarget.table?.name ?? ""}
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => setOrderDetailsTarget(null)} aria-label="Close order details" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer", padding: "0.25rem" }}><X size={20} /></button>
+                      </header>
+                      <div style={{ padding: "1rem 1.1rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                        {orderDetailsLoading ? (
+                          <div role="status" style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--text-muted)" }}>Loading order details…</div>
+                        ) : orderDetailsError ? (
+                          <div role="alert" style={{ padding: "1rem", borderRadius: "8px", color: "#fca5a5", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}>{orderDetailsError}</div>
+                        ) : orderDetails ? (() => {
+                          const order = orderDetails;
+                          const items = Array.isArray(order.items) ? order.items : Array.isArray(order.Items) ? order.Items : [];
+                          const dateValue = order.createdAt ?? order.CreatedAt ?? order.orderTime ?? order.OrderTime;
+                          const dateText = dateValue ? new Date(dateValue).toLocaleString() : "—";
+                          const value = (...keys) => keys.map((key) => order[key]).find((item) => item !== undefined && item !== null && item !== "");
+                          const metadata = [
+                            ["Order ID", value("orderId", "OrderId", "id", "Id") ?? orderDetailsTarget.orderId ?? "—"],
+                            ["Date & time", dateText],
+                            ["Status", value("status", "Status", "orderStatus", "OrderStatus") ?? "—"],
+                            ["Assigned server", value("serverName", "ServerName", "assignedServerName", "AssignedServerName", "waiterName", "WaiterName") ?? orderDetailsTarget.table?.server ?? "—"],
+                          ];
+                          return (
+                            <>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: "0.6rem" }}>
+                                {metadata.map(([label, content]) => <div key={label} style={{ padding: "0.65rem 0.75rem", borderRadius: "8px", background: "var(--bg-tertiary)", minWidth: 0 }}><div style={{ color: "var(--text-muted)", fontSize: "0.7rem", marginBottom: "0.2rem" }}>{label}</div><div style={{ color: "var(--text-main)", fontSize: "0.82rem", fontWeight: 700, overflowWrap: "anywhere" }}>{content}</div></div>)}
+                              </div>
+                              <div style={{ border: "1px solid var(--border-subtle)", borderRadius: "9px", overflow: "hidden" }}>
+                                <div style={{ padding: "0.65rem 0.75rem", background: "var(--bg-tertiary)", color: "var(--text-main)", fontWeight: 800, fontSize: "0.8rem" }}>Ordered Items</div>
+                                {items.length ? items.map((item, index) => {
+                                  const quantity = Number(item.quantity ?? item.Quantity) || 0;
+                                  const price = Number(item.price ?? item.unitPrice ?? item.Price ?? item.UnitPrice);
+                                  return <div key={item.orderItemId ?? item.OrderItemId ?? item.id ?? item.Id ?? index} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: "0.8rem", padding: "0.65rem 0.75rem", borderTop: "1px solid var(--border-subtle)", color: "var(--text-main)", fontSize: "0.8rem" }}><span>{item.name ?? item.Name ?? item.dishName ?? item.DishName ?? "Menu item"}</span><span>× {quantity}</span><span>{Number.isFinite(price) ? formatCurrency(price) : "—"}</span></div>;
+                                }) : <div style={{ padding: "1rem", color: "var(--text-muted)", textAlign: "center", fontSize: "0.8rem" }}>No order items were returned by the API.</div>}
+                              </div>
+                              {(() => {
+                                const totals = [["Subtotal", value("subtotal", "Subtotal")], ["Tax", value("taxAmount", "TaxAmount", "tax", "Tax")], ["Total", value("totalAmount", "TotalAmount", "grandTotal", "GrandTotal", "total", "Total")]].filter(([, amount]) => amount !== undefined && amount !== null);
+                                return totals.length ? <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "flex-end", color: "var(--text-main)", fontSize: "0.82rem" }}>{totals.map(([label, amount]) => <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: "2rem", minWidth: "180px", fontWeight: label === "Total" ? 850 : 600 }}><span>{label}</span><span>{formatCurrency(Number(amount) || 0)}</span></div>)}</div> : null;
+                              })()}
+                            </>
+                          );
+                        })() : (
+                          <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--text-muted)" }}>No order details are available.</div>
+                        )}
+                      </div>
+                    </section>
                   </div>
                 )}
 

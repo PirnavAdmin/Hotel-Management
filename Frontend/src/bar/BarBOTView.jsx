@@ -1057,16 +1057,8 @@ export function BarBOTView({
       ) : (
         /* 4. Cards Grid (Exact Match to Dine KOT glowing border cards) */
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              adminBotTableFilter !== "all"
-                ? "minmax(200px, 320px)"
-                : "repeat(auto-fill, minmax(170px, 1fr))",
-            gap: "0.85rem",
-            justifyContent: adminBotTableFilter !== "all" ? "center" : "stretch",
-            alignItems: "stretch",
-          }}
+          className={`kds-order-grid${adminBotTableFilter !== "all" ? " kds-order-grid--single" : ""}`}
+          style={{ width: "100%", minWidth: 0 }}
         >
           {botDisplayTables.map((tbl) => {
             const activeItems = tbl.drinkItems || [];
@@ -1145,6 +1137,7 @@ export function BarBOTView({
             return (
               <div
                 key={tbl.id}
+                className="kds-bar-order-card"
                 onClick={() => setSelectedBotModalTable(tbl)}
                 title="Click to view ordered drinks and prepare actions"
                 style={{
@@ -1156,11 +1149,7 @@ export function BarBOTView({
                   cursor: "pointer",
                   transition: "all 0.18s ease",
                   boxShadow: cardShadow,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
                   gap: "0.45rem",
-                  minHeight: "220px",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-2px)";
@@ -1374,6 +1363,7 @@ export function BarBOTView({
 
                 {/* Row 5: Action Button */}
                 <button
+                  className="kds-order-card-action"
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();

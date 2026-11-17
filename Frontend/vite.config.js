@@ -168,18 +168,13 @@ function globalSyncPlugin(backendTarget) {
   let sseClients = [];
   const getDataFile = () => {
     const candidates = [
-      path.resolve(import.meta.dirname || process.cwd(), "..", "server-db.json"),
-      path.resolve(process.cwd(), "..", "server-db.json"),
-      path.resolve(process.cwd(), "server-db.json"),
-      path.resolve(process.cwd(), "POS", "server-db.json"),
-      path.resolve(process.cwd(), "Frontend", "server-db.json"),
-      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\server-db.json",
-      "c:\\Users\\ADMIN\\Desktop\\POS 2 new file\\POS 2\\POS\\Frontend\\server-db.json",
+      path.resolve(FRONTEND_ROOT, "server-db.json"),
+      path.resolve(WORKSPACE_ROOT, "server-db.json"),
     ];
     for (const c of candidates) {
       if (fs.existsSync(c)) return c;
     }
-    return path.resolve(process.cwd(), "server-db.json");
+    return path.resolve(FRONTEND_ROOT, "server-db.json");
   };
 
   const loadDb = () => {
@@ -198,19 +193,10 @@ function globalSyncPlugin(backendTarget) {
     try {
       const file = getDataFile();
       const serialized = JSON.stringify(data, null, 2);
-      const writeIfChanged = (target) => {
-        const existing = fs.existsSync(target)
-          ? fs.readFileSync(target, "utf-8").replace(/^\uFEFF/, "")
-          : null;
-        if (existing !== serialized) fs.writeFileSync(target, serialized, "utf-8");
-      };
-      writeIfChanged(file);
-      const altFile = file.includes("Frontend")
-        ? path.resolve(file, "..", "..", "server-db.json")
-        : path.resolve(file, "..", "Frontend", "server-db.json");
-      if (fs.existsSync(altFile) && altFile !== file) {
-        try { writeIfChanged(altFile); } catch {}
-      }
+      const existing = fs.existsSync(file)
+        ? fs.readFileSync(file, "utf-8").replace(/^\uFEFF/, "")
+        : null;
+      if (existing !== serialized) fs.writeFileSync(file, serialized, "utf-8");
     } catch {}
   };
 
@@ -2360,7 +2346,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running."
+                  error: `Cannot reach the backend API on ${backendTarget}. Confirm it is running.`
                 }));
               }
             });
@@ -2378,7 +2364,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                  error: `Cannot reach the backend API on ${backendTarget}. Confirm it is running.`
                 }));
               }
             });
@@ -2396,7 +2382,7 @@ export default defineConfig(({ mode }) => {
                 res.writeHead(503, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({
                   success: false,
-                  error: "Cannot reach the ASP.NET API on port 5018. Confirm it is running on this computer."
+                  error: `Cannot reach the backend API on ${backendTarget}. Confirm it is running.`
                 }));
               }
             });

@@ -4775,7 +4775,7 @@ function BarTablesView({
         ...editingTable,
         name: tableForm.name,
         tableName: tableForm.name,
-        tableNumber: tableForm.name,
+        tableNumber: String(chosenId),
         section: tableForm.section,
         sectionArea: tableForm.section,
         area: tableForm.section,
@@ -5327,7 +5327,7 @@ function BarTablesView({
                         flexShrink: 0,
                       }}
                     >
-                      <span>T{tbl.name ? tbl.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : tbl.id}</span>
+                      <span>T{tbl.tableNumberNumeric || tbl.tableNumber || tbl.id}</span>
                     </div>
                     <span
                       style={{
@@ -7706,7 +7706,7 @@ export function BarWorkspace({
     return {
       ...source,
       id: source.id ?? source.tableId,
-      number: source.name || source.tableName || source.tableNumber || `Table ${source.id}`,
+      number: source.tableName || source.name || `Table ${source.tableNumberNumeric || source.tableNumber || source.id}`,
       area: source.sectionArea || source.section || source.location || "—",
       capacity: Number(source.capacityChairs ?? source.capacity ?? 0),
       guests: Number(source.guests ?? source.occupiedChairs ?? 0),

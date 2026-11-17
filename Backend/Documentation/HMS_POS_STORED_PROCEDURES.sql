@@ -1327,6 +1327,7 @@ CREATE PROCEDURE `sp_manage_restaurant_tables`(
     IN p_table_id           BIGINT UNSIGNED,
     IN p_branch_id          BIGINT UNSIGNED,
     IN p_table_number       VARCHAR(50),
+    IN p_table_name         VARCHAR(50),
     IN p_capacity           INT,
     IN p_location           VARCHAR(50),
     IN p_qr_code_url        VARCHAR(255),
@@ -1373,7 +1374,7 @@ proc_label: BEGIN
                 START TRANSACTION;
                     UPDATE restaurant_tables
                     SET deleted_at = NULL,
-                        table_name = TRIM(p_table_number),
+                        table_name = TRIM(p_table_name),
                         capacity = COALESCE(p_capacity, 4),
                         capacity_chairs = COALESCE(p_capacity, 4),
                         location = COALESCE(p_location, 'Main Hall'),
@@ -1393,7 +1394,7 @@ proc_label: BEGIN
                         created_at, updated_at
                     )
                     VALUES (
-                        COALESCE(p_branch_id, 1), TRIM(p_table_number), TRIM(p_table_number),
+                        COALESCE(p_branch_id, 1), TRIM(p_table_number), TRIM(p_table_name),
                         COALESCE(p_capacity, 4), COALESCE(p_capacity, 4),
                         COALESCE(p_location, 'Main Hall'), COALESCE(p_location, 'Main Hall'),
                         p_qr_code_url, 'available', p_assigned_server_id,
@@ -1441,7 +1442,7 @@ proc_label: BEGIN
         START TRANSACTION;
             UPDATE restaurant_tables
             SET table_number = COALESCE(TRIM(p_table_number), table_number),
-                table_name   = COALESCE(TRIM(p_table_number), table_name),
+                table_name   = COALESCE(TRIM(p_table_name), table_name),
                 capacity     = COALESCE(p_capacity, capacity),
                 capacity_chairs = COALESCE(p_capacity, capacity_chairs),
                 location     = COALESCE(p_location, location),

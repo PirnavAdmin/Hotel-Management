@@ -919,7 +919,9 @@ export function SelectSeatsModal({
     return { id: seatId, defaultId: defaultSeatId, isOccupied: false, isSelected };
   });
 
-  const availableCount = Math.max(0, capacity - selectedSeatIds.length);
+  const selectedSeats = seats.filter((seat) => seat.isSelected);
+  const selectedCount = selectedSeats.length;
+  const availableCount = Math.max(0, capacity - selectedCount);
 
   // Seat positioning matching Image 1
   let topSeats = [];
@@ -956,9 +958,19 @@ export function SelectSeatsModal({
 
   const handleToggleSeat = (seatId) => {
     if (isEditingSeats) return;
-    setSelectedSeatIds((prev) =>
-      prev.includes(seatId) ? prev.filter((id) => id !== seatId) : [...prev, seatId]
-    );
+    const seat = seats.find((item) => item.id === seatId || item.defaultId === seatId);
+    if (!seat) return;
+
+    setSelectedSeatIds((prev) => {
+      const selectedIds = new Set(prev);
+      const isSelected = selectedIds.has(seat.id) || selectedIds.has(seat.defaultId);
+      selectedIds.delete(seat.id);
+      selectedIds.delete(seat.defaultId);
+
+      if (!isSelected) selectedIds.add(seat.id);
+
+      return Array.from(selectedIds);
+    });
   };
 
   const handleSaveSeatConfig = (newCapacity, newLabels = customSeatLabels) => {
@@ -1008,7 +1020,7 @@ export function SelectSeatsModal({
   };
 
   const handleConfirmSeats = () => {
-    const selectedCount = selectedSeatIds.length;
+    const selectedCount = selectedSeats.length;
     const currentCap = Number(currentTable.capacity) || 4;
 
     // In admin mode, if the user explicitly clicked individual seats (e.g. 4 of 6),
@@ -1024,7 +1036,7 @@ export function SelectSeatsModal({
       : (role === "admin" ? newCapacity : (Number(currentTable.guests) || newCapacity));
 
     const finalSeats = selectedCount > 0
-      ? [...selectedSeatIds]
+      ? selectedSeats.map((seat) => seat.id)
       : Array.from({ length: newCapacity }, (_, i) => `S${i + 1}`);
 
     const hasActiveItems = Array.isArray(currentTable.items) && currentTable.items.some(
@@ -1610,7 +1622,7 @@ export function SelectSeatsModal({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ color: "var(--text-dim)" }}>Table No:</span>
                   <span style={{ color: "var(--text-main)", fontWeight: 700, fontSize: "0.88rem" }}>
-                    T{currentTable.name ? currentTable.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "") : currentTable.id}
+                    T{currentTable.tableNumberNumeric || currentTable.tableNumber || currentTable.id}
                   </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1695,7 +1707,7 @@ export function SelectSeatsModal({
                     <span style={{ color: "var(--text-main)", fontWeight: 600 }}>Selected</span>
                   </div>
                   <span style={{ color: "var(--text-main)", fontWeight: 800, fontSize: "0.92rem" }}>
-                    {selectedSeatIds.length}
+                    {selectedCount}
                   </span>
                 </div>
               </div>
@@ -1721,7 +1733,7 @@ export function SelectSeatsModal({
                 Selected Seats
               </span>
               <span style={{ color: "var(--text-main)", fontSize: "1.15rem", fontWeight: 800 }}>
-                {selectedSeatIds.length} / {capacity}
+                {selectedCount} / {capacity}
               </span>
             </div>
           </div>

@@ -165,13 +165,14 @@ export function AdminTakeaway({
       if (summaryResult?.success) setSummary(summaryResult.data || null);
       else throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
     } catch (error) {
+      console.warn("Could not load takeaway orders:", error?.message);
       if (!quiet) alert(error?.message || "Could not load takeaway orders.");
     } finally {
       setIsRefreshing(false);
     }
   };
   useEffect(() => {
-    handleRefresh();
+    handleRefresh({ quiet: true });
   }, []);  // --- Filtering & Tab State ---
   useEffect(() => {
     let timer = null;
