@@ -1,4 +1,4 @@
-import { API_HTTP_BASE, apiClient } from "./apiConfig";
+import { apiClient } from "./apiConfig";
 import { getMenuItemImage, resolveMenuImageUrl } from "../utils/menuImageHelper";
 import {
   isDrinkCategory,

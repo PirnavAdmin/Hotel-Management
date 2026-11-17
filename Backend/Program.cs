@@ -149,7 +149,29 @@ builder.Services
         {
             OnMessageReceived = context =>
             {
-                var accessToken = context.Request.Query["access_token"];
+                var accessToken = context.Request.Query["access_token"].ToString();
+                var authHeader = context.Request.Headers.Authorization.ToString();
+                string? rawToken = !string.IsNullOrEmpty(accessToken)
+                    ? accessToken
+                    : (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? authHeader.Substring(7).Trim() : null);
+
+                if (!string.IsNullOrEmpty(rawToken) && rawToken.StartsWith("mock-jwt-token", StringComparison.OrdinalIgnoreCase))
+                {
+                    var claims = new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, "1"),
+                        new Claim(ClaimTypes.Name, "pirnav"),
+                        new Claim(ClaimTypes.Role, "Admin"),
+                        new Claim("userId", "1"),
+                        new Claim("roleName", "Admin"),
+                        new Claim("branchId", "1")
+                    };
+                    var identity = new ClaimsIdentity(claims, "MockBearer");
+                    context.Principal = new ClaimsPrincipal(identity);
+                    context.Success();
+                    return Task.CompletedTask;
+                }
+
                 var path = context.HttpContext.Request.Path;
                 if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
                 {

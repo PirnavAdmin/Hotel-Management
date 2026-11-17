@@ -57,27 +57,81 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.62; }
 
 .admin-header {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  align-items: center !important;
   gap: 0.75rem !important;
   padding-inline: clamp(0.85rem, 2vw, 1.75rem) !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
-.admin-header > :first-child,
+.admin-header > .restaurant-header-bg-animation {
+  position: absolute !important;
+  inset: 0 !important;
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+.admin-header-left {
+  grid-column: 1 !important;
+  justify-self: start !important;
+  display: flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.admin-header-center {
+  grid-column: 2 !important;
+  justify-self: center !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.admin-header-spacer {
+  grid-column: 2 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.admin-header-right {
+  grid-column: 3 !important;
+  justify-self: end !important;
+  margin-left: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0.85rem !important;
+  min-width: 0 !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.admin-header > :first-child:not(.restaurant-header-bg-animation),
 .admin-header > :last-child { min-width: 0; }
 .admin-header > :last-child { justify-content: flex-end; gap: 0.6rem !important; }
 .admin-header.has-mode-toggle > :nth-child(2) { justify-self: center; }
 
 @media (max-width: 900px) {
-  .admin-header { grid-template-columns: minmax(0, 1fr); height: auto !important; min-height: 68px !important; padding-block: 0.65rem !important; }
-  .admin-header.has-mode-toggle > :nth-child(2) { grid-column: 1; justify-self: center; }
-  .admin-header > :last-child { grid-column: 1; justify-content: flex-end; flex-wrap: wrap; }
+  .admin-header { grid-template-columns: minmax(0, 1fr) !important; height: auto !important; min-height: 68px !important; padding-block: 0.65rem !important; }
+  .admin-header-left { grid-column: 1 !important; justify-self: start !important; }
+  .admin-header-center { grid-column: 1 !important; justify-self: center !important; }
+  .admin-header-right { grid-column: 1 !important; justify-self: flex-end !important; justify-content: flex-end !important; flex-wrap: wrap !important; }
+  .admin-header.has-mode-toggle > :nth-child(2) { grid-column: 1 !important; justify-self: center !important; }
+  .admin-header > :last-child { grid-column: 1 !important; justify-content: flex-end !important; flex-wrap: wrap !important; }
 }
 
 @media (max-width: 600px) {
   .pos-header-status { padding-block: 0.18rem !important; }
   .pos-header-status-inner { gap: 0.65rem !important; }
-  .admin-header { grid-template-columns: minmax(0, 1fr); }
-  .admin-header.has-mode-toggle > :nth-child(2) { grid-column: 1; }
-  .admin-header > :last-child { grid-column: 1; justify-content: flex-end; }
+  .admin-header { grid-template-columns: minmax(0, 1fr) !important; }
+  .admin-header-left { grid-column: 1 !important; }
+  .admin-header-center { grid-column: 1 !important; }
+  .admin-header-right { grid-column: 1 !important; justify-content: flex-end !important; }
+  .admin-header.has-mode-toggle > :nth-child(2) { grid-column: 1 !important; }
+  .admin-header > :last-child { grid-column: 1 !important; justify-content: flex-end !important; }
   :is([role="dialog"], .modal-content, .modal-dialog) { width: 100%; max-width: 100%; max-height: calc(100dvh - 16px); overflow-y: auto; }
 }

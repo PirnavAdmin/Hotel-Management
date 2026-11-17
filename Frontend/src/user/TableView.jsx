@@ -252,7 +252,7 @@ import {
   Lock,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
+import { getTableSortNumber, compareTablesNaturally, getTableBadgeText } from "../utils/tableSortHelper";
 import {
   parseTimeToSeconds,
   formatElapsedTimer,
@@ -2110,7 +2110,7 @@ export function TableView({
                           flexShrink: 0,
                         }}
                       >
-                        T{table.tableNumberNumeric || table.tableNumber || getTableSortNumber(table) || table.id}
+                        {getTableBadgeText(table)}
                       </span>
                       <h3
                         style={{

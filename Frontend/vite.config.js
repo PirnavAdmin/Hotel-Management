@@ -60,7 +60,10 @@ let mailTransporter = null;
 const getMailTransporter = async () => {
   if (!nodemailer) return null;
   // Dynamically load .env so changes are picked up without server restart
-  const currentEnv = loadEnv("development", process.cwd(), "");
+  const currentEnv = {
+    ...loadEnv("development", WORKSPACE_ROOT, ""),
+    ...loadEnv("development", process.cwd(), ""),
+  };
   const host = currentEnv.SMTP_HOST || process.env.SMTP_HOST || currentEnv.EMAIL_HOST || process.env.EMAIL_HOST;
   const port = Number(currentEnv.SMTP_PORT || process.env.SMTP_PORT || currentEnv.EMAIL_PORT || process.env.EMAIL_PORT || 587);
   const user = currentEnv.SMTP_USER || process.env.SMTP_USER || currentEnv.EMAIL_USER || process.env.EMAIL_USER;
@@ -2312,6 +2315,7 @@ export default defineConfig(({ mode }) => {
     "http://127.0.0.1:5018";
 
   return {
+    envDir: WORKSPACE_ROOT,
     plugins: [react(), globalSyncPlugin(backendTarget)],
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)

@@ -46,11 +46,11 @@ export function parseOrderToYMD(order) {
     if (isoMatch) {
       return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
     }
-    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    const dmyMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
     if (dmyMatch) {
       return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
     }
-    const textMatch = s.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3,})[\s\-]+(\d{4})/);
+    const textMatch = s.match(/^(\d{1,2})[\s-]+([a-zA-Z]{3,})[\s-]+(\d{4})/);
     if (textMatch) {
       const mon = textMatch[2].slice(0, 3).toLowerCase();
       if (months[mon]) {

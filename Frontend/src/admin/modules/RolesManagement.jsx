@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, RefreshCw, Key, Lock, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Key, Lock } from 'lucide-react';
 import { apiGetRoles } from '../../api/roleApi';
 
 export function RolesManagement({ isLight = false, showToast = alert }) {

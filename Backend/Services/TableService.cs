@@ -104,10 +104,10 @@ public class TableService
             throw new ArgumentException("Table Number / Identifier is required and cannot be empty.");
         }
 
-        if (resolvedNumber.Length > 10)
+        if (resolvedNumber.Length > 50)
         {
-            _logger.LogWarning("CreateTableAsync rejected: Table Number '{TableNumber}' exceeds 10 characters.", resolvedNumber);
-            throw new ArgumentException("Table Number / Identifier must not exceed 10 characters.");
+            _logger.LogWarning("CreateTableAsync rejected: Table Number '{TableNumber}' exceeds 50 characters.", resolvedNumber);
+            throw new ArgumentException("Table Number / Identifier must not exceed 50 characters.");
         }
 
         long branchId = dto.BranchId.HasValue && dto.BranchId.Value > 0 ? dto.BranchId.Value : 1;
@@ -219,10 +219,10 @@ public class TableService
         var resolvedNumber = !string.IsNullOrWhiteSpace(dto.TableNumber) ? dto.TableNumber.Trim() : existing.TableNumber;
         var resolvedName = !string.IsNullOrWhiteSpace(dto.TableName) ? dto.TableName.Trim() : (!string.IsNullOrWhiteSpace(dto.Name) ? dto.Name.Trim() : existing.TableName);
 
-        if (resolvedNumber.Length > 10)
+        if (resolvedNumber.Length > 50)
         {
-            _logger.LogWarning("UpdateTableAsync rejected: Table Number '{TableNumber}' exceeds 10 characters.", resolvedNumber);
-            throw new ArgumentException("Table Number / Identifier must not exceed 10 characters.");
+            _logger.LogWarning("UpdateTableAsync rejected: Table Number '{TableNumber}' exceeds 50 characters.", resolvedNumber);
+            throw new ArgumentException("Table Number / Identifier must not exceed 50 characters.");
         }
 
         long branchId = dto.BranchId.HasValue && dto.BranchId.Value > 0 ? dto.BranchId.Value : existing.BranchId;

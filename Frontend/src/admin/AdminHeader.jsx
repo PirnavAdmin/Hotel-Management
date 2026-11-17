@@ -109,7 +109,8 @@ export function AdminHeader({
         padding: "0 1.75rem",
         borderBottom: "1px solid var(--border-subtle)",
         background: "var(--bg-secondary)",
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
         alignItems: "center",
         justifyContent: "space-between",
         flexWrap: "nowrap",
@@ -330,6 +331,7 @@ export function AdminHeader({
 
       {/* Restaurant title */}
       <div
+        className="admin-header-left"
         style={{
           display: "flex",
           alignItems: "center",
@@ -357,9 +359,10 @@ export function AdminHeader({
         </div>
       </div>
 
-      {/* Dine vs Bar Mode Toggle */}
-      {showModeToggle && (
+      {/* Dine vs Bar Mode Toggle (or spacer to maintain 3-column grid) */}
+      {showModeToggle ? (
         <div
+          className="admin-header-center"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -433,15 +436,21 @@ export function AdminHeader({
             <span>Bar</span>
           </button>
         </div>
+      ) : (
+        <div className="admin-header-spacer" aria-hidden="true" style={{ gridColumn: 2 }} />
       )}
 
       {/* Right Controls Row (Date/Time, Theme Toggle, Profile Avatar) */}
       <div
+        className="admin-header-right"
         style={{
           display: "flex",
           alignItems: "center",
           gap: "0.85rem",
           flexShrink: 0,
+          marginLeft: "auto",
+          justifyContent: "flex-end",
+          gridColumn: 3,
           position: "relative",
           zIndex: 2,
         }}

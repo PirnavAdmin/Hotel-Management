@@ -113,7 +113,7 @@ export function isDisallowedItemName(raw) {
   if (standardAllowed.includes(s)) return false;
 
   // Reject dishes with "with", "w/", "(", ")", numbers
-  if (/\b(with|w\/)\b/i.test(s) || /[\(\)\d]/.test(s)) return true;
+  if (/\b(with|w\/)\b/i.test(s) || /[()\d]/.test(s)) return true;
 
   // Specific food and drink items that must never appear in category dropdowns
   const dishKeywords = [
@@ -332,7 +332,7 @@ export function getApproximateIngredientMrp(rawName = "", unit = "KG") {
   } else if (normalizedUnit === "g") {
     rate = rate / 1000;
   } else if (normalizedUnit === "L") {
-    rate = rate;
+    // Already in per-litre rate
   }
 
   return Number(rate.toFixed(2));
@@ -1737,7 +1737,8 @@ export function AdminPortal({
 
   const handleSaveTable = (e) => {
     e.preventDefault();
-    if (!tableForm.name.trim()) return;
+    const rawName = String(tableForm.name || "").trim();
+    if (!rawName) return;
 
     if (tableForm.section) {
       saveCustomSection(tableForm.section);
@@ -1754,26 +1755,28 @@ export function AdminPortal({
       });
     }
 
+    const formattedName = rawName || (editingTable ? (editingTable.name || `Table-${editingTable.id}`) : `Table-${chosenId}`);
+
     if (editingTable) {
-      const enteredName = tableForm.name.trim();
       onUpdateTable({
         ...editingTable,
-        name: enteredName,
-        tableName: enteredName,
+        id: editingTable.id,
+        name: rawName || editingTable.name || `Table-${editingTable.id}`,
+        tableName: rawName || editingTable.tableName || `Table-${editingTable.id}`,
+        tableNumber: rawName || editingTable.tableNumber || String(editingTable.id),
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
         server: assignedServer,
       });
     } else {
-      const parsedNum = parseInt(tableForm.name.replace(/\D/g, ""), 10);
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
-      const chosenId = Number.isFinite(parsedNum) && parsedNum > 0 ? parsedNum : maxId + 1;
-      const enteredName = tableForm.name.trim();
+      const chosenId = maxId + 1;
+      const newName = rawName || `Table-${chosenId}`;
       onAddTable({
         id: chosenId,
-        name: enteredName,
-        tableName: enteredName,
-        tableNumber: String(chosenId),
+        name: newName,
+        tableName: newName,
+        tableNumber: newName,
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 4,
         status: "vacant",
@@ -3542,33 +3545,16 @@ export function AdminPortal({
                                 }}
                               >
                                 {/* Col 1: Table # */}
-                                <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                  <div
-                                    style={{
-                                      width: "28px",
-                                      height: "28px",
-                                      borderRadius: "6px",
-                                      background: "rgba(245, 158, 11, 0.15)",
-                                      color: "var(--accent-amber-light)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontWeight: 800,
-                                      fontSize: "0.8rem",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    <span>T{tbl.tableNumberNumeric || tbl.tableNumber || getTableSortNumber(tbl) || tbl.id}</span>
-                                  </div>
+                                <div className="floor-table-name" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                   <span
                                     style={{
                                       fontWeight: 700,
                                       color: "var(--text-main)",
-                                      fontSize: "0.88rem",
+                                      fontSize: "0.92rem",
                                       whiteSpace: "normal",
                                     }}
                                   >
-                                    {tbl.name || `Table ${tbl.id}`}
+                                    {tbl.name || tbl.tableName || tbl.tableNumber || `Table ${tbl.id}`}
                                   </span>
                                 </div>
 
@@ -7058,6 +7044,7 @@ export function AdminPortal({
               <input
                 type="text"
                 required
+                placeholder="e.g. spin-1, Table-5, VIP-1"
                 value={tableForm.name}
                 onChange={(e) =>
                   setTableForm({ ...tableForm, name: e.target.value })

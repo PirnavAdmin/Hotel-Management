@@ -1,0 +1,9 @@
+{
+  "dotnet.dotnetPath": "C:\\Users\\ADMIN\\.dotnet\\dotnet.exe",
+  "csharp.dotnetPath": "C:\\Users\\ADMIN\\.dotnet\\dotnet.exe",
+  "dotnet.preferCustomDotnet": true,
+  "dotnetAcquisitionExtension.existingPaths": {
+    "extensionId": "ms-dotnettools.csharp",
+    "path": "C:\\Users\\ADMIN\\.dotnet\\dotnet.exe"
+  }
+}
