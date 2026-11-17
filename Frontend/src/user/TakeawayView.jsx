@@ -1,7 +1,7 @@
 import { SearchableSelect } from "../common/SearchableSelect";
 import "./TakeawayView.css";
 import "../common/MenuCatalogLayout.css";
-import React, { useEffect, useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircle2, Clock, ChefHat, LoaderCircle, RefreshCw, Eye, ReceiptText, Send } from "lucide-react";
 import { MenuItemCard } from "../common/MenuItemCard";
@@ -17,6 +17,42 @@ import {
   apiSendTakeawayOrderToKitchen,
 } from "../api/orderApi";
 
+const extractOrderRecords = (response) => {
+  const queue = [response?.data, response];
+  const visited = new Set();
+  while (queue.length) {
+    const value = queue.shift();
+    if (!value || typeof value !== "object" || visited.has(value)) continue;
+    visited.add(value);
+    if (Array.isArray(value)) return value;
+    for (const key of ["orders", "takeawayOrders", "orderList", "records", "items", "data", "result"]) {
+      const nested = value[key];
+      if (Array.isArray(nested)) return nested;
+      if (nested && typeof nested === "object") queue.push(nested);
+    }
+  }
+  return null;
+};
+
+const isActiveTakeawayHistoryOrder = (order) => {
+  const orderType = String(order?.orderType ?? order?.OrderType ?? "").trim().toLowerCase();
+  const orderStatus = String(order?.status ?? order?.Status ?? order?.orderStatus ?? order?.OrderStatus ?? "").trim().toLowerCase();
+  const fulfillmentStatus = String(order?.fulfillmentStatus ?? order?.FulfillmentStatus ?? "").trim().toLowerCase();
+  const items = order?.items ?? order?.Items;
+  const terminalFulfillment = ["cancelled", "canceled"];
+  const activeKitchenStatuses = ["queued", "received", "new", "pending", "cooking", "mixing", "preparing", "ready", "completed"];
+  return orderType === "takeaway" &&
+    (orderStatus === "settled" || String(order?.paymentStatus ?? order?.PaymentStatus ?? "").trim().toLowerCase() === "paid") &&
+    !["cancelled", "canceled"].includes(orderStatus) &&
+    !terminalFulfillment.includes(fulfillmentStatus) &&
+    Array.isArray(items) &&
+    items.some((item) => {
+      const kotId = Number(item?.kotId ?? item?.KotId ?? item?.botId ?? item?.BotId);
+      const kotStatus = String(item?.kotStatus ?? item?.KotStatus ?? item?.itemStatus ?? "").trim().toLowerCase();
+      return kotId > 0 && activeKitchenStatuses.includes(kotStatus);
+    });
+};
+
 export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, onShowReceipt, orderPlacedSignal = 0 }) {
   const [activeScreen, setActiveScreen] = useState("menu");
   const [query, setQuery] = useState("");
@@ -26,6 +62,10 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   const descriptionTooltipId = useId();
   const [takeawayOrders, setTakeawayOrders] = useState([]);
   const [takeawayHistory, setTakeawayHistory] = useState([]);
+  const takeawayOrdersRefreshInFlightRef = useRef(false);
+  const takeawayHistoryRefreshInFlightRef = useRef(false);
+  const takeawayHistoryRef = useRef([]);
+  const takeawayHistoryLoadedRef = useRef(false);
   const [orderNotice, setOrderNotice] = useState("");
   const [dispatchingOrderId, setDispatchingOrderId] = useState(null);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
@@ -85,18 +125,31 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   };
   const getOrderNumber = (order) => String(order.orderNumber ?? order.invoiceNo ?? order.id ?? order.orderId ?? order.Id ?? "");
   const orderDateKey = (date) => date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}` : "";
-  const paidStatuses = useMemo(() => [...new Set(takeawayOrders.map(getOrderStatus).filter(Boolean))], [takeawayOrders]);
+  const paidTakeawayOrders = useMemo(() => {
+    const ordersById = new Map();
+    const getOrderId = (order) => String(order.id ?? order.Id ?? order.orderId ?? order.OrderId ?? order.orderNumber ?? order.OrderNumber ?? "");
+    takeawayHistory.forEach((order) => {
+      const id = getOrderId(order);
+      if (id) ordersById.set(id, order);
+    });
+    takeawayOrders.forEach((order) => {
+      const id = getOrderId(order);
+      if (id) ordersById.set(id, order);
+    });
+    return [...ordersById.values()];
+  }, [takeawayOrders, takeawayHistory]);
+  const paidStatuses = useMemo(() => [...new Set(paidTakeawayOrders.map(getOrderStatus).filter(Boolean))], [paidTakeawayOrders]);
   const historyStatuses = useMemo(() => [...new Set(takeawayHistory.map(getOrderStatus).filter(Boolean))], [takeawayHistory]);
   const filteredPaidOrders = useMemo(() => {
     const query = paidSearch.trim().toLowerCase();
-    return takeawayOrders.filter((order) => {
+    return paidTakeawayOrders.filter((order) => {
       const number = getOrderNumber(order).toLowerCase();
       const status = getOrderStatus(order).toLowerCase();
       const date = getOrderDate(order);
       const statusMatches = paidStatus === "all" || (paidStatus === "__in_kitchen" ? !["ready", "dispatched", "cancelled"].includes(status) : status === paidStatus.toLowerCase());
       return (!query || number.includes(query)) && statusMatches && (!paidDate || orderDateKey(date) === paidDate);
     });
-  }, [takeawayOrders, paidSearch, paidStatus, paidDate]);
+  }, [paidTakeawayOrders, paidSearch, paidStatus, paidDate]);
   const filteredTakeawayHistory = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -131,6 +184,8 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   };
 
   const refreshTakeawayOrders = async () => {
+    if (takeawayOrdersRefreshInFlightRef.current) return;
+    takeawayOrdersRefreshInFlightRef.current = true;
     const localList = getLocalTakeawayOrders();
     const normalizedLocal = localList.map((order) => ({
       ...order,
@@ -153,14 +208,22 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
 
     try {
       const result = await apiGetTakeawayOrders();
-      if (result?.success && Array.isArray(result.data)) {
+      const apiOrders = extractOrderRecords(result);
+      if (result?.success && apiOrders) {
         setOrderNotice("");
-        const serverOrders = result.data.map((order) => ({
+        const serverOrders = apiOrders
+          .filter((order) => {
+            const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase();
+            return !orderType || orderType === "takeaway";
+          })
+          .map((order) => ({
           ...order,
           id: order.id ?? order.Id ?? order.orderId ?? order.OrderId,
           orderId: order.orderId ?? order.OrderId ?? order.id ?? order.Id,
-          orderNumber: order.orderNumber ?? order.OrderNumber,
+          orderNumber: order.orderNumber ?? order.OrderNumber ?? order.invoiceNo ?? order.InvoiceNo,
           status: order.status ?? order.Status ?? order.orderStatus ?? order.OrderStatus,
+          paymentStatus: order.paymentStatus ?? order.PaymentStatus,
+          fulfillmentStatus: order.fulfillmentStatus ?? order.FulfillmentStatus,
           customerName: order.customerName ?? order.CustomerName,
           customerPhone: order.customerPhone ?? order.CustomerPhone ?? order.phoneNumber ?? order.PhoneNumber,
           grandTotal: order.grandTotal ?? order.GrandTotal ?? order.totalAmount ?? order.TotalAmount,
@@ -174,15 +237,37 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
           })),
         }));
 
-        const seenKeys = new Set(serverOrders.map((o) => String(o.orderNumber || o.id || o.orderId)));
-        const combined = [
-          ...serverOrders,
-          ...normalizedLocal.filter((o) => !seenKeys.has(String(o.orderNumber || o.id || o.orderId))),
-        ];
-        setTakeawayOrders(combined);
+        let currentOrders = serverOrders;
+        if (currentOrders.length === 0) {
+          if (!takeawayHistoryLoadedRef.current) {
+            const historyResult = await apiGetTakeawayOrderHistory();
+            const historyRecords = extractOrderRecords(historyResult);
+            if (historyResult?.success && historyRecords) {
+              const takeawayRecords = historyRecords.filter((order) =>
+                String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase() === "takeaway",
+              );
+              takeawayHistoryRef.current = takeawayRecords;
+              takeawayHistoryLoadedRef.current = true;
+              setTakeawayHistory(takeawayRecords);
+            }
+          }
+          currentOrders = takeawayHistoryRef.current.filter(isActiveTakeawayHistoryOrder);
+        }
+        setTakeawayOrders(currentOrders);
         return;
       }
-    } catch {}
+      if (!result?.success && normalizedLocal.length === 0) {
+        setOrderNotice(result?.error || "Could not load active takeaway orders from the server.");
+      } else if (result?.success && normalizedLocal.length === 0) {
+        setOrderNotice("The takeaway orders response did not contain an order list.");
+      }
+    } catch (error) {
+      if (normalizedLocal.length === 0) {
+        setOrderNotice(error?.message || "Could not load active takeaway orders from the server.");
+      }
+    } finally {
+      takeawayOrdersRefreshInFlightRef.current = false;
+    }
 
     // Fallback: Display local orders immediately
     if (normalizedLocal.length > 0) {
@@ -192,18 +277,27 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   };
 
   const refreshTakeawayHistory = async () => {
+    if (takeawayHistoryRefreshInFlightRef.current) return;
+    takeawayHistoryRefreshInFlightRef.current = true;
     setHistoryLoading(true);
     try {
       const result = await apiGetTakeawayOrderHistory();
-      if (!result?.success || !Array.isArray(result.data?.orders)) {
+      const historyOrders = extractOrderRecords(result);
+      if (!result?.success || !historyOrders) {
         setOrderNotice(result?.error || "Could not load takeaway history from the server.");
       } else {
-        setTakeawayHistory(result.data.orders);
+        const takeawayRecords = historyOrders.filter((order) =>
+          String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase() === "takeaway",
+        );
+        takeawayHistoryRef.current = takeawayRecords;
+        takeawayHistoryLoadedRef.current = true;
+        setTakeawayHistory(takeawayRecords);
       }
     } catch (error) {
       setOrderNotice(error?.message || "Could not load takeaway history from the server.");
     } finally {
       setHistoryLoading(false);
+      takeawayHistoryRefreshInFlightRef.current = false;
     }
   };
 
@@ -224,11 +318,11 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     };
     const unsubscribe = subscribeToRealtimeEvents(({ name }) => {
       if (name === "TakeawayOrderCreated" || name === "TakeawayStatusUpdated" || name === "TakeawayOrderCancelled" || name === "KitchenStatusAlert") {
-        scheduleOrderRefresh(name === "TakeawayStatusUpdated" || name === "TakeawayOrderCancelled");
+        scheduleOrderRefresh(true);
       }
     });
     const handleReconnect = () => scheduleOrderRefresh(true);
-    const intervalId = window.setInterval(refreshTakeawayOrders, 4000);
+    const intervalId = window.setInterval(refreshTakeawayOrders, 15000);
     const handleSync = () => {
       scheduleOrderRefresh(true);
     };
@@ -262,7 +356,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     setDispatchingOrderId(orderId);
     try {
       const result = await apiDispatchTakeawayOrder(orderId);
-      if (!result?.success) setOrderNotice(result?.error || "Could not dispatch this takeaway order.");
+      if (!result?.success || result?.data?.success === false) setOrderNotice(result?.error || result?.data?.message || "Could not dispatch this takeaway order.");
       else {
         setOrderNotice("Takeaway order dispatched.");
         await refreshTakeawayOrders();
@@ -455,8 +549,11 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
               const orderId = order.id ?? order.Id ?? order.orderId ?? order.OrderId;
               const orderNumber = order.orderNumber ?? order.OrderNumber ?? order.invoiceNo ?? order.InvoiceNo ?? orderId;
               const orderItems = Array.isArray(order.items ?? order.Items) ? (order.items ?? order.Items) : [];
-              const allReady = orderItems.length > 0 && orderItems.every((item) => ["ready", "served", "completed"].includes(String(item.kotStatus ?? item.KotStatus ?? "").toLowerCase()));
-              const isCooking = orderItems.some((item) => String(item.kotStatus ?? item.KotStatus ?? "").toLowerCase() === "cooking");
+              const requiredItems = orderItems.filter((item) => !["cancelled", "canceled", "void", "deleted"].includes(String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase()));
+              const allReady = requiredItems.length > 0 && requiredItems.every((item) => ["ready", "served", "completed"].includes(String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase()));
+              const fulfillmentState = String(order.fulfillmentStatus ?? order.FulfillmentStatus ?? "").trim().toLowerCase().replace(/[ _-]/g, "");
+              const alreadyHandedOver = ["pickedup", "dispatched", "handedover"].includes(fulfillmentState) || (requiredItems.length > 0 && requiredItems.every((item) => String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase() === "served"));
+              const isCooking = requiredItems.some((item) => String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase() === "cooking");
               const orderTotal = order.grandTotal ?? order.GrandTotal ?? order.totalAmount ?? order.TotalAmount ?? order.total ?? order.amount;
               const dishCount = orderItems.reduce((sum, item) => sum + (Number(item.quantity ?? item.Quantity ?? item.qty) || 1), 0);
               const kotNotSent = orderItems.some((item) => !(item.kotId ?? item.KotId));
@@ -470,7 +567,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
                     <strong>Order #{orderNumber}</strong>
                     <span className="takeaway-order-status" style={{ background: statusBg, color: statusColor, borderColor: statusBorder }}>
                       {allReady ? <CheckCircle2 size={12} /> : isCooking ? <ChefHat size={12} /> : <Clock size={12} />}
-                      {allReady ? "Cooking Done" : isCooking ? "Cooking" : "Kitchen Queue"}
+                      {allReady ? "Ready" : isCooking ? "Cooking" : "Kitchen Queue"}
                     </span>
                   </div>
                   <div className="takeaway-order-card-summary">
@@ -483,7 +580,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
                   </div>
                   <div className="takeaway-order-lifecycle-actions">
                     {kotNotSent && <button type="button" disabled={dispatchingOrderId != null} onClick={() => handleRetryKitchenSend(orderId)} className="takeaway-secondary-button takeaway-order-secondary-action">{isBusy ? <><LoaderCircle className="takeaway-spinner" size={13}/> Sending…</> : <><Send size={13}/> Retry kitchen send</>}</button>}
-                    <button type="button" disabled={!allReady || dispatchingOrderId != null} onClick={() => handleDispatch(orderId)} className="takeaway-order-handover" style={{ background: allReady ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "var(--bg-secondary)", color: allReady ? "#fff" : "var(--text-muted)", cursor: allReady ? "pointer" : "not-allowed", boxShadow: allReady ? "0 2px 8px rgba(16, 185, 129, .35)" : "none" }}>
+                    <button type="button" disabled={!allReady || alreadyHandedOver || dispatchingOrderId != null} onClick={() => handleDispatch(orderId)} className="takeaway-order-handover" style={{ background: allReady && !alreadyHandedOver ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "var(--bg-secondary)", color: allReady && !alreadyHandedOver ? "#fff" : "var(--text-muted)", cursor: allReady && !alreadyHandedOver ? "pointer" : "not-allowed", boxShadow: allReady && !alreadyHandedOver ? "0 2px 8px rgba(16, 185, 129, .35)" : "none" }}>
                       {isBusy ? <><LoaderCircle className="takeaway-spinner" size={13}/> Processing…</> : "Handover"}
                     </button>
                   </div>
@@ -601,7 +698,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
       {paidOrdersOpen && <div className="takeaway-history-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setPaidOrdersOpen(false); }}>
         <section className="takeaway-history-dialog" role="dialog" aria-modal="true" aria-labelledby="paid-takeaway-title">
           <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".75rem", padding: "1rem", borderBottom: "1px solid var(--border-subtle)" }}>
-            <div><h3 id="paid-takeaway-title" style={{ margin: 0 }}>Paid Takeaway Orders</h3><p style={{ margin: ".25rem 0 0", color: "var(--text-muted)", fontSize: ".85rem" }}>Active paid orders</p></div>
+            <div><h3 id="paid-takeaway-title" style={{ margin: 0 }}>Paid Takeaway Orders</h3><p style={{ margin: ".25rem 0 0", color: "var(--text-muted)", fontSize: ".85rem" }}>Active and handed-over paid orders</p></div>
             <button type="button" className="takeaway-secondary-button" aria-label="Close paid takeaway orders" onClick={() => setPaidOrdersOpen(false)} style={{ display: "inline-flex", padding: ".45rem", alignItems: "center" }}><X size={18}/></button>
           </header>
           <div className="takeaway-history-content">
@@ -611,14 +708,17 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
             <input aria-label="Filter paid orders by date" type="date" value={paidDate} onChange={(event) => setPaidDate(event.target.value)} />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", color: "var(--text-muted)", fontSize: ".8rem" }}><span>{filteredPaidOrders.length} matching {filteredPaidOrders.length === 1 ? "order" : "orders"}</span><button type="button" className="takeaway-secondary-button" onClick={() => { setPaidSearch(""); setPaidStatus("all"); setPaidDate(""); }}>Clear Filters</button></div>
           </div>
-          {!filteredPaidOrders.length && <p style={{ color: "var(--text-muted)", fontSize: ".9rem", padding: "0 1rem" }}>{takeawayOrders.length ? "No paid takeaway orders match these filters." : orderNotice || "No active takeaway orders."}</p>}
+          {!filteredPaidOrders.length && <p style={{ color: "var(--text-muted)", fontSize: ".9rem", padding: "0 1rem" }}>{paidTakeawayOrders.length ? "No paid takeaway orders match these filters." : orderNotice || "No paid takeaway orders."}</p>}
           {filteredPaidOrders.map((order) => {
             const orderItems = Array.isArray(order.items) ? order.items : [];
-            const allReady = orderItems.length > 0 && orderItems.every((item) => ["ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()));
+            const requiredItems = orderItems.filter((item) => !["cancelled", "canceled", "void", "deleted"].includes(String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase()));
+            const allReady = requiredItems.length > 0 && requiredItems.every((item) => ["ready", "served", "completed"].includes(String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase()));
+            const fulfillmentState = String(order.fulfillmentStatus ?? order.FulfillmentStatus ?? "").trim().toLowerCase().replace(/[ _-]/g, "");
+            const alreadyHandedOver = ["pickedup", "dispatched", "handedover", "completed"].includes(fulfillmentState) || (requiredItems.length > 0 && requiredItems.every((item) => String(item.kotStatus ?? item.KotStatus ?? "").trim().toLowerCase() === "served"));
             const kotNotSent = orderItems.some((item) => !item.kotId);
             const orderId = order.id ?? order.orderId ?? order.Id;
             const orderTotal = order.grandTotal ?? order.totalAmount ?? order.total ?? order.amount;
-            const displayStatus = order.status ?? order.Status ?? (allReady ? "Ready" : "In kitchen");
+            const displayStatus = order.fulfillmentStatus ?? order.FulfillmentStatus ?? (allReady ? "Ready" : "In kitchen");
             return <div className="takeaway-kitchen-order" key={orderId}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: ".5rem" }}><strong>Order #{order.orderNumber ?? orderId}</strong><strong style={{ color: allReady ? "#10b981" : "var(--accent-amber-light)" }}>{displayStatus}</strong></div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: ".35rem", marginTop: ".4rem" }}>

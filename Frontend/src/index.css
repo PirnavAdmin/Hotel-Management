@@ -1187,3 +1187,63 @@ select option { color:var(--text-main); background:var(--input-bg); }
 .floor-table-layout .floor-table-name > span { min-width: 0; }
 .floor-table-layout .floor-table-actions-heading { display: flex; align-items: center; justify-content: center; text-align: center; }
 .floor-table-layout .floor-table-actions { display: flex; align-items: center; justify-content: center; gap: 0.45rem; }
+
+/* ── CLIENT DEMO POLISH & PREMIUM MICRO-ANIMATIONS ── */
+@keyframes shimmerGold {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes gentleBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes tableActiveGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.25); }
+}
+
+/* Dish card hover elevate & image zoom */
+.pos-dish-card, .takeaway-dish-card, .customer-menu-card, article[class*="dish"], article[class*="menu-item"] {
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.22s cubic-bezier(0.2, 0, 0, 1), border-color 0.22s ease !important;
+}
+
+.pos-dish-card:hover, .takeaway-dish-card:hover, .customer-menu-card:hover, article[class*="dish"]:hover, article[class*="menu-item"]:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(245, 158, 11, 0.28) !important;
+}
+
+.pos-dish-card img, .takeaway-dish-card img, .customer-menu-card img {
+  transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.pos-dish-card:hover img, .takeaway-dish-card:hover img, .customer-menu-card:hover img {
+  transform: scale(1.05) !important;
+}
+
+/* Interactive button feedback */
+button:not(:disabled):active {
+  transform: scale(0.975);
+  transition: transform 0.08s ease;
+}
+
+/* Category pills smooth hover */
+.category-pill, [class*="category-pill"], .pos-takeaway-cat-btn {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.category-pill:hover, [class*="category-pill"]:hover, .pos-takeaway-cat-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Badge shimmer for Chef's Special / Bestseller */
+.special-badge, [class*="chef-special"], [class*="badge-special"] {
+  background-size: 200% auto;
+  animation: shimmerGold 3s linear infinite;
+}
+
+/* Occupied / Active table indicator */
+.table-card-occupied, [data-status="occupied"] {
+  animation: tableActiveGlow 3s ease-in-out infinite;
+}

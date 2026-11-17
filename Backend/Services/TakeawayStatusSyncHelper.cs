@@ -34,20 +34,23 @@ public static class TakeawayStatusSyncHelper
             return "Cancelled";
         }
 
-        if (!string.IsNullOrWhiteSpace(order.FulfillmentStatus))
+        if (!string.IsNullOrWhiteSpace(order.FulfillmentStatus) &&
+            !string.Equals(order.FulfillmentStatus, "PickedUp", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(order.FulfillmentStatus, "Completed", StringComparison.OrdinalIgnoreCase))
         {
             return order.FulfillmentStatus;
         }
 
-        var items = order.Items?.Where(i => i.IsActive && !i.IsDeleted).ToList() ?? new List<OrderItem>();
+        var items = order.Items?.Where(i => i.IsActive && !i.IsDeleted &&
+            !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(i.KotStatus, "Canceled", StringComparison.OrdinalIgnoreCase)).ToList() ?? new List<OrderItem>();
         if (items.Count == 0)
         {
             return string.Equals(order.Status, "Completed", StringComparison.OrdinalIgnoreCase) ? "Completed" : "New";
         }
 
         bool allServed = items.All(i =>
-            string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(i.KotStatus, "Completed", StringComparison.OrdinalIgnoreCase));
+            string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase));
         if (allServed)
         {
             return string.Equals(order.Status, "Completed", StringComparison.OrdinalIgnoreCase) ? "Completed" : "PickedUp";
@@ -67,7 +70,8 @@ public static class TakeawayStatusSyncHelper
             string.Equals(i.KotStatus, "Mixing", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(i.KotStatus, "Preparing", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(i.KotStatus, "Ready", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase));
+            string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(i.KotStatus, "Completed", StringComparison.OrdinalIgnoreCase));
         if (anyStarted)
         {
             return "Preparing";
@@ -93,12 +97,13 @@ public static class TakeawayStatusSyncHelper
             return;
         }
 
-        var items = order.Items.Where(i => i.IsActive && !i.IsDeleted).ToList();
+        var items = order.Items.Where(i => i.IsActive && !i.IsDeleted &&
+            !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(i.KotStatus, "Canceled", StringComparison.OrdinalIgnoreCase)).ToList();
         if (items.Count == 0) return;
 
         string derived;
-        if (items.All(i => string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase) ||
-                           string.Equals(i.KotStatus, "Completed", StringComparison.OrdinalIgnoreCase)))
+        if (items.All(i => string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase)))
         {
             derived = string.Equals(order.FulfillmentStatus, "Completed", StringComparison.OrdinalIgnoreCase)
                 ? "Completed"
@@ -114,7 +119,8 @@ public static class TakeawayStatusSyncHelper
                                 string.Equals(i.KotStatus, "Mixing", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(i.KotStatus, "Preparing", StringComparison.OrdinalIgnoreCase) ||
                                 string.Equals(i.KotStatus, "Ready", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase)))
+                                string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(i.KotStatus, "Completed", StringComparison.OrdinalIgnoreCase)))
         {
             derived = "Preparing";
         }
@@ -139,20 +145,24 @@ public static class TakeawayStatusSyncHelper
             const string sql = @"
                 UPDATE restaurant_orders ro
                 SET ro.fulfillment_status = CASE
-                    WHEN NOT EXISTS (
+                    WHEN EXISTS (
                         SELECT 1 FROM order_items oi
                         WHERE oi.order_id = ro.order_id AND oi.is_active = 1 AND oi.is_deleted = 0
-                          AND LOWER(oi.item_status) NOT IN ('served', 'completed', 'cancelled')
+                          AND LOWER(oi.item_status) NOT IN ('cancelled', 'canceled')
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM order_items oi
+                        WHERE oi.order_id = ro.order_id AND oi.is_active = 1 AND oi.is_deleted = 0
+                          AND LOWER(oi.item_status) NOT IN ('served', 'cancelled', 'canceled')
                     ) THEN IF(ro.fulfillment_status = 'Completed', 'Completed', 'PickedUp')
                     WHEN NOT EXISTS (
                         SELECT 1 FROM order_items oi
                         WHERE oi.order_id = ro.order_id AND oi.is_active = 1 AND oi.is_deleted = 0
-                          AND LOWER(oi.item_status) NOT IN ('ready', 'served', 'completed', 'cancelled')
+                          AND LOWER(oi.item_status) NOT IN ('ready', 'served', 'completed', 'cancelled', 'canceled')
                     ) THEN 'Ready'
                     WHEN EXISTS (
                         SELECT 1 FROM order_items oi
                         WHERE oi.order_id = ro.order_id AND oi.is_active = 1 AND oi.is_deleted = 0
-                          AND LOWER(oi.item_status) IN ('cooking', 'mixing', 'preparing', 'ready', 'served')
+                          AND LOWER(oi.item_status) IN ('cooking', 'mixing', 'preparing', 'ready', 'served', 'completed')
                     ) THEN 'Preparing'
                     ELSE 'New'
                 END,

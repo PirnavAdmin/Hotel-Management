@@ -86,7 +86,7 @@ public class TableService
         if (found != null) return found;
 
         var direct = await _spService.ExecuteSqlQueryAsync(
-            "SELECT t.*, (SELECT o.order_number FROM orders o WHERE o.table_id = t.table_id AND o.status IN ('pending', 'confirmed', 'preparing', 'ready', 'served') ORDER BY o.order_id DESC LIMIT 1) AS active_order_number FROM restaurant_tables t WHERE t.table_id = @id AND t.deleted_at IS NULL",
+            "SELECT t.*, (SELECT o.order_number FROM restaurant_orders o LEFT JOIN dining_tables dt ON dt.dining_table_id = o.dining_table_id AND dt.is_active = 1 AND dt.is_deleted = 0 WHERE o.is_active = 1 AND o.is_deleted = 0 AND LOWER(o.order_status) IN ('active', 'billed') AND ((dt.dining_table_id IS NOT NULL AND (dt.table_number = t.table_name OR dt.table_number = t.table_number)) OR (dt.dining_table_id IS NULL AND o.dining_table_id = t.table_id)) ORDER BY o.order_id DESC LIMIT 1) AS active_order_number FROM restaurant_tables t WHERE t.table_id = @id AND t.deleted_at IS NULL",
             MapFromReader,
             new Dictionary<string, object?> { { "id", id } });
 
@@ -333,9 +333,14 @@ public class TableService
         await _spService.ExecuteQueryAsync("sp_manage_restaurant_tables", MapSpOperationResult, parameters);
         try
         {
+            var normalizedStatus = status.Trim().ToLowerInvariant();
+            var clearsOccupancy = normalizedStatus is "available" or "vacant" or "free";
+            var tableUpdateSql = clearsOccupancy
+                ? "UPDATE restaurant_tables SET status = @stat, occupied_chairs = 0, updated_at = NOW() WHERE table_id = @tid;"
+                : "UPDATE restaurant_tables SET status = @stat, updated_at = NOW() WHERE table_id = @tid;";
             await _spService.ExecuteSqlNonQueryAsync(
-                "UPDATE dining_tables SET status = @stat, updated_at = NOW() WHERE dining_table_id = @tid;",
-                new Dictionary<string, object?> { { "stat", status.Trim().ToLower() }, { "tid", id } });
+                tableUpdateSql,
+                new Dictionary<string, object?> { { "stat", normalizedStatus == "free" ? "available" : normalizedStatus }, { "tid", id } });
         }
         catch { }
 

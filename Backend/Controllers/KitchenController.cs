@@ -232,7 +232,40 @@ public class KitchenController : ControllerBase
                 return Conflict(new { success = false, message = "Cannot update kitchen item status for a cancelled or deleted order." });
             }
             item.KotStatus = cleanStatus;
-            item.UpdatedAt = DateTime.UtcNow;
+            var transitionTime = DateTime.UtcNow;
+            item.UpdatedAt = transitionTime;
+
+            var ticketItems = await _context.OrderItems
+                .Where(i => i.OrderId == item.OrderId &&
+                    i.KotId == item.KotId &&
+                    i.KotBatch == item.KotBatch &&
+                    i.IsActive && !i.IsDeleted &&
+                    (i.BotId == null || i.BotId == 0) &&
+                    !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
+                .ToListAsync();
+            var kitchenTicket = await _context.KitchenOrderTickets
+                .FirstOrDefaultAsync(ticket => ticket.Id == item.KotId.GetValueOrDefault() && ticket.IsActive && !ticket.IsDeleted);
+            if (kitchenTicket != null && ticketItems.Count > 0)
+            {
+                if (ticketItems.All(i => string.Equals(i.KotStatus, "ready", StringComparison.OrdinalIgnoreCase) ||
+                                         string.Equals(i.KotStatus, "served", StringComparison.OrdinalIgnoreCase) ||
+                                         string.Equals(i.KotStatus, "completed", StringComparison.OrdinalIgnoreCase)))
+                {
+                    kitchenTicket.Status = "Ready";
+                    kitchenTicket.CompletedAt ??= transitionTime;
+                }
+                else if (ticketItems.Any(i => string.Equals(i.KotStatus, "cooking", StringComparison.OrdinalIgnoreCase)))
+                {
+                    kitchenTicket.Status = "Cooking";
+                    kitchenTicket.CompletedAt = null;
+                }
+                else
+                {
+                    kitchenTicket.Status = "Queued";
+                    kitchenTicket.CompletedAt = null;
+                }
+                kitchenTicket.UpdatedAt = transitionTime;
+            }
 
             await _context.SaveChangesAsync();
             await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, item.OrderId);

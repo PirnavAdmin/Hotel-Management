@@ -1013,7 +1013,7 @@ function globalSyncPlugin(backendTarget) {
               categorySet.add(cat.trim());
             }
           });
-          ["biryani", "starters", "mains", "tandoor-kebabs", "fast-food", "breads", "beverages", "desserts"].forEach((c) => categorySet.add(c));
+          ["Non-Veg Pizzas", "Veg Pizzas", "Sandwiches", "Appetisers", "Mini Pizza Combos", "Cold Beverages", "Hot Beverages", "Half and Half Pizza", "Signature Pastas", "Desserts", "Lunch Menu"].forEach((c) => categorySet.add(c));
           const categories = Array.from(categorySet);
           res.writeHead(200, { "Content-Type": "application/json" });
           return res.end(

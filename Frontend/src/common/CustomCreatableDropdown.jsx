@@ -37,9 +37,13 @@ export function CustomCreatableDropdown({
   });
 
   // Check if current value already exists in normalized options
-  const valueExists = normalizedOptions.some(
-    (opt) => String(opt.value).toLowerCase() === String(value).toLowerCase()
+  const matchedOpt = normalizedOptions.find(
+    (opt) =>
+      String(opt.value).toLowerCase() === String(value).toLowerCase() ||
+      String(opt.label).toLowerCase() === String(value).toLowerCase() ||
+      String(opt.value).replace(/[^a-z0-9]/g, "") === String(value).replace(/[^a-z0-9]/g, "")
   );
+  const valueExists = Boolean(matchedOpt);
 
   const handleSelectChange = (e) => {
     const val = e.target.value;
@@ -79,7 +83,7 @@ export function CustomCreatableDropdown({
         id={id}
         name={name}
         required={required}
-        value={isCustomMode ? "__custom__" : (value || "")}
+        value={isCustomMode ? "__custom__" : (matchedOpt ? matchedOpt.value : (value || ""))}
         onChange={handleSelectChange}
         style={{
           width: "100%",
@@ -99,6 +103,11 @@ export function CustomCreatableDropdown({
           ...selectStyle,
         }}
       >
+        {!value && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
         {/* If current value is custom and not yet in normalizedOptions, include it */}
         {value && !valueExists && !isCustomMode && (
           <option value={value}>{value}</option>

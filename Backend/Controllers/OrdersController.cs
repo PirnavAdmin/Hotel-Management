@@ -50,15 +50,19 @@ public class OrdersController : ControllerBase
     {
         var orders = await _context.Orders
             .Include(o => o.Items)
-            .Where(o => o.IsActive && !o.IsDeleted && o.OrderType == "Takeaway" && o.Status == "Settled" &&
+            .Where(o => o.IsActive && !o.IsDeleted &&
+                o.OrderType.ToLower() == "takeaway" && o.Status.ToLower() == "settled" &&
+                (o.FulfillmentStatus == null || o.FulfillmentStatus.ToLower() != "cancelled") &&
                 o.Items.Any(i => i.IsActive && !i.IsDeleted &&
-                    i.KotStatus != "Served" && i.KotStatus != "served" &&
-                    i.KotStatus != "Completed" && i.KotStatus != "completed"))
+                    i.KotStatus.ToLower() != "served" &&
+                    i.KotStatus.ToLower() != "cancelled" &&
+                    i.KotStatus.ToLower() != "canceled"))
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
 
         foreach (var order in orders)
         {
+            await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
             await PopulateDisplayFields(order);
             RecalculateTotals(order);
         }
@@ -70,13 +74,23 @@ public class OrdersController : ControllerBase
     public async Task<IActionResult> DispatchTakeawayOrder(long id)
     {
         var order = await _context.Orders.Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.Id == id && o.IsActive && !o.IsDeleted && o.OrderType == "Takeaway" && o.Status == "Settled");
+            .FirstOrDefaultAsync(o => o.Id == id && o.IsActive && !o.IsDeleted &&
+                o.OrderType.ToLower() == "takeaway" && o.Status.ToLower() == "settled");
         if (order == null) return NotFound(new { success = false, message = "Takeaway order not found." });
 
-        var kitchenItems = order.Items.Where(i => i.IsActive && !i.IsDeleted).ToList();
+        var kitchenItems = order.Items.Where(i => i.IsActive && !i.IsDeleted &&
+            !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(i.KotStatus, "Canceled", StringComparison.OrdinalIgnoreCase)).ToList();
+        var fulfillmentStatus = order.FulfillmentStatus?.Trim();
+        var isAlreadyHandedOver = string.Equals(fulfillmentStatus, "PickedUp", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fulfillmentStatus, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            (kitchenItems.Count > 0 && kitchenItems.All(i => string.Equals(i.KotStatus, "Served", StringComparison.OrdinalIgnoreCase)));
+        if (isAlreadyHandedOver)
+        {
+            return Conflict(new { success = false, message = "This takeaway order has already been handed over." });
+        }
         if (kitchenItems.Count == 0 || kitchenItems.Any(i =>
             i.KotStatus != "Ready" && i.KotStatus != "ready" &&
-            i.KotStatus != "Served" && i.KotStatus != "served" &&
             i.KotStatus != "Completed" && i.KotStatus != "completed"))
         {
             return Conflict(new { success = false, message = "The kitchen must mark every item ready before dispatch." });
@@ -1356,6 +1370,15 @@ public class OrdersController : ControllerBase
             });
         }
 
+        if (string.Equals(order.Status, "Settled", StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflict(new
+            {
+                success = false,
+                message = "This order has already been settled."
+            });
+        }
+
         if (request != null)
         {
             order.DiscountPercent =
@@ -1376,8 +1399,50 @@ public class OrdersController : ControllerBase
 
         RecalculateTotals(order);
 
-        order.Status = "Settled";
+        DiningTable? diningTable = null;
+        RestaurantTable? restaurantTable = null;
+        if (order.TableId.HasValue)
+        {
+            diningTable = await _context.DiningTables
+                .FirstOrDefaultAsync(t => t.Id == order.TableId.Value && t.IsActive && !t.IsDeleted);
+            if (diningTable != null && !string.IsNullOrWhiteSpace(diningTable.Name))
+            {
+                var tableName = diningTable.Name.Trim();
+                restaurantTable = await _context.RestaurantTables.FirstOrDefaultAsync(t =>
+                    t.DeletedAt == null &&
+                    (t.TableName == tableName || t.TableNumber == tableName));
+            }
 
+            // Older records can use the same numeric ID across both table stores.
+            // Use that fallback only after trying the stable custom name mapping.
+            restaurantTable ??= await _context.RestaurantTables.FirstOrDefaultAsync(t =>
+                t.TableId == order.TableId.Value && t.DeletedAt == null);
+            if (restaurantTable == null)
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "The order's dining table could not be matched to an active Floor Plan table. Payment was not submitted."
+                });
+            }
+        }
+
+        var paymentMethod = string.IsNullOrWhiteSpace(request?.PaymentMethod)
+            ? order.PaymentMethod ?? "Cash"
+            : request.PaymentMethod.Trim();
+        var invoiceId = await EnsureInvoiceCreatedAsync(order, paymentMethod, request?.InvoiceNumber);
+        if (invoiceId <= 0)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                success = false,
+                message = "Payment could not be recorded. The order and table were left unsettled."
+            });
+        }
+
+        order.Status = "Settled";
+        order.PaymentStatus = "Paid";
+        order.PaymentMethod = paymentMethod;
         order.UpdatedAt = DateTime.UtcNow;
 
         foreach (var item in order.Items)
@@ -1393,32 +1458,21 @@ public class OrdersController : ControllerBase
 
         if (order.TableId.HasValue)
         {
-            var table = await _context.DiningTables
-                .FirstOrDefaultAsync(t =>
-                    t.Id == order.TableId.Value);
-
-            if (table != null)
+            if (diningTable != null)
             {
-                table.Status = "vacant";
-                table.UpdatedAt = DateTime.UtcNow;
+                diningTable.Status = "vacant";
+                diningTable.UpdatedAt = DateTime.UtcNow;
             }
 
-            var restTbl = await _context.RestaurantTables.FirstOrDefaultAsync(t => 
-                (t.TableId == order.TableId.Value || (table != null && (t.TableNumber == table.Name || t.TableName == table.Name))) && t.DeletedAt == null);
-            if (restTbl != null)
+            if (restaurantTable != null)
             {
-                restTbl.Status = "available";
-                restTbl.OccupiedChairs = 0;
-                restTbl.UpdatedAt = DateTime.UtcNow;
+                restaurantTable.Status = "available";
+                restaurantTable.OccupiedChairs = 0;
+                restaurantTable.UpdatedAt = DateTime.UtcNow;
             }
         }
 
         await _context.SaveChangesAsync();
-
-        long invoiceId = await EnsureInvoiceCreatedAsync(
-            order,
-            request?.PaymentMethod ?? order.PaymentMethod ?? "Cash",
-            request?.InvoiceNumber);
 
         if (order.TableId.HasValue)
         {
@@ -1479,7 +1533,7 @@ public class OrdersController : ControllerBase
             Action = "completed",
             BranchId = branchId,
             RecordId = order.Id.ToString(),
-            Data = new { orderId = order.Id, amount = order.GrandTotal, paymentMethod = request?.PaymentMethod ?? order.PaymentMethod ?? "Cash", invoiceId }
+            Data = new { orderId = order.Id, amount = order.GrandTotal, paymentMethod, invoiceId }
         });
 
         if (invoiceId > 0)
@@ -1829,6 +1883,12 @@ public class OrdersController : ControllerBase
 
             Status =
                 order.Status,
+
+            PaymentStatus =
+                order.PaymentStatus,
+
+            FulfillmentStatus =
+                order.FulfillmentStatus,
 
             Subtotal =
                 order.Subtotal,

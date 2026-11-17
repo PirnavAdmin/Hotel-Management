@@ -1,5 +1,5 @@
 import { SearchableSelect } from "../common/SearchableSelect";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
 import {
   X,
@@ -42,7 +42,7 @@ import {
   Boxes,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
-import { getTableSortNumber, compareTablesNaturally, getTableBadgeText } from "../utils/tableSortHelper";
+import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
 import { LoginManagement } from "./LoginManagement";
 import { ProfileDropdown } from "../common/ProfileDropdown";
@@ -113,7 +113,7 @@ export function isDisallowedItemName(raw) {
   if (standardAllowed.includes(s)) return false;
 
   // Reject dishes with "with", "w/", "(", ")", numbers
-  if (/\b(with|w\/)\b/i.test(s) || /[\(\)\d]/.test(s)) return true;
+  if (/\b(with|w\/)\b/i.test(s) || /[()\d]/.test(s)) return true;
 
   // Specific food and drink items that must never appear in category dropdowns
   const dishKeywords = [
@@ -137,20 +137,226 @@ export function isDisallowedDineCategory(raw) {
   const s = raw.trim().toLowerCase();
   if (!s) return false;
 
+  // Explicitly allow legitimate restaurant categories
+  if (/^(cold beverages|hot beverages|mini pizza combos|half and half pizza|lunch menu|veg pizzas|non-veg pizzas|sandwiches|appetisers|signature pastas|desserts)$/i.test(s)) {
+    return false;
+  }
+
   // 1. Bar and alcohol categories
   if (isBarCategory(s)) return true;
 
-  // 2. Drinks and beverage categories (Beverages, Juices, Watermelon Juice, Tea & Coffee, Shakes, etc.)
-  if (isDrinkCategory(s) || isBeverageCategory(s)) return true;
-  if (/^(beverage|beverages|drink|drinks|juice|juices|tea|coffee|shake|shakes|smoothie|smoothies)/i.test(s)) return true;
-  if (/\b(juice|juices|beverage|beverages|coffee|tea|mocktail|cocktail|beer|wine|vodka|gin|rum|brandy|whiskey|whisky|bourbon|scotch|tequila|liqueur|shake|smoothie|soda)\b/i.test(s)) return true;
+  // 2. Bar alcohol keywords
+  if (/\b(mocktail|cocktail|beer|wine|vodka|gin|rum|brandy|whiskey|whisky|bourbon|scotch|tequila|liqueur)\b/i.test(s)) return true;
 
-  // 3. Specific dish names or combo platters that leaked into categories
-  if (s === "veg thali" || s === "thali" || s.includes("thali") || s.includes("platter") || s.includes("combo")) return true;
-  if (s === "watermelon juice" || s.includes("watermelon")) return true;
-
-  // 4. Other dish keywords
+  // 3. Other dish keywords
   if (isDisallowedItemName(s)) return true;
+
+  return false;
+}
+
+export const STANDARD_MENU_CATEGORIES = [
+  {
+    value: "Non-Veg Pizzas",
+    slug: "non-veg-pizzas",
+    label: "Non-Veg Pizzas",
+    order: 10,
+    aliases: [
+      "non-veg pizzas",
+      "non veg pizzas",
+      "non veg pizza",
+      "non-veg pizza",
+      "non-veg-pizzas",
+      "pizza non-veg",
+      "nonveg pizza",
+      "nonveg pizzas",
+    ],
+  },
+  {
+    value: "Veg Pizzas",
+    slug: "veg-pizzas",
+    label: "Veg Pizzas",
+    order: 20,
+    aliases: [
+      "veg pizzas",
+      "veg pizza",
+      "veg-pizzas",
+      "pizza veg",
+      "vegetarian pizza",
+    ],
+  },
+  {
+    value: "Sandwiches",
+    slug: "sandwiches",
+    label: "Sandwiches",
+    order: 30,
+    aliases: ["sandwiches", "sandwich"],
+  },
+  {
+    value: "Appetisers",
+    slug: "appetisers",
+    label: "Appetisers",
+    order: 40,
+    aliases: [
+      "appetisers",
+      "appetiser",
+      "appetizers",
+      "appetizer",
+      "starters",
+      "starter",
+    ],
+  },
+  {
+    value: "Mini Pizza Combos",
+    slug: "mini-pizza-combos",
+    label: "Mini Pizza Combos",
+    order: 50,
+    aliases: [
+      "mini pizza combos",
+      "mini pizza combo",
+      "mini-pizza-combos",
+      "pizza combos",
+      "combos",
+    ],
+  },
+  {
+    value: "Cold Beverages",
+    slug: "cold-beverages",
+    label: "Cold Beverages",
+    order: 60,
+    aliases: [
+      "cold beverages",
+      "cold beverage",
+      "cold-beverages",
+      "cold drinks",
+    ],
+  },
+  {
+    value: "Hot Beverages",
+    slug: "hot-beverages",
+    label: "Hot Beverages",
+    order: 70,
+    aliases: [
+      "hot beverages",
+      "hot beverage",
+      "hot-beverages",
+      "hot drinks",
+      "coffee & tea",
+    ],
+  },
+  {
+    value: "Half and Half Pizza",
+    slug: "half-and-half-pizza",
+    label: "Half and Half Pizza",
+    order: 80,
+    aliases: [
+      "half and half pizza",
+      "half & half pizza",
+      "half-and-half-pizza",
+      "half and half",
+    ],
+  },
+  {
+    value: "Signature Pastas",
+    slug: "signature-pastas",
+    label: "Signature Pastas",
+    order: 90,
+    aliases: [
+      "signature pastas",
+      "signature pasta",
+      "pastas",
+      "pasta",
+      "signature-pastas",
+    ],
+  },
+  {
+    value: "Desserts",
+    slug: "desserts",
+    label: "Desserts",
+    order: 100,
+    aliases: ["desserts", "dessert", "sweets"],
+  },
+  {
+    value: "Lunch Menu",
+    slug: "lunch-menu",
+    label: "Lunch Menu",
+    order: 110,
+    aliases: [
+      "lunch menu",
+      "lunch",
+      "meals",
+      "thali",
+      "rice items",
+      "lunch-menu",
+      "south indian",
+    ],
+  },
+];
+
+export function findStandardCategory(rawStr) {
+  if (!rawStr) return null;
+  const lower = String(rawStr).trim().toLowerCase();
+  const alpha = lower.replace(/[^a-z0-9]/g, "");
+  return (
+    STANDARD_MENU_CATEGORIES.find(
+      (c) =>
+        c.value.toLowerCase() === lower ||
+        c.slug.toLowerCase() === lower ||
+        c.label.toLowerCase() === lower ||
+        c.value.replace(/[^a-z0-9]/g, "") === alpha ||
+        c.slug.replace(/[^a-z0-9]/g, "") === alpha ||
+        c.aliases.some(
+          (a) =>
+            a.toLowerCase() === lower ||
+            a.replace(/[^a-z0-9]/g, "") === alpha,
+        ),
+    ) || null
+  );
+}
+
+export function isItemVeg(item) {
+  if (!item) return false;
+  if (item.isVeg === true || item.is_veg === 1 || item.is_veg === true) return true;
+  if (item.isVeg === false || item.is_veg === 0 || item.is_veg === false) return false;
+  const dt = String(item.dietaryType || item.dietary_type || item.dietary || "").toUpperCase();
+  if (dt.includes("NON")) return false;
+  if (dt.includes("VEG")) return true;
+  return false;
+}
+
+export function isCategoryMatch(itemCategory, selectedCategoryFilter) {
+  if (
+    !selectedCategoryFilter ||
+    selectedCategoryFilter === "all" ||
+    selectedCategoryFilter === ""
+  ) {
+    return true;
+  }
+  const selRaw = String(selectedCategoryFilter).trim().toLowerCase();
+  const itemRaw = String(itemCategory ?? "").trim().toLowerCase();
+  if (!itemRaw) return false;
+
+  // Direct exact string equality
+  if (itemRaw === selRaw) return true;
+
+  // Stripped alphanumeric match (e.g. "veg-pizzas" === "Veg Pizzas")
+  const selAlpha = selRaw.replace(/[^a-z0-9]/g, "");
+  const itemAlpha = itemRaw.replace(/[^a-z0-9]/g, "");
+  if (selAlpha && itemAlpha && selAlpha === itemAlpha) return true;
+
+  // CRITICAL: Strict Veg vs Non-Veg distinction!
+  // A filter for veg MUST NEVER match non-veg and vice-versa
+  const selIsNonVeg = selRaw.includes("non");
+  const itemIsNonVeg = itemRaw.includes("non");
+  if (selIsNonVeg !== itemIsNonVeg && (selRaw.includes("veg") || itemRaw.includes("veg"))) {
+    return false;
+  }
+
+  // Match via standard categories
+  const selStd = findStandardCategory(selRaw);
+  const itemStd = findStandardCategory(itemRaw);
+  if (selStd && itemStd) {
+    return selStd.slug === itemStd.slug;
+  }
 
   return false;
 }
@@ -332,7 +538,7 @@ export function getApproximateIngredientMrp(rawName = "", unit = "KG") {
   } else if (normalizedUnit === "g") {
     rate = rate / 1000;
   } else if (normalizedUnit === "L") {
-    rate = rate;
+    // Already in per-litre rate
   }
 
   return Number(rate.toFixed(2));
@@ -502,6 +708,7 @@ export function AdminPortal({
   onSetMenuAvailability,
   onSetMenuSpecial,
   tables,
+  takeawayOrders = [],
   onAddTable,
   onUpdateTable,
   onDeleteTable,
@@ -716,6 +923,74 @@ export function AdminPortal({
   const [isKotTableDropdownOpen, setIsKotTableDropdownOpen] = useState(false);
   const [kotTableStatusFilter, setKotTableStatusFilter] = useState("all");
   const [selectedKotModalTable, setSelectedKotModalTable] = useState(null);
+  const [localTakeawayOrders, setLocalTakeawayOrders] = useState(() => {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_takeaway_orders") : null;
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const handleTakeawayChange = () => {
+      try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_takeaway_orders") : null;
+        setLocalTakeawayOrders(raw ? JSON.parse(raw) : []);
+      } catch {}
+    };
+    window.addEventListener("avsr-takeaway-updated", handleTakeawayChange);
+    window.addEventListener("avsr-kot-updated", handleTakeawayChange);
+    window.addEventListener("storage", handleTakeawayChange);
+    return () => {
+      window.removeEventListener("avsr-takeaway-updated", handleTakeawayChange);
+      window.removeEventListener("avsr-kot-updated", handleTakeawayChange);
+      window.removeEventListener("storage", handleTakeawayChange);
+    };
+  }, []);
+
+  const allTakeawayKOTList = useMemo(() => {
+    const combined = [
+      ...(Array.isArray(takeawayOrders) ? takeawayOrders : []),
+      ...localTakeawayOrders,
+      ...(Array.isArray(pastOrders) ? pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway")) : [])
+    ];
+    const seen = new Set();
+    const result = [];
+    for (const ord of combined) {
+      if (!ord) continue;
+      const key = String(ord.invoiceNo || ord.orderNumber || ord.id || ord.orderId || "");
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const items = Array.isArray(ord.items) ? ord.items : [];
+      const foodItems = items.filter((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i));
+      if (foodItems.length === 0) continue;
+      const isPickedUp = ["pickedup", "dispatched", "handedover", "completed"].includes(String(ord.fulfillmentStatus || "").toLowerCase());
+      if (isPickedUp) continue;
+
+      const orderNumber = ord.invoiceNo || ord.orderNumber || ord.orderId || ord.id;
+      result.push({
+        id: `takeaway-${orderNumber}`,
+        orderId: ord.id || ord.orderId,
+        orderNumber,
+        isTakeaway: true,
+        orderType: "Takeaway",
+        tableName: `Takeaway #${orderNumber}`,
+        name: `Takeaway #${orderNumber}`,
+        section: "Takeaway",
+        server: ord.server || ord.serverName || "Takeaway Counter",
+        customer: ord.customerName || ord.customer || "Walk-in Customer",
+        phone: ord.customerPhone || ord.phone || "",
+        orderTime: ord.orderTime || ord.settledAt || ord.date || "Just now",
+        items: foodItems,
+        totalQuantity: foodItems.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0),
+        totalAmount: Number(ord.grandTotal ?? ord.totalAmount ?? 0),
+        status: ord.status || "Settled",
+        fulfillmentStatus: ord.fulfillmentStatus || "New",
+      });
+    }
+    return result;
+  }, [takeawayOrders, localTakeawayOrders, pastOrders]);
   const [orderDetailsTarget, setOrderDetailsTarget] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
   const [orderDetailsLoading, setOrderDetailsLoading] = useState(false);
@@ -1280,98 +1555,18 @@ export function AdminPortal({
         .filter(Boolean),
     );
 
-    // Standard high-level dining categories ordered strictly from Soups to Desserts
-    const standardCategories = [
-      {
-        value: "soups",
-        label: "Soups",
-        order: 10,
-        aliases: ["soups", "soup", "hot soup", "soups & salads", "soups & broths", "salads & soups"],
-      },
-      {
-        value: "starters",
-        label: "Starters",
-        order: 20,
-        aliases: ["starters", "starter", "starters & appetizers", "appetizers", "appetizer", "finger food"],
-      },
-      {
-        value: "tandoor-kebabs",
-        label: "Tandoori",
-        order: 30,
-        aliases: ["tandoor-kebabs", "tandoori & kebabs", "tandoori", "kebabs", "kebab", "tikka"],
-      },
-      {
-        value: "mains",
-        label: "Main Course",
-        order: 40,
-        aliases: ["mains", "main course", "main course & curries", "curries", "curry", "gravies", "gravy"],
-      },
-      {
-        value: "breads",
-        label: "Breads",
-        order: 50,
-        aliases: ["breads", "naan & roti", "roti", "naan", "tandoori roti", "indian breads", "bread", "rotis"],
-      },
-      {
-        value: "biryani",
-        label: "Biryani",
-        order: 60,
-        aliases: [
-          "biryani",
-          "biryanis",
-          "biryanis & rice special",
-          "biryani & rice special",
-          "biryani special",
-          "rice items",
-          "rice special",
-          "rice",
-          "fried rice",
-          "pulao",
-        ],
-      },
-      {
-        value: "burgers",
-        label: "Burgers",
-        order: 70,
-        aliases: ["burger", "burgers"],
-      },
-      {
-        value: "pizza",
-        label: "Pizza",
-        order: 71,
-        aliases: ["pizza", "pizzas"],
-      },
-      {
-        value: "fast-food",
-        label: "Fast Food",
-        order: 72,
-        aliases: ["fast-food", "fast food", "fastfood", "burgers, pizza & fast food", "pizza & fast food"],
-      },
-      {
-        value: "desserts",
-        label: "Desserts",
-        order: 990, // Desserts always at the very end
-        aliases: ["desserts", "desserts & sweets", "dessert", "sweets", "ice cream", "sweet", "mithai"],
-      },
-    ];
-
-    standardCategories.forEach((cat) => {
-      map.set(cat.value.toLowerCase(), { value: cat.value, label: cat.label, order: cat.order });
+    // Standard restaurant menu categories
+    STANDARD_MENU_CATEGORIES.forEach((cat) => {
+      map.set(cat.slug, {
+        value: cat.value,
+        label: cat.label,
+        order: cat.order,
+      });
     });
-
-    const findStandard = (rawStr) => {
-      const lower = String(rawStr || "").trim().toLowerCase();
-      return standardCategories.find(
-        (c) =>
-          c.value.toLowerCase() === lower ||
-          c.label.toLowerCase() === lower ||
-          c.aliases.some((a) => a.toLowerCase() === lower)
-      );
-    };
 
     const getCleanCategoryLabel = (catVal) => {
       const s = String(catVal || "").trim();
-      const std = findStandard(s);
+      const std = findStandardCategory(s);
       if (std) return std.label;
       const str = s.replace(/[-_]/g, " ");
       return str.charAt(0).toUpperCase() + str.slice(1);
@@ -1389,8 +1584,8 @@ export function AdminPortal({
         return;
       }
 
-      // If matches any standard category (e.g. "Biryanis & Rice Special", "Tandoori Roti", "Rice items"), skip to avoid duplicates
-      if (findStandard(trimmed)) return;
+      // If matches any standard category, skip to avoid duplicates
+      if (findStandardCategory(trimmed)) return;
 
       const canonicalKey = trimmed.toLowerCase().replace(/[-_]/g, " ");
       if (!map.has(canonicalKey)) {
@@ -1409,7 +1604,7 @@ export function AdminPortal({
       const lower = trimmed.toLowerCase();
       if (dishNames.has(lower)) return;
 
-      if (findStandard(trimmed)) return;
+      if (findStandardCategory(trimmed)) return;
 
       const canonicalKey = lower.replace(/[-_]/g, " ");
       if (!map.has(canonicalKey)) {
@@ -1950,36 +2145,36 @@ export function AdminPortal({
     if (isDrinkItem(item)) return false;
 
     const query = searchFilter.trim().toLowerCase();
-    return (
+    const matchesSearch =
+      !query ||
       [item.name, item.description, item.category].some((value) =>
         String(value ?? "")
           .toLowerCase()
           .includes(query),
-      ) &&
-      (!menuFilters.category ||
-        (() => {
-          const sel = menuFilters.category.toLowerCase().trim();
-          const itemCat = String(item.category ?? "").toLowerCase().trim();
-          if (itemCat === sel || itemCat.replace(/[-_]/g, "") === sel.replace(/[-_]/g, "")) return true;
-          if (sel === "soups" && itemCat.includes("soup")) return true;
-          if (sel === "starters" && (itemCat.includes("starter") || itemCat.includes("appetiz"))) return true;
-          if (sel === "tandoor-kebabs" && (itemCat.includes("tandoor") || itemCat.includes("kebab") || itemCat.includes("tikka"))) return true;
-          if (sel === "mains" && (itemCat.includes("main") || itemCat.includes("curri") || itemCat.includes("curry") || itemCat.includes("gravy"))) return true;
-          if (sel === "breads" && (itemCat.includes("bread") || itemCat.includes("roti") || itemCat.includes("naan"))) return true;
-          if (sel === "biryani" && (itemCat.includes("biryani") || itemCat.includes("rice") || itemCat.includes("pulao"))) return true;
-          if (sel === "burgers" && (itemCat === "burger" || itemCat === "burgers")) return true;
-          if (sel === "pizza" && (itemCat === "pizza" || itemCat === "pizzas")) return true;
-          if (sel === "fast-food" && (itemCat.includes("fast") || itemCat === "burgers, pizza & fast food" || itemCat === "pizza & fast food")) return true;
-          if (sel === "desserts" && (itemCat.includes("dessert") || itemCat.includes("sweet") || itemCat.includes("ice cream"))) return true;
-          return false;
-        })()) &&
-      (!menuFilters.dietary ||
-        Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
-      (!menuFilters.availability ||
-        (item.isAvailable !== false) ===
-          (menuFilters.availability === "available")) &&
-      (!menuFilters.special ||
-        Boolean(item.isChefSpecial) === (menuFilters.special === "special"))
+      );
+
+    const matchesCategory = isCategoryMatch(item.category, menuFilters.category);
+
+    const matchesDietary =
+      !menuFilters.dietary ||
+      (menuFilters.dietary === "veg" ? isItemVeg(item) : !isItemVeg(item));
+
+    const matchesAvailability =
+      !menuFilters.availability ||
+      (item.isAvailable !== false) ===
+        (menuFilters.availability === "available");
+
+    const matchesSpecial =
+      !menuFilters.special ||
+      Boolean(item.isChefSpecial ?? item.isChefsSpecial ?? item.isSpecial) ===
+        (menuFilters.special === "special");
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesDietary &&
+      matchesAvailability &&
+      matchesSpecial
     );
   });
 
@@ -2001,12 +2196,16 @@ export function AdminPortal({
     .filter((t) => t.status !== "vacant")
     .reduce((sum, t) => sum + (Number(t.guests) || 0), 0);
   const tablesWithOrders = tables.filter((t) => t.items && t.items.length > 0);
-  const activeKOTCount = tablesWithOrders.filter(
+  const activeTakeawayKOTCount = allTakeawayKOTList.filter(
+    (t) => !t.items.every((i) => i.kotStatus === "served" || i.kotStatus === "ready"),
+  ).length;
+  const dineInKOTCount = tablesWithOrders.filter(
     (t) =>
       !t.items.every(
         (i) => i.kotStatus === "served" || i.kotStatus === "ready",
       ),
   ).length;
+  const activeKOTCount = dineInKOTCount;
 
   return (
     <div
@@ -2069,6 +2268,7 @@ export function AdminPortal({
           tablesCount={tables.length}
           staffCount={staffList.length}
           activeKOTCount={activeKOTCount}
+          takeawayCount={activeTakeawayKOTCount}
           restaurantLogo={restaurantLogo}
           restaurantName={restaurantName}
           restaurantTagline={restaurantTagline}
@@ -2158,6 +2358,7 @@ export function AdminPortal({
                     tables={tables}
                     staffList={staffList}
                     pastOrders={pastOrders}
+                    activeTakeawayKOTCount={activeTakeawayKOTCount}
                     sharedRecordLoad={sharedRecordLoad}
                     onNavigateTab={setActiveTab}
                     onOpenKOTView={onOpenKOTView}
@@ -2660,14 +2861,15 @@ export function AdminPortal({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {allCategoryOptions.find(
-                                      (option) =>
-                                        option.value.toLowerCase() ===
-                                        String(item.category || "").toLowerCase(),
-                                    )?.label || item.category.replace(/[-_]/g, " ")}
+                                    {findStandardCategory(item.category)?.label ||
+                                      allCategoryOptions.find(
+                                        (option) =>
+                                          option.value.toLowerCase() ===
+                                          String(item.category || "").toLowerCase(),
+                                      )?.label || String(item.category || "").replace(/[-_]/g, " ")}
                                   </td>
                                   <td data-label="Dietary" style={{ padding: "0.6rem 0.85rem" }}>
-                                    {item.isVeg ? (
+                                    {isItemVeg(item) ? (
                                       <span
                                         style={{
                                           background: "rgba(16, 185, 129, 0.12)",
@@ -2959,119 +3161,130 @@ export function AdminPortal({
                               </select>
                             </div>
 
-                            {/* Page Buttons */}
-                            <div
-                              style={{
+                            {/* Page Buttons: « First  < Prev  1  2  3  4  Next >  Last » */}
+                            {(() => {
+                              const maxVisiblePages = 4;
+                              let startPage = Math.max(1, safeMenuPage - Math.floor(maxVisiblePages / 2));
+                              let endPage = startPage + maxVisiblePages - 1;
+                              if (endPage > totalMenuPages) {
+                                endPage = totalMenuPages;
+                                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                              }
+                              const visiblePages = [];
+                              for (let p = startPage; p <= endPage; p++) {
+                                visiblePages.push(p);
+                              }
+
+                              const navBtnStyle = (disabled) => ({
+                                height: "28px",
+                                padding: "0 10px",
+                                borderRadius: "7px",
+                                background: disabled
+                                  ? "rgba(255, 255, 255, 0.03)"
+                                  : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
+                                border: "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
+                                color: disabled ? "#475569" : "var(--text-main, #e2e8f0)",
+                                cursor: disabled ? "not-allowed" : "pointer",
+                                opacity: disabled ? 0.45 : 1,
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "0.25rem",
-                              }}
-                            >
-                              <button
-                                onClick={() =>
-                                  setMenuPage((p) => Math.max(1, p - 1))
-                                }
-                                disabled={safeMenuPage === 1}
-                                style={{
-                                  height: "24px",
-                                  padding: "0 6px",
-                                  borderRadius: "5px",
-                                  background:
-                                    safeMenuPage === 1
-                                      ? "rgba(var(--surface-rgb),0.02)"
-                                      : "rgba(var(--surface-rgb),0.06)",
-                                  border: "1px solid var(--neutral-border)",
-                                  color:
-                                    safeMenuPage === 1 ? "#475569" : "var(--text-muted)",
-                                  cursor:
-                                    safeMenuPage === 1
-                                      ? "not-allowed"
-                                      : "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "2px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 600,
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Previous page"
-                              >
-                                <ChevronLeft size={13} />
-                                <span>Prev</span>
-                              </button>
+                                justifyContent: "center",
+                                gap: "3px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                transition: "all 0.15s ease",
+                              });
 
-                              {Array.from(
-                                { length: totalMenuPages },
-                                (_, i) => i + 1,
-                              ).map((page) => {
-                                const isActive = page === safeMenuPage;
-                                return (
+                              return (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                  }}
+                                >
+                                  {/* « First */}
                                   <button
-                                    key={page}
-                                    onClick={() => setMenuPage(page)}
-                                    style={{
-                                      height: "24px",
-                                      minWidth: "24px",
-                                      padding: "0 5px",
-                                      borderRadius: "5px",
-                                      background: isActive
-                                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                                        : "transparent",
-                                      border: isActive
-                                        ? "none"
-                                        : "1px solid rgba(var(--surface-rgb),0.08)",
-                                      color: isActive ? "#ffffff" : "var(--text-dim)",
-                                      cursor: "pointer",
-                                      fontSize: "0.72rem",
-                                      fontWeight: isActive ? 800 : 500,
-                                      boxShadow: isActive
-                                        ? "0 2px 8px rgba(245, 158, 11, 0.35)"
-                                        : "none",
-                                      transition: "all 0.15s ease",
-                                    }}
+                                    type="button"
+                                    onClick={() => setMenuPage(1)}
+                                    disabled={safeMenuPage === 1}
+                                    style={navBtnStyle(safeMenuPage === 1)}
+                                    title="Go to first page"
                                   >
-                                    {page}
+                                    « First
                                   </button>
-                                );
-                              })}
 
-                              <button
-                                onClick={() =>
-                                  setMenuPage((p) =>
-                                    Math.min(totalMenuPages, p + 1),
-                                  )
-                                }
-                                disabled={safeMenuPage === totalMenuPages}
-                                style={{
-                                  height: "24px",
-                                  padding: "0 6px",
-                                  borderRadius: "5px",
-                                  background:
-                                    safeMenuPage === totalMenuPages
-                                      ? "rgba(var(--surface-rgb),0.02)"
-                                      : "rgba(var(--surface-rgb),0.06)",
-                                  border: "1px solid var(--neutral-border)",
-                                  color:
-                                    safeMenuPage === totalMenuPages
-                                      ? "#475569"
-                                      : "var(--text-muted)",
-                                  cursor:
-                                    safeMenuPage === totalMenuPages
-                                      ? "not-allowed"
-                                      : "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "2px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 600,
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Next page"
-                              >
-                                <span>Next</span>
-                                <ChevronRight size={13} />
-                              </button>
-                            </div>
+                                  {/* < Prev */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+                                    disabled={safeMenuPage === 1}
+                                    style={navBtnStyle(safeMenuPage === 1)}
+                                    title="Go to previous page"
+                                  >
+                                    &lt; Prev
+                                  </button>
+
+                                  {/* Visible Page Numbers */}
+                                  {visiblePages.map((page) => {
+                                    const isActive = page === safeMenuPage;
+                                    return (
+                                      <button
+                                        key={page}
+                                        type="button"
+                                        onClick={() => setMenuPage(page)}
+                                        style={{
+                                          height: "28px",
+                                          minWidth: "28px",
+                                          padding: "0 8px",
+                                          borderRadius: "7px",
+                                          background: isActive
+                                            ? "#0d5c56"
+                                            : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
+                                          border: isActive
+                                            ? "1px solid #14b8a6"
+                                            : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
+                                          color: isActive ? "#ffffff" : "var(--text-main, #e2e8f0)",
+                                          cursor: "pointer",
+                                          fontSize: "0.78rem",
+                                          fontWeight: isActive ? 800 : 600,
+                                          boxShadow: isActive
+                                            ? "0 2px 8px rgba(13, 92, 86, 0.45)"
+                                            : "none",
+                                          transition: "all 0.15s ease",
+                                        }}
+                                      >
+                                        {page}
+                                      </button>
+                                    );
+                                  })}
+
+                                  {/* Next > */}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setMenuPage((p) => Math.min(totalMenuPages, p + 1))
+                                    }
+                                    disabled={safeMenuPage === totalMenuPages}
+                                    style={navBtnStyle(safeMenuPage === totalMenuPages)}
+                                    title="Go to next page"
+                                  >
+                                    Next &gt;
+                                  </button>
+
+                                  {/* Last » */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setMenuPage(totalMenuPages)}
+                                    disabled={safeMenuPage === totalMenuPages}
+                                    style={navBtnStyle(safeMenuPage === totalMenuPages)}
+                                    title="Go to last page"
+                                  >
+                                    Last »
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       )}
@@ -4554,7 +4767,10 @@ export function AdminPortal({
                             type="button"
                             role="tab"
                             aria-selected={adminKotStation === "kitchen"}
-                            onClick={() => setAdminKotStation("kitchen")}
+                            onClick={() => {
+                              setAdminKotStation("kitchen");
+                              setAdminKotTableFilter("all");
+                            }}
                             style={{
                               padding: "5px 12px",
                               borderRadius: "6px",
@@ -4567,7 +4783,29 @@ export function AdminPortal({
                               transition: "all 0.15s ease",
                             }}
                           >
-                            🍳 Kitchen KOT
+                            🍳 Dine-In KOT ({tablesWithOrders.filter(t => (t.items || []).some(i => !isDrinkItem(i))).length})
+                          </button>
+                          <button
+                            type="button"
+                            role="tab"
+                            aria-selected={adminKotStation === "takeaway"}
+                            onClick={() => {
+                              setAdminKotStation("takeaway");
+                              setAdminKotTableFilter("all");
+                            }}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: "6px",
+                              border: "none",
+                              background: adminKotStation === "takeaway" ? "#f97316" : "transparent",
+                              color: adminKotStation === "takeaway" ? "#ffffff" : "var(--text-muted)",
+                              fontSize: "0.78rem",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            🥡 Takeaway KOT ({allTakeawayKOTList.length})
                           </button>
                           <button
                             type="button"
@@ -4681,12 +4919,14 @@ export function AdminPortal({
                             }}
                           >
                             <span>
-                              {tables.find(
-                                (t) =>
-                                  t.id === Number(adminKotTableFilter) ||
-                                  t.name === adminKotTableFilter ||
-                                  String(t.id) === String(adminKotTableFilter),
-                              )?.name || `Table ${adminKotTableFilter}`}
+                              {adminKotTableFilter === "takeaway"
+                                ? "Takeaway Orders"
+                                : tables.find(
+                                    (t) =>
+                                      t.id === Number(adminKotTableFilter) ||
+                                      t.name === adminKotTableFilter ||
+                                      String(t.id) === String(adminKotTableFilter),
+                                  )?.name || `Table ${adminKotTableFilter}`}
                             </span>
                             <button
                               type="button"
@@ -4713,7 +4953,9 @@ export function AdminPortal({
                               fontWeight: 600,
                             }}
                           >
-                            All Active Tables ({tables.filter((t) => (t.items || []).some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i))).length})
+                            {adminKotStation === "takeaway"
+                              ? `All Active Takeaways (${allTakeawayKOTList.length} Orders)`
+                              : `All Active Dine-In Tables (${tables.filter((t) => (t.items || []).some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i))).length} Tables)`}
                           </span>
                         )}
                       </div>
@@ -4759,15 +5001,17 @@ export function AdminPortal({
                             }
                           />
                           <span>
-                            {adminKotTableFilter === "all"
-                              ? "All Tables"
-                              : tables.find(
-                                  (t) =>
-                                    t.id === Number(adminKotTableFilter) ||
-                                    t.name === adminKotTableFilter ||
-                                    String(t.id) ===
-                                      String(adminKotTableFilter),
-                                )?.name || "All Tables"}
+                            {adminKotTableFilter === "takeaway"
+                              ? "🥡 Takeaway"
+                              : adminKotTableFilter === "all"
+                                ? "All Orders"
+                                : tables.find(
+                                    (t) =>
+                                      t.id === Number(adminKotTableFilter) ||
+                                      t.name === adminKotTableFilter ||
+                                      String(t.id) ===
+                                        String(adminKotTableFilter),
+                                  )?.name || "All Orders"}
                           </span>
                           <ChevronDown
                             size={15}
@@ -4938,7 +5182,7 @@ export function AdminPortal({
                                   padding: "0.35rem",
                                 }}
                               >
-                                {/* All Active Tables Option */}
+                                {/* All Active Orders Option */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -5001,7 +5245,7 @@ export function AdminPortal({
                                             : 650,
                                       }}
                                     >
-                                      All Active Tables
+                                      All Active Orders
                                     </span>
                                   </span>
                                   <span
@@ -5017,7 +5261,79 @@ export function AdminPortal({
                                   >
                                     {adminKotTableFilter === "all"
                                       ? "CURRENT"
-                                      : `${tablesWithOrders.length} ACTIVE`}
+                                      : `${tablesWithOrders.length + allTakeawayKOTList.length} ACTIVE`}
+                                  </span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAdminKotTableFilter("takeaway");
+                                    setIsKotTableDropdownOpen(false);
+                                  }}
+                                  style={{
+                                    width: "100%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: "0.65rem",
+                                    padding: "0.55rem 0.65rem",
+                                    marginBottom: "2px",
+                                    borderRadius: "7px",
+                                    background:
+                                      adminKotTableFilter === "takeaway"
+                                        ? "rgba(249,115,22,0.18)"
+                                        : "transparent",
+                                    color: "var(--text-main)",
+                                    border:
+                                      adminKotTableFilter === "takeaway"
+                                        ? "1px solid rgba(249,115,22,0.5)"
+                                        : "1px solid transparent",
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (adminKotTableFilter !== "takeaway")
+                                      e.currentTarget.style.background =
+                                        "var(--bg-tertiary)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (adminKotTableFilter !== "takeaway")
+                                      e.currentTarget.style.background =
+                                        "transparent";
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.55rem",
+                                    }}
+                                  >
+                                    <span>🥡</span>
+                                    <span
+                                      style={{
+                                        fontWeight:
+                                          adminKotTableFilter === "takeaway"
+                                            ? 800
+                                            : 650,
+                                      }}
+                                    >
+                                      Takeaway Orders
+                                    </span>
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "0.66rem",
+                                      fontWeight: 800,
+                                      textTransform: "uppercase",
+                                      color:
+                                        adminKotTableFilter === "takeaway"
+                                          ? "#f97316"
+                                          : "var(--text-dim)",
+                                    }}
+                                  >
+                                    {allTakeawayKOTList.length} ACTIVE
                                   </span>
                                 </button>
 
@@ -5161,25 +5477,34 @@ export function AdminPortal({
                       </div>
                     </div>
 
-                    {/* Table KOT Cards */}
+                    {/* Table & Takeaway KOT Cards */}
                     {(() => {
-                      const kotDisplayTables = tables.filter((t) => {
-                        if (adminKotTableFilter !== "all") {
-                          return (
-                            t.id === Number(adminKotTableFilter) ||
-                            t.name === adminKotTableFilter
-                          );
+                      const kotDisplayTables = (() => {
+                        if (adminKotStation === "takeaway") {
+                          return allTakeawayKOTList;
                         }
-                        const foodItems = (Array.isArray(t.items) ? t.items : []).filter(
-                          (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
-                        );
-                        return foodItems.length > 0;
-                      });
+                        const dineInList = tables.filter((t) => {
+                          if (adminKotTableFilter !== "all" && adminKotTableFilter !== "takeaway") {
+                            return (
+                              t.id === Number(adminKotTableFilter) ||
+                              t.name === adminKotTableFilter
+                            );
+                          }
+                          const foodItems = (Array.isArray(t.items) ? t.items : []).filter(
+                            (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
+                          );
+                          return foodItems.length > 0;
+                        });
+
+                        return dineInList;
+                      })();
 
                       const activeKotModalTable = selectedKotModalTable
-                        ? tables.find(
-                            (t) => String(t.id) === String(selectedKotModalTable.id)
-                          ) || selectedKotModalTable
+                        ? (selectedKotModalTable.isTakeaway
+                            ? selectedKotModalTable
+                            : (tables.find(
+                                (t) => String(t.id) === String(selectedKotModalTable.id)
+                              ) || selectedKotModalTable))
                         : null;
 
                       if (kotDisplayTables.length === 0) {
@@ -5204,8 +5529,8 @@ export function AdminPortal({
                               }}
                             >
                               {adminKotTableFilter !== "all"
-                                ? `No Active Orders for Table ${adminKotTableFilter}`
-                                : "No Active Kitchen Tickets"}
+                                ? (adminKotTableFilter === "takeaway" ? "No Active Takeaway Orders" : `No Active Orders for Table ${adminKotTableFilter}`)
+                                : (adminKotStation === "takeaway" ? "No Active Takeaway Orders in Kitchen" : "No Active Kitchen Tickets")}
                             </h4>
                             <p
                               style={{
@@ -5213,8 +5538,9 @@ export function AdminPortal({
                                 color: "var(--text-muted)",
                               }}
                             >
-                              Orders dispatched from dining tables will appear
-                              here live.
+                              {adminKotStation === "takeaway"
+                                ? "Paid takeaway orders sent to the kitchen will appear here live."
+                                : "Orders dispatched from dining tables and takeaway counters will appear here live."}
                             </p>
                           </div>
                         );
@@ -5237,6 +5563,7 @@ export function AdminPortal({
                             }}
                           >
                             {kotDisplayTables.map((tbl) => {
+                              const isTakeaway = Boolean(tbl.isTakeaway) || String(tbl.orderType).toLowerCase() === "takeaway" || String(tbl.id).startsWith("takeaway-");
                               const items = Array.isArray(tbl.items) ? tbl.items : [];
                               const activeItems = items.filter(
                                 (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i)
@@ -5274,7 +5601,7 @@ export function AdminPortal({
                                   : "var(--status-occupied, #f59e0b)";
 
                               const statusBadge = allCompleted
-                                ? { text: "🔔 Ready to Serve", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.3)" }
+                                ? { text: isTakeaway ? "🔔 Ready for Pickup" : "🔔 Ready to Serve", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.3)" }
                                 : isCooking
                                   ? { text: "🔥 In Preparation", color: "#ea580c", bg: "rgba(234, 88, 12, 0.15)", border: "rgba(234, 88, 12, 0.3)" }
                                   : { text: "📥 Order Received", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", border: "rgba(245, 158, 11, 0.3)" };
@@ -5283,7 +5610,7 @@ export function AdminPortal({
                               const moreCount = activeItems.length - 1;
 
                               const tableNum = tbl.tableNumberNumeric || tbl.tableNumber || getTableSortNumber(tbl) || tbl.id;
-                              const tableNameDisplay = tbl.tableName || tbl.name || `Table ${tableNum}`;
+                              const tableNameDisplay = tbl.tableName || tbl.name || (isTakeaway ? `Takeaway #${tbl.orderNumber || tableNum}` : `Table ${tableNum}`);
 
                               return (
                                 <div
@@ -5338,9 +5665,11 @@ export function AdminPortal({
                                       >
                                         <span
                                           style={{
-                                            background: allCompleted
-                                              ? "var(--status-vacant, #10b981)"
-                                              : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                            background: isTakeaway
+                                              ? "#f97316"
+                                              : (allCompleted
+                                                  ? "var(--status-vacant, #10b981)"
+                                                  : "linear-gradient(135deg, #f59e0b, #ea580c)"),
                                             color: "#ffffff",
                                             fontWeight: 900,
                                             fontSize: "0.74rem",
@@ -5350,7 +5679,7 @@ export function AdminPortal({
                                             flexShrink: 0,
                                           }}
                                         >
-                                          T{tableNum}
+                                          {isTakeaway ? "🥡 TAKEAWAY" : `T${tableNum}`}
                                         </span>
                                         <h3
                                           style={{
@@ -5399,10 +5728,10 @@ export function AdminPortal({
                                       }}
                                     >
                                       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                                        {tbl.section || "Main Hall"}
+                                        {isTakeaway ? "🥡 Pickup Counter" : (tbl.section || "Main Hall")}
                                       </span>
                                       <span style={{ flexShrink: 0 }}>
-                                        Server: {tbl.server || "Staff"}
+                                        {isTakeaway ? `Customer: ${tbl.customer || "Walk-in"}` : `Server: ${tbl.server || "Staff"}`}
                                       </span>
                                     </div>
 
@@ -5603,7 +5932,9 @@ export function AdminPortal({
                                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                                     <div
                                       style={{
-                                        background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                        background: activeKotModalTable.isTakeaway
+                                          ? "#f97316"
+                                          : "linear-gradient(135deg, #f59e0b, #ea580c)",
                                         color: "#ffffff",
                                         padding: "0.3rem 0.65rem",
                                         borderRadius: "7px",
@@ -5611,7 +5942,9 @@ export function AdminPortal({
                                         fontSize: "0.95rem",
                                       }}
                                     >
-                                      T{activeKotModalTable.tableNumberNumeric || activeKotModalTable.tableNumber || getTableSortNumber(activeKotModalTable) || activeKotModalTable.id}
+                                      {activeKotModalTable.isTakeaway
+                                        ? "🥡 TAKEOUT"
+                                        : `T${activeKotModalTable.tableNumberNumeric || activeKotModalTable.tableNumber || getTableSortNumber(activeKotModalTable) || activeKotModalTable.id}`}
                                     </div>
                                     <div>
                                       <h3
@@ -5626,7 +5959,9 @@ export function AdminPortal({
                                         {activeKotModalTable.name} — Items to Cook
                                       </h3>
                                       <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                                        {activeKotModalTable.section || "Main Hall"} • Server: <strong style={{ color: "var(--text-main)" }}>{activeKotModalTable.server || "Staff"}</strong> • Ordered: {formatDisplayTime(activeKotModalTable.orderTime) || "Just Now"}
+                                        {activeKotModalTable.isTakeaway
+                                          ? `🥡 Pickup Counter • Customer: ${activeKotModalTable.customer || "Takeaway Customer"} • Ordered: ${formatDisplayTime(activeKotModalTable.orderTime) || "Just Now"}`
+                                          : `${activeKotModalTable.section || "Main Hall"} • Server: ${activeKotModalTable.server || "Staff"} • Ordered: ${formatDisplayTime(activeKotModalTable.orderTime) || "Just Now"}`}
                                       </div>
                                     </div>
                                   </div>
@@ -5970,7 +6305,7 @@ export function AdminPortal({
                                         title="Mark only kitchen food items as ready"
                                       >
                                         <ChefHat size={14} />
-                                        <span>Mark Food Ready</span>
+                                        <span>{activeKotModalTable.isTakeaway ? "Mark Ready for Pickup" : "Mark Food Ready"}</span>
                                       </button>
                                     )}
 

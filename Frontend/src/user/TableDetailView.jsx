@@ -1862,7 +1862,10 @@ export function TableDetailView({
       const itemDescription = String(item?.description ?? item?.shortDescription ?? item?.short_description ?? "");
       const itemCategory = String(item?.category ?? item?.categoryName ?? item?.category_name ?? item?.dishCategory ?? "");
       const normalizedItemCategory = itemCategory.trim().toLowerCase();
-      const matchCat = normalizedSelectedCategory === "all" || normalizedItemCategory === normalizedSelectedCategory;
+      const matchCat =
+        normalizedSelectedCategory === "all" ||
+        normalizedItemCategory === normalizedSelectedCategory ||
+        normalizedItemCategory.replace(/[\s-_]/g, "") === normalizedSelectedCategory.replace(/[\s-_]/g, "");
 
       const itemTitle = itemName.toLowerCase();
       const itemDesc = itemDescription.toLowerCase();

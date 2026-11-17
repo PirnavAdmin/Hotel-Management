@@ -403,6 +403,11 @@ public class TablesController : ControllerBase
 
         _logger.LogInformation("Vacating table {Id} ({TableName})", existing.TableId, existing.TableName);
         var updated = await _tableService.UpdateTableStatusAsync(existing.TableId, "available");
+        if (updated == null || !string.Equals(updated.Status, "available", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogError("Vacate request for table {Id} did not persist an available status.", existing.TableId);
+            return StatusCode(500, new { success = false, message = "The table status could not be confirmed as vacant." });
+        }
         _tableLockService.ReleaseLock(id);
         _tableLockService.ReleaseLock(existing.TableId.ToString());
 

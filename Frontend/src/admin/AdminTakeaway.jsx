@@ -160,13 +160,30 @@ export function AdminTakeaway({
         apiGetAllAdminTakeawayOrders(),
         apiGetAdminTakeawaySummary(),
       ]);
-      if (!ordersResult?.success) throw new Error(ordersResult?.error || "Could not load takeaway orders.");
-      setOrders((Array.isArray(ordersResult.data) ? ordersResult.data : []).map((ord, idx) => normalizeOrder(ord, idx)));
+      if (ordersResult?.success && Array.isArray(ordersResult.data) && ordersResult.data.length > 0) {
+        setOrders(ordersResult.data.map((ord, idx) => normalizeOrder(ord, idx)));
+      } else {
+        // Fallback to locally stored takeaway orders
+        try {
+          const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_takeaway_orders") : null;
+          const localOrders = raw ? JSON.parse(raw) : [];
+          if (localOrders.length > 0) {
+            setOrders(localOrders.map((ord, idx) => normalizeOrder(ord, idx)));
+          } else if (ordersResult?.data && Array.isArray(ordersResult.data)) {
+            setOrders(ordersResult.data.map((ord, idx) => normalizeOrder(ord, idx)));
+          }
+        } catch {}
+      }
       if (summaryResult?.success) setSummary(summaryResult.data || null);
-      else throw new Error(summaryResult?.error || "Could not load takeaway order summary.");
     } catch (error) {
-      console.warn("Could not load takeaway orders:", error?.message);
-      if (!quiet) alert(error?.message || "Could not load takeaway orders.");
+      console.warn("Could not load takeaway orders from server:", error?.message);
+      try {
+        const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_takeaway_orders") : null;
+        const localOrders = raw ? JSON.parse(raw) : [];
+        if (localOrders.length > 0) {
+          setOrders(localOrders.map((ord, idx) => normalizeOrder(ord, idx)));
+        }
+      } catch {}
     } finally {
       setIsRefreshing(false);
     }

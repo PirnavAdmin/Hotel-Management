@@ -37,6 +37,7 @@ export function AdminOverview({
   tables = [],
   staffList = [],
   pastOrders = [],
+  activeTakeawayKOTCount = 0,
   onNavigateTab,
   onOpenKOTView,
   onOpenItemModal,
@@ -138,12 +139,13 @@ export function AdminOverview({
   );
 
   const tablesWithOrders = tables.filter((t) => t.items && t.items.length > 0);
-  const pendingKOTCount = tablesWithOrders.filter(
-    (t) =>
-      !t.items.every(
-        (i) => i.kotStatus === "served" || i.kotStatus === "ready"
-      )
-  ).length;
+  const pendingKOTCount =
+    tablesWithOrders.filter(
+      (t) =>
+        !t.items.every(
+          (i) => i.kotStatus === "served" || i.kotStatus === "ready"
+        )
+    ).length + (Number(activeTakeawayKOTCount) || 0);
 
   const dineInMenuItems = menuItems.filter((item) => !isBarMenuItem(item));
   const vegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "VEG" || i.isVeg === true)).length;

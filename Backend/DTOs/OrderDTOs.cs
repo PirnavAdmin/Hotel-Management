@@ -149,6 +149,10 @@ public class OrderDto
 
     public string? PaymentMethod { get; set; }
 
+    public string? PaymentStatus { get; set; }
+
+    public string? FulfillmentStatus { get; set; }
+
     public string? InvoiceNo { get; set; }
     public long? InvoiceId { get; set; }
     public string? CustomerName { get; set; }
