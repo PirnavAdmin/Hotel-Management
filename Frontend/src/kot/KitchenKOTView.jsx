@@ -163,6 +163,7 @@ export function KitchenKOTView({
       "KotItemAdded", "KotItemUpdated", "KotItemDeleted", "ReceiveNewBOT",
       "ReceiveBarKotCreated", "BarKotCancelled", "ReceiveBarKotUpdated",
       "ReceiveBarKotTableUpdated", "ReceiveBarKotItemUpdated",
+      "kot:itemUpdated", "kot:statusChanged", "KitchenStatusAlert", "TakeawayStatusUpdated",
     ]);
     let refreshTimer = null;
     const scheduleRefresh = () => {
@@ -281,19 +282,31 @@ export function KitchenKOTView({
       : pastOrders;
 
   // The Kitchen board uses persisted order-backed tickets as its source of truth.
-  const isItemReceived = (item) => {
-    return ["", "received", "new", "queued", "pending"].includes(
-      String(item?.kotStatus || "").toLowerCase(),
-    );
-  };
+  const getItemKotStatus = (item) =>
+    String(item?.kotStatus ?? item?.KotStatus ?? item?.itemStatus ?? item?.ItemStatus ?? "").trim().toLowerCase();
 
-  const isItemCooking = (item) =>
-    String(item?.kotStatus || "").toLowerCase() === "cooking";
+  const isRequiredKitchenItem = (item) =>
+    !["cancelled", "canceled", "void", "deleted"].includes(getItemKotStatus(item));
+
+  const isItemReceived = (item) =>
+    ["", "received", "new", "queued", "pending"].includes(getItemKotStatus(item));
+
+  const isItemCooking = (item) => getItemKotStatus(item) === "cooking";
 
   const isItemCompleted = (item) =>
-    item.kotStatus === "ready" ||
-    item.kotStatus === "served" ||
-    item.kotStatus === "completed";
+    ["ready", "served", "completed"].includes(getItemKotStatus(item));
+
+  const getTicketStatus = (ticket) => {
+    const items = Array.isArray(ticket?.items) ? ticket.items.filter(isRequiredKitchenItem) : [];
+    if (items.some(isItemReceived)) return "received";
+    if (items.some(isItemCooking)) return "cooking";
+    if (items.length > 0 && items.every(isItemCompleted)) return "completed";
+
+    const status = String(ticket?.ticketStatus ?? ticket?.status ?? "").trim().toLowerCase();
+    if (["ready", "served", "completed"].includes(status)) return "completed";
+    if (status === "cooking") return "cooking";
+    return "received";
+  };
 
   const getCookingElapsedSeconds = (ticket) => {
     if (!ticket) return 0;
@@ -519,27 +532,31 @@ export function KitchenKOTView({
     .filter((table) => {
       if (!table || !Array.isArray(table.items) || table.items.length === 0) return false;
       return table.items.some((item) => {
-        if (!item || item.status === "cancelled" || item.kotStatus === "cancelled") return false;
+        if (!item || ["cancelled", "canceled"].includes(getItemKotStatus(item))) return false;
         const status = String(item.kotStatus || item.status || "").toLowerCase();
-        const isSent = Boolean(item.kotSent || table.kotSent || ["received", "cooking", "ready"].includes(status));
-        return isSent && !["served", "completed"].includes(status);
+        const isSent = Boolean(item.kotSent || table.kotSent || ["received", "new", "queued", "pending", "cooking", "ready", "served", "completed"].includes(status));
+        return isSent;
       });
     })
     .map((table) => {
       const activeStationItems = (table.items || [])
         .filter((item) => {
-          if (!item || item.status === "cancelled" || item.kotStatus === "cancelled") return false;
+          if (!item || ["cancelled", "canceled"].includes(getItemKotStatus(item))) return false;
           const isDrink = isDrinkItem(item, menuLookup);
           const status = String(item.kotStatus || item.status || "").toLowerCase();
-          const isSent = Boolean(item.kotSent || table.kotSent || ["received", "cooking", "ready"].includes(status));
-          return (isBarStation ? isDrink : !isDrink) && isSent && !["served", "completed"].includes(status);
+          const isSent = Boolean(item.kotSent || table.kotSent || ["received", "new", "queued", "pending", "cooking", "ready", "served", "completed"].includes(status));
+          return (isBarStation ? isDrink : !isDrink) && isSent;
         })
         .map((item, idx) => ({
           ...item,
           id: item.id ?? item.orderItemId ?? `item-${table.id}-${idx}`,
           menuItemId: item.menuItemId ?? item.id,
           name: item.name || item.dishName || "Order Item",
-          kotStatus: String(item.kotStatus || (item.kotSent ? "received" : "queued")).toLowerCase(),
+          kotStatus: String(
+            item.kotStatus ||
+            (["received", "new", "queued", "pending", "cooking", "ready", "served", "completed"].includes(String(item.status || "").toLowerCase()) ? item.status : "") ||
+            (item.kotSent ? "received" : "queued"),
+          ).toLowerCase(),
           kotBatch: Number(item.kotBatch) || Number(table.kotBatch) || 1,
         }));
 
@@ -588,17 +605,16 @@ export function KitchenKOTView({
       const items = Array.isArray(order.items) ? order.items : [];
       const activeStationItems = items
         .filter((item) => {
-          if (!item || item.status === "cancelled" || item.kotStatus === "cancelled") return false;
+          if (!item || ["cancelled", "canceled"].includes(getItemKotStatus(item))) return false;
           const isDrink = isDrinkItem(item, menuLookup);
-          const status = String(item.kotStatus || "").toLowerCase();
-          return (isBarStation ? isDrink : !isDrink) && !["served", "completed"].includes(status);
+          return isBarStation ? isDrink : !isDrink;
         })
         .map((item, idx) => ({
           ...item,
           id: item.id ?? item.orderItemId ?? `takeaway-item-${order.id || order.invoiceNo}-${idx}`,
           menuItemId: item.menuItemId ?? item.id,
           name: item.name || item.dishName || "Order Item",
-          kotStatus: String(item.kotStatus || "received").toLowerCase(),
+          kotStatus: String(item.kotStatus || item.itemStatus || item.status || "received").toLowerCase(),
           kotBatch: 1,
         }));
 
@@ -618,7 +634,7 @@ export function KitchenKOTView({
         orderTime,
         priority: "urgent",
         uniqueKey: `takeaway-${orderId}`,
-        isPaid: true,
+      isPaid: Boolean(order.isPaid ?? order.IsPaid) || ["paid", "settled"].includes(String(order.paymentStatus ?? order.PaymentStatus ?? order.status ?? order.Status ?? "").trim().toLowerCase()),
         ticketType: "active",
         items: activeStationItems,
         orderTimestamp: parseSafeTime(order.orderTimestamp || order.settledAt || order.date),
@@ -628,10 +644,10 @@ export function KitchenKOTView({
 
   // 3. API TICKETS: Map persisted API kitchen tickets
   const apiTickets = (Array.isArray(persistedKitchenTickets) ? persistedKitchenTickets : []).map((ticket) => {
-    const orderId = ticket.orderId ?? ticket.ticketId;
-    const backendTableId = ticket.tableId ?? orderId;
+    const orderId = ticket.orderId ?? ticket.OrderId ?? ticket.ticketId ?? ticket.TicketId;
+    const backendTableId = ticket.tableId ?? ticket.TableId ?? orderId;
     const ticketName = ticket.tableName || ticket.TableName || "";
-    const orderTime = ticket.orderTime || ticket.createdAt || ticket.orderReceivedAt;
+    const orderTime = ticket.orderTime || ticket.OrderTime || ticket.createdAt || ticket.CreatedAt || ticket.orderReceivedAt;
     const localTable = tables.find((table) => {
       const idMatches = [table.backendTableId, table.tableId, table.id]
         .filter((id) => id !== undefined && id !== null)
@@ -651,28 +667,31 @@ export function KitchenKOTView({
       backendOrderId: orderId,
       orderType,
       kotBatch: batch,
+      ticketStatus: ticket.ticketStatus || ticket.TicketStatus || ticket.status || ticket.Status,
       name: localTable?.name || ticketName || `Table ${tableId}`,
       section: ticket.section || ticket.sectionArea || "Main Hall",
       server: ticket.serverName || "Server",
       orderTime: orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       priority: ticket.priority || "normal",
-      uniqueKey: `active-${orderId}-${batch}`,
+      uniqueKey: String(orderType).toLowerCase() === "takeaway"
+        ? `takeaway-${orderId}`
+        : `active-${orderId}-${batch}`,
       isPaid: false,
       ticketType: "active",
       items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
         const isDrink = isDrinkItem(item, menuLookup);
-        const status = String(item?.kotStatus || item?.itemStatus || "").toLowerCase();
+        const status = getItemKotStatus(item);
         return (
           (isBarStation ? isDrink : !isDrink) &&
-          !["ready", "served", "completed", "cancelled", "canceled"].includes(status)
+          !["cancelled", "canceled"].includes(status)
         );
       }).map((item) => ({
         ...item,
-        id: item.id ?? item.orderItemId,
-        menuItemId: item.menuItemId,
-        name: item.name || item.dishName || "Order Item",
-        kotStatus: String(item.kotStatus || item.itemStatus || "queued").toLowerCase(),
-        kotBatch: Number(item.kotBatch) || batch,
+        id: item.id ?? item.Id ?? item.orderItemId ?? item.OrderItemId,
+        menuItemId: item.menuItemId ?? item.MenuItemId,
+        name: item.name || item.Name || item.dishName || item.DishName || "Order Item",
+        kotStatus: String(item.kotStatus || item.KotStatus || item.itemStatus || item.ItemStatus || ticket.ticketStatus || ticket.TicketStatus || "queued").toLowerCase(),
+        kotBatch: Number(item.kotBatch ?? item.KotBatch) || batch,
       })),
       orderTimestamp: parseSafeTime(orderTime),
     };
@@ -686,11 +705,19 @@ export function KitchenKOTView({
   // Merge tickets: Table tickets + Takeaway tickets + API tickets (deduplicated)
   const mergedActiveMap = new Map();
   tableTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
-  takeawayTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
+  const apiTakeawayOrderIds = new Set(apiTickets
+    .filter((ticket) => String(ticket.orderType).toLowerCase() === "takeaway")
+    .map((ticket) => String(ticket.backendOrderId)));
+  const hasAuthoritativeKitchenList = !isBarStation && !isKitchenLoading && !kitchenApiError;
+  takeawayTickets.forEach((t) => {
+    const orderId = String(t.backendOrderId ?? "");
+    if (hasAuthoritativeKitchenList && orderId && !apiTakeawayOrderIds.has(orderId)) return;
+    mergedActiveMap.set(String(t.uniqueKey), t);
+  });
   apiTickets.forEach((t) => {
     const key = String(t.uniqueKey);
     const tableKey = `table-${t.id}`;
-    if (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey)) {
+    if (String(t.orderType).toLowerCase() === "takeaway" || (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey))) {
       mergedActiveMap.set(key, t);
     }
   });
@@ -716,9 +743,8 @@ export function KitchenKOTView({
   // Auto-record completion timer for any completed ticket that doesn't have one so it STOPS ticking immediately
   useEffect(() => {
     allKitchenTickets.forEach((t) => {
-      const isDone =
-        t.isPaid ||
-        (t.items && t.items.length > 0 && t.items.every(isItemCompleted));
+      const requiredItems = Array.isArray(t.items) ? t.items.filter(isRequiredKitchenItem) : [];
+      const isDone = requiredItems.length > 0 && requiredItems.every(isItemCompleted);
       const key = t.uniqueKey || `table-${t.id}`;
       if (isDone) {
         setCompletedTimers((prev) => {
@@ -745,7 +771,7 @@ export function KitchenKOTView({
   }, [allKitchenTickets]);
 
   // Filtered tickets based on selected table number, status, and search query
-  const filteredTables = allKitchenTickets.filter((t) => {
+  const ticketsMatchingOtherFilters = allKitchenTickets.filter((t) => {
     // 1. Table Number Filter: When user or admin clicks on a table number, show only that table
     if (selectedTableFilter !== "all") {
       const matchId = String(t.id) === String(selectedTableFilter);
@@ -771,27 +797,19 @@ export function KitchenKOTView({
       if (!matchesTable && !matchesItem) return false;
     }
 
-    // 3. Status filter
-    if (statusFilter !== "all") {
-      const items = Array.isArray(t?.items) ? t.items : [];
-      const hasCooking = items.some(isItemCooking);
-      const hasReceived = items.some(isItemReceived);
-
-      if (statusFilter === "pending" && !hasReceived) return false;
-      if (statusFilter === "cooking" && !hasCooking) return false;
-    }
-
     return true;
   });
 
+  const selectedStatus = statusFilter === "pending" ? "received" : statusFilter;
+  const filteredTables = statusFilter === "all"
+    ? ticketsMatchingOtherFilters
+    : ticketsMatchingOtherFilters.filter((ticket) => getTicketStatus(ticket) === selectedStatus);
+
   // Kitchen stats: accurately reflect Received -> Cooking -> Completed
-  const totalOrdersCount = allKitchenTickets.length;
-  const pendingOrdersCount = allKitchenTickets.filter(
-    (t) => Array.isArray(t?.items) && t.items.some(isItemReceived),
-  ).length;
-  const cookingOrdersCount = allKitchenTickets.filter(
-    (t) => Array.isArray(t?.items) && t.items.some(isItemCooking),
-  ).length;
+  const totalOrdersCount = ticketsMatchingOtherFilters.length;
+  const pendingOrdersCount = ticketsMatchingOtherFilters.filter((t) => getTicketStatus(t) === "received").length;
+  const cookingOrdersCount = ticketsMatchingOtherFilters.filter((t) => getTicketStatus(t) === "cooking").length;
+  const completedOrdersCount = ticketsMatchingOtherFilters.filter((t) => getTicketStatus(t) === "completed").length;
   // Auto-switch to "Received" tab when a new KOT arrives
   const prevPendingRef = useRef(pendingOrdersCount);
   useEffect(() => {
@@ -826,6 +844,25 @@ export function KitchenKOTView({
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
     const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
 
+    if (ticket.backendOrderId) {
+      try {
+        if (itemId != null && (!targetItem || !Number.isFinite(Number(targetItem.id)))) {
+          reportKitchenActionError({ error: "Kitchen item has no saved order-item ID." }, "Start cooking");
+          return;
+        }
+        const result = targetItem && Number.isFinite(Number(targetItem.id))
+          ? await apiUpdateKitchenItemStatus(targetItem.id, "cooking")
+          : await apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch);
+        if (result?.success === false || result?.data?.success === false) {
+          reportKitchenActionError(result, "Start cooking");
+          return;
+        }
+      } catch (error) {
+        reportKitchenActionError({ error: error?.message }, "Start cooking");
+        return;
+      }
+    }
+
     if (isTakeaway) {
       updateLocalTakeawayItemStatus(ticketKey, itemId, "cooking");
       onUpdateItemKotStatus?.(ticketKey, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
@@ -836,15 +873,6 @@ export function KitchenKOTView({
       onUpdateItemKotStatus?.(localTableId, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     }
 
-    if (ticket.backendOrderId && !String(ticketKey).startsWith("takeaway-")) {
-      try {
-        if (itemId && !String(itemId).startsWith("item-")) {
-          apiUpdateKitchenItemStatus(itemId, "cooking").catch(() => {});
-        } else {
-          apiStartKitchenTicket(ticket.backendOrderId, ticket.kotBatch).catch(() => {});
-        }
-      } catch {}
-    }
     refreshKitchenTicketsRef.current?.();
   };
 
@@ -872,19 +900,36 @@ export function KitchenKOTView({
       !itemId ||
       (currentTable?.items &&
         currentTable.items.every((i) => String(i.id) === String(itemId) || isItemCompleted(i)));
+    const isTakeaway = String(currentTable.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
+    const targetItem = itemId && currentTable.items.find((item) => String(item.id) === String(itemId));
+
+    if (currentTable.backendOrderId) {
+      try {
+        if (itemId != null && (!targetItem || !Number.isFinite(Number(targetItem.id)))) {
+          reportKitchenActionError({ error: "Kitchen item has no saved order-item ID." }, "Complete preparation");
+          return;
+        }
+        const result = targetItem && Number.isFinite(Number(targetItem.id))
+          ? await apiUpdateKitchenItemStatus(targetItem.id, "ready")
+          : await apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch);
+        if (result?.success === false || result?.data?.success === false) {
+          reportKitchenActionError(result, "Complete preparation");
+          return;
+        }
+      } catch (error) {
+        reportKitchenActionError({ error: error?.message }, "Complete preparation");
+        return;
+      }
+    }
+
     if (willAllBeReady && durationStr) {
       setCompletedTimers((prev) => ({
         ...prev,
         [ticketKey]: durationStr,
         [`table-${currentTable.id}`]: durationStr,
-        ...(currentTable?.uniqueKey
-          ? { [currentTable.uniqueKey]: durationStr }
-          : {}),
+        ...(currentTable?.uniqueKey ? { [currentTable.uniqueKey]: durationStr } : {}),
       }));
     }
-
-    const isTakeaway = String(currentTable.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
-    const targetItem = itemId && currentTable.items.find((item) => String(item.id) === String(itemId));
 
     if (isTakeaway) {
       updateLocalTakeawayItemStatus(ticketKey, itemId, "ready");
@@ -898,15 +943,6 @@ export function KitchenKOTView({
       onUpdateItemKotStatus?.(localTableId, "ready", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     }
 
-    if (currentTable.backendOrderId && !String(ticketKey).startsWith("takeaway-")) {
-      try {
-        if (itemId && !String(itemId).startsWith("item-")) {
-          apiUpdateKitchenItemStatus(itemId, "ready").catch(() => {});
-        } else {
-          apiCompleteKitchenTicket(currentTable.backendOrderId, currentTable.kotBatch).catch(() => {});
-        }
-      } catch {}
-    }
     refreshKitchenTicketsRef.current?.();
   };
 
@@ -924,6 +960,25 @@ export function KitchenKOTView({
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
     const targetItem = itemId && ticket.items.find((item) => String(item.id) === String(itemId));
 
+    if (ticket.backendOrderId) {
+      const targetItems = itemId
+        ? ticket.items.filter((item) => String(item.id) === String(itemId))
+        : ticket.items.filter((item) => !isItemCompleted(item));
+      try {
+        const results = await Promise.all(targetItems
+          .filter((item) => Number.isFinite(Number(item.id)))
+          .map((item) => apiUpdateKitchenItemStatus(item.id, "queued")));
+        const failure = results.find((result) => result?.success === false || result?.data?.success === false);
+        if (failure) {
+          reportKitchenActionError(failure, "Reset item");
+          return;
+        }
+      } catch (error) {
+        reportKitchenActionError({ error: error?.message }, "Reset item");
+        return;
+      }
+    }
+
     if (isTakeaway) {
       updateLocalTakeawayItemStatus(ticketKey, itemId, "received");
       onUpdateItemKotStatus?.(ticketKey, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
@@ -934,14 +989,6 @@ export function KitchenKOTView({
       onUpdateItemKotStatus?.(localTableId, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     }
 
-    if (ticket.backendOrderId && !String(ticketKey).startsWith("takeaway-")) {
-      try {
-        const targetItems = itemId
-          ? ticket.items.filter((item) => String(item.id) === String(itemId))
-          : ticket.items.filter((item) => !isItemCompleted(item));
-        Promise.all(targetItems.map((item) => apiUpdateKitchenItemStatus(item.id, "queued"))).catch(() => {});
-      } catch {}
-    }
     refreshKitchenTicketsRef.current?.();
   };
 
@@ -1564,6 +1611,15 @@ export function KitchenKOTView({
                   badgeBg: "rgba(234, 88, 12, 0.25)",
                   badgeBorder: "rgba(234, 88, 12, 0.5)",
                 },
+                {
+                  id: "completed",
+                  label: "Completed",
+                  count: completedOrdersCount,
+                  dot: "#22c55e",
+                  badgeColor: "#86efac",
+                  badgeBg: "rgba(34, 197, 94, 0.2)",
+                  badgeBorder: "rgba(34, 197, 94, 0.45)",
+                },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1734,7 +1790,7 @@ export function KitchenKOTView({
                     selectedTableFilter === table.name;
                   const tableDot = matchingTickets.some(
                     (ticket) =>
-                      !ticket.isPaid && Array.isArray(ticket?.items) && ticket.items.some(isItemCooking),
+                      Array.isArray(ticket?.items) && ticket.items.some(isItemCooking),
                   )
                     ? "#ea580c"
                     : matchingTickets.length > 0
@@ -2041,17 +2097,12 @@ export function KitchenKOTView({
               className={`kot-cards-grid${selectedTableFilter !== "all" ? " kot-cards-grid--single" : ""}`}
             >
               {filteredTables.map((tbl) => {
-                const allServed =
-                  tbl.isPaid ||
-                  (tbl.items &&
-                    tbl.items.length > 0 &&
-                    tbl.items.every(isItemCompleted));
-                const isCooking =
-                  !tbl.isPaid && tbl.items && tbl.items.some(isItemCooking);
-                const compactStatus = allServed || tbl.isPaid
+                const ticketStatus = getTicketStatus(tbl);
+                const isCooking = ticketStatus === "cooking";
+                const compactStatus = ticketStatus === "completed"
                   ? { label: "Completed", color: "#22c55e" }
-                  : isCooking
-                    ? { label: "Preparing", color: "#f97316" }
+                  : ticketStatus === "cooking"
+                    ? { label: "Cooking", color: "#f59e0b" }
                     : { label: "Received", color: "#ef4444" };
                 const orderTimeLabel = formatDisplayTime(tbl.orderTime);
                 const isTakeawayOrder = String(tbl.orderType).toLowerCase() === "takeaway";
@@ -2117,16 +2168,12 @@ export function KitchenKOTView({
         {activeModalTicket &&
           (() => {
             const modalTicket = activeModalTicket;
-            const allServed =
-              modalTicket.isPaid ||
-              (modalTicket.items &&
-                modalTicket.items.length > 0 &&
-                modalTicket.items.every(isItemCompleted));
-            const isCooking =
-              !modalTicket.isPaid &&
-              modalTicket.items &&
-              modalTicket.items.some(isItemCooking);
-            const isReceived = !modalTicket.isPaid && !allServed && !isCooking;
+            const requiredItems = Array.isArray(modalTicket.items)
+              ? modalTicket.items.filter(isRequiredKitchenItem)
+              : [];
+            const allServed = requiredItems.length > 0 && requiredItems.every(isItemCompleted);
+            const isCooking = requiredItems.some(isItemCooking);
+            const isReceived = !allServed && !isCooking;
 
             const elapsedSec = modalTicket.orderTime
               ? parseTimeToSeconds(modalTicket.orderTime)
@@ -2160,7 +2207,7 @@ export function KitchenKOTView({
             if (!cookingStartedDisplay) {
               if (isCooking) {
                 cookingStartedDisplay = modalTicket.orderTime || "Started";
-              } else if (allServed || modalTicket.isPaid) {
+              } else if (allServed) {
                 cookingStartedDisplay =
                   modalTicket.cookingStartedAt ||
                   modalTicket.orderTime ||
@@ -2170,30 +2217,20 @@ export function KitchenKOTView({
               }
             }
 
-            let completedTimeDisplay =
-              modalTicket.completedAt || modalTicket.settledAt;
-            if (!completedTimeDisplay && (allServed || modalTicket.isPaid)) {
+            let completedTimeDisplay = modalTicket.completedAt;
+            if (!completedTimeDisplay && allServed) {
               completedTimeDisplay = "Ready";
             }
 
-            const modalPreparedCount = modalTicket.items
-              ? modalTicket.items.filter(isItemCompleted).length
-              : 0;
-            const modalTotalCount = modalTicket.items
-              ? modalTicket.items.length
-              : 0;
+            const modalPreparedCount = requiredItems.filter(isItemCompleted).length;
+            const modalTotalCount = requiredItems.length;
 
             let statusBadgeText = "";
             let statusBadgeColor = "#fb923c";
             let statusBadgeBg = "rgba(234, 88, 12, 0.22)";
             let statusBadgeBorder = "rgba(234, 88, 12, 0.55)";
 
-            if (modalTicket.isPaid) {
-              statusBadgeText = "💰 COMPLETED (PAID)";
-              statusBadgeColor = "var(--success)";
-              statusBadgeBg = "rgba(16, 185, 129, 0.22)";
-              statusBadgeBorder = "rgba(16, 185, 129, 0.55)";
-            } else if (allServed) {
+            if (allServed) {
               statusBadgeText = "PREPARATION COMPLETED";
               statusBadgeColor = "var(--success)";
               statusBadgeBg = "rgba(16, 185, 129, 0.22)";
@@ -2322,16 +2359,16 @@ export function KitchenKOTView({
                           <span
                             style={{
                               background: isLightTheme
-                                ? modalTicket.isPaid || allServed
+                                ? allServed
                                   ? "rgba(16, 185, 129, 0.12)"
                                   : "rgba(234, 88, 12, 0.12)"
                                 : statusBadgeBg,
                               color: isLightTheme
-                                ? modalTicket.isPaid || allServed
+                                ? allServed
                                   ? "#047857"
                                   : "#c2410c"
                                 : statusBadgeColor,
-                              border: `1px solid ${isLightTheme ? (modalTicket.isPaid || allServed ? "rgba(5, 150, 105, 0.45)" : "rgba(194, 65, 12, 0.4)") : statusBadgeBorder}`,
+                              border: `1px solid ${isLightTheme ? (allServed ? "rgba(5, 150, 105, 0.45)" : "rgba(194, 65, 12, 0.4)") : statusBadgeBorder}`,
                               padding: "2px 8px",
                               borderRadius: "10px",
                               fontSize: "0.68rem",
@@ -2477,11 +2514,11 @@ export function KitchenKOTView({
                         <div
                           style={{
                             background:
-                              isCooking || allServed || modalTicket.isPaid
+                              isCooking || allServed
                                 ? "rgba(255, 123, 0, 0.12)"
                                 : "rgba(var(--surface-rgb),0.04)",
                             border:
-                              isCooking || allServed || modalTicket.isPaid
+                              isCooking || allServed
                                 ? "1.5px solid rgba(255, 123, 0, 0.45)"
                                 : "1px solid rgba(var(--surface-rgb),0.12)",
                             borderRadius: "10px",
@@ -2497,7 +2534,7 @@ export function KitchenKOTView({
                               justifyContent: "center",
                               gap: "4px",
                               color:
-                                isCooking || allServed || modalTicket.isPaid
+                                isCooking || allServed
                                 ? isLightTheme
                                   ? "#c2410c"
                                   : "#fb923c"
@@ -2517,7 +2554,6 @@ export function KitchenKOTView({
                               color:
                                 isCooking ||
                                 allServed ||
-                                modalTicket.isPaid ||
                                 modalTicket.cookingStartedAt
                                 ? cardPrimaryText
                                 : isLightTheme
@@ -2551,7 +2587,7 @@ export function KitchenKOTView({
                           >
                             {isCooking
                               ? "Active Cooking"
-                              : allServed || modalTicket.isPaid
+                              : allServed
                                 ? "Cooked"
                                 : "Waiting"}
                           </div>
@@ -2561,11 +2597,11 @@ export function KitchenKOTView({
                         <div
                           style={{
                             background:
-                              allServed || modalTicket.isPaid
+                              allServed
                                 ? "rgba(16, 185, 129, 0.14)"
                                 : "rgba(var(--surface-rgb),0.04)",
                             border:
-                              allServed || modalTicket.isPaid
+                              allServed
                                 ? "1.5px solid rgba(16, 185, 129, 0.5)"
                                 : "1px solid rgba(var(--surface-rgb),0.12)",
                             borderRadius: "10px",
@@ -2581,7 +2617,7 @@ export function KitchenKOTView({
                               justifyContent: "center",
                               gap: "4px",
                               color:
-                                allServed || modalTicket.isPaid
+                                allServed
                                 ? isLightTheme
                                   ? "#047857"
                                   : "#34d399"
@@ -2599,7 +2635,7 @@ export function KitchenKOTView({
                               fontSize: "1rem",
                               fontWeight: 900,
                               color:
-                                allServed || modalTicket.isPaid
+                                allServed
                                 ? isLightTheme
                                   ? "#047857"
                                   : "#34d399"
@@ -2614,7 +2650,7 @@ export function KitchenKOTView({
                               textOverflow: "ellipsis",
                             }}
                           >
-                            {allServed || modalTicket.isPaid
+                            {allServed
                               ? formatDisplayTime(completedTimeDisplay)
                               : isCooking
                                 ? modalPreparedCount > 0
@@ -2635,12 +2671,10 @@ export function KitchenKOTView({
                               textOverflow: "ellipsis",
                             }}
                           >
-                            {(allServed || modalTicket.isPaid) &&
+                            {(allServed) &&
                             stoppedDuration
                               ? `(${stoppedDuration})`
-                              : !allServed &&
-                                  !modalTicket.isPaid &&
-                                  modalTicket.orderTime
+                              : !allServed && modalTicket.orderTime
                                 ? `(${elapsedFormatted})`
                                 : ""}
                           </div>
@@ -2931,7 +2965,7 @@ export function KitchenKOTView({
                         gap: "0.5rem",
                       }}
                     >
-                      {!modalTicket.isPaid && isReceived && (
+                      {isReceived && (
                         <button
                           onClick={() => handleStartCooking(modalTicket.uniqueKey)}
                           style={{
@@ -2958,7 +2992,7 @@ export function KitchenKOTView({
                         </button>
                       )}
 
-                      {!modalTicket.isPaid && isCooking && (
+                      {isCooking && (
                         <button
                           onClick={() =>
                             handleCompletePreparation(modalTicket.uniqueKey)

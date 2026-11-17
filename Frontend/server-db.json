@@ -1,4 +1,6 @@
 {
+  "avsr_last_invoice_date_v2": "17 Nov 2026",
+  "avsr_daily_inv_cnt_17_Nov_2026": "12",
   "gourmet_pos_staff_v1": [
     {
       "staffId": 1,
@@ -84,10 +86,5 @@
       "avatarInitial": "K",
       "createdAt": "2026-10-09T04:27:02.069081"
     }
-<<<<<<< HEAD
-  ],
-  "gourmet_pos_tables_v2_inr": []
-=======
   ]
->>>>>>> 509af6d1c27def55722d33ba731cc5e49e54962c
 }

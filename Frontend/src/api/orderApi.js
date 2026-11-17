@@ -196,7 +196,7 @@ export async function apiGetOrderHistory({ orderType, remoteOnly = false } = {})
 export async function apiGetTakeawayOrderHistory() {
   const response = await apiGetOrderHistory({ orderType: "Takeaway", remoteOnly: true });
   if (!response?.success || !Array.isArray(response.data?.orders)) return response;
-  const orders = response.data.orders.filter((order) => String(order.orderType ?? order.OrderType ?? "").toLowerCase() === "takeaway");
+  const orders = response.data.orders.filter((order) => String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase() === "takeaway");
   return {
     ...response,
     data: {
