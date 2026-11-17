@@ -154,6 +154,213 @@ export function isDisallowedDineCategory(raw) {
   return false;
 }
 
+export const STANDARD_MENU_CATEGORIES = [
+  {
+    value: "Non-Veg Pizzas",
+    slug: "non-veg-pizzas",
+    label: "Non-Veg Pizzas",
+    order: 10,
+    aliases: [
+      "non-veg pizzas",
+      "non veg pizzas",
+      "non veg pizza",
+      "non-veg pizza",
+      "non-veg-pizzas",
+      "pizza non-veg",
+      "nonveg pizza",
+      "nonveg pizzas",
+    ],
+  },
+  {
+    value: "Veg Pizzas",
+    slug: "veg-pizzas",
+    label: "Veg Pizzas",
+    order: 20,
+    aliases: [
+      "veg pizzas",
+      "veg pizza",
+      "veg-pizzas",
+      "pizza veg",
+      "vegetarian pizza",
+    ],
+  },
+  {
+    value: "Sandwiches",
+    slug: "sandwiches",
+    label: "Sandwiches",
+    order: 30,
+    aliases: ["sandwiches", "sandwich"],
+  },
+  {
+    value: "Appetisers",
+    slug: "appetisers",
+    label: "Appetisers",
+    order: 40,
+    aliases: [
+      "appetisers",
+      "appetiser",
+      "appetizers",
+      "appetizer",
+      "starters",
+      "starter",
+    ],
+  },
+  {
+    value: "Mini Pizza Combos",
+    slug: "mini-pizza-combos",
+    label: "Mini Pizza Combos",
+    order: 50,
+    aliases: [
+      "mini pizza combos",
+      "mini pizza combo",
+      "mini-pizza-combos",
+      "pizza combos",
+      "combos",
+    ],
+  },
+  {
+    value: "Cold Beverages",
+    slug: "cold-beverages",
+    label: "Cold Beverages",
+    order: 60,
+    aliases: [
+      "cold beverages",
+      "cold beverage",
+      "cold-beverages",
+      "cold drinks",
+    ],
+  },
+  {
+    value: "Hot Beverages",
+    slug: "hot-beverages",
+    label: "Hot Beverages",
+    order: 70,
+    aliases: [
+      "hot beverages",
+      "hot beverage",
+      "hot-beverages",
+      "hot drinks",
+      "coffee & tea",
+    ],
+  },
+  {
+    value: "Half and Half Pizza",
+    slug: "half-and-half-pizza",
+    label: "Half and Half Pizza",
+    order: 80,
+    aliases: [
+      "half and half pizza",
+      "half & half pizza",
+      "half-and-half-pizza",
+      "half and half",
+    ],
+  },
+  {
+    value: "Signature Pastas",
+    slug: "signature-pastas",
+    label: "Signature Pastas",
+    order: 90,
+    aliases: [
+      "signature pastas",
+      "signature pasta",
+      "pastas",
+      "pasta",
+      "signature-pastas",
+    ],
+  },
+  {
+    value: "Desserts",
+    slug: "desserts",
+    label: "Desserts",
+    order: 100,
+    aliases: ["desserts", "dessert", "sweets"],
+  },
+  {
+    value: "Lunch Menu",
+    slug: "lunch-menu",
+    label: "Lunch Menu",
+    order: 110,
+    aliases: [
+      "lunch menu",
+      "lunch",
+      "meals",
+      "thali",
+      "rice items",
+      "lunch-menu",
+      "south indian",
+    ],
+  },
+];
+
+export function findStandardCategory(rawStr) {
+  if (!rawStr) return null;
+  const lower = String(rawStr).trim().toLowerCase();
+  const alpha = lower.replace(/[^a-z0-9]/g, "");
+  return (
+    STANDARD_MENU_CATEGORIES.find(
+      (c) =>
+        c.value.toLowerCase() === lower ||
+        c.slug.toLowerCase() === lower ||
+        c.label.toLowerCase() === lower ||
+        c.value.replace(/[^a-z0-9]/g, "") === alpha ||
+        c.slug.replace(/[^a-z0-9]/g, "") === alpha ||
+        c.aliases.some(
+          (a) =>
+            a.toLowerCase() === lower ||
+            a.replace(/[^a-z0-9]/g, "") === alpha,
+        ),
+    ) || null
+  );
+}
+
+export function isItemVeg(item) {
+  if (!item) return false;
+  if (item.isVeg === true || item.is_veg === 1 || item.is_veg === true) return true;
+  if (item.isVeg === false || item.is_veg === 0 || item.is_veg === false) return false;
+  const dt = String(item.dietaryType || item.dietary_type || item.dietary || "").toUpperCase();
+  if (dt.includes("NON")) return false;
+  if (dt.includes("VEG")) return true;
+  return false;
+}
+
+export function isCategoryMatch(itemCategory, selectedCategoryFilter) {
+  if (
+    !selectedCategoryFilter ||
+    selectedCategoryFilter === "all" ||
+    selectedCategoryFilter === ""
+  ) {
+    return true;
+  }
+  const selRaw = String(selectedCategoryFilter).trim().toLowerCase();
+  const itemRaw = String(itemCategory ?? "").trim().toLowerCase();
+  if (!itemRaw) return false;
+
+  // Direct exact string equality
+  if (itemRaw === selRaw) return true;
+
+  // Stripped alphanumeric match (e.g. "veg-pizzas" === "Veg Pizzas")
+  const selAlpha = selRaw.replace(/[^a-z0-9]/g, "");
+  const itemAlpha = itemRaw.replace(/[^a-z0-9]/g, "");
+  if (selAlpha && itemAlpha && selAlpha === itemAlpha) return true;
+
+  // CRITICAL: Strict Veg vs Non-Veg distinction!
+  // A filter for veg MUST NEVER match non-veg and vice-versa
+  const selIsNonVeg = selRaw.includes("non");
+  const itemIsNonVeg = itemRaw.includes("non");
+  if (selIsNonVeg !== itemIsNonVeg && (selRaw.includes("veg") || itemRaw.includes("veg"))) {
+    return false;
+  }
+
+  // Match via standard categories
+  const selStd = findStandardCategory(selRaw);
+  const itemStd = findStandardCategory(itemRaw);
+  if (selStd && itemStd) {
+    return selStd.slug === itemStd.slug;
+  }
+
+  return false;
+}
+
 export function inferIngredientCategory(rawName = "") {
   const name = String(rawName || "").toLowerCase().trim();
   if (/chicken|mutton|fish|prawn|lamb|meat|egg|beef|pork|bacon|sausage/i.test(name)) return "Meat & Seafood";
@@ -1349,92 +1556,17 @@ export function AdminPortal({
     );
 
     // Standard restaurant menu categories
-    const standardCategories = [
-      {
-        value: "non-veg-pizzas",
-        label: "Non-Veg Pizzas",
-        order: 10,
-        aliases: ["non-veg pizzas", "non veg pizzas", "non veg pizza", "non-veg pizza", "non-veg-pizzas"],
-      },
-      {
-        value: "veg-pizzas",
-        label: "Veg Pizzas",
-        order: 20,
-        aliases: ["veg pizzas", "veg pizza", "veg-pizzas"],
-      },
-      {
-        value: "sandwiches",
-        label: "Sandwiches",
-        order: 30,
-        aliases: ["sandwiches", "sandwich"],
-      },
-      {
-        value: "appetisers",
-        label: "Appetisers",
-        order: 40,
-        aliases: ["appetisers", "appetiser", "appetizers", "appetizer", "starters", "starter"],
-      },
-      {
-        value: "mini-pizza-combos",
-        label: "Mini Pizza Combos",
-        order: 50,
-        aliases: ["mini pizza combos", "mini pizza combo", "mini-pizza-combos", "pizza combos", "combos"],
-      },
-      {
-        value: "cold-beverages",
-        label: "Cold Beverages",
-        order: 60,
-        aliases: ["cold beverages", "cold beverage", "cold-beverages", "cold drinks"],
-      },
-      {
-        value: "hot-beverages",
-        label: "Hot Beverages",
-        order: 70,
-        aliases: ["hot beverages", "hot beverage", "hot-beverages", "hot drinks", "coffee & tea"],
-      },
-      {
-        value: "half-and-half-pizza",
-        label: "Half and Half Pizza",
-        order: 80,
-        aliases: ["half and half pizza", "half & half pizza", "half-and-half-pizza", "half and half"],
-      },
-      {
-        value: "signature-pastas",
-        label: "Signature Pastas",
-        order: 90,
-        aliases: ["signature pastas", "signature pasta", "pastas", "pasta", "signature-pastas"],
-      },
-      {
-        value: "desserts",
-        label: "Desserts",
-        order: 100,
-        aliases: ["desserts", "dessert", "sweets"],
-      },
-      {
-        value: "lunch-menu",
-        label: "Lunch Menu",
-        order: 110,
-        aliases: ["lunch menu", "lunch", "meals", "thali", "rice items", "lunch-menu", "south indian"],
-      },
-    ];
-
-    standardCategories.forEach((cat) => {
-      map.set(cat.value.toLowerCase(), { value: cat.value, label: cat.label, order: cat.order });
+    STANDARD_MENU_CATEGORIES.forEach((cat) => {
+      map.set(cat.slug, {
+        value: cat.value,
+        label: cat.label,
+        order: cat.order,
+      });
     });
-
-    const findStandard = (rawStr) => {
-      const lower = String(rawStr || "").trim().toLowerCase();
-      return standardCategories.find(
-        (c) =>
-          c.value.toLowerCase() === lower ||
-          c.label.toLowerCase() === lower ||
-          c.aliases.some((a) => a.toLowerCase() === lower)
-      );
-    };
 
     const getCleanCategoryLabel = (catVal) => {
       const s = String(catVal || "").trim();
-      const std = findStandard(s);
+      const std = findStandardCategory(s);
       if (std) return std.label;
       const str = s.replace(/[-_]/g, " ");
       return str.charAt(0).toUpperCase() + str.slice(1);
@@ -1452,8 +1584,8 @@ export function AdminPortal({
         return;
       }
 
-      // If matches any standard category (e.g. "Biryanis & Rice Special", "Tandoori Roti", "Rice items"), skip to avoid duplicates
-      if (findStandard(trimmed)) return;
+      // If matches any standard category, skip to avoid duplicates
+      if (findStandardCategory(trimmed)) return;
 
       const canonicalKey = trimmed.toLowerCase().replace(/[-_]/g, " ");
       if (!map.has(canonicalKey)) {
@@ -1472,7 +1604,7 @@ export function AdminPortal({
       const lower = trimmed.toLowerCase();
       if (dishNames.has(lower)) return;
 
-      if (findStandard(trimmed)) return;
+      if (findStandardCategory(trimmed)) return;
 
       const canonicalKey = lower.replace(/[-_]/g, " ");
       if (!map.has(canonicalKey)) {
@@ -2013,31 +2145,36 @@ export function AdminPortal({
     if (isDrinkItem(item)) return false;
 
     const query = searchFilter.trim().toLowerCase();
-    return (
+    const matchesSearch =
+      !query ||
       [item.name, item.description, item.category].some((value) =>
         String(value ?? "")
           .toLowerCase()
           .includes(query),
-      ) &&
-      (!menuFilters.category ||
-        (() => {
-          const sel = menuFilters.category.toLowerCase().trim();
-          const itemCat = String(item.category ?? "").toLowerCase().trim();
-          if (
-            itemCat === sel ||
-            itemCat.replace(/[\s-_]/g, "") === sel.replace(/[\s-_]/g, "") ||
-            itemCat.includes(sel.replace(/[-_]/g, " ")) ||
-            sel.replace(/[-_]/g, " ").includes(itemCat)
-          ) return true;
-          return false;
-        })()) &&
-      (!menuFilters.dietary ||
-        Boolean(item.isVeg) === (menuFilters.dietary === "veg")) &&
-      (!menuFilters.availability ||
-        (item.isAvailable !== false) ===
-          (menuFilters.availability === "available")) &&
-      (!menuFilters.special ||
-        Boolean(item.isChefSpecial) === (menuFilters.special === "special"))
+      );
+
+    const matchesCategory = isCategoryMatch(item.category, menuFilters.category);
+
+    const matchesDietary =
+      !menuFilters.dietary ||
+      (menuFilters.dietary === "veg" ? isItemVeg(item) : !isItemVeg(item));
+
+    const matchesAvailability =
+      !menuFilters.availability ||
+      (item.isAvailable !== false) ===
+        (menuFilters.availability === "available");
+
+    const matchesSpecial =
+      !menuFilters.special ||
+      Boolean(item.isChefSpecial ?? item.isChefsSpecial ?? item.isSpecial) ===
+        (menuFilters.special === "special");
+
+    return (
+      matchesSearch &&
+      matchesCategory &&
+      matchesDietary &&
+      matchesAvailability &&
+      matchesSpecial
     );
   });
 
@@ -2724,14 +2861,15 @@ export function AdminPortal({
                                       whiteSpace: "nowrap",
                                     }}
                                   >
-                                    {allCategoryOptions.find(
-                                      (option) =>
-                                        option.value.toLowerCase() ===
-                                        String(item.category || "").toLowerCase(),
-                                    )?.label || item.category.replace(/[-_]/g, " ")}
+                                    {findStandardCategory(item.category)?.label ||
+                                      allCategoryOptions.find(
+                                        (option) =>
+                                          option.value.toLowerCase() ===
+                                          String(item.category || "").toLowerCase(),
+                                      )?.label || String(item.category || "").replace(/[-_]/g, " ")}
                                   </td>
                                   <td data-label="Dietary" style={{ padding: "0.6rem 0.85rem" }}>
-                                    {item.isVeg ? (
+                                    {isItemVeg(item) ? (
                                       <span
                                         style={{
                                           background: "rgba(16, 185, 129, 0.12)",
