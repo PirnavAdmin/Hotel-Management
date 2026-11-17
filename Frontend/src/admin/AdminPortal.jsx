@@ -3023,119 +3023,130 @@ export function AdminPortal({
                               </select>
                             </div>
 
-                            {/* Page Buttons */}
-                            <div
-                              style={{
+                            {/* Page Buttons: « First  < Prev  1  2  3  4  Next >  Last » */}
+                            {(() => {
+                              const maxVisiblePages = 4;
+                              let startPage = Math.max(1, safeMenuPage - Math.floor(maxVisiblePages / 2));
+                              let endPage = startPage + maxVisiblePages - 1;
+                              if (endPage > totalMenuPages) {
+                                endPage = totalMenuPages;
+                                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                              }
+                              const visiblePages = [];
+                              for (let p = startPage; p <= endPage; p++) {
+                                visiblePages.push(p);
+                              }
+
+                              const navBtnStyle = (disabled) => ({
+                                height: "28px",
+                                padding: "0 10px",
+                                borderRadius: "7px",
+                                background: disabled
+                                  ? "rgba(255, 255, 255, 0.03)"
+                                  : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
+                                border: "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
+                                color: disabled ? "#475569" : "var(--text-main, #e2e8f0)",
+                                cursor: disabled ? "not-allowed" : "pointer",
+                                opacity: disabled ? 0.45 : 1,
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "0.25rem",
-                              }}
-                            >
-                              <button
-                                onClick={() =>
-                                  setMenuPage((p) => Math.max(1, p - 1))
-                                }
-                                disabled={safeMenuPage === 1}
-                                style={{
-                                  height: "24px",
-                                  padding: "0 6px",
-                                  borderRadius: "5px",
-                                  background:
-                                    safeMenuPage === 1
-                                      ? "rgba(var(--surface-rgb),0.02)"
-                                      : "rgba(var(--surface-rgb),0.06)",
-                                  border: "1px solid var(--neutral-border)",
-                                  color:
-                                    safeMenuPage === 1 ? "#475569" : "var(--text-muted)",
-                                  cursor:
-                                    safeMenuPage === 1
-                                      ? "not-allowed"
-                                      : "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "2px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 600,
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Previous page"
-                              >
-                                <ChevronLeft size={13} />
-                                <span>Prev</span>
-                              </button>
+                                justifyContent: "center",
+                                gap: "3px",
+                                fontSize: "0.75rem",
+                                fontWeight: 600,
+                                transition: "all 0.15s ease",
+                              });
 
-                              {Array.from(
-                                { length: totalMenuPages },
-                                (_, i) => i + 1,
-                              ).map((page) => {
-                                const isActive = page === safeMenuPage;
-                                return (
+                              return (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
+                                  }}
+                                >
+                                  {/* « First */}
                                   <button
-                                    key={page}
-                                    onClick={() => setMenuPage(page)}
-                                    style={{
-                                      height: "24px",
-                                      minWidth: "24px",
-                                      padding: "0 5px",
-                                      borderRadius: "5px",
-                                      background: isActive
-                                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                                        : "transparent",
-                                      border: isActive
-                                        ? "none"
-                                        : "1px solid rgba(var(--surface-rgb),0.08)",
-                                      color: isActive ? "#ffffff" : "var(--text-dim)",
-                                      cursor: "pointer",
-                                      fontSize: "0.72rem",
-                                      fontWeight: isActive ? 800 : 500,
-                                      boxShadow: isActive
-                                        ? "0 2px 8px rgba(245, 158, 11, 0.35)"
-                                        : "none",
-                                      transition: "all 0.15s ease",
-                                    }}
+                                    type="button"
+                                    onClick={() => setMenuPage(1)}
+                                    disabled={safeMenuPage === 1}
+                                    style={navBtnStyle(safeMenuPage === 1)}
+                                    title="Go to first page"
                                   >
-                                    {page}
+                                    « First
                                   </button>
-                                );
-                              })}
 
-                              <button
-                                onClick={() =>
-                                  setMenuPage((p) =>
-                                    Math.min(totalMenuPages, p + 1),
-                                  )
-                                }
-                                disabled={safeMenuPage === totalMenuPages}
-                                style={{
-                                  height: "24px",
-                                  padding: "0 6px",
-                                  borderRadius: "5px",
-                                  background:
-                                    safeMenuPage === totalMenuPages
-                                      ? "rgba(var(--surface-rgb),0.02)"
-                                      : "rgba(var(--surface-rgb),0.06)",
-                                  border: "1px solid var(--neutral-border)",
-                                  color:
-                                    safeMenuPage === totalMenuPages
-                                      ? "#475569"
-                                      : "var(--text-muted)",
-                                  cursor:
-                                    safeMenuPage === totalMenuPages
-                                      ? "not-allowed"
-                                      : "pointer",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: "2px",
-                                  fontSize: "0.72rem",
-                                  fontWeight: 600,
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Next page"
-                              >
-                                <span>Next</span>
-                                <ChevronRight size={13} />
-                              </button>
-                            </div>
+                                  {/* < Prev */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+                                    disabled={safeMenuPage === 1}
+                                    style={navBtnStyle(safeMenuPage === 1)}
+                                    title="Go to previous page"
+                                  >
+                                    &lt; Prev
+                                  </button>
+
+                                  {/* Visible Page Numbers */}
+                                  {visiblePages.map((page) => {
+                                    const isActive = page === safeMenuPage;
+                                    return (
+                                      <button
+                                        key={page}
+                                        type="button"
+                                        onClick={() => setMenuPage(page)}
+                                        style={{
+                                          height: "28px",
+                                          minWidth: "28px",
+                                          padding: "0 8px",
+                                          borderRadius: "7px",
+                                          background: isActive
+                                            ? "#0d5c56"
+                                            : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
+                                          border: isActive
+                                            ? "1px solid #14b8a6"
+                                            : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
+                                          color: isActive ? "#ffffff" : "var(--text-main, #e2e8f0)",
+                                          cursor: "pointer",
+                                          fontSize: "0.78rem",
+                                          fontWeight: isActive ? 800 : 600,
+                                          boxShadow: isActive
+                                            ? "0 2px 8px rgba(13, 92, 86, 0.45)"
+                                            : "none",
+                                          transition: "all 0.15s ease",
+                                        }}
+                                      >
+                                        {page}
+                                      </button>
+                                    );
+                                  })}
+
+                                  {/* Next > */}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setMenuPage((p) => Math.min(totalMenuPages, p + 1))
+                                    }
+                                    disabled={safeMenuPage === totalMenuPages}
+                                    style={navBtnStyle(safeMenuPage === totalMenuPages)}
+                                    title="Go to next page"
+                                  >
+                                    Next &gt;
+                                  </button>
+
+                                  {/* Last » */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setMenuPage(totalMenuPages)}
+                                    disabled={safeMenuPage === totalMenuPages}
+                                    style={navBtnStyle(safeMenuPage === totalMenuPages)}
+                                    title="Go to last page"
+                                  >
+                                    Last »
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       )}

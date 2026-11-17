@@ -1800,5 +1800,45 @@
       "isChefSpecial": true,
       "isAvailable": true
     }
-  ]
+  ],
+  "gourmet_pos_past_orders_v2_inr": [],
+  "gourmet_pos_inventory_purchases_v1": [],
+  "gourmet_pos_settings_v1": {
+    "restaurantName": "",
+    "tagline": "",
+    "phone": "",
+    "address": "",
+    "gstin": "",
+    "taxRate": 5,
+    "serviceChargeRate": 5,
+    "currency": "₹",
+    "receiptHeader": "",
+    "receiptFooter": "",
+    "selectedQrId": "",
+    "paymentQrs": [
+      {
+        "id": "qr-1",
+        "label": "QR 1",
+        "image": null,
+        "active": false
+      },
+      {
+        "id": "qr-2",
+        "label": "QR 2",
+        "image": null,
+        "active": false
+      },
+      {
+        "id": "qr-3",
+        "label": "QR 3",
+        "image": null,
+        "active": false
+      }
+    ],
+    "showLogoOnReceipt": true,
+    "showAddressOnReceipt": true,
+    "showGstBreakdown": true,
+    "lowStockAlertsEnabled": true,
+    "showBarHeaderToggle": false
+  }
 }
