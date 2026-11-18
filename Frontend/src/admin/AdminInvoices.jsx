@@ -1456,106 +1456,131 @@ export function AdminInvoices({
                   ))}
                 </select>
               </div>
-              <div
-                style={{
+              {/* Page Buttons: « First  < Prev  1  2  3  4  Next >  Last » */}
+              {(() => {
+                const maxVisiblePages = 4;
+                let startPage = Math.max(1, visiblePage - Math.floor(maxVisiblePages / 2));
+                let endPage = startPage + maxVisiblePages - 1;
+                if (endPage > pageCount) {
+                  endPage = pageCount;
+                  startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
+                const visiblePages = [];
+                for (let p = startPage; p <= endPage; p++) {
+                  visiblePages.push(p);
+                }
+
+                const navBtnStyle = (disabled) => ({
+                  height: "26px",
+                  padding: "0 8px",
+                  borderRadius: "6px",
+                  background: disabled
+                    ? "rgba(255, 255, 255, 0.03)"
+                    : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
+                  border: "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
+                  color: disabled ? "#475569" : "var(--text-main, #e2e8f0)",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  opacity: disabled ? 0.45 : 1,
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.25rem",
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label="Previous page"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.max(1, page - 1))
-                  }
-                  disabled={visiblePage === 1}
-                  style={{
-                    height: "24px",
-                    padding: "0 6px",
-                    borderRadius: "5px",
-                    background:
-                      visiblePage === 1
-                        ? "rgba(var(--surface-rgb),0.02)"
-                        : "rgba(var(--surface-rgb),0.06)",
-                    border: "1px solid var(--neutral-border)",
-                    color: visiblePage === 1 ? "var(--text-dim)" : "var(--text-muted)",
-                    cursor: visiblePage === 1 ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2px",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  <ChevronLeft size={13} />
-                  <span>Prev</span>
-                </button>
-                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                  (page) => {
-                    const isActive = page === visiblePage;
-                    return (
-                      <button
-                        key={page}
-                        type="button"
-                        aria-label={`Page ${page}`}
-                        aria-current={isActive ? "page" : undefined}
-                        onClick={() => setCurrentPage(page)}
-                        style={{
-                          height: "24px",
-                          minWidth: "24px",
-                          padding: "0 5px",
-                          borderRadius: "5px",
-                          background: isActive
-                            ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                            : "transparent",
-                          border: isActive
-                            ? "none"
-                            : "1px solid rgba(var(--surface-rgb),0.08)",
-                          color: isActive ? "#ffffff" : "var(--text-dim)",
-                          cursor: "pointer",
-                          fontSize: "0.72rem",
-                          fontWeight: isActive ? 800 : 500,
-                          boxShadow: isActive
-                            ? "0 2px 8px rgba(245, 158, 11, 0.35)"
-                            : "none",
-                        }}
-                      >
-                        {page}
-                      </button>
-                    );
-                  },
-                )}
-                <button
-                  type="button"
-                  aria-label="Next page"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.min(pageCount, page + 1))
-                  }
-                  disabled={visiblePage === pageCount}
-                  style={{
-                    height: "24px",
-                    padding: "0 6px",
-                    borderRadius: "5px",
-                    background:
-                      visiblePage === pageCount
-                        ? "rgba(var(--surface-rgb),0.02)"
-                        : "rgba(var(--surface-rgb),0.06)",
-                    border: "1px solid var(--neutral-border)",
-                    color: visiblePage === pageCount ? "var(--text-dim)" : "var(--text-muted)",
-                    cursor:
-                      visiblePage === pageCount ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "2px",
-                    fontSize: "0.72rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  <span>Next</span>
-                  <ChevronRight size={13} />
-                </button>
-              </div>
+                  justifyContent: "center",
+                  gap: "2px",
+                  fontSize: "0.74rem",
+                  fontWeight: 600,
+                  transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                });
+
+                return (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                    }}
+                  >
+                    {/* « First */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={visiblePage === 1}
+                      style={navBtnStyle(visiblePage === 1)}
+                      title="Go to first page"
+                    >
+                      « First
+                    </button>
+
+                    {/* < Prev */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={visiblePage === 1}
+                      style={navBtnStyle(visiblePage === 1)}
+                      title="Go to previous page"
+                    >
+                      &lt; Prev
+                    </button>
+
+                    {/* Visible Page Numbers */}
+                    {visiblePages.map((page) => {
+                      const isActive = page === visiblePage;
+                      return (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => setCurrentPage(page)}
+                          style={{
+                            height: "26px",
+                            minWidth: "26px",
+                            padding: "0 7px",
+                            borderRadius: "6px",
+                            background: isActive
+                              ? "#0d5c56"
+                              : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
+                            border: isActive
+                              ? "1px solid #14b8a6"
+                              : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
+                            color: isActive ? "#ffffff" : "var(--text-main, #e2e8f0)",
+                            cursor: "pointer",
+                            fontSize: "0.76rem",
+                            fontWeight: isActive ? 800 : 600,
+                            boxShadow: isActive
+                              ? "0 2px 8px rgba(13, 92, 86, 0.45)"
+                              : "none",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {page}
+                        </button>
+                      );
+                    })}
+
+                    {/* Next > */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(pageCount, p + 1))
+                      }
+                      disabled={visiblePage === pageCount}
+                      style={navBtnStyle(visiblePage === pageCount)}
+                      title="Go to next page"
+                    >
+                      Next &gt;
+                    </button>
+
+                    {/* Last » */}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(pageCount)}
+                      disabled={visiblePage === pageCount}
+                      style={navBtnStyle(visiblePage === pageCount)}
+                      title="Go to last page"
+                    >
+                      Last »
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
