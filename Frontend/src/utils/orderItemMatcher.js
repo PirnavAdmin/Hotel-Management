@@ -35,7 +35,7 @@ export function isSameMenuItem(a, b) {
 }
 
 /**
- * Consolidates duplicate order item rows in an array into single rows with summed quantities.
+ * Consolidates duplicate order item rows in an array into single rows with deduplicated / consistent quantities.
  */
 export function consolidateOrderItems(items = []) {
   if (!Array.isArray(items) || items.length === 0) return [];
@@ -46,12 +46,14 @@ export function consolidateOrderItems(items = []) {
     const existingIndex = consolidated.findIndex((c) => isSameMenuItem(c, item));
     if (existingIndex > -1) {
       const existing = consolidated[existingIndex];
+      // When duplicate rows appear from duplicate SSE or API calls, take the maximum intended quantity
+      const cleanQty = Math.max(Number(existing.quantity) || 1, Number(item.quantity) || 1);
       consolidated[existingIndex] = {
         ...existing,
         ...item,
         id: existing.id || item.id,
         menuItemId: existing.menuItemId ?? item.menuItemId ?? existing.id ?? item.id,
-        quantity: Math.max(1, Number(existing.quantity) || 1),
+        quantity: cleanQty,
         notes: existing.notes || item.notes || "",
         kotStatus: existing.kotStatus === "ready" ? "ready" : (item.kotStatus || existing.kotStatus || "new"),
         kotSent: Boolean(existing.kotSent || item.kotSent),

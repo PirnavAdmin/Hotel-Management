@@ -44,6 +44,7 @@ import {
   formatDisplayTime,
 } from "../utils/timer";
 import { getBusinessDayKey } from "../utils/invoiceCounter";
+import { consolidateOrderItems, isSameMenuItem } from "../utils/orderItemMatcher";
 
 const formatCleanTableNum = (name, id) => {
   if (!name) return String(id ?? "");
@@ -546,7 +547,7 @@ export function KitchenKOTView({
       });
     })
     .map((table) => {
-      const activeStationItems = (table.items || [])
+      const rawActiveStationItems = (table.items || [])
         .filter((item) => {
           if (!item || ["cancelled", "canceled"].includes(getItemKotStatus(item))) return false;
           const isDrink = isDrinkItem(item, menuLookup);
@@ -566,6 +567,8 @@ export function KitchenKOTView({
           ).toLowerCase(),
           kotBatch: Number(item.kotBatch) || Number(table.kotBatch) || 1,
         }));
+
+      const activeStationItems = consolidateOrderItems(rawActiveStationItems);
 
       if (activeStationItems.length === 0) return null;
 
@@ -709,7 +712,7 @@ export function KitchenKOTView({
         : `active-${orderId}-${batch}`,
       isPaid: false,
       ticketType: "active",
-      items: (Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
+      items: consolidateOrderItems((Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
         const isDrink = isDrinkItem(item, menuLookup);
         const status = getItemKotStatus(item);
         return (
@@ -723,7 +726,7 @@ export function KitchenKOTView({
         name: item.name || item.Name || item.dishName || item.DishName || "Order Item",
         kotStatus: String(item.kotStatus || item.KotStatus || item.itemStatus || item.ItemStatus || ticket.ticketStatus || ticket.TicketStatus || "queued").toLowerCase(),
         kotBatch: Number(item.kotBatch ?? item.KotBatch) || batch,
-      })),
+      }))),
       orderTimestamp: parseSafeTime(orderTime),
     };
   }).filter((ticket) => {
@@ -2352,7 +2355,10 @@ export function KitchenKOTView({
         {/* ================= 6. TICKET / ORDER DETAILS POPUP MODAL ================= */}
         {activeModalTicket &&
           (() => {
-            const modalTicket = activeModalTicket;
+            const modalTicket = {
+              ...activeModalTicket,
+              items: consolidateOrderItems(activeModalTicket.items || []),
+            };
             const requiredItems = Array.isArray(modalTicket.items)
               ? modalTicket.items.filter(isRequiredKitchenItem)
               : [];

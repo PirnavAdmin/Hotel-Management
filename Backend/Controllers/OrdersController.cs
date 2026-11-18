@@ -62,6 +62,7 @@ public class OrdersController : ControllerBase
 
         foreach (var order in orders)
         {
+            await CleanDuplicateOrderItemsAsync(order);
             await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
             await PopulateDisplayFields(order);
             RecalculateTotals(order);
@@ -154,6 +155,7 @@ public class OrdersController : ControllerBase
             return NotFound(new { message = $"Order {id} not found." });
         }
 
+        await CleanDuplicateOrderItemsAsync(order);
         await PopulateDisplayFields(order);
         RecalculateTotals(order);
 
@@ -208,6 +210,7 @@ public class OrdersController : ControllerBase
             return Ok(null);
         }
 
+        await CleanDuplicateOrderItemsAsync(order);
         await PopulateDisplayFields(order);
         RecalculateTotals(order);
 
@@ -615,6 +618,12 @@ public class OrdersController : ControllerBase
 
             if (existingItem != null)
             {
+                // Rapid duplicate protection: if this exact item was added within the last 15 seconds, ignore duplicate call
+                if (existingItem.Quantity == itemInput.Quantity && Math.Abs((DateTime.UtcNow - existingItem.CreatedAt).TotalSeconds) < 15)
+                {
+                    continue;
+                }
+
                 existingItem.Quantity += itemInput.Quantity;
 
                 existingItem.TotalPrice =
@@ -630,6 +639,18 @@ public class OrdersController : ControllerBase
             }
             else
             {
+                // Idempotency check: if an active item for this exact dish was added within the last 20 seconds, skip duplicate creation
+                var recentMatch = order.Items.FirstOrDefault(i =>
+                    i.IsActive && !i.IsDeleted &&
+                    (i.MenuItemId == menuItemId || string.Equals(i.Name, itemInput.Name, StringComparison.OrdinalIgnoreCase)) &&
+                    i.VariantId == itemInput.VariantId &&
+                    Math.Abs((DateTime.UtcNow - i.CreatedAt).TotalSeconds) < 20);
+
+                if (recentMatch != null)
+                {
+                    continue;
+                }
+
                 var newItem = new OrderItem
                 {
                     OrderId = order.Id,
@@ -1825,14 +1846,41 @@ public class OrdersController : ControllerBase
 
 
     // ============================================================
-    // RECALCULATE TOTALS
+    // CLEAN DUPLICATE ITEMS & RECALCULATE TOTALS
     // ============================================================
+
+    private async Task CleanDuplicateOrderItemsAsync(Order order)
+    {
+        if (order?.Items == null || order.Items.Count <= 1) return;
+        try
+        {
+            var seenKeys = new HashSet<string>();
+            bool hasDuplicates = false;
+            foreach (var item in order.Items.Where(i => i.IsActive && !i.IsDeleted).ToList())
+            {
+                var key = $"{item.MenuItemId}_{item.Name?.Trim().ToLowerInvariant()}_{item.KotStatus?.ToLowerInvariant()}_{item.KotBatch}";
+                if (!seenKeys.Add(key))
+                {
+                    item.IsActive = false;
+                    item.IsDeleted = true;
+                    item.KotStatus = "Cancelled";
+                    hasDuplicates = true;
+                }
+            }
+            if (hasDuplicates)
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
+        catch { }
+    }
 
     private static void RecalculateTotals(Order order)
     {
-        order.Subtotal =
-            order.Items.Sum(i =>
-                i.Price * i.Quantity);
+        var activeItems = order.Items
+            .Where(i => i.IsActive && !i.IsDeleted && !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase));
+
+        order.Subtotal = activeItems.Sum(i => i.Price * i.Quantity);
 
         order.DiscountAmount =
             order.Subtotal *
@@ -1939,10 +1987,17 @@ public class OrdersController : ControllerBase
             CreatedAt =
                 order.CreatedAt,
 
-            Items =
-                order.Items
-                    .Select(MapToOrderItemDto)
-                    .ToList()
+            Items = order.Items
+                .Where(i => i.IsActive && !i.IsDeleted && !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(i => new { i.MenuItemId, Name = (i.Name ?? "").Trim().ToLowerInvariant(), Status = (i.KotStatus ?? "").ToLowerInvariant(), i.KotBatch })
+                .Select(g =>
+                {
+                    var first = g.First();
+                    var dto = MapToOrderItemDto(first);
+                    dto.Quantity = g.Sum(x => x.Quantity);
+                    return dto;
+                })
+                .ToList()
         };
     }
 
@@ -2222,6 +2277,7 @@ public class OrdersController : ControllerBase
             return NotFound(new { success = false, message = $"Order {id} not found." });
         }
 
+        await CleanDuplicateOrderItemsAsync(order);
         await PopulateDisplayFields(order);
         RecalculateTotals(order);
 

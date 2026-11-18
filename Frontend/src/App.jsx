@@ -44,7 +44,7 @@ import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
 import { MENU_ITEMS } from "./data/menuData";
-import { isSameMenuItem } from "./utils/orderItemMatcher";
+import { isSameMenuItem, consolidateOrderItems } from "./utils/orderItemMatcher";
 import {
   Bell,
   CheckCircle2,
@@ -157,7 +157,7 @@ const mergeActiveDiningOrders = (tables, orders) => {
       : Array.isArray(order.Items)
       ? order.Items
       : [];
-    const items = orderItems
+    const rawItems = orderItems
       .filter((item) => {
         const status = String(item?.status || item?.Status || "").toLowerCase();
         const kotStatus = String(item?.kotStatus || item?.KotStatus || "").toLowerCase();
@@ -178,6 +178,8 @@ const mergeActiveDiningOrders = (tables, orders) => {
         kotSent: Number(item.kotId ?? item.KotId ?? item.botId ?? item.BotId) > 0,
         orderId: item.orderId ?? item.OrderId ?? order.id ?? order.Id,
       }));
+
+    const items = consolidateOrderItems(rawItems);
 
     const orderStatus = String(order.status ?? order.Status).toLowerCase();
     if (items.length === 0 || !["active", "billed"].includes(orderStatus)) {
@@ -1324,9 +1326,20 @@ export function App() {
     }
   }, [activeKitchenAlert]);
 
+  const CLIENT_INSTANCE_ID = useRef(
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : "client-" + Math.random().toString(36).slice(2) + Date.now().toString(36)
+  );
+  const lastPushedTablesJsonRef = useRef("");
+
   const pushGlobalSync = (payload) => {
     try {
-      const syncBody = JSON.stringify(payload);
+      const payloadWithClient = {
+        ...payload,
+        clientId: CLIENT_INSTANCE_ID.current,
+      };
+      const syncBody = JSON.stringify(payloadWithClient);
       const headers = {
         "Content-Type": "application/json",
       };
@@ -1391,7 +1404,7 @@ export function App() {
     try {
       if (typeof BroadcastChannel !== "undefined") {
         const bc = new BroadcastChannel("avsr_pos_cross_sync");
-        bc.postMessage({ type, payload });
+        bc.postMessage({ type, payload, clientId: CLIENT_INSTANCE_ID.current });
         bc.close();
       }
     } catch {}
@@ -1419,8 +1432,11 @@ export function App() {
       const cleanJson = JSON.stringify(cleanTables);
       if (localStorage.getItem(STORAGE_KEY_TABLES) !== cleanJson) {
         localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
-        broadcastSync("SYNC_TABLES", cleanTables);
+        if (cleanJson !== lastPushedTablesJsonRef.current) {
+          lastPushedTablesJsonRef.current = cleanJson;
+          pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+          broadcastSync("SYNC_TABLES", cleanTables);
+        }
       }
     } catch {}
   }, [tables, deletedTableIds, tablesReadyForSync]);
@@ -1627,16 +1643,24 @@ export function App() {
           const payload = parsedMsg.payload;
           if (!payload) return;
 
+          // Ignore echo broadcasts originating from this client tab to prevent infinite sync loops
+          if (payload.clientId && payload.clientId === CLIENT_INSTANCE_ID.current) return;
+
           const incomingTables = (parsedMsg.type === "SYNC_TABLES" || parsedMsg.type === "SYNC") && Array.isArray(payload)
             ? payload
             : payload.tables ?? payload.data?.tables ?? payload[STORAGE_KEY_TABLES];
-        if (Array.isArray(incomingTables)) {
+          if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
             const clean = mergeIncomingTables(incomingTables, freshDel);
-            setTables(clean);
-            try {
-              localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
-            } catch {}
+            const cleanJson = JSON.stringify(clean);
+            const currentJson = localStorage.getItem(STORAGE_KEY_TABLES);
+            if (cleanJson !== currentJson) {
+              lastPushedTablesJsonRef.current = cleanJson;
+              setTables(clean);
+              try {
+                localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
+              } catch {}
+            }
           }
           const incomingOrders = (parsedMsg.type === "SYNC_ORDERS" || parsedMsg.type === "SYNC") && Array.isArray(payload)
             ? payload
@@ -2108,8 +2132,9 @@ export function App() {
       try {
         syncChannel = new BroadcastChannel("avsr_pos_cross_sync");
         syncChannel.onmessage = (event) => {
-          const { type, payload } = event.data || {};
+          const { type, payload, clientId } = event.data || {};
           if (!type || !payload) return;
+          if (clientId && clientId === CLIENT_INSTANCE_ID.current) return;
 
           if (type === "SYNC_TABLES" && Array.isArray(payload)) {
             const freshDel = getDeletedTableIds();
@@ -2206,9 +2231,6 @@ export function App() {
 
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("focus", syncAllFromStorage);
-    window.addEventListener("avsr-tables-updated", syncAllFromStorage);
-    window.addEventListener("avsr-orders-updated", syncAllFromStorage);
-    window.addEventListener("avsr-kot-updated", syncAllFromStorage);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") syncAllFromStorage();
     };
@@ -2217,9 +2239,6 @@ export function App() {
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("focus", syncAllFromStorage);
-      window.removeEventListener("avsr-tables-updated", syncAllFromStorage);
-      window.removeEventListener("avsr-orders-updated", syncAllFromStorage);
-      window.removeEventListener("avsr-kot-updated", syncAllFromStorage);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
       unsubscribeSse();
@@ -2521,10 +2540,10 @@ export function App() {
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2591,10 +2610,10 @@ export function App() {
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2633,10 +2652,10 @@ export function App() {
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2663,10 +2682,10 @@ export function App() {
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2745,9 +2764,16 @@ export function App() {
     );
   };
 
+  const lastKotDispatchTimes = useRef({});
+
   // 1. Send KOT (Kitchen Order Ticket): Transitions items to 'received' status in Kitchen
   const handleSendKOT = async (tableId) => {
     const dispatchKey = String(tableId);
+    const now = Date.now();
+    if (lastKotDispatchTimes.current[dispatchKey] && now - lastKotDispatchTimes.current[dispatchKey] < 2500) {
+      return;
+    }
+    lastKotDispatchTimes.current[dispatchKey] = now;
     if (kotDispatchesInFlight.current.has(dispatchKey)) return;
     kotDispatchesInFlight.current.add(dispatchKey);
     const tbl = tables.find((t) => String(t.id) === dispatchKey);
@@ -2797,11 +2823,10 @@ export function App() {
       const nextTables = tables.map((table) => String(table.id) === dispatchKey ? targetUpdatedTable : table);
       setTables(nextTables);
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
-        window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
       } catch {}
 
       sounds.playBell();
@@ -2825,7 +2850,9 @@ export function App() {
         let newItems = unsentItems.filter((item) => !item.kotPendingServer);
         if (!newItems.length && !backendOrderId) newItems = unsentItems;
 
-        if (newItems.length) {
+        const consolidatedNewItems = consolidateOrderItems(newItems);
+
+        if (consolidatedNewItems.length) {
           const createResult = await apiCreateOrder({
             tableId: backendTableId,
             tableName,
@@ -2833,7 +2860,7 @@ export function App() {
             serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
             guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
             status: "Active",
-            items: newItems.map((item) => ({
+            items: consolidatedNewItems.map((item) => ({
               menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
               id: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
               name: item.name || item.dishName || "Order Item",
@@ -3045,10 +3072,10 @@ export function App() {
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -3195,10 +3222,10 @@ export function App() {
       });
 
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;

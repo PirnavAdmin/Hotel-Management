@@ -140,31 +140,25 @@ public class KitchenController : ControllerBase
                     TicketStatus = overallStatus,
 
                     Items = batchItems
-                        .Select(i => new OrderItemDto
+                        .GroupBy(i => new { i.MenuItemId, Name = (i.Name ?? "").Trim().ToLowerInvariant(), Status = (i.KotStatus ?? "").ToLowerInvariant(), i.KotBatch })
+                        .Select(g =>
                         {
-                            Id = i.Id,
-
-                            OrderId = i.OrderId,
-
-                            KotId = i.KotId,
-
-                            BotId = i.BotId,
-
-                            IsBarItem = false,
-
-                            MenuItemId = i.MenuItemId,
-
-                            Name = i.Name,
-
-                            Price = i.Price,
-
-                            Quantity = i.Quantity,
-
-                            Notes = i.Notes,
-
-                            KotStatus = i.KotStatus,
-
-                            KotBatch = i.KotBatch
+                            var first = g.First();
+                            return new OrderItemDto
+                            {
+                                Id = first.Id,
+                                OrderId = first.OrderId,
+                                KotId = first.KotId,
+                                BotId = first.BotId,
+                                IsBarItem = false,
+                                MenuItemId = first.MenuItemId,
+                                Name = first.Name,
+                                Price = first.Price,
+                                Quantity = g.Sum(x => x.Quantity),
+                                Notes = string.Join(", ", g.Select(x => x.Notes).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct()),
+                                KotStatus = first.KotStatus,
+                                KotBatch = first.KotBatch
+                            };
                         })
                         .ToList()
                 });

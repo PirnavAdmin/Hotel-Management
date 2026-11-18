@@ -1838,6 +1838,17 @@ export function TableDetailView({
   const [isTableDropdownOpen, setIsTableDropdownOpen] = useState(false);
   const [tableStatusFilter, setTableStatusFilter] = useState("all"); // 'all' | 'vacant' | 'occupied' | 'billed'
   const [isMobileOrderSlipOpen, setIsMobileOrderSlipOpen] = useState(false);
+  const [isSendingKot, setIsSendingKot] = useState(false);
+
+  const handleTriggerSendKot = async () => {
+    if (isSendingKot || safeItems.length === 0) return;
+    setIsSendingKot(true);
+    try {
+      await onSendKOT(targetTableId, safeItems);
+    } finally {
+      setTimeout(() => setIsSendingKot(false), 2000);
+    }
+  };
   const activeMenuItems = orderMode === "bar"
     ? barMenuItems
     : menuItems.filter((item) => !isDrinkItem(item));
@@ -4461,8 +4472,8 @@ export function TableDetailView({
                   }}
                 >
                   <button
-                    onClick={() => onSendKOT(targetTableId, safeItems)}
-                    disabled={safeItems.length === 0}
+                    onClick={handleTriggerSendKot}
+                    disabled={safeItems.length === 0 || isSendingKot}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -4470,27 +4481,29 @@ export function TableDetailView({
                       gap: "0.3rem",
                       padding: "0.5rem",
                       borderRadius: "6px",
-                      background: hasUnsentItems
-                        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
-                        : "var(--bg-tertiary)",
+                      background: isSendingKot
+                        ? "var(--bg-tertiary)"
+                        : hasUnsentItems
+                          ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                          : "var(--bg-tertiary)",
                       color:
-                        safeItems.length === 0
+                        safeItems.length === 0 || isSendingKot
                           ? "var(--text-dim)"
                           : (hasUnsentItems ? "var(--accent-amber-light)" : "var(--text-main)"),
-                      border: hasUnsentItems
+                      border: hasUnsentItems && !isSendingKot
                         ? "1.5px solid var(--accent-amber)"
                         : "1px solid var(--border-subtle)",
                       fontSize: "0.74rem",
                       fontWeight: 700,
                       cursor:
-                        safeItems.length === 0 ? "not-allowed" : "pointer",
-                      boxShadow: hasUnsentItems
+                        safeItems.length === 0 || isSendingKot ? "not-allowed" : "pointer",
+                      boxShadow: hasUnsentItems && !isSendingKot
                         ? "0 0 10px rgba(245, 158, 11, 0.3)"
                         : "none",
                     }}
                   >
                     <ChefHat size={13} color="var(--accent-amber)" />
-                    <span>{hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel}</span>
+                    <span>{isSendingKot ? "Sending Orders..." : (hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel)}</span>
                   </button>
                   <button
                     onClick={() => onOpenReceipt(targetTableId)}
@@ -4886,19 +4899,21 @@ export function TableDetailView({
                 <button
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
-                    onSendKOT(targetTableId, safeItems);
+                    handleTriggerSendKot();
                   }}
-                  disabled={safeItems.length === 0}
+                  disabled={safeItems.length === 0 || isSendingKot}
                   style={{
                     padding: "0.55rem",
                     borderRadius: "8px",
-                    background: hasUnsentItems
-                      ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
-                      : "var(--bg-primary)",
-                    color: safeItems.length === 0
+                    background: isSendingKot
+                      ? "var(--bg-primary)"
+                      : hasUnsentItems
+                        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                        : "var(--bg-primary)",
+                    color: safeItems.length === 0 || isSendingKot
                       ? "var(--text-dim)"
                       : (hasUnsentItems ? "var(--accent-amber-light)" : "var(--text-main)"),
-                    border: hasUnsentItems
+                    border: hasUnsentItems && !isSendingKot
                       ? "1.5px solid var(--accent-amber)"
                       : "1px solid var(--border-subtle)",
                     fontWeight: 700,
