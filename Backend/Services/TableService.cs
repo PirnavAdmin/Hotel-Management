@@ -350,77 +350,179 @@ public class TableService
     public async Task<bool> DeleteTableAsync(long id)
     {
         _logger.LogInformation("DeleteTableAsync initiating: TableId={TableId}", id);
-        var existing = await GetTableByIdAsync(id);
-        if (existing == null)
+        string? tableName = null;
+        string? tableNumber = null;
+        try
         {
-            _logger.LogWarning("DeleteTableAsync: TableId={TableId} not found.", id);
-            return false;
-        }
-
-        var parameters = new Dictionary<string, object?>
-        {
-            { "p_action", "DELETE" },
-            { "p_table_id", id },
-            { "p_branch_id", null },
-            { "p_table_number", null },
-            { "p_table_name", null },
-            { "p_capacity", null },
-            { "p_location", null },
-            { "p_qr_code_url", null },
-            { "p_status", null },
-            { "p_assigned_server_id", null }
-        };
-
-        var results = await _spService.ExecuteQueryAsync("sp_manage_restaurant_tables", MapSpOperationResult, parameters);
-        var result = results.Count > 0 ? results[0] : null;
-        _logger.LogInformation("DeleteTableAsync completed: TableId={TableId}, StatusCode={StatusCode}", id, result?.StatusCode);
-        if (result != null && result.StatusCode == 200)
-        {
-            try
+            var existing = await GetTableByIdAsync(id);
+            if (existing != null)
             {
-                await _spService.ExecuteSqlNonQueryAsync(
-                    "UPDATE dining_tables SET is_deleted = 1, is_active = 0, updated_at = NOW() WHERE dining_table_id = @tid;",
-                    new Dictionary<string, object?> { { "tid", id } });
+                tableName = existing.TableName;
+                tableNumber = existing.TableNumber;
             }
-            catch { }
-            return true;
         }
-        return false;
+        catch { }
+
+        bool spDeleted = false;
+        try
+        {
+            var parameters = new Dictionary<string, object?>
+            {
+                { "p_action", "DELETE" },
+                { "p_table_id", id },
+                { "p_branch_id", null },
+                { "p_table_number", null },
+                { "p_table_name", null },
+                { "p_capacity", null },
+                { "p_location", null },
+                { "p_qr_code_url", null },
+                { "p_status", null },
+                { "p_assigned_server_id", null }
+            };
+
+            var results = await _spService.ExecuteQueryAsync("sp_manage_restaurant_tables", MapSpOperationResult, parameters);
+            var result = results.Count > 0 ? results[0] : null;
+            _logger.LogInformation("DeleteTableAsync sp_manage_restaurant_tables: TableId={TableId}, StatusCode={StatusCode}", id, result?.StatusCode);
+            if (result != null && result.StatusCode == 200)
+            {
+                spDeleted = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "sp_manage_restaurant_tables threw for TableId={TableId}. Proceeding with direct soft-delete.", id);
+        }
+
+        // Direct database soft-delete fallback to guarantee table is marked inactive/deleted
+        bool directDeleted = false;
+        try
+        {
+            var affected = await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE restaurant_tables SET deleted_at = NOW(), status = 'inactive' WHERE table_id = @id AND deleted_at IS NULL;",
+                new Dictionary<string, object?> { { "id", id } });
+
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE dining_tables SET is_deleted = 1, is_active = 0, updated_at = NOW() WHERE dining_table_id = @tid OR (@tnum IS NOT NULL AND table_number = @tnum);",
+                new Dictionary<string, object?> { { "tid", id }, { "tnum", tableNumber ?? tableName } });
+
+            if (affected > 0)
+            {
+                directDeleted = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Direct soft-delete failed for TableId={TableId}", id);
+        }
+
+        // Verify if table is now inactive/deleted in restaurant_tables
+        try
+        {
+            var activeCount = await _spService.ExecuteSqlScalarAsync<long>(
+                "SELECT COUNT(*) FROM restaurant_tables WHERE table_id = @id AND deleted_at IS NULL",
+                new Dictionary<string, object?> { { "id", id } });
+            if (activeCount == 0)
+            {
+                return true;
+            }
+        }
+        catch { }
+
+        return spDeleted || directDeleted;
     }
 
     public async Task<TableResponseDto?> GetTableByIdOrIdentifierAsync(string identifier, long? branchId = null)
     {
         if (string.IsNullOrWhiteSpace(identifier)) return null;
         long targetBranch = branchId.HasValue && branchId.Value > 0 ? branchId.Value : 1;
+        var cleanIdentifier = identifier.Trim();
 
         // 1. If numeric, check if table exists with table_id = numericId
-        if (long.TryParse(identifier, out var numericId) && numericId > 0)
+        if (long.TryParse(cleanIdentifier, out var numericId) && numericId > 0)
         {
             var byId = await GetTableByIdAsync(numericId, targetBranch);
             if (byId != null) return byId;
         }
 
         // 2. Look up by table_number or table_name
-        var cleanIdentifier = identifier.Trim();
         var allTables = await GetTablesAsync(branchId: targetBranch);
-        return allTables.FirstOrDefault(t => 
+        var match = allTables.FirstOrDefault(t => 
+            t.TableId.ToString() == cleanIdentifier ||
             t.TableNumber.Equals(cleanIdentifier, StringComparison.OrdinalIgnoreCase) ||
             t.TableName.Equals(cleanIdentifier, StringComparison.OrdinalIgnoreCase) ||
             cleanIdentifier.Equals($"Table {t.TableNumber}", StringComparison.OrdinalIgnoreCase) ||
+            cleanIdentifier.Equals($"Table-{t.TableNumber}", StringComparison.OrdinalIgnoreCase) ||
             cleanIdentifier.Equals($"T-{t.TableNumber}", StringComparison.OrdinalIgnoreCase) ||
+            cleanIdentifier.Equals($"T{t.TableNumber}", StringComparison.OrdinalIgnoreCase) ||
             t.TableNumber.Equals(cleanIdentifier.Replace("Table ", "").Trim(), StringComparison.OrdinalIgnoreCase) ||
             t.TableNumber.Equals(cleanIdentifier.Replace("T-", "").Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (match != null) return match;
+
+        // 3. Normalized alphanumeric match (e.g. "Spin - 5" matches "Spin 5", "Spin-5", "5")
+        var normalizedInput = new string(cleanIdentifier.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+        match = allTables.FirstOrDefault(t => {
+            var normNum = new string((t.TableNumber ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+            var normName = new string((t.TableName ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+            return (!string.IsNullOrEmpty(normNum) && (normNum == normalizedInput || normNum.EndsWith(normalizedInput) || normalizedInput.EndsWith(normNum))) ||
+                   (!string.IsNullOrEmpty(normName) && (normName == normalizedInput || normName.EndsWith(normalizedInput) || normalizedInput.EndsWith(normName)));
+        });
+
+        if (match != null) return match;
+
+        // 4. Fallback search directly in dining_tables table
+        try
+        {
+            var dtMatches = await _spService.ExecuteSqlQueryAsync(
+                "SELECT dining_table_id FROM dining_tables WHERE (dining_table_id = @num OR table_number = @ident OR LOWER(table_number) = LOWER(@ident)) AND is_deleted = 0 LIMIT 1",
+                r => Convert.ToInt64(r["dining_table_id"]),
+                new Dictionary<string, object?> { { "num", long.TryParse(cleanIdentifier, out var nid) ? nid : 0 }, { "ident", cleanIdentifier } });
+            if (dtMatches.Count > 0)
+            {
+                var dtId = dtMatches[0];
+                var byDtId = await GetTableByIdAsync(dtId, targetBranch);
+                if (byDtId != null) return byDtId;
+            }
+        }
+        catch { }
+
+        return null;
     }
 
     public async Task<bool> DeleteTableByIdOrIdentifierAsync(string identifier, long? branchId = null)
     {
+        if (string.IsNullOrWhiteSpace(identifier)) return false;
+
         var match = await GetTableByIdOrIdentifierAsync(identifier, branchId);
-        if (match != null)
+        long? tableIdToDelete = match?.TableId;
+
+        if (!tableIdToDelete.HasValue && long.TryParse(identifier.Trim(), out var directId) && directId > 0)
         {
-            return await DeleteTableAsync(match.TableId);
+            tableIdToDelete = directId;
         }
 
-        return false;
+        if (tableIdToDelete.HasValue)
+        {
+            return await DeleteTableAsync(tableIdToDelete.Value);
+        }
+
+        // Direct soft-delete by table_name or table_number if ID couldn't be resolved
+        try
+        {
+            var clean = identifier.Trim();
+            var affected = await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE restaurant_tables SET deleted_at = NOW(), status = 'inactive' WHERE (table_name = @ident OR table_number = @ident) AND deleted_at IS NULL;",
+                new Dictionary<string, object?> { { "ident", clean } });
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE dining_tables SET is_deleted = 1, is_active = 0, updated_at = NOW() WHERE (table_number = @ident) AND is_deleted = 0;",
+                new Dictionary<string, object?> { { "ident", clean } });
+            return affected > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete table by identifier {Identifier}", identifier);
+            return false;
+        }
     }
 
     public async Task<(bool Success, string Message)> TransferTableAsync(long sourceTableId, long targetTableId)

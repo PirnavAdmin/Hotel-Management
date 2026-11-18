@@ -1029,7 +1029,6 @@ export function TableView({
               : t
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
-          window.dispatchEvent(new Event("storage"));
           window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
@@ -1104,7 +1103,6 @@ export function TableView({
               : t
           );
           localStorage.setItem("gourmet_pos_tables_v2_inr", JSON.stringify(updated));
-          window.dispatchEvent(new Event("storage"));
           window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
         }
       }
@@ -2088,33 +2086,9 @@ export function TableView({
                         minWidth: 0,
                       }}
                     >
-                      <span
-                        style={{
-                          background:
-                            table.status !== "vacant"
-                              ? "linear-gradient(135deg, #f59e0b, #ea580c)"
-                              : "var(--bg-tertiary)",
-                          color:
-                            table.status !== "vacant"
-                              ? "#ffffff"
-                              : "var(--text-main)",
-                          border:
-                            table.status !== "vacant"
-                              ? "none"
-                              : "1px solid var(--border-subtle)",
-                          fontWeight: 900,
-                          fontSize: "0.74rem",
-                          padding: "2px 6px",
-                          borderRadius: "4px",
-                          letterSpacing: "0.03em",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {getTableBadgeText(table)}
-                      </span>
                       <h3
                         style={{
-                          fontSize: "1rem",
+                          fontSize: "1.05rem",
                           fontWeight: 900,
                           color:
                             table.status !== "vacant"
@@ -2122,13 +2096,13 @@ export function TableView({
                               : "var(--text-main)",
                           margin: 0,
                           lineHeight: 1.1,
-                          letterSpacing: "-0.02em",
+                          letterSpacing: "-0.01em",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                         }}
                       >
-                        {table.name ? (table.name.trim().match(/^(?:table|t)\s*[-–—]?\s*\d+$/i) ? `Table ${table.name.replace(/^(?:table|t)\s*[-–—]?\s*/i, "")}` : table.name) : `Table ${table.id}`}
+                        {table.name || table.tableName || table.tableNumber || `Table ${table.id}`}
                       </h3>
                     </div>
                     <span

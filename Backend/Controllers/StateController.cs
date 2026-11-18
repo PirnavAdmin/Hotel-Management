@@ -136,71 +136,46 @@ public class StateController : ControllerBase
                 supplier = i.Supplier
             });
 
-            var rawActiveOrders = await _context.Orders
-                .AsNoTracking()
+            // Fetch actual active and billed dining & takeaway orders from the database
+            var activeOrderEntities = await _context.Orders
                 .Include(o => o.Items)
                 .Where(o => o.IsActive && !o.IsDeleted &&
                     (o.Status == "Active" || o.Status == "active" || o.Status == "Billed" || o.Status == "billed"))
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
 
-            var activeOrders = rawActiveOrders.ConvertAll(o => new
+            var activeOrders = activeOrderEntities.ConvertAll(o => (object)new
             {
                 id = o.Id,
                 orderId = o.Id,
                 orderNumber = o.OrderNumber,
                 tableId = o.TableId,
-                tableName = !string.IsNullOrWhiteSpace(o.TableName) ? o.TableName : $"Table {o.TableId}",
-                status = o.Status,
                 orderType = o.OrderType,
-                totalAmount = o.GrandTotal > 0 ? o.GrandTotal : o.Subtotal,
-                grandTotal = o.GrandTotal > 0 ? o.GrandTotal : o.Subtotal,
+                status = o.Status,
+                guests = o.Guests,
                 subtotal = o.Subtotal,
-                taxAmount = o.TaxAmount,
+                discountPercent = o.DiscountPercent,
                 discountAmount = o.DiscountAmount,
-                server = !string.IsNullOrWhiteSpace(o.ServerName) ? o.ServerName : "Staff",
+                taxAmount = o.TaxAmount,
+                serviceChargeAmount = o.ServiceChargeAmount,
+                grandTotal = o.GrandTotal,
                 createdAt = o.CreatedAt,
-                items = o.Items.Where(i => !string.Equals(i.KotStatus, "Cancelled", StringComparison.OrdinalIgnoreCase)).Select(i => new
+                items = o.Items.Where(i => i.IsActive && !i.IsDeleted).Select(i => new
                 {
                     id = i.Id,
+                    orderItemId = i.Id,
                     menuItemId = i.MenuItemId,
                     name = i.Name,
                     price = i.Price,
                     quantity = i.Quantity,
-                    kotStatus = i.KotStatus
-                })
+                    notes = i.Notes,
+                    kotStatus = i.KotStatus,
+                    kotBatch = i.KotBatch,
+                    kotId = i.KotId
+                }).ToList()
             });
 
-            var rawInvoices = await _context.Invoices
-                .AsNoTracking()
-                .Include(i => i.Payments)
-                .OrderByDescending(i => i.CreatedAt)
-                .Take(250)
-                .ToListAsync();
-
-            var pastOrders = rawInvoices.ConvertAll(inv => new
-            {
-                id = inv.InvoiceId,
-                invoiceId = inv.InvoiceId,
-                invoiceNo = inv.InvoiceNumber,
-                invoiceNumber = inv.InvoiceNumber,
-                orderId = inv.OrderId,
-                tableName = !string.IsNullOrWhiteSpace(inv.TableName) ? inv.TableName : "Dining Table",
-                server = !string.IsNullOrWhiteSpace(inv.ServerName) ? inv.ServerName : "Staff",
-                status = !string.IsNullOrWhiteSpace(inv.Status) ? inv.Status : "Paid",
-                isPaid = true,
-                grandTotal = inv.TotalAmount,
-                totalAmount = inv.TotalAmount,
-                subtotal = inv.Subtotal > 0 ? inv.Subtotal : inv.TotalAmount,
-                taxAmount = inv.TaxAmount,
-                discountAmount = inv.DiscountAmount,
-                paidAmount = inv.PaidAmount > 0 ? inv.PaidAmount : inv.TotalAmount,
-                paymentMethod = inv.Payments != null && inv.Payments.Count > 0 ? inv.Payments.Last().PaymentMode : (!string.IsNullOrWhiteSpace(inv.PaymentMethod) ? inv.PaymentMethod : "Cash"),
-                createdAt = inv.CreatedAt,
-                date = inv.CreatedAt.ToString("yyyy-MM-dd"),
-                settledAt = inv.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-            });
-
+            var pastOrders = new List<object>();
             var restaurantSettings = await _settingsService.GetSettingsAsync();
             var activeTableLocks = _tableLockService.GetAllActiveLocks();
 
@@ -255,13 +230,17 @@ public class StateController : ControllerBase
         {
             _logger.LogInformation("Processing POS sync payload.");
 
+            bool hasSettings = false;
+            bool hasInv = false;
+            bool hasLocks = false;
+
             if (syncPayload.ValueKind == JsonValueKind.Object)
             {
                 // 1. Restaurant Settings
                 JsonElement settingsElement = default;
-                bool hasSettings = syncPayload.TryGetProperty("gourmet_pos_settings_v1", out settingsElement) ||
-                                   syncPayload.TryGetProperty("restaurantSettings", out settingsElement) ||
-                                   syncPayload.TryGetProperty("restaurant_settings", out settingsElement);
+                hasSettings = syncPayload.TryGetProperty("gourmet_pos_settings_v1", out settingsElement) ||
+                              syncPayload.TryGetProperty("restaurantSettings", out settingsElement) ||
+                              syncPayload.TryGetProperty("restaurant_settings", out settingsElement);
 
                 if (hasSettings && settingsElement.ValueKind == JsonValueKind.Object)
                 {
@@ -276,10 +255,10 @@ public class StateController : ControllerBase
 
                 // 2. Inventory Items
                 JsonElement invElement = default;
-                bool hasInv = syncPayload.TryGetProperty("gourmet_pos_inventory_v2", out invElement) ||
-                              syncPayload.TryGetProperty("gourmet_pos_inventory_v1", out invElement) ||
-                              syncPayload.TryGetProperty("inventory", out invElement) ||
-                              syncPayload.TryGetProperty("ingredients", out invElement);
+                hasInv = syncPayload.TryGetProperty("gourmet_pos_inventory_v2", out invElement) ||
+                         syncPayload.TryGetProperty("gourmet_pos_inventory_v1", out invElement) ||
+                         syncPayload.TryGetProperty("inventory", out invElement) ||
+                         syncPayload.TryGetProperty("ingredients", out invElement);
 
                 if (hasInv)
                 {
@@ -293,9 +272,9 @@ public class StateController : ControllerBase
 
                 // 3. Table Concurrency Locks
                 JsonElement locksElement = default;
-                bool hasLocks = syncPayload.TryGetProperty("avsr_table_locks_v1", out locksElement) ||
-                                syncPayload.TryGetProperty("tableLocks", out locksElement) ||
-                                syncPayload.TryGetProperty("SYNC_TABLE_LOCKS", out locksElement);
+                hasLocks = syncPayload.TryGetProperty("avsr_table_locks_v1", out locksElement) ||
+                           syncPayload.TryGetProperty("tableLocks", out locksElement) ||
+                           syncPayload.TryGetProperty("SYNC_TABLE_LOCKS", out locksElement);
 
                 if (hasLocks && locksElement.ValueKind == JsonValueKind.Object)
                 {
@@ -306,231 +285,22 @@ public class StateController : ControllerBase
                         _tableLockService.SyncLocks(incomingLocks);
                     }
                 }
-
-                // 4. Restaurant Tables - Merge local table definitions into database
-                JsonElement tablesElement = default;
-                bool hasTables = syncPayload.TryGetProperty("gourmet_pos_tables_v1", out tablesElement) ||
-                                 syncPayload.TryGetProperty("tables", out tablesElement);
-
-                if (hasTables && tablesElement.ValueKind == JsonValueKind.Array)
-                {
-                    try
-                    {
-                        var existingTables = await _context.RestaurantTables.ToListAsync();
-                        foreach (var tbl in tablesElement.EnumerateArray())
-                        {
-                            string? name = tbl.TryGetProperty("name", out var np) ? np.GetString() : (tbl.TryGetProperty("tableName", out var tnp) ? tnp.GetString() : null);
-                            if (string.IsNullOrWhiteSpace(name)) continue;
-                            name = name.Trim();
-                            string section = tbl.TryGetProperty("section", out var sp) ? sp.GetString() ?? "Main Hall" : "Main Hall";
-                            int capacity = tbl.TryGetProperty("capacity", out var cp) && cp.TryGetInt32(out var cVal) ? cVal : 4;
-                            string status = tbl.TryGetProperty("status", out var stp) ? stp.GetString() ?? "available" : "available";
-                            if (status == "vacant") status = "available";
-
-                            var match = existingTables.FirstOrDefault(et =>
-                                string.Equals(et.TableName, name, StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(et.TableNumber, name, StringComparison.OrdinalIgnoreCase));
-
-                            if (match == null)
-                            {
-                                var newTbl = new RestaurantTable
-                                {
-                                    BranchId = 1,
-                                    TableNumber = name,
-                                    TableName = name,
-                                    Capacity = capacity,
-                                    CapacityChairs = capacity,
-                                    Location = section,
-                                    SectionArea = section,
-                                    Status = status,
-                                    CreatedAt = DateTime.UtcNow,
-                                    UpdatedAt = DateTime.UtcNow
-                                };
-                                _context.RestaurantTables.Add(newTbl);
-                                existingTables.Add(newTbl);
-                            }
-                            else
-                            {
-                                match.Capacity = capacity;
-                                match.CapacityChairs = capacity;
-                                match.Location = section;
-                                match.SectionArea = section;
-                                if (!string.IsNullOrWhiteSpace(status)) match.Status = status;
-                                match.UpdatedAt = DateTime.UtcNow;
-                            }
-                        }
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation("Synchronized restaurant tables to database.");
-                    }
-                    catch (Exception tex)
-                    {
-                        _logger.LogWarning(tex, "Non-fatal error while syncing tables to database.");
-                    }
-                }
-
-                // 5. Menu Items - Merge local menu items into database
-                JsonElement menuElement = default;
-                bool hasMenu = syncPayload.TryGetProperty("gourmet_pos_menu_v1", out menuElement) ||
-                               syncPayload.TryGetProperty("menuItems", out menuElement);
-
-                if (hasMenu && menuElement.ValueKind == JsonValueKind.Array)
-                {
-                    try
-                    {
-                        var existingMenu = await _context.MenuItems.ToListAsync();
-                        foreach (var item in menuElement.EnumerateArray())
-                        {
-                            string? dishName = item.TryGetProperty("name", out var np) ? np.GetString() : (item.TryGetProperty("dishName", out var dnp) ? dnp.GetString() : null);
-                            if (string.IsNullOrWhiteSpace(dishName)) continue;
-                            dishName = dishName.Trim();
-                            string category = item.TryGetProperty("category", out var cp) ? cp.GetString() ?? "Main Course" : "Main Course";
-                            decimal price = item.TryGetProperty("price", out var pp) && pp.TryGetDecimal(out var pVal) ? pVal : 0;
-                            string dietary = item.TryGetProperty("isVeg", out var vp) && vp.GetBoolean() ? "VEG" : (item.TryGetProperty("dietaryType", out var dtp) ? dtp.GetString() ?? "NON-VEG" : "NON-VEG");
-                            bool isAvailable = !item.TryGetProperty("isAvailable", out var ap) || ap.GetBoolean();
-                            string? imageUrl = item.TryGetProperty("image", out var ip) ? ip.GetString() : (item.TryGetProperty("imageUrl", out var iup) ? iup.GetString() : null);
-
-                            var match = existingMenu.FirstOrDefault(em => string.Equals(em.DishName, dishName, StringComparison.OrdinalIgnoreCase));
-                            if (match == null && price > 0)
-                            {
-                                var newMenuItem = new MenuItem
-                                {
-                                    DishName = dishName,
-                                    Category = category,
-                                    Price = price,
-                                    DietaryType = dietary,
-                                    IsAvailable = isAvailable,
-                                    ImageUrl = imageUrl,
-                                    CreatedAt = DateTime.UtcNow,
-                                    UpdatedAt = DateTime.UtcNow
-                                };
-                                _context.MenuItems.Add(newMenuItem);
-                                existingMenu.Add(newMenuItem);
-                            }
-                            else if (match != null)
-                            {
-                                if (price > 0) match.Price = price;
-                                match.IsAvailable = isAvailable;
-                                if (!string.IsNullOrWhiteSpace(category)) match.Category = category;
-                                if (!string.IsNullOrWhiteSpace(imageUrl)) match.ImageUrl = imageUrl;
-                                match.UpdatedAt = DateTime.UtcNow;
-                            }
-                        }
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation("Synchronized menu items to database.");
-                    }
-                    catch (Exception mex)
-                    {
-                        _logger.LogWarning(mex, "Non-fatal error while syncing menu items to database.");
-                    }
-                }
-
-                // 6. Staff List - Merge local staff into database
-                JsonElement staffElement = default;
-                bool hasStaff = syncPayload.TryGetProperty("gourmet_pos_staff_v1", out staffElement) ||
-                                syncPayload.TryGetProperty("staff", out staffElement) ||
-                                syncPayload.TryGetProperty("staffList", out staffElement);
-
-                if (hasStaff && staffElement.ValueKind == JsonValueKind.Array)
-                {
-                    try
-                    {
-                        var existingStaff = await _context.StaffPersons.ToListAsync();
-                        foreach (var s in staffElement.EnumerateArray())
-                        {
-                            string? name = s.TryGetProperty("name", out var np) ? np.GetString() : (s.TryGetProperty("fullName", out var fnp) ? fnp.GetString() : null);
-                            if (string.IsNullOrWhiteSpace(name)) continue;
-                            name = name.Trim();
-                            string role = s.TryGetProperty("role", out var rp) ? rp.GetString() ?? "Staff" : (s.TryGetProperty("roleTitle", out var rtp) ? rtp.GetString() ?? "Staff" : "Staff");
-                            string phone = s.TryGetProperty("phone", out var php) ? php.GetString() ?? "" : "";
-                            string shift = s.TryGetProperty("shift", out var shp) ? shp.GetString() ?? "Full Day" : "Full Day";
-
-                            var match = existingStaff.FirstOrDefault(es => string.Equals(es.FullName, name, StringComparison.OrdinalIgnoreCase));
-                            if (match == null)
-                            {
-                                var newStaff = new StaffPerson
-                                {
-                                    FullName = name,
-                                    RoleTitle = role,
-                                    Phone = phone,
-                                    Shift = shift,
-                                    IsActive = true,
-                                    CreatedAt = DateTime.UtcNow,
-                                    UpdatedAt = DateTime.UtcNow
-                                };
-                                _context.StaffPersons.Add(newStaff);
-                                existingStaff.Add(newStaff);
-                            }
-                        }
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation("Synchronized staff list to database.");
-                    }
-                    catch (Exception stex)
-                    {
-                        _logger.LogWarning(stex, "Non-fatal error while syncing staff to database.");
-                    }
-                }
-
-                // 7. Invoices & Settled Orders - Merge local invoices into database
-                JsonElement ordersElement = default;
-                bool hasOrders = syncPayload.TryGetProperty("gourmet_pos_past_orders_v2_inr", out ordersElement) ||
-                                 syncPayload.TryGetProperty("pastOrders", out ordersElement);
-
-                if (hasOrders && ordersElement.ValueKind == JsonValueKind.Array)
-                {
-                    try
-                    {
-                        var existingInvoices = await _context.Invoices.Select(i => i.InvoiceNumber).ToListAsync();
-                        var existingSet = new HashSet<string>(existingInvoices, StringComparer.OrdinalIgnoreCase);
-
-                        foreach (var ord in ordersElement.EnumerateArray())
-                        {
-                            string? invNo = ord.TryGetProperty("invoiceNo", out var inp) ? inp.GetString() : (ord.TryGetProperty("invoiceNumber", out var inump) ? inump.GetString() : null);
-                            if (string.IsNullOrWhiteSpace(invNo) || existingSet.Contains(invNo)) continue;
-
-                            decimal total = ord.TryGetProperty("grandTotal", out var gp) && gp.TryGetDecimal(out var gVal) ? gVal : (ord.TryGetProperty("totalAmount", out var tp) && tp.TryGetDecimal(out var tVal) ? tVal : 0);
-                            decimal subtotal = ord.TryGetProperty("subtotal", out var subp) && subp.TryGetDecimal(out var subVal) ? subVal : total;
-                            decimal tax = ord.TryGetProperty("taxAmount", out var taxp) && taxp.TryGetDecimal(out var taxVal) ? taxVal : 0;
-                            string paymentMethod = ord.TryGetProperty("paymentMethod", out var pmp) ? pmp.GetString() ?? "CASH" : "CASH";
-                            string tableName = ord.TryGetProperty("tableName", out var tnp) ? tnp.GetString() ?? "Dining" : "Dining";
-
-                            var invoice = new Invoice
-                            {
-                                InvoiceNumber = invNo,
-                                OrderId = 0,
-                                TotalAmount = total,
-                                Subtotal = subtotal,
-                                TaxAmount = tax,
-                                PaidAmount = total,
-                                AmountPaid = total,
-                                PaymentMethod = paymentMethod,
-                                TableName = tableName,
-                                Status = "PAID",
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow
-                            };
-                            _context.Invoices.Add(invoice);
-                            existingSet.Add(invNo);
-                        }
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation("Synchronized past orders/invoices to database.");
-                    }
-                    catch (Exception oex)
-                    {
-                        _logger.LogWarning(oex, "Non-fatal error while syncing invoices to database.");
-                    }
-                }
             }
 
-            // Real-time broadcast to all connected clients over SSE & SignalR!
-            await _sseBroadcaster.BroadcastAsync("SYNC", syncPayload);
-            await _realtimeSync.PublishAsync(new RealtimeEvent
+            // Only broadcast meaningful synchronized changes (settings, locks, inventory)
+            // Do NOT broadcast raw local client table/menu/staff array dumps which cause client infinite feedback loops
+            if (hasSettings || hasInv || hasLocks)
             {
-                EventType = "state:synced",
-                Module = "State",
-                Action = "synced",
-                BranchId = 1,
-                Data = syncPayload
-            });
+                await _sseBroadcaster.BroadcastAsync("SYNC", syncPayload);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "state:synced",
+                    Module = "State",
+                    Action = "synced",
+                    BranchId = 1,
+                    Data = syncPayload
+                });
+            }
 
             return Ok(new
             {

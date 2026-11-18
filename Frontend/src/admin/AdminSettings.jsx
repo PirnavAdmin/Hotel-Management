@@ -213,9 +213,74 @@ export function AdminSettings({
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
+        // Step 1: Draw to initial canvas to analyze and trim empty margins
+        const srcCanvas = document.createElement("canvas");
+        srcCanvas.width = img.width;
+        srcCanvas.height = img.height;
+        const srcCtx = srcCanvas.getContext("2d");
+        srcCtx.drawImage(img, 0, 0);
+
+        let trimmedCanvas = srcCanvas;
+        try {
+          const imgData = srcCtx.getImageData(0, 0, img.width, img.height);
+          const data = imgData.data;
+          const corners = [
+            0, // top-left
+            Math.max(0, (img.width - 1) * 4), // top-right
+            Math.max(0, (img.width * (img.height - 1)) * 4), // bottom-left
+            Math.max(0, (img.width * img.height - 1) * 4), // bottom-right
+          ];
+
+          const isBackground = (idx) => {
+            const a = data[idx + 3];
+            if (a < 20) return true; // Transparent
+            const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+            // Near-white or light background borders
+            if (r >= 232 && g >= 232 && b >= 232) return true;
+            // Match against any corner color with tolerance
+            for (const cIdx of corners) {
+              const ca = data[cIdx + 3];
+              if (ca < 20) continue;
+              const cr = data[cIdx], cg = data[cIdx + 1], cb = data[cIdx + 2];
+              const diff = Math.abs(r - cr) + Math.abs(g - cg) + Math.abs(b - cb);
+              if (diff < 50) return true;
+            }
+            return false;
+          };
+
+          let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
+          let hasContent = false;
+          for (let y = 0; y < img.height; y++) {
+            for (let x = 0; x < img.width; x++) {
+              const idx = (y * img.width + x) * 4;
+              if (!isBackground(idx)) {
+                hasContent = true;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+              }
+            }
+          }
+
+          if (hasContent && (minX > 0 || minY > 0 || maxX < img.width - 1 || maxY < img.height - 1)) {
+            // Trim surrounding borders
+            const cropW = Math.max(1, maxX - minX + 1);
+            const cropH = Math.max(1, maxY - minY + 1);
+            const cropCanvas = document.createElement("canvas");
+            cropCanvas.width = cropW;
+            cropCanvas.height = cropH;
+            cropCanvas.getContext("2d").drawImage(srcCanvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+            trimmedCanvas = cropCanvas;
+          }
+        } catch {
+          // Fallback to original if pixel analysis blocked
+          trimmedCanvas = srcCanvas;
+        }
+
         const maxDim = 500;
-        let width = img.width;
-        let height = img.height;
+        let width = trimmedCanvas.width;
+        let height = trimmedCanvas.height;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -229,7 +294,7 @@ export function AdminSettings({
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(trimmedCanvas, 0, 0, width, height);
         callback(canvas.toDataURL("image/png", 0.9));
       };
       img.onerror = () => callback(e.target.result);
@@ -819,8 +884,9 @@ export function AdminSettings({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        background: "transparent",
+                        background: "var(--bg-secondary)",
                         flexShrink: 0,
+                        padding: "2px",
                       }}
                     >
                       <img
@@ -829,7 +895,7 @@ export function AdminSettings({
                         style={{
                           width: "100%",
                           height: "100%",
-                          objectFit: "cover",
+                          objectFit: "contain",
                           display: "block",
                         }}
                       />

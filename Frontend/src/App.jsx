@@ -394,35 +394,33 @@ const mergeIncomingTables = (
     : [];
   const tablesById = new Map();
 
-  // Retain currently saved tables in localStorage so active dining tables, items, and selected seats are never lost during sync
-  if (preserveCachedDefinitions) {
-    try {
-      const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
-      if (rawSaved) {
-        const parsedSaved = JSON.parse(rawSaved);
-        if (Array.isArray(parsedSaved)) {
-          parsedSaved.forEach((savedTable) => {
-            const st = preserveCachedOrders
-              ? savedTable
-              : clearCachedTableOrder(savedTable);
-            if (st && st.id && !isSyntheticOverflowTable(st) && !deletedIds.includes(String(st.id))) {
-              const backendId = Number(st.backendTableId ?? st.tableId ?? st.TableId);
-              const sourceId = Number(st.id ?? st.Id);
-              const targetId = (Number.isSafeInteger(backendId) && backendId > 0 && backendId !== 999999)
-                ? backendId
-                : (Number.isSafeInteger(sourceId) && sourceId > 0 && sourceId !== 999999)
-                  ? sourceId
-                  : parseTableNumber(st);
-              if (targetId != null) {
-                const key = String(targetId);
-                const existingDef = tablesById.get(key) || {};
-                tablesById.set(key, { ...existingDef, ...st });
-              }
+  // Read currently saved tables from localStorage to retain active in-memory cart/order state for existing tables
+  const cachedTableMap = new Map();
+  try {
+    const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
+    if (rawSaved) {
+      const parsedSaved = JSON.parse(rawSaved);
+      if (Array.isArray(parsedSaved)) {
+        parsedSaved.forEach((st) => {
+          if (st && st.id != null) {
+            cachedTableMap.set(String(st.id), st);
+            const backendId = st.backendTableId ?? st.tableId ?? st.TableId;
+            if (backendId != null) {
+              cachedTableMap.set(String(backendId), st);
             }
-          });
-        }
+          }
+        });
       }
-    } catch {}
+    }
+  } catch {}
+
+  // Only fallback to cached definitions if no incoming tables were provided at all (e.g. offline boot)
+  if (preserveCachedDefinitions && (!Array.isArray(incomingTables) || incomingTables.length === 0)) {
+    cachedTableMap.forEach((st, key) => {
+      if (st && st.id && !isSyntheticOverflowTable(st) && !deletedIds.includes(String(st.id))) {
+        tablesById.set(key, preserveCachedOrders ? st : clearCachedTableOrder(st));
+      }
+    });
   }
 
   // 2. Overlay incoming live tables from server or localStorage
@@ -445,12 +443,19 @@ const mergeIncomingTables = (
         if (num != null) targetId = num;
       }
 
-      if (!targetId || deletedIds.includes(String(targetId))) return;
+      if (
+        !targetId ||
+        deletedIds.includes(String(targetId)) ||
+        (backendId && deletedIds.includes(String(backendId))) ||
+        (sourceId && deletedIds.includes(String(sourceId))) ||
+        (rawName && deletedIds.includes(rawName)) ||
+        (table.tableNumber && deletedIds.includes(String(table.tableNumber)))
+      ) return;
 
       if (isRogueName(rawName)) return;
 
       const key = String(targetId);
-      const existing = tablesById.get(key) || {};
+      const existing = tablesById.get(key) || cachedTableMap.get(key) || {};
       const cleanName = rawName || String(table.tableNumber || table.TableNumber || table.number || `Table-${targetId}`).trim();
       const cleanNumber = String(
         table.tableNumberNumeric ?? table.tableNumber ?? table.TableNumber ?? table.number ?? targetId,
@@ -543,8 +548,8 @@ const mergeIncomingTables = (
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
     .map((table) => {
-      const isVacant = ["vacant", "available", "free"].includes(String(table.status || "").toLowerCase());
-      if (isVacant) {
+      const hasActive = Array.isArray(table.items) && table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+      if (!hasActive && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
         return {
           ...table,
           status: "vacant",
@@ -1410,7 +1415,7 @@ export function App() {
     } catch {}
   };
 
-  // Sync to LocalStorage & Global Network DB
+  // Sync to LocalStorage & cross-tab sync (persisted locally without spamming server POST loops)
   useEffect(() => {
     if (!tablesReadyForSync) return;
     try {
@@ -1423,7 +1428,7 @@ export function App() {
         deletedTableIds,
         {
           preserveCachedOrders: !replaceCachedTableOrdersRef.current,
-          preserveCachedDefinitions: !replaceCachedTableOrdersRef.current,
+          preserveCachedDefinitions: false,
         },
       )
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
@@ -1432,11 +1437,7 @@ export function App() {
       const cleanJson = JSON.stringify(cleanTables);
       if (localStorage.getItem(STORAGE_KEY_TABLES) !== cleanJson) {
         localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
-        if (cleanJson !== lastPushedTablesJsonRef.current) {
-          lastPushedTablesJsonRef.current = cleanJson;
-          pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
-          broadcastSync("SYNC_TABLES", cleanTables);
-        }
+
       }
     } catch {}
   }, [tables, deletedTableIds, tablesReadyForSync]);
@@ -1447,7 +1448,6 @@ export function App() {
       const menuJson = JSON.stringify(menuItems);
       if (localStorage.getItem(STORAGE_KEY_MENU) !== menuJson) {
         localStorage.setItem(STORAGE_KEY_MENU, menuJson);
-        pushGlobalSync({ [STORAGE_KEY_MENU]: menuItems });
         broadcastSync("SYNC_MENU", menuItems);
       }
     } catch {}
@@ -1458,7 +1458,6 @@ export function App() {
       const staffJson = JSON.stringify(staffList);
       if (localStorage.getItem(STORAGE_KEY_STAFF) !== staffJson) {
         localStorage.setItem(STORAGE_KEY_STAFF, staffJson);
-        pushGlobalSync({ [STORAGE_KEY_STAFF]: staffList });
         broadcastSync("SYNC_STAFF", staffList);
       }
     } catch {}
@@ -1470,7 +1469,6 @@ export function App() {
       const paymentsJson = JSON.stringify(salaryPayments);
       if (localStorage.getItem(STORAGE_KEY_SALARY_PAYMENTS) !== paymentsJson) {
         localStorage.setItem(STORAGE_KEY_SALARY_PAYMENTS, paymentsJson);
-        pushGlobalSync({ [STORAGE_KEY_SALARY_PAYMENTS]: salaryPayments });
         broadcastSync("SYNC_SALARY_PAYMENTS", salaryPayments);
       }
     } catch (error) {
@@ -1484,7 +1482,6 @@ export function App() {
       const purchasesJson = JSON.stringify(inventoryPurchases);
       if (localStorage.getItem(STORAGE_KEY_INVENTORY_PURCHASES) !== purchasesJson) {
         localStorage.setItem(STORAGE_KEY_INVENTORY_PURCHASES, purchasesJson);
-        pushGlobalSync({ [STORAGE_KEY_INVENTORY_PURCHASES]: inventoryPurchases });
         broadcastSync("SYNC_INVENTORY_PURCHASES", inventoryPurchases);
       }
     } catch (error) {
@@ -1497,7 +1494,6 @@ export function App() {
       const ordersJson = JSON.stringify(pastOrders);
       if (localStorage.getItem(STORAGE_KEY_ORDERS) !== ordersJson) {
         localStorage.setItem(STORAGE_KEY_ORDERS, ordersJson);
-        pushGlobalSync({ [STORAGE_KEY_ORDERS]: pastOrders });
         broadcastSync("SYNC_ORDERS", pastOrders);
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("avsr-invoices-updated", { detail: pastOrders }));
@@ -1515,73 +1511,35 @@ export function App() {
       if (!getRealtimeConnectionStatus().connected) return;
       const data = await requestSharedNetworkState();
       if (!data || isCancelled) return;
-
-      const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
-      if (Array.isArray(incomingTables) && incomingTables.length > 0) {
-        const freshDel = getDeletedTableIds();
-        const clean = mergeIncomingTables(incomingTables, freshDel, { preserveCachedOrders: false, preserveCachedDefinitions: false });
-        setTables(clean);
-        try {
-          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
-        } catch {}
-      }
-
-      const incomingOrders = data.pastOrders ?? data.data?.pastOrders ?? data[STORAGE_KEY_ORDERS];
-      if (Array.isArray(incomingOrders) && incomingOrders.length > 0) {
-        setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
-      }
-
-      const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
-      if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
-        const normalizedMenu = incomingMenu.filter((item) => !item.isBarItem && !item.isBarDrink).map(normalizeMenuItem);
-        setMenuItems(normalizedMenu);
-        try {
-          localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
-        } catch {}
-      }
-
-      // Merge any local-only offline records to server database
-      try {
-        const payloadToMerge = {};
-        let needsSync = false;
-
-        const localTables = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLES) || "[]");
-        if (Array.isArray(localTables) && localTables.length > 0) {
-          const serverTableNames = new Set((data.tables || []).map((t) => String(t.name || t.tableName || "").toLowerCase().trim()));
-          const hasMissingTable = localTables.some((lt) => !serverTableNames.has(String(lt.name || lt.tableName || "").toLowerCase().trim()));
-          if (hasMissingTable || (data.tables || []).length === 0) {
-            payloadToMerge[STORAGE_KEY_TABLES] = localTables;
-            needsSync = true;
-          }
+        if (!data) return;
+        const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
+        if (Array.isArray(incomingTables)) {
+          const freshDel = getDeletedTableIds();
+          const clean = mergeIncomingTables(incomingTables, freshDel, { preserveCachedDefinitions: false });
+          setTables((prev) => (prev && prev.length > 0 ? prev : clean));
+          try {
+            localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
+          } catch {}
         }
 
-        const localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
-        if (Array.isArray(localMenu) && localMenu.length > 0) {
-          const serverMenuNames = new Set((data.menuItems || []).map((m) => String(m.name || m.dishName || "").toLowerCase().trim()));
-          const hasMissingMenu = localMenu.some((lm) => !serverMenuNames.has(String(lm.name || lm.dishName || "").toLowerCase().trim()));
-          if (hasMissingMenu || (data.menuItems || []).length === 0) {
-            payloadToMerge[STORAGE_KEY_MENU] = localMenu;
-            needsSync = true;
-          }
+        const incomingOrders = data.pastOrders ?? data.data?.pastOrders ?? data[STORAGE_KEY_ORDERS];
+        if (Array.isArray(incomingOrders)) {
+          setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
         }
 
-        const localOrders = JSON.parse(localStorage.getItem(STORAGE_KEY_ORDERS) || "[]");
-        if (Array.isArray(localOrders) && localOrders.length > 0) {
-          const serverInvoices = new Set((data.pastOrders || []).map((o) => String(o.invoiceNo || o.invoiceNumber || o.id || "")));
-          const hasMissingInvoice = localOrders.some((lo) => {
-            const key = String(lo.invoiceNo || lo.invoiceNumber || lo.id || "");
-            return key && !serverInvoices.has(key);
+        // Menu items are officially loaded from /api/v1/menu-items (which includes isChefsSpecial).
+        // Only fallback to /api/state if menuItems has not been loaded at all.
+        const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
+        if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
+          setMenuItems((prev) => {
+            if (prev && prev.length > 0) return prev;
+            const normalizedMenu = incomingMenu.filter((item) => !item.isBarItem && !item.isBarDrink).map(normalizeMenuItem);
+            try {
+              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+            } catch {}
+            return normalizedMenu;
           });
-          if (hasMissingInvoice) {
-            payloadToMerge[STORAGE_KEY_ORDERS] = localOrders;
-            needsSync = true;
-          }
         }
-
-        if (needsSync && Object.keys(payloadToMerge).length > 0) {
-          pushGlobalSync(payloadToMerge);
-        }
-      } catch {}
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
@@ -1651,16 +1609,7 @@ export function App() {
             : payload.tables ?? payload.data?.tables ?? payload[STORAGE_KEY_TABLES];
           if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
-            const clean = mergeIncomingTables(incomingTables, freshDel);
-            const cleanJson = JSON.stringify(clean);
-            const currentJson = localStorage.getItem(STORAGE_KEY_TABLES);
-            if (cleanJson !== currentJson) {
-              lastPushedTablesJsonRef.current = cleanJson;
-              setTables(clean);
-              try {
-                localStorage.setItem(STORAGE_KEY_TABLES, cleanJson);
-              } catch {}
-            }
+
           }
           const incomingOrders = (parsedMsg.type === "SYNC_ORDERS" || parsedMsg.type === "SYNC") && Array.isArray(payload)
             ? payload
@@ -1715,8 +1664,10 @@ export function App() {
                     getRelevantLocalFallback(m),
                 };
               });
+              const nextMenuJson = JSON.stringify(normalizedMenu);
+              if (JSON.stringify(prev) === nextMenuJson) return prev;
               try {
-                localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+                localStorage.setItem(STORAGE_KEY_MENU, nextMenuJson);
               } catch {}
               return normalizedMenu;
             });
@@ -1748,11 +1699,13 @@ export function App() {
               monthlySalary: s.monthlySalary,
               status: s.isActive === false ? "inactive" : "active",
             })), localStaff);
-            setStaffList(normalizedStaff);
+            const dedupedStaff = dedupeStaff(normalizedStaff);
+            const staffJson = JSON.stringify(dedupedStaff);
+            setStaffList((prev) => (JSON.stringify(prev) === staffJson ? prev : dedupedStaff));
             try {
               localStorage.setItem(
                 STORAGE_KEY_STAFF,
-                JSON.stringify(normalizedStaff),
+                staffJson,
               );
             } catch {}
           }
@@ -1970,7 +1923,9 @@ export function App() {
         if (alert.type === "cooking_completed") sounds.playBell();
         else sounds.playAddItem();
       } else if (name === "StateSynced" && payload && typeof payload === "object") {
-        handleSseMessage({ data: JSON.stringify({ type: "SYNC", payload }) });
+        if (getRealtimeConnectionStatus().sse !== "connected") {
+          handleSseMessage({ data: JSON.stringify({ type: "SYNC", payload }) });
+        }
       } else if (name === "PaymentCompleted") {
         window.dispatchEvent(new CustomEvent("avsr-payments-updated", { detail: payload }));
       } else if (name === "TableLockUpdated") {
@@ -2042,7 +1997,7 @@ export function App() {
           const incomingTables = JSON.parse(e.newValue);
           if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
-            const clean = mergeIncomingTables(incomingTables, freshDel);
+            const clean = mergeIncomingTables(incomingTables, freshDel, { preserveCachedDefinitions: false });
             setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
           }
         } catch {}
@@ -2138,7 +2093,7 @@ export function App() {
 
           if (type === "SYNC_TABLES" && Array.isArray(payload)) {
             const freshDel = getDeletedTableIds();
-            const clean = mergeIncomingTables(payload, freshDel);
+            const clean = mergeIncomingTables(payload, freshDel, { preserveCachedDefinitions: false });
             setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
           } else if (type === "SYNC_ORDERS" && Array.isArray(payload)) {
             setPastOrders((current) => mergeSettledOrders(current, payload));
@@ -2167,7 +2122,7 @@ export function App() {
           const parsed = JSON.parse(rawTables);
           if (Array.isArray(parsed)) {
             const freshDel = getDeletedTableIds();
-            const clean = mergeIncomingTables(parsed, freshDel);
+            const clean = mergeIncomingTables(parsed, freshDel, { preserveCachedDefinitions: false });
             setTables((prev) => (JSON.stringify(prev) === JSON.stringify(clean) ? prev : clean));
           }
         }
@@ -2406,18 +2361,13 @@ export function App() {
             if (order && String(order.tableId ?? order.TableId) === String(backendTableId)) {
               const refreshedTable = mergeActiveDiningOrders([targetTable], [order])[0];
               setTables((current) => current.map((table) =>
-                String(table.id) === String(targetTable.id) ? refreshedTable : table,
+                String(table.id) === String(rawId) ? refreshedTable : table,
               ));
             } else if (!order) {
-              const hasLocalItems = Array.isArray(targetTable?.items) && targetTable.items.some(
-                (item) => !item.kotSent && item.status !== "cancelled"
-              );
-              if (!hasLocalItems) {
-                const vacantTable = clearCachedTableOrder(targetTable);
-                setTables((current) => current.map((table) =>
-                  String(table.id) === String(targetTable.id) ? vacantTable : table,
-                ));
-              }
+              const vacantTable = clearCachedTableOrder(targetTable);
+              setTables((current) => current.map((table) =>
+                String(table.id) === String(rawId) ? vacantTable : table,
+              ));
             }
           }
         } catch (error) {
@@ -2540,10 +2490,7 @@ export function App() {
       });
 
       try {
-        const nextJson = JSON.stringify(nextTables);
-        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
-        lastPushedTablesJsonRef.current = nextJson;
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+
       } catch {}
 
       return nextTables;
@@ -2610,10 +2557,7 @@ export function App() {
       });
 
       try {
-        const nextJson = JSON.stringify(nextTables);
-        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
-        lastPushedTablesJsonRef.current = nextJson;
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+
       } catch {}
 
       return nextTables;
@@ -2652,10 +2596,7 @@ export function App() {
       });
 
       try {
-        const nextJson = JSON.stringify(nextTables);
-        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
-        lastPushedTablesJsonRef.current = nextJson;
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+
       } catch {}
 
       return nextTables;
@@ -2682,10 +2623,7 @@ export function App() {
       });
 
       try {
-        const nextJson = JSON.stringify(nextTables);
-        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
-        lastPushedTablesJsonRef.current = nextJson;
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+
       } catch {}
 
       return nextTables;
@@ -2720,9 +2658,7 @@ export function App() {
       });
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+        broadcastSync("SYNC_TABLES", nextTables);
       } catch {}
       return nextTables;
     });
@@ -3072,10 +3008,7 @@ export function App() {
       });
 
       try {
-        const nextJson = JSON.stringify(nextTables);
-        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
-        lastPushedTablesJsonRef.current = nextJson;
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+
       } catch {}
 
       return nextTables;
@@ -3222,10 +3155,7 @@ export function App() {
       });
 
       try {
-        const nextJson = JSON.stringify(nextTables);
-        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
-        lastPushedTablesJsonRef.current = nextJson;
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+
       } catch {}
 
       return nextTables;
@@ -3290,9 +3220,7 @@ export function App() {
       });
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+        broadcastSync("SYNC_TABLES", nextTables);
       } catch {}
       return nextTables;
     });
@@ -3355,9 +3283,7 @@ export function App() {
       });
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
-        pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
-        window.dispatchEvent(new Event("storage"));
-        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+        broadcastSync("SYNC_TABLES", nextTables);
       } catch {}
       return nextTables;
     });
@@ -4112,21 +4038,32 @@ export function App() {
   };
 
   const handleDeleteTable = async (tableId) => {
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
-    const targetApiId = tbl?.backendTableId || tableId;
-    const apiResult = await apiDeleteTable(targetApiId).catch((error) => ({ success: false, error: error?.message }));
-    if (!apiResult?.success) {
-      showToast(`Table was not deleted from the backend: ${apiResult?.error || "Unknown API error"}`);
-      return false;
-    }
+    const tbl = tables.find(
+      (t) =>
+        String(t.id) === String(tableId) ||
+        String(t.backendTableId) === String(tableId) ||
+        String(t.tableId) === String(tableId) ||
+        (t.name && String(t.name) === String(tableId)) ||
+        (t.tableName && String(t.tableName) === String(tableId)),
+    );
+    const targetApiId = tbl?.backendTableId || tbl?.tableId || tableId;
 
-    // 1. Permanently register this table ID as deleted
+    const aliasesToDelete = [
+      tableId,
+      String(tableId),
+      targetApiId,
+      String(targetApiId),
+      tbl?.id,
+      tbl?.backendTableId,
+      tbl?.tableId,
+      tbl?.name,
+      tbl?.tableName,
+      tbl?.tableNumber,
+    ].filter((v) => v != null && v !== "");
+
+    // 1. Permanently register this table ID and all its aliases as deleted
     const nextDeleted = [
-      ...new Set(
-        [...deletedTableIds, tableId, String(tableId), Number(tableId)].filter(
-          Boolean,
-        ),
-      ),
+      ...new Set([...deletedTableIds, ...aliasesToDelete]),
     ];
     setDeletedTableIds(nextDeleted);
     try {
@@ -4137,7 +4074,15 @@ export function App() {
     } catch {}
 
     // 2. Remove table from active list and persist immediately
-    const nextTables = tables.filter((t) => String(t.id) !== String(tableId));
+    const nextTables = tables.filter((t) =>
+      !aliasesToDelete.some((del) =>
+        String(t.id) === String(del) ||
+        String(t.backendTableId) === String(del) ||
+        String(t.tableId) === String(del) ||
+        (t.name && String(t.name) === String(del)) ||
+        (t.tableName && String(t.tableName) === String(del))
+      )
+    );
     setTables(nextTables);
     try {
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
@@ -4147,8 +4092,20 @@ export function App() {
     } catch {}
 
     // 3. If currently selected table in billing view is this deleted table, switch to first remaining table
-    if (String(selectedTableId) === String(tableId)) {
-      setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : 1);
+    if (aliasesToDelete.some((del) => String(selectedTableId) === String(del))) {
+      setSelectedTableId(nextTables.length > 0 ? nextTables[0].id : null);
+    }
+
+    // 4. Call backend API to delete table (best effort with name fallback)
+    try {
+      const apiResult = await apiDeleteTable(targetApiId);
+      if (!apiResult?.success && tbl?.name && tbl.name !== String(targetApiId)) {
+        await apiDeleteTable(encodeURIComponent(tbl.name)).catch(() => {});
+      }
+    } catch (err) {
+      if (tbl?.name && tbl.name !== String(targetApiId)) {
+        await apiDeleteTable(encodeURIComponent(tbl.name)).catch(() => {});
+      }
     }
 
     showToast(`🗑️   Permanently Deleted ${tbl?.name || "Table"}`);

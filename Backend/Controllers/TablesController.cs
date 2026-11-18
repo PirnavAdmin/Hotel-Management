@@ -340,6 +340,12 @@ public class TablesController : ControllerBase
         _tableLockService.ReleaseLock(id);
         var success = await _tableService.DeleteTableByIdOrIdentifierAsync(id);
 
+        if (!success)
+        {
+            _logger.LogWarning("DELETE /api/v1/tables/{Id} failed: Table not found or could not be marked inactive.", id);
+            return NotFound(new { success = false, message = $"Table '{id}' could not be deleted or was not found." });
+        }
+
         var tables = await _tableService.GetTablesAsync();
         await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", tables);
 

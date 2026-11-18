@@ -170,51 +170,59 @@ public class OrdersController : ControllerBase
     [HttpGet("table/{tableId}")]
     public async Task<IActionResult> GetOrderByTable(long tableId)
     {
-        // 1. Check for active or billed order by TableId directly
-        var order = await _context.Orders
-            .Include(o => o.Items)
-            .Where(o =>
-                o.TableId == tableId &&
-                o.IsActive &&
-                !o.IsDeleted &&
-                (o.Status == "Active" ||
-                 o.Status == "active" ||
-                 o.Status == "Billed" ||
-                 o.Status == "billed"))
-            .OrderByDescending(o => o.CreatedAt)
-            .FirstOrDefaultAsync();
-
-        // 2. If not found by TableId, also check matching table in RestaurantTables or DiningTables
-        if (order == null)
+        try
         {
-            var restTable = await _context.RestaurantTables
-                .FirstOrDefaultAsync(t => (t.TableId == tableId || t.TableNumber == tableId.ToString()) && t.DeletedAt == null);
+            // 1. Check for active or billed order by TableId directly
+            var order = await _context.Orders
+                .Include(o => o.Items)
+                .Where(o =>
+                    o.TableId == tableId &&
+                    o.IsActive &&
+                    !o.IsDeleted &&
+                    (o.Status == "Active" ||
+                     o.Status == "active" ||
+                     o.Status == "Billed" ||
+                     o.Status == "billed"))
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
 
-            if (restTable != null)
+            // 2. If not found by TableId, also check matching table in RestaurantTables
+            if (order == null)
             {
-                order = await _context.Orders
-                    .Include(o => o.Items)
-                    .Where(o =>
-                        o.IsActive &&
-                        !o.IsDeleted &&
-                        (o.Status == "Active" || o.Status == "active" || o.Status == "Billed" || o.Status == "billed") &&
-                        (o.TableId == restTable.TableId || o.TableName == restTable.TableName || o.TableName == restTable.TableNumber))
-                    .OrderByDescending(o => o.CreatedAt)
-                    .FirstOrDefaultAsync();
-            }
-        }
+                var restTable = await _context.RestaurantTables
+                    .FirstOrDefaultAsync(t => (t.TableId == tableId || t.TableNumber == tableId.ToString()) && t.DeletedAt == null);
 
-        if (order == null)
+                if (restTable != null && restTable.TableId != tableId)
+                {
+                    order = await _context.Orders
+                        .Include(o => o.Items)
+                        .Where(o =>
+                            o.TableId == restTable.TableId &&
+                            o.IsActive &&
+                            !o.IsDeleted &&
+                            (o.Status == "Active" || o.Status == "active" || o.Status == "Billed" || o.Status == "billed"))
+                        .OrderByDescending(o => o.CreatedAt)
+                        .FirstOrDefaultAsync();
+                }
+            }
+
+            if (order == null)
+            {
+                // Table has no active order. Return 200 OK with null data so client can take a new order.
+                return Ok(null);
+            }
+
+            await CleanDuplicateOrderItemsAsync(order);
+            await PopulateDisplayFields(order);
+            RecalculateTotals(order);
+
+            return Ok(MapToOrderDto(order));
+        }
+        catch (Exception ex)
         {
-            // Table has no active order. Return 200 OK with null data so client can take a new order.
+            _logger.LogWarning(ex, "Error getting order for table {TableId}: {Message}", tableId, ex.Message);
             return Ok(null);
         }
-
-        await CleanDuplicateOrderItemsAsync(order);
-        await PopulateDisplayFields(order);
-        RecalculateTotals(order);
-
-        return Ok(MapToOrderDto(order));
     }
 
 
