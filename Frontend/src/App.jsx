@@ -2300,14 +2300,24 @@ export function App() {
   const isTakeawayActive = String(selectedTableId) === "takeaway";
   const currentTable = isTakeawayActive
     ? takeawayOrder
-    : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
+    : (tables.find((t) =>
+        String(t.id) === String(selectedTableId) ||
+        String(t.backendTableId) === String(selectedTableId) ||
+        String(t.tableNumber) === String(selectedTableId) ||
+        (t.name && String(t.name).trim().toLowerCase() === String(selectedTableId).trim().toLowerCase())
+      ) || tables[0] || null);
 
   // Table selection handler with multi-waiter concurrency enforcement
   const handleSelectTable = async (id) => {
     const rawId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
     if (String(rawId) !== "takeaway") {
       const lockResult = acquireTableLock(rawId, posSession);
-      const targetTable = tables.find((t) => String(t.id) === String(rawId));
+      const targetTable = tables.find((t) =>
+        String(t.id) === String(rawId) ||
+        String(t.backendTableId) === String(rawId) ||
+        String(t.tableNumber) === String(rawId) ||
+        (t.name && String(t.name).trim().toLowerCase() === String(rawId).trim().toLowerCase())
+      );
       const tblName = targetTable?.name || `Table ${rawId}`;
 
       if (!lockResult.success) {
@@ -2317,30 +2327,32 @@ export function App() {
     }
 
     if (String(rawId) !== "takeaway") {
-      const targetTable = tables.find((table) => String(table.id) === String(rawId));
+      const targetTable = tables.find((table) =>
+        String(table.id) === String(rawId) ||
+        String(table.backendTableId) === String(rawId) ||
+        String(table.tableNumber) === String(rawId) ||
+        (table.name && String(table.name).trim().toLowerCase() === String(rawId).trim().toLowerCase())
+      );
       const backendTableId = targetTable?.backendTableId ?? targetTable?.tableId;
       if (Number(backendTableId) > 0) {
         try {
           const response = await apiGetOrderForTable(backendTableId);
-          if (!response?.success) {
-            throw new Error(response?.error || "The existing table order could not be loaded.");
-          }
-          const order = response.data?.data ?? response.data?.order ?? response.data;
-          if (order && String(order.tableId ?? order.TableId) === String(backendTableId)) {
-            const refreshedTable = mergeActiveDiningOrders([targetTable], [order])[0];
-            setTables((current) => current.map((table) =>
-              String(table.id) === String(rawId) ? refreshedTable : table,
-            ));
-          } else if (!order) {
-            const vacantTable = clearCachedTableOrder(targetTable);
-            setTables((current) => current.map((table) =>
-              String(table.id) === String(rawId) ? vacantTable : table,
-            ));
+          if (response && response.success) {
+            const order = response.data?.data ?? response.data?.order ?? response.data;
+            if (order && String(order.tableId ?? order.TableId) === String(backendTableId)) {
+              const refreshedTable = mergeActiveDiningOrders([targetTable], [order])[0];
+              setTables((current) => current.map((table) =>
+                String(table.id) === String(rawId) ? refreshedTable : table,
+              ));
+            } else if (!order) {
+              const vacantTable = clearCachedTableOrder(targetTable);
+              setTables((current) => current.map((table) =>
+                String(table.id) === String(rawId) ? vacantTable : table,
+              ));
+            }
           }
         } catch (error) {
-          showToast(error?.message || "The existing table order could not be loaded.");
-          releaseTableLock(rawId);
-          return;
+          console.warn("Could not load server order for table, proceeding with local table state:", error);
         }
       }
     }

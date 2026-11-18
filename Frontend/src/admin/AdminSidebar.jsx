@@ -254,6 +254,7 @@ export function AdminSidebar({
             justifyContent: "center",
             boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
             flexShrink: 0,
+            overflow: "hidden",
           }}
         >
           {liveLogo ? (
@@ -263,9 +264,9 @@ export function AdminSidebar({
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "contain",
+                objectFit: "cover",
                 borderRadius: "10px",
-                padding: "3px",
+                display: "block",
               }}
             />
           ) : portalMode === "bar" ? (

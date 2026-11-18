@@ -208,6 +208,36 @@ export function AdminSettings({
     return JSON.stringify(settings) !== JSON.stringify(lastSavedSettings);
   }, [settings, lastSavedSettings]);
 
+  const processImageFile = (file, callback) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 500;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        callback(canvas.toDataURL("image/png", 0.9));
+      };
+      img.onerror = () => callback(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleLogoUpload = (event) => {
     const file = event.target.files?.[0];
     const input = event.currentTarget;
@@ -217,24 +247,10 @@ export function AdminSettings({
       setLogoError("Choose an image file for the restaurant logo.");
       return;
     }
-    if (file.size > 350 * 1024) {
-      setLogoError(
-        "Logo must be 350 KB or smaller so it can be saved reliably in browser storage.",
-      );
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setSettings((current) => ({ ...current, logo: reader.result }));
-      }
+    processImageFile(file, (dataUrl) => {
+      setSettings((current) => ({ ...current, logo: dataUrl }));
       input.value = "";
-    };
-    reader.onerror = () => {
-      setLogoError("Could not read this image. Please try another file.");
-      input.value = "";
-    };
-    reader.readAsDataURL(file);
+    });
   };
 
   useEffect(() => {
@@ -336,36 +352,6 @@ export function AdminSettings({
     if (onSaveSettings) {
       onSaveSettings(updated).catch(() => {});
     }
-  };
-
-  const processImageFile = (file, callback) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const maxDim = 500;
-        let width = img.width;
-        let height = img.height;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        callback(canvas.toDataURL("image/png", 0.9));
-      };
-      img.onerror = () => callback(e.target.result);
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
   };
 
   const executeQrUpload = (index, file) => {
@@ -823,19 +809,31 @@ export function AdminSettings({
                   }}
                 >
                   {settings.logo ? (
-                    <img
-                      src={settings.logo}
-                      alt="Restaurant logo preview"
+                    <div
                       style={{
                         width: "64px",
                         height: "64px",
-                        objectFit: "contain",
-                        background: "var(--bg-secondary)",
-                        border: "1px solid var(--border-card)",
                         borderRadius: "10px",
-                        padding: "5px",
+                        overflow: "hidden",
+                        border: "1px solid var(--border-card)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "transparent",
+                        flexShrink: 0,
                       }}
-                    />
+                    >
+                      <img
+                        src={settings.logo}
+                        alt="Restaurant logo preview"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -847,6 +845,7 @@ export function AdminSettings({
                         background: "var(--bg-secondary)",
                         border: "1px dashed var(--border-card)",
                         borderRadius: "10px",
+                        flexShrink: 0,
                       }}
                     >
                       <Store size={22} />

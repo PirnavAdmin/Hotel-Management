@@ -168,20 +168,7 @@ public class OrdersController : ControllerBase
     [HttpGet("table/{tableId}")]
     public async Task<IActionResult> GetOrderByTable(long tableId)
     {
-        var table = await _context.DiningTables
-            .FirstOrDefaultAsync(t =>
-                t.Id == tableId &&
-                t.IsActive &&
-                !t.IsDeleted);
-
-        if (table == null)
-        {
-            return NotFound(new
-            {
-                message = "Table not found."
-            });
-        }
-
+        // 1. Check for active or billed order by TableId directly
         var order = await _context.Orders
             .Include(o => o.Items)
             .Where(o =>
@@ -195,8 +182,29 @@ public class OrdersController : ControllerBase
             .OrderByDescending(o => o.CreatedAt)
             .FirstOrDefaultAsync();
 
+        // 2. If not found by TableId, also check matching table in RestaurantTables or DiningTables
         if (order == null)
         {
+            var restTable = await _context.RestaurantTables
+                .FirstOrDefaultAsync(t => (t.TableId == tableId || t.TableNumber == tableId.ToString()) && t.DeletedAt == null);
+
+            if (restTable != null)
+            {
+                order = await _context.Orders
+                    .Include(o => o.Items)
+                    .Where(o =>
+                        o.IsActive &&
+                        !o.IsDeleted &&
+                        (o.Status == "Active" || o.Status == "active" || o.Status == "Billed" || o.Status == "billed") &&
+                        (o.TableId == restTable.TableId || o.TableName == restTable.TableName || o.TableName == restTable.TableNumber))
+                    .OrderByDescending(o => o.CreatedAt)
+                    .FirstOrDefaultAsync();
+            }
+        }
+
+        if (order == null)
+        {
+            // Table has no active order. Return 200 OK with null data so client can take a new order.
             return Ok(null);
         }
 
