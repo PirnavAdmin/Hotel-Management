@@ -500,24 +500,31 @@ export function AdminSettings({
     setIsSaving(true);
     setSaveError("");
 
+    const settingsToSave = {
+      ...settings,
+      updatedAt: Date.now(),
+      isUserConfigured: true,
+    };
+
     try {
       localStorage.setItem(
         "gourmet_pos_settings_v1",
-        JSON.stringify(settings),
+        JSON.stringify(settingsToSave),
       );
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new Event("restaurant-settings-updated"));
-      window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settings }));
+      window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settingsToSave }));
 
       if (onSaveSettings) {
         try {
-          await onSaveSettings(settings);
+          await onSaveSettings(settingsToSave);
         } catch (syncErr) {
           console.warn("Server sync error (local settings saved successfully):", syncErr);
         }
       }
 
-      setLastSavedSettings(settings);
+      setLastSavedSettings(settingsToSave);
+      setSettings(settingsToSave);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     } catch (error) {

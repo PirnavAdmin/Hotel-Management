@@ -1251,8 +1251,34 @@ export function AdminPortal({
           localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}",
         );
       } catch {}
-      // Shared server settings are authoritative across devices.
-      const mergedSettings = { ...localSettings, ...settings };
+
+      // Strip empty or null properties from server so they never wipe user data
+      const cleanServer = {};
+      Object.entries(settings).forEach(([key, val]) => {
+        if (val !== null && val !== undefined && val !== "") {
+          cleanServer[key] = val;
+        }
+      });
+
+      // If user has explicitly saved settings locally, protect custom brand identity (name, logo, tagline)
+      const hasLocalCustomizations =
+        Boolean(localSettings.isUserConfigured) ||
+        Boolean(localSettings.updatedAt) ||
+        (Boolean(localSettings.restaurantName) && localSettings.restaurantName.trim() !== "AVSR FOOD COURT");
+
+      const mergedSettings = {
+        ...cleanServer,
+        ...localSettings,
+        ...(hasLocalCustomizations
+          ? {
+              restaurantName: localSettings.restaurantName || cleanServer.restaurantName || "",
+              tagline: localSettings.tagline !== undefined ? localSettings.tagline : cleanServer.tagline || "",
+            }
+          : {}),
+        // Never erase local base64 logo if server returned none
+        logo: localSettings.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+      };
+
       try {
         localStorage.setItem(
           RESTAURANT_SETTINGS_KEY,
@@ -1301,9 +1327,15 @@ export function AdminPortal({
   }, []);
 
   const handleSaveRestaurantSettings = async (settings) => {
+    const stampedSettings = {
+      ...settings,
+      updatedAt: Date.now(),
+      isUserConfigured: true,
+    };
+
     // 1. Save directly to dedicated REST endpoint
     try {
-      await apiUpdateRestaurantSettings(settings);
+      await apiUpdateRestaurantSettings(stampedSettings);
     } catch (restErr) {
       console.warn("Direct restaurant-settings API update warning:", restErr);
     }
@@ -1315,19 +1347,19 @@ export function AdminPortal({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: settings }),
+        body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: stampedSettings }),
       });
     } catch (syncErr) {
       console.warn("Settings sync broadcast warning:", syncErr);
     }
 
     try {
-      localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(stampedSettings));
     } catch {}
     window.dispatchEvent(new Event("restaurant-settings-updated"));
     window.dispatchEvent(new Event("storage"));
-    window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settings }));
-    setRestaurantSettings(settings);
+    window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: stampedSettings }));
+    setRestaurantSettings(stampedSettings);
   };
 
   const themes = [

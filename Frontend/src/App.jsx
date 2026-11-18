@@ -595,7 +595,31 @@ export function App() {
       if (!settings || typeof settings !== "object") return;
       let local = {};
       try { local = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}"); } catch {}
-      const merged = { ...local, ...settings };
+
+      const cleanServer = {};
+      Object.entries(settings).forEach(([key, val]) => {
+        if (val !== null && val !== undefined && val !== "") {
+          cleanServer[key] = val;
+        }
+      });
+
+      const hasLocalCustomizations =
+        Boolean(local.isUserConfigured) ||
+        Boolean(local.updatedAt) ||
+        (Boolean(local.restaurantName) && local.restaurantName.trim() !== "AVSR FOOD COURT");
+
+      const merged = {
+        ...cleanServer,
+        ...local,
+        ...(hasLocalCustomizations
+          ? {
+              restaurantName: local.restaurantName || cleanServer.restaurantName || "",
+              tagline: local.tagline !== undefined ? local.tagline : cleanServer.tagline || "",
+            }
+          : {}),
+        logo: local.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+      };
+
       try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {
         setRestaurantSettings(merged);
