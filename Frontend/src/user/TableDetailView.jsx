@@ -1795,12 +1795,7 @@ export function TableDetailView({
   onOpenKOTView,
   onShowToast,
 }) {
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Active table identity and live selection
   const activeTable =
     (Array.isArray(allTables) && table?.id
       ? allTables.find((t) => String(t.id) === String(table.id))
@@ -1900,9 +1895,12 @@ export function TableDetailView({
       };
 
   // Financial calculations in Rupees
+  const isVacant = activeTable?.status === "vacant" || table?.status === "vacant";
   const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
   const propItems = Array.isArray(table?.items) ? table.items : [];
-  const rawSafeItems = activeItems.length > 0 ? activeItems : propItems;
+  const rawSafeItems = isVacant
+    ? []
+    : (activeItems.length > 0 ? activeItems : propItems);
   const safeItems = useMemo(() => consolidateOrderItems(rawSafeItems), [rawSafeItems]);
   const safeItemKeys = createOrderLineKeys(safeItems);
   const targetTableId = activeTable?.id ?? table?.id;
