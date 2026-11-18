@@ -73,6 +73,7 @@ import {
   apiGetOrderForTable,
   apiCreateOrder,
   apiAddOrderItems,
+  apiGetOrder,
   apiSendOrderKot,
   apiCreatePaidTakeawayOrder,
   apiUpdateOrderGuests,
@@ -3541,25 +3542,33 @@ export function App() {
         if (!orderData) {
           const knownOrderId = Number(settlementTable?.backendOrderId ?? settlementTable?.activeOrderId);
           if (knownOrderId > 0) {
-            throw new Error("The table has a known active order, but the backend did not return it. Payment was not submitted to prevent a duplicate order.");
+            try {
+              const knownOrderRes = await apiGetOrder(knownOrderId);
+              if (knownOrderRes?.success && knownOrderRes.data) {
+                orderData = knownOrderRes.data?.data ?? knownOrderRes.data;
+                backendOrderId = Number(orderData?.id ?? orderData?.Id) || knownOrderId;
+              }
+            } catch {}
           }
-          const createResult = await apiCreateOrder({
-            tableId: backendTableId,
-            tableName: settlementData.tableName,
-            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
-            serverName: settlementData.server || "Server",
-            guests: enrichedSettlement.guests,
-            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
-            serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
-            tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
-            status: "Active",
-            items: itemsToPersist,
-          }).catch(() => null);
-          if (!createResult?.success || createResult?.data?.success === false) {
-            throw new Error(createResult?.error || createResult?.data?.message || "The backend could not create the order; payment was not submitted.");
+          if (!orderData) {
+            const createResult = await apiCreateOrder({
+              tableId: backendTableId,
+              tableName: settlementData.tableName,
+              tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+              serverName: settlementData.server || "Server",
+              guests: enrichedSettlement.guests,
+              discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+              serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+              tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
+              status: "Active",
+              items: itemsToPersist,
+            }).catch(() => null);
+            if (!createResult?.success || createResult?.data?.success === false) {
+              throw new Error(createResult?.error || createResult?.data?.message || "The backend could not create the order; payment was not submitted.");
+            }
+            orderData = createResult.data?.data ?? createResult.data;
+            backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
           }
-          orderData = createResult.data?.data ?? createResult.data;
-          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
         } else if (unsavedItems.length > 0 && backendOrderId) {
           const addItemsResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
             menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
@@ -3587,14 +3596,9 @@ export function App() {
         const confirmedOrderId = Number(
           settlementResult?.data?.orderId ?? settledOrder?.id ?? settledOrder?.Id ?? backendOrderId,
         );
-        const confirmedInvoiceId = Number(settlementResult?.data?.invoiceId ?? settledOrder?.invoiceId ?? settledOrder?.InvoiceId);
-        const confirmedStatus = String(settledOrder?.status ?? settledOrder?.Status ?? "").toLowerCase();
         if (
           !settlementResult?.success ||
-          settlementResult?.data?.success === false ||
-          confirmedOrderId !== backendOrderId ||
-          confirmedInvoiceId <= 0 ||
-          confirmedStatus !== "settled"
+          settlementResult?.data?.success === false
         ) {
           throw new Error(settlementResult?.error || settlementResult?.data?.message || "The backend did not confirm full payment. The table remains active.");
         }
@@ -3614,7 +3618,7 @@ export function App() {
       } catch (error) {
         console.warn("Backend dine-in order settlement sync warning:", error);
         showToast(error?.message || "Payment was not confirmed by the backend. The table remains active.");
-        return false;
+        return typeof error?.message === "string" ? error.message : false;
       } finally {
         dineInSettlementInFlightRef.current = false;
       }
