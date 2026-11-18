@@ -965,8 +965,23 @@ export function AdminPortal({
       const items = Array.isArray(ord.items) ? ord.items : [];
       const foodItems = items.filter((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled" && !isDrinkItem(i));
       if (foodItems.length === 0) continue;
-      const isPickedUp = ["pickedup", "dispatched", "handedover", "completed"].includes(String(ord.fulfillmentStatus || "").toLowerCase());
-      if (isPickedUp) continue;
+      const fulfillment = String(ord.fulfillmentStatus || "").toLowerCase();
+      const status = String(ord.status || "").toLowerCase();
+      const isFinished =
+        ["pickedup", "picked_up", "dispatched", "handedover", "completed", "settled", "closed", "delivered"].includes(fulfillment) ||
+        ["completed", "settled", "closed", "delivered"].includes(status) ||
+        Boolean(ord.isCompleted || ord.isPickedUp);
+      if (isFinished) continue;
+
+      // If it's already settled/paid without active uncooked items, do not count as active KOT
+      const paymentStatus = String(ord.paymentStatus || "").toLowerCase();
+      if ((paymentStatus === "paid" || ord.isPaid) && (status === "settled" || status === "completed" || !status)) {
+        const hasUncooked = foodItems.some((i) => {
+          const k = String(i.kotStatus || "").toLowerCase();
+          return ["received", "queued", "new", "pending", "cooking"].includes(k);
+        });
+        if (!hasUncooked) continue;
+      }
 
       const orderNumber = ord.invoiceNo || ord.orderNumber || ord.orderId || ord.id;
       result.push({

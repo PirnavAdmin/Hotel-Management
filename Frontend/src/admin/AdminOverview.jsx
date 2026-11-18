@@ -28,6 +28,7 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, formatInvoiceNumber, getOrderTimestamp, parseOrderToYMD } from "../utils/orderDedupe";
 import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
+import { compareTablesNaturally } from "../utils/tableSortHelper";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
 
@@ -45,6 +46,32 @@ export function AdminOverview({
   sharedRecordLoad = { tables: "ready", staff: "ready" },
 }) {
   const [salesRange, setSalesRange] = useState(7);
+  // Live tables synced with props, localStorage, and floor events
+  const [liveTables, setLiveTables] = useState(() => {
+    if (Array.isArray(tables) && tables.length > 0) return tables;
+    try {
+      const raw = localStorage.getItem("gourmet_pos_tables_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return Array.isArray(tables) ? tables : [];
+  });
+
+  // Live menu items synced with props, localStorage, and menu events
+  const [liveMenuItems, setLiveMenuItems] = useState(() => {
+    if (Array.isArray(menuItems) && menuItems.length > 0) return menuItems;
+    try {
+      const raw = localStorage.getItem("gourmet_pos_menu_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return Array.isArray(menuItems) ? menuItems : [];
+  });
+
   // Dynamically load orders from localStorage or props with deduplication
   const [ordersList, setOrdersList] = useState(() => {
     try {
@@ -64,6 +91,18 @@ export function AdminOverview({
     } catch {}
     return [];
   });
+
+  useEffect(() => {
+    if (Array.isArray(tables) && tables.length > 0) {
+      setLiveTables(tables);
+    }
+  }, [tables]);
+
+  useEffect(() => {
+    if (Array.isArray(menuItems) && menuItems.length > 0) {
+      setLiveMenuItems(menuItems);
+    }
+  }, [menuItems]);
 
   useEffect(() => {
     if (Array.isArray(pastOrders) && pastOrders.length > 0) {
@@ -86,7 +125,11 @@ export function AdminOverview({
 
     fetchOrders();
 
-    const syncFromStorage = () => {
+    const syncFromStorage = (e) => {
+      if (Array.isArray(e?.detail) && e.detail.length > 0) {
+        setOrdersList((current) => dedupeOrders([...e.detail, ...(Array.isArray(current) ? current : [])]));
+        return;
+      }
       try {
         const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
         if (saved) {
@@ -110,11 +153,41 @@ export function AdminOverview({
       }
     };
 
+    const syncTables = (e) => {
+      if (Array.isArray(e?.detail) && e.detail.length > 0) {
+        setLiveTables(e.detail);
+        return;
+      }
+      try {
+        const raw = localStorage.getItem("gourmet_pos_tables_v1");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) setLiveTables(parsed);
+        }
+      } catch {}
+    };
+
+    const syncMenu = (e) => {
+      if (Array.isArray(e?.detail) && e.detail.length > 0) {
+        setLiveMenuItems(e.detail);
+        return;
+      }
+      try {
+        const raw = localStorage.getItem("gourmet_pos_menu_v1");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) setLiveMenuItems(parsed);
+        }
+      } catch {}
+    };
+
     window.addEventListener("storage", syncFromStorage);
     window.addEventListener("focus", syncFromStorage);
     window.addEventListener("avsr-orders-updated", syncFromStorage);
     window.addEventListener("avsr-invoices-updated", syncFromStorage);
     window.addEventListener("avsr-inventory-updated", syncInventory);
+    window.addEventListener("avsr-tables-updated", syncTables);
+    window.addEventListener("avsr-menu-updated", syncMenu);
 
     return () => {
       active = false;
@@ -123,6 +196,8 @@ export function AdminOverview({
       window.removeEventListener("avsr-orders-updated", syncFromStorage);
       window.removeEventListener("avsr-invoices-updated", syncFromStorage);
       window.removeEventListener("avsr-inventory-updated", syncInventory);
+      window.removeEventListener("avsr-tables-updated", syncTables);
+      window.removeEventListener("avsr-menu-updated", syncMenu);
     };
   }, []);
 
@@ -134,8 +209,11 @@ export function AdminOverview({
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const todayOrders = cleanOrders.filter((o) => parseOrderToYMD(o) === todayYMD);
+  const getOrderAmount = (order) =>
+    Number(order?.grandTotal ?? order?.totalAmount ?? order?.total ?? order?.paidAmount) || 0;
+
   const todayRevenue = todayOrders.reduce(
-    (sum, order) => sum + (Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0),
+    (sum, order) => sum + getOrderAmount(order),
     0
   );
 
@@ -143,28 +221,43 @@ export function AdminOverview({
   const todayCashRevenue = todayOrders
     .filter((o) => {
       const mode = String(o.paymentMethod || o.paymentMode || "").toLowerCase();
-      return mode === "cash";
+      return mode.includes("cash");
     })
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? o.totalAmount) || 0), 0);
+    .reduce((sum, o) => sum + getOrderAmount(o), 0);
 
   const todayUpiRevenue = todayOrders
     .filter((o) => {
       const mode = String(o.paymentMethod || o.paymentMode || "").toLowerCase();
-      return mode === "upi" || mode === "qr" || mode === "online";
+      return mode.includes("upi") || mode.includes("qr") || mode.includes("online");
     })
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? o.totalAmount) || 0), 0);
+    .reduce((sum, o) => sum + getOrderAmount(o), 0);
 
-  const occupiedTables = tables.filter((t) => t.status !== "vacant" && Array.isArray(t.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"));
-  const totalChairs = tables.reduce(
-    (sum, t) => sum + (Number(t.capacity) || 0),
+  const isTableOccupied = (tbl) => {
+    if (!tbl) return false;
+    const rawStatus = String(tbl?.status || "").trim().toLowerCase();
+    if (["vacant", "available", "free"].includes(rawStatus)) {
+      return false;
+    }
+    if (["occupied", "dining", "billed"].includes(rawStatus)) {
+      return true;
+    }
+    const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+    );
+    return Boolean(hasActiveItems);
+  };
+
+  const occupiedTables = liveTables.filter(isTableOccupied);
+  const totalChairs = liveTables.reduce(
+    (sum, t) => sum + (Number(t.capacity || t.capacityChairs || t.chairs) || 4),
     0
   );
   const occupiedChairs = occupiedTables.reduce(
-    (sum, t) => sum + (Number(t.guests) || 0),
+    (sum, t) => sum + (Number(t.guests || t.persons || t.capacity || t.capacityChairs || t.chairs) || 0),
     0
   );
 
-  const tablesWithOrders = tables.filter((t) => t.items && t.items.length > 0);
+  const tablesWithOrders = liveTables.filter((t) => t.items && t.items.length > 0);
   const pendingKOTCount =
     tablesWithOrders.filter(
       (t) =>
@@ -173,7 +266,7 @@ export function AdminOverview({
         )
     ).length + (Number(activeTakeawayKOTCount) || 0);
 
-  const dineInMenuItems = menuItems.filter((item) => !isBarMenuItem(item));
+  const dineInMenuItems = liveMenuItems.filter((item) => !isBarMenuItem(item));
   const vegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "VEG" || i.isVeg === true)).length;
   const nonVegCount = dineInMenuItems.filter((i) => (i.dietaryType?.toUpperCase() === "NON-VEG" || i.isVeg === false)).length;
 
@@ -194,7 +287,7 @@ export function AdminOverview({
           ? String(date.getDate())
           : "",
       accessibleDate: date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
-      revenue: dayOrders.reduce((sum, order) => sum + (Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0), 0),
+      revenue: dayOrders.reduce((sum, order) => sum + getOrderAmount(order), 0),
       count: dayOrders.length,
     };
   });
@@ -566,7 +659,7 @@ export function AdminOverview({
             </div>
           </div>
           <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {occupiedTables.length} / {tables.length} Tables
+            {occupiedTables.length} / {liveTables.length} Tables
           </div>
           <div
             style={{
@@ -858,14 +951,14 @@ export function AdminOverview({
               paddingRight: "2px",
             }}
           >
-            {tables
+            {liveTables
               .slice()
-              .sort((a, b) => Number(a.id || 0) - Number(b.id || 0))
+              .sort(compareTablesNaturally)
               .map((tbl) => {
-                const isOccupied = tbl.status !== "vacant" && Array.isArray(tbl.items) && tbl.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
+                const isOccupied = isTableOccupied(tbl);
                 return (
                   <div
-                    key={tbl.id}
+                    key={tbl.id || tbl.tableNumber || tbl.name}
                     onClick={() => onNavigateTab("tables")}
                     style={{
                       background: isOccupied
@@ -896,7 +989,7 @@ export function AdminOverview({
                         color: isOccupied ? "var(--accent-amber)" : "var(--text-main)",
                       }}
                     >
-                      {tbl.name}
+                      {tbl.name || tbl.tableName || `Table ${tbl.id}`}
                     </div>
                     <div
                       style={{
@@ -918,7 +1011,7 @@ export function AdminOverview({
                           background: isOccupied ? "#f59e0b" : "#10b981",
                         }}
                       />
-                      <span>{isOccupied ? `${tbl.guests || 2} Guests` : "Vacant"}</span>
+                      <span>{isOccupied ? `${tbl.guests || tbl.persons || 1} Seated` : "Vacant"}</span>
                     </div>
                     <div
                       style={{

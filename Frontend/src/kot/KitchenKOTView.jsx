@@ -609,6 +609,14 @@ export function KitchenKOTView({
 
   const takeawayTickets = uniqueTakeawayOrders
     .map((order) => {
+      const fulfillment = String(order.fulfillmentStatus || "").toLowerCase();
+      const status = String(order.status || "").toLowerCase();
+      const isFinished =
+        ["pickedup", "picked_up", "dispatched", "handedover", "completed", "settled", "closed", "delivered"].includes(fulfillment) ||
+        ["completed", "settled", "closed", "delivered"].includes(status) ||
+        Boolean(order.isCompleted || order.isPickedUp);
+      if (isFinished) return null;
+
       const items = Array.isArray(order.items) ? order.items : [];
       const activeStationItems = items
         .filter((item) => {
