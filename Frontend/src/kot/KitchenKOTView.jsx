@@ -2555,7 +2555,7 @@ export function KitchenKOTView({
                               margin: 0,
                             }}
                           >
-                            {modalTicket.name} Order Details
+                            Order Details
                           </h2>
                           <span
                             style={{
