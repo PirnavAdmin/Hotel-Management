@@ -52,6 +52,7 @@ import {
   Clock,
   ArrowRight,
   X,
+  UtensilsCrossed,
 } from "lucide-react";
 import {
   cleanNotificationText,
@@ -4321,9 +4322,141 @@ export function App() {
   };
 
   if (authRestorePending) {
+    const hotelName = restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+    const hotelLogo = restaurantSettings?.logo || "";
+    const hotelTagline = restaurantSettings?.tagline?.trim() || "";
+
     return (
-      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#080d18", color: "#d6deeb" }}>
-        Verifying your session with the server…
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#080d18",
+          color: "#d6deeb",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          padding: "2rem",
+          textAlign: "center",
+        }}
+      >
+        <style>{`
+          @keyframes pulseHotelGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.3)); }
+            50% { transform: scale(1.04); filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.55)); }
+          }
+          @keyframes spinRing {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+
+        {/* Branded Hotel Logo / Icon */}
+        <div style={{ position: "relative", marginBottom: "1.35rem" }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: "-6px",
+              borderRadius: "22px",
+              border: "2px dashed rgba(245, 158, 11, 0.45)",
+              animation: "spinRing 10s linear infinite",
+            }}
+          />
+          {hotelLogo ? (
+            <img
+              src={hotelLogo}
+              alt={hotelName}
+              style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "18px",
+                objectFit: "cover",
+                border: "2px solid rgba(245, 158, 11, 0.4)",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
+                animation: "pulseHotelGlow 2.5s ease-in-out infinite",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "18px",
+                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 24px rgba(245, 158, 11, 0.35)",
+                animation: "pulseHotelGlow 2.5s ease-in-out infinite",
+              }}
+            >
+              <UtensilsCrossed size={34} color="#ffffff" />
+            </div>
+          )}
+        </div>
+
+        {/* Hotel Name */}
+        <h1
+          style={{
+            fontSize: "1.75rem",
+            fontWeight: 800,
+            letterSpacing: "0.02em",
+            color: "#ffffff",
+            margin: "0 0 0.35rem 0",
+            textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+          }}
+        >
+          {hotelName}
+        </h1>
+
+        {hotelTagline && (
+          <p
+            style={{
+              fontSize: "0.88rem",
+              color: "#94a3b8",
+              margin: "0 0 1.25rem 0",
+              fontWeight: 500,
+            }}
+          >
+            {hotelTagline}
+          </p>
+        )}
+
+        {/* Loading Indicator */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.6rem",
+            marginTop: hotelTagline ? 0 : "0.75rem",
+            padding: "0.45rem 1.1rem",
+            borderRadius: "20px",
+            background: "rgba(255, 255, 255, 0.04)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+          }}
+        >
+          <div
+            style={{
+              width: "14px",
+              height: "14px",
+              border: "2px solid rgba(245, 158, 11, 0.25)",
+              borderTopColor: "#f59e0b",
+              borderRadius: "50%",
+              animation: "spinRing 0.8s linear infinite",
+            }}
+          />
+          <span
+            style={{
+              fontSize: "0.84rem",
+              color: "#cbd5e1",
+              fontWeight: 600,
+              letterSpacing: "0.03em",
+            }}
+          >
+            Loading...
+          </span>
+        </div>
       </div>
     );
   }
