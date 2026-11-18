@@ -336,13 +336,13 @@ const isRogueName = (name) => {
 
 const parseTableNumber = (table) => {
   const rawName = String(table?.tableNumber || table?.TableNumber || table?.name || table?.tableName || table?.TableName || "").trim();
-  const match = rawName.match(/(\d+)/);
+  const match = rawName.match(/^(?:table|t)?[\s-]*(\d+)$/i);
   if (match) {
     const number = Number(match[1]);
     if (Number.isSafeInteger(number) && number > 0) return number;
   }
-  const rawId = Number(table?.tableId ?? table?.TableId ?? table?.id ?? table?.Id);
-  return Number.isSafeInteger(rawId) && rawId > 0 ? rawId : null;
+  const rawId = Number(table?.backendTableId ?? table?.tableId ?? table?.TableId ?? table?.id ?? table?.Id);
+  return Number.isSafeInteger(rawId) && rawId > 0 && rawId !== 999999 ? rawId : null;
 };
 
 const isSyntheticOverflowTable = (table) => {
@@ -404,10 +404,17 @@ const mergeIncomingTables = (
               ? savedTable
               : clearCachedTableOrder(savedTable);
             if (st && st.id && !isSyntheticOverflowTable(st) && !deletedIds.includes(String(st.id))) {
-              const num = parseTableNumber(st);
-              if (num != null) {
-                const existingDef = tablesById.get(num) || {};
-                tablesById.set(num, { ...existingDef, ...st });
+              const backendId = Number(st.backendTableId ?? st.tableId ?? st.TableId);
+              const sourceId = Number(st.id ?? st.Id);
+              const targetId = (Number.isSafeInteger(backendId) && backendId > 0 && backendId !== 999999)
+                ? backendId
+                : (Number.isSafeInteger(sourceId) && sourceId > 0 && sourceId !== 999999)
+                  ? sourceId
+                  : parseTableNumber(st);
+              if (targetId != null) {
+                const key = String(targetId);
+                const existingDef = tablesById.get(key) || {};
+                tablesById.set(key, { ...existingDef, ...st });
               }
             }
           });
@@ -422,29 +429,29 @@ const mergeIncomingTables = (
       if (!table || typeof table !== "object") return;
       const rawName = String(table.tableName || table.name || table.TableName || "").trim();
       if (isSyntheticOverflowTable(table)) return;
-      const num = parseTableNumber(table);
 
-      let targetId = null;
+      const backendId = Number(table.backendTableId ?? table.tableId ?? table.TableId);
       const sourceId = Number(table.id ?? table.Id);
-      if (num != null) {
-        targetId = num;
+      let targetId = null;
+
+      if (Number.isSafeInteger(backendId) && backendId > 0 && backendId !== 999999) {
+        targetId = backendId;
       } else if (Number.isSafeInteger(sourceId) && sourceId > 0 && sourceId !== 999999) {
         targetId = sourceId;
+      } else {
+        const num = parseTableNumber(table);
+        if (num != null) targetId = num;
       }
 
       if (!targetId || deletedIds.includes(String(targetId))) return;
 
       if (isRogueName(rawName)) return;
 
-      // If this table previously had an arbitrary backend auto-increment ID (e.g. 55) in tablesById, remove it
-      if (table.id && Number(table.id) !== targetId && tablesById.has(Number(table.id))) {
-        tablesById.delete(Number(table.id));
-      }
-
-      const existing = tablesById.get(targetId) || {};
-      const cleanName = rawName || String(table.tableNumber || table.TableNumber || table.number || `Table-${num || targetId}`).trim();
+      const key = String(targetId);
+      const existing = tablesById.get(key) || {};
+      const cleanName = rawName || String(table.tableNumber || table.TableNumber || table.number || `Table-${targetId}`).trim();
       const cleanNumber = String(
-        table.tableNumberNumeric ?? table.tableNumber ?? table.TableNumber ?? table.number ?? num ?? targetId,
+        table.tableNumberNumeric ?? table.tableNumber ?? table.TableNumber ?? table.number ?? targetId,
       ).trim();
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
@@ -527,7 +534,7 @@ const mergeIncomingTables = (
         occupiedSince: isFinalVacant ? null : (table.occupiedSince || (preserveCachedOrders ? existing.occupiedSince : null) || null),
       };
 
-      tablesById.set(targetId, normalized);
+      tablesById.set(key, normalized);
     });
   }
 
