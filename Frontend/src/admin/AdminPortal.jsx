@@ -6620,7 +6620,7 @@ export function AdminPortal({
               <input
                 type="text"
                 required
-                placeholder="e.g. Special Hyderabadi Dum Biryani"
+                placeholder="e.g. Special Chilli Chicken Pizza (10\x22)"
                 value={itemForm.name}
                 onChange={(e) =>
                   setItemForm({ ...itemForm, name: e.target.value })
