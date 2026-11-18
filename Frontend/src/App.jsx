@@ -1499,35 +1499,73 @@ export function App() {
       if (!getRealtimeConnectionStatus().connected) return;
       const data = await requestSharedNetworkState();
       if (!data || isCancelled) return;
-        if (!data) return;
-        const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
-        if (Array.isArray(incomingTables)) {
-          const freshDel = getDeletedTableIds();
-          const clean = mergeIncomingTables(incomingTables, freshDel);
-          setTables((prev) => (prev && prev.length > 0 ? prev : clean));
-          try {
-            localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
-          } catch {}
+
+      const incomingTables = data.tables ?? data.data?.tables ?? data[STORAGE_KEY_TABLES];
+      if (Array.isArray(incomingTables) && incomingTables.length > 0) {
+        const freshDel = getDeletedTableIds();
+        const clean = mergeIncomingTables(incomingTables, freshDel, { preserveCachedOrders: false, preserveCachedDefinitions: false });
+        setTables(clean);
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
+        } catch {}
+      }
+
+      const incomingOrders = data.pastOrders ?? data.data?.pastOrders ?? data[STORAGE_KEY_ORDERS];
+      if (Array.isArray(incomingOrders) && incomingOrders.length > 0) {
+        setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
+      }
+
+      const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
+      if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
+        const normalizedMenu = incomingMenu.filter((item) => !item.isBarItem && !item.isBarDrink).map(normalizeMenuItem);
+        setMenuItems(normalizedMenu);
+        try {
+          localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
+        } catch {}
+      }
+
+      // Merge any local-only offline records to server database
+      try {
+        const payloadToMerge = {};
+        let needsSync = false;
+
+        const localTables = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLES) || "[]");
+        if (Array.isArray(localTables) && localTables.length > 0) {
+          const serverTableNames = new Set((data.tables || []).map((t) => String(t.name || t.tableName || "").toLowerCase().trim()));
+          const hasMissingTable = localTables.some((lt) => !serverTableNames.has(String(lt.name || lt.tableName || "").toLowerCase().trim()));
+          if (hasMissingTable || (data.tables || []).length === 0) {
+            payloadToMerge[STORAGE_KEY_TABLES] = localTables;
+            needsSync = true;
+          }
         }
 
-        const incomingOrders = data.pastOrders ?? data.data?.pastOrders ?? data[STORAGE_KEY_ORDERS];
-        if (Array.isArray(incomingOrders)) {
-          setPastOrders((current) => mergeSettledOrders(current, incomingOrders));
+        const localMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+        if (Array.isArray(localMenu) && localMenu.length > 0) {
+          const serverMenuNames = new Set((data.menuItems || []).map((m) => String(m.name || m.dishName || "").toLowerCase().trim()));
+          const hasMissingMenu = localMenu.some((lm) => !serverMenuNames.has(String(lm.name || lm.dishName || "").toLowerCase().trim()));
+          if (hasMissingMenu || (data.menuItems || []).length === 0) {
+            payloadToMerge[STORAGE_KEY_MENU] = localMenu;
+            needsSync = true;
+          }
         }
 
-        // Menu items are officially loaded from /api/v1/menu-items (which includes isChefsSpecial).
-        // Only fallback to /api/state if menuItems has not been loaded at all.
-        const incomingMenu = data.menuItems ?? data.data?.menuItems ?? data[STORAGE_KEY_MENU];
-        if (Array.isArray(incomingMenu) && incomingMenu.length > 0) {
-          setMenuItems((prev) => {
-            if (prev && prev.length > 0) return prev;
-            const normalizedMenu = incomingMenu.filter((item) => !item.isBarItem && !item.isBarDrink).map(normalizeMenuItem);
-            try {
-              localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(normalizedMenu));
-            } catch {}
-            return normalizedMenu;
+        const localOrders = JSON.parse(localStorage.getItem(STORAGE_KEY_ORDERS) || "[]");
+        if (Array.isArray(localOrders) && localOrders.length > 0) {
+          const serverInvoices = new Set((data.pastOrders || []).map((o) => String(o.invoiceNo || o.invoiceNumber || o.id || "")));
+          const hasMissingInvoice = localOrders.some((lo) => {
+            const key = String(lo.invoiceNo || lo.invoiceNumber || lo.id || "");
+            return key && !serverInvoices.has(key);
           });
+          if (hasMissingInvoice) {
+            payloadToMerge[STORAGE_KEY_ORDERS] = localOrders;
+            needsSync = true;
+          }
         }
+
+        if (needsSync && Object.keys(payloadToMerge).length > 0) {
+          pushGlobalSync(payloadToMerge);
+        }
+      } catch {}
 
         const incomingStaff =
           data.staff || data.data?.staff || data[STORAGE_KEY_STAFF];
