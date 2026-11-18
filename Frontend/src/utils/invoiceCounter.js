@@ -1,6 +1,7 @@
 // ============================================================
 // Daily invoice sequence follows the restaurant business day (04:00 to 03:59).
 // ============================================================
+import { API_SYNC_BASE } from "../api/apiConfig";
 
 const LAST_DATE_KEY = 'avsr_last_invoice_date_v2';
 const DAILY_COUNTER_PREFIX = 'avsr_daily_inv_cnt_';
@@ -131,7 +132,7 @@ export function getNextInvoiceNumber(targetDateStr) {
 
     // Broadcast update across LAN / other terminals
     try {
-      fetch('/api/sync', {
+      fetch(`${API_SYNC_BASE}/api/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

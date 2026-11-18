@@ -1,14 +1,10 @@
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
-const configuredReservationApiBase =
-  import.meta.env.VITE_RESERVATION_API_BASE_URL || configuredApiBase;
 
-// Browser-to-API traffic stays same-origin through a reverse proxy.
-// During development, Vite forwards requests to the backend,
-// or gracefully falls back to local server-db.json when offline so data is NEVER lost.
+// API requests use the configured backend directly in every environment.
 export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
-export const RESERVATION_API_BASE_URL = configuredReservationApiBase.trim().replace(/\/$/, "");
-export const API_HTTP_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
-export const API_SYNC_BASE = import.meta.env.DEV ? "/__backend_api" : (API_BASE_URL || "/__backend_api");
+export const RESERVATION_API_BASE_URL = API_BASE_URL;
+export const API_HTTP_BASE = API_BASE_URL;
+export const API_SYNC_BASE = API_BASE_URL;
 export const apiUrl = (path) => `${API_HTTP_BASE}${path.startsWith("/") ? path : `/${path}`}`;
 
 const DEFAULT_HEADERS = {
@@ -31,7 +27,6 @@ async function performApiRequest(endpoint, options = {}) {
         : null;
 
     const headers = {
-      ...(remoteOnly && import.meta.env.DEV && !requestBase ? { "X-Remote-Only": "true" } : {}),
       ...DEFAULT_HEADERS,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
@@ -42,26 +37,7 @@ async function performApiRequest(endpoint, options = {}) {
       headers,
     };
 
-    let res;
-    try {
-      res = await fetch(url, config);
-      if (!remoteOnly && !res.ok && (res.status === 502 || res.status === 503 || res.status === 504) && url !== endpoint) {
-        try {
-          const fallbackRes = await fetch(endpoint, config);
-          if (fallbackRes.ok) res = fallbackRes;
-        } catch {}
-      }
-    } catch (fetchErr) {
-      if (!remoteOnly && url !== endpoint) {
-        try {
-          res = await fetch(endpoint, config);
-        } catch {
-          throw fetchErr;
-        }
-      } else {
-        throw fetchErr;
-      }
-    }
+    const res = await fetch(url, config);
 
     if (res.status === 401 || res.status === 403) {
       // Handle unauthorized (optional: dispatch event or clear storage)
