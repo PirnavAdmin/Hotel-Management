@@ -44,6 +44,7 @@ import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
 import { MENU_ITEMS } from "./data/menuData";
+import { isSameMenuItem } from "./utils/orderItemMatcher";
 import {
   Bell,
   CheckCircle2,
@@ -2333,19 +2334,21 @@ export function App() {
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
+    if (!menuItem) return;
     if (String(tableId) === "takeaway") {
       setTakeawayOrder((prev) => {
         const currentItems = Array.isArray(prev.items) ? prev.items : [];
-        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        const existingIndex = currentItems.findIndex((i) => isSameMenuItem(i, menuItem));
+        const requestedQty = typeof menuItem.quantity === "number" && menuItem.quantity > 0 ? menuItem.quantity : 1;
         let newItems;
         if (existingIndex > -1) {
           newItems = currentItems.map((item, idx) =>
             idx === existingIndex
-              ? { ...item, quantity: item.quantity + (menuItem.quantity || 1) }
+              ? { ...item, quantity: item.quantity + requestedQty }
               : item
           );
         } else {
-          newItems = [...currentItems, { ...menuItem, quantity: menuItem.quantity || 1, kotSent: false }];
+          newItems = [...currentItems, { ...menuItem, quantity: requestedQty, kotSent: false }];
         }
         return { ...prev, items: newItems, status: "occupied" };
       });
@@ -2359,7 +2362,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
 
         const currentItems = Array.isArray(t.items) ? t.items : [];
-        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        const existingIndex = currentItems.findIndex((i) => isSameMenuItem(i, menuItem));
         let newItems;
 
         const specifiedQty =
@@ -2368,7 +2371,7 @@ export function App() {
           typeof menuItem.notes === "string" ? menuItem.notes : null;
 
         if (specifiedQty === 0) {
-          newItems = currentItems.filter((i) => String(i.id) !== String(menuItem.id));
+          newItems = currentItems.filter((i) => !isSameMenuItem(i, menuItem));
         } else if (existingIndex > -1) {
           newItems = currentItems.map((item, idx) =>
             idx === existingIndex
@@ -2456,10 +2459,10 @@ export function App() {
         const currentItems = Array.isArray(prev.items) ? prev.items : [];
         let newItems;
         if (newQty <= 0) {
-          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+          newItems = currentItems.filter((i) => !isSameMenuItem(i, { id: itemId, menuItemId: itemId }));
         } else {
           newItems = currentItems.map((i) =>
-            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i
+            isSameMenuItem(i, { id: itemId, menuItemId: itemId }) ? { ...i, quantity: newQty } : i
           );
         }
         return { ...prev, items: newItems, status: newItems.length > 0 ? "occupied" : "vacant" };
@@ -2474,10 +2477,10 @@ export function App() {
         const currentItems = Array.isArray(t.items) ? t.items : [];
         let newItems;
         if (newQty <= 0) {
-          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+          newItems = currentItems.filter((i) => !isSameMenuItem(i, { id: itemId, menuItemId: itemId }));
         } else {
           newItems = currentItems.map((i) =>
-            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i,
+            isSameMenuItem(i, { id: itemId, menuItemId: itemId }) ? { ...i, quantity: newQty } : i,
           );
         }
 
@@ -2522,7 +2525,7 @@ export function App() {
       const nextTables = prevTables.map((t) => {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
-        const newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        const newItems = currentItems.filter((i) => !isSameMenuItem(i, { id: itemId, menuItemId: itemId }));
         const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
