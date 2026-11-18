@@ -1961,7 +1961,7 @@ export function TableView({
             let statusText = "Vacant";
             let statusBg = "var(--status-vacant-bg)";
 
-            const isOccupied = hasActiveItems && table.status !== "vacant";
+            const isOccupied = (hasActiveItems || table.status === "occupied" || table.status === "dining" || table.status === "billed") && table.status !== "vacant";
 
             if (isOccupied) {
               if (table.status === "billed") {

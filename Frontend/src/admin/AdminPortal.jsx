@@ -1023,20 +1023,16 @@ export function AdminPortal({
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
-    if (rawStatus === "vacant") {
-      return false;
-    }
-    const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
-      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
-    );
-    // A table without active items is strictly vacant!
-    if (!hasActiveItems) {
+    if (rawStatus === "vacant" || rawStatus === "available" || rawStatus === "free") {
       return false;
     }
     if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
       return true;
     }
-    return hasActiveItems;
+    const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
+      (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
+    );
+    return Boolean(hasActiveItems);
   };
 
   const emptyTableFilters = {

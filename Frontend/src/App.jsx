@@ -541,8 +541,8 @@ const mergeIncomingTables = (
   return Array.from(tablesById.values())
     .filter((table) => !deletedIds.includes(String(table.id)))
     .map((table) => {
-      const hasActive = Array.isArray(table.items) && table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
-      if (!hasActive && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
+      const isVacant = ["vacant", "available", "free"].includes(String(table.status || "").toLowerCase());
+      if (isVacant) {
         return {
           ...table,
           status: "vacant",
@@ -2349,13 +2349,18 @@ export function App() {
             if (order && String(order.tableId ?? order.TableId) === String(backendTableId)) {
               const refreshedTable = mergeActiveDiningOrders([targetTable], [order])[0];
               setTables((current) => current.map((table) =>
-                String(table.id) === String(rawId) ? refreshedTable : table,
+                String(table.id) === String(targetTable.id) ? refreshedTable : table,
               ));
             } else if (!order) {
-              const vacantTable = clearCachedTableOrder(targetTable);
-              setTables((current) => current.map((table) =>
-                String(table.id) === String(rawId) ? vacantTable : table,
-              ));
+              const hasLocalItems = Array.isArray(targetTable?.items) && targetTable.items.some(
+                (item) => !item.kotSent && item.status !== "cancelled"
+              );
+              if (!hasLocalItems) {
+                const vacantTable = clearCachedTableOrder(targetTable);
+                setTables((current) => current.map((table) =>
+                  String(table.id) === String(targetTable.id) ? vacantTable : table,
+                ));
+              }
             }
           }
         } catch (error) {
