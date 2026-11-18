@@ -24,7 +24,41 @@ export function AdminHeader({
   });
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [activeToast, setActiveToast] = useState(null);
+  const [dropdownCoords, setDropdownCoords] = useState(null);
   const notifRef = useRef(null);
+
+  // Keep dropdown securely positioned in front of viewport and within visible screen bounds
+  useEffect(() => {
+    if (isNotifOpen && notifRef.current) {
+      const updatePosition = () => {
+        if (!notifRef.current) return;
+        const rect = notifRef.current.getBoundingClientRect();
+        const width = Math.min(340, window.innerWidth - 24);
+
+        let left = rect.right - width;
+        if (left < 12) {
+          left = Math.max(12, rect.left);
+        }
+        if (left + width > window.innerWidth - 12) {
+          left = Math.max(12, window.innerWidth - width - 12);
+        }
+
+        setDropdownCoords({
+          top: rect.bottom + 8,
+          left,
+          width,
+        });
+      };
+
+      updatePosition();
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition);
+      };
+    }
+  }, [isNotifOpen]);
 
   // Listen to kitchen notifications
   useEffect(() => {
@@ -116,9 +150,9 @@ export function AdminHeader({
         flexWrap: "nowrap",
         gap: "1rem",
         flexShrink: 0,
-        zIndex: 40,
+        zIndex: 100,
         position: "relative",
-        overflow: "hidden",
+        overflow: "visible",
       }}
     >
       {/* ── RESTAURANT THEME BACKGROUND ANIMATION ── */}
@@ -528,23 +562,26 @@ export function AdminHeader({
             )}
           </button>
 
-          {/* Notifications Dropdown Panel */}
+          {/* Notifications Dropdown Panel - Anchored in fixed viewport space to guarantee rendering in front */}
           {isNotifOpen && (
             <div
               style={{
-                position: "absolute",
-                top: "calc(100% + 8px)",
-                right: 0,
-                width: "320px",
+                position: "fixed",
+                top: dropdownCoords ? `${dropdownCoords.top}px` : "76px",
+                left: dropdownCoords ? `${dropdownCoords.left}px` : "auto",
+                right: dropdownCoords ? "auto" : "20px",
+                width: dropdownCoords ? `${dropdownCoords.width}px` : "340px",
+                maxWidth: "calc(100vw - 24px)",
                 maxHeight: "420px",
                 background: "var(--bg-secondary)",
                 border: "1px solid var(--border-card)",
                 borderRadius: "14px",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-                zIndex: 1000,
+                boxShadow: "0 20px 50px rgba(0,0,0,0.7), 0 0 20px rgba(245, 158, 11, 0.2)",
+                zIndex: 999999,
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
+                animation: "fadeIn 0.15s ease",
               }}
             >
               <div
