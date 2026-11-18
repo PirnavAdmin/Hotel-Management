@@ -138,7 +138,7 @@ export function KitchenKOTView({
       if (kitchenFetchInProgress.current) return;
       kitchenFetchInProgress.current = true;
       try {
-        if (import.meta.env.DEV) console.debug("[Kitchen] GET /api/Kitchen/active-tickets");
+        if (import.meta.env.DEV) console.debug("[Kitchen] GET /api/v1/kitchen/active-tickets");
         const result = await apiGetActiveKitchenTickets();
         if (!result?.success || !Array.isArray(result.data)) {
           const message = result?.error || "The Kitchen API returned an unexpected response.";
@@ -147,7 +147,7 @@ export function KitchenKOTView({
           return;
         }
         if (import.meta.env.DEV) console.debug("[Kitchen] Tickets loaded", {
-          endpoint: "/api/Kitchen/active-tickets",
+          endpoint: "/api/v1/kitchen/active-tickets",
           status: result.status,
           count: result.data.length,
         });
@@ -746,9 +746,9 @@ export function KitchenKOTView({
       if (String(t.orderType).toLowerCase() !== "takeaway") {
         const key = String(t.uniqueKey);
         const tableKey = `table-${t.id}`;
-        if (!mergedActiveMap.has(key) && !mergedActiveMap.has(tableKey)) {
-          mergedActiveMap.set(key, t);
-        }
+        const localTicket = mergedActiveMap.get(tableKey);
+        if (localTicket) mergedActiveMap.delete(tableKey);
+        mergedActiveMap.set(key, { ...(localTicket || {}), ...t });
       }
     });
   }
