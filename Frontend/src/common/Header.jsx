@@ -569,7 +569,7 @@ export function Header({
                 borderRadius: "14px",
                 boxShadow:
                   "0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(245, 158, 11, 0.2)",
-                zIndex: 9999,
+                zIndex: 999999,
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",

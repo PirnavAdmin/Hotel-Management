@@ -47,6 +47,7 @@ import { getDailyBalances } from "./accounting/accountingService";
 import { printSurface } from "../utils/printSurface";
 import { apiGetInventory } from "../api/inventoryApi";
 import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
+import { sanitizeDishName } from "../utils/sanitizeDishName";
 import {
   dedupeOrders,
   sortOrdersBySettlementTime,
@@ -576,7 +577,8 @@ export function AdminReports({
     const dishCounts = {};
     filteredOrders.forEach((o) => {
       (o.items || []).forEach((item) => {
-        const name = item.name || 'Dish';
+        const rawName = item.name || item.dishName || 'Dish';
+        const name = sanitizeDishName(rawName);
         dishCounts[name] = (dishCounts[name] || 0) + (item.quantity || 1);
       });
     });

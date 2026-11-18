@@ -927,7 +927,7 @@ export function TableReservationFlow({
                   </span>
                 </div>
                 <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#292524" }}>
-                  Hyderabadi Chicken Dum Biryani x 1, Crispy Corn x 1
+                  Chilli Chicken Pizza (10") x 1, Crispy Fries x 1
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", color: "#78716c", marginTop: "8px" }}>
                   <span>Pickup: Today at 08:15 PM</span>
@@ -943,7 +943,7 @@ export function TableReservationFlow({
                   </span>
                 </div>
                 <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#292524" }}>
-                  Paneer Butter Masala x 1, Butter Naan x 2
+                  Paneer Butter Masala x 1, Garlic Bread With Cheese x 2
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", color: "#78716c", marginTop: "8px" }}>
                   <span>Reservation date and time</span>

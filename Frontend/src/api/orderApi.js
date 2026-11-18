@@ -39,8 +39,18 @@ export async function apiCreatePaidTakeawayOrder(orderData) {
   return await apiClient("/api/v1/orders", { method: "POST", remoteOnly: true, body: JSON.stringify(orderData) });
 }
 
+async function dispatchKot(endpoint, options = {}) {
+  const result = await apiClient(endpoint, options);
+  if (!result?.success) {
+    const error = new Error(result?.error || "The backend could not dispatch this order to KOT.");
+    error.status = result?.status;
+    throw error;
+  }
+  return result;
+}
+
 export async function apiSendTakeawayOrderToKitchen(orderId) {
-  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/send-kot`, { method: "POST", remoteOnly: true });
+  return dispatchKot(`/api/v1/orders/${encodeURIComponent(orderId)}/kot`, { method: "POST", remoteOnly: true });
 }
 
 export async function apiGetOrder(id) {
@@ -59,7 +69,7 @@ export async function apiCreateOrder(orderData) {
 }
 
 export async function apiSendOrderKot(orderId) {
-  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}/send-kot`, {
+  return dispatchKot(`/api/v1/orders/${encodeURIComponent(orderId)}/kot`, {
     method: "POST",
   });
 }
@@ -73,7 +83,7 @@ export async function apiAddOrderItems(orderId, items) {
 
 export async function apiUpdateOrderItems(orderId, items) {
   return await apiClient(`/api/v1/orders/${orderId}/items`, {
-    method: "PUT",
+    method: "POST",
     body: JSON.stringify({ items }),
   });
 }

@@ -1375,16 +1375,16 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
 
           <div style={{ flexGrow: 1, overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-              <span>1x Royal Dum Biryani (Custom)</span>
-              <strong>₹415.00</strong>
+              <span>1x Chilli Chicken Pizza (10")</span>
+              <strong>₹379.00</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
               <span>1x Paneer Butter Masala</span>
-              <strong>₹260.00</strong>
+              <strong>₹249.00</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-              <span>2x Butter Garlic Naan</span>
-              <strong>₹120.00</strong>
+              <span>2x Garlic Bread With Cheese</span>
+              <strong>₹198.00</strong>
             </div>
 
             <div

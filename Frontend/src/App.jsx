@@ -26,8 +26,6 @@ import {
   apiCreateTable,
   apiUpdateTable,
   apiDeleteTable,
-  apiVacateTable,
-  apiUpdateTableStatus,
   apiLockTable,
   apiUnlockTable,
   apiGetTableLocks,
@@ -46,6 +44,7 @@ import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
 import { MENU_ITEMS } from "./data/menuData";
+import { isSameMenuItem } from "./utils/orderItemMatcher";
 import {
   Bell,
   CheckCircle2,
@@ -75,10 +74,11 @@ import {
   apiAddOrderItems,
   apiSendOrderKot,
   apiCreatePaidTakeawayOrder,
-  apiSendTakeawayOrderToKitchen,
+  apiUpdateOrderGuests,
   apiUpdateOrderDiscount,
   apiSettleOrder,
 } from "./api/orderApi";
+import { apiGetInvoiceByOrder } from "./api/invoiceApi";
 import {
   apiAdjustStock,
   apiCreateInventoryPurchase,
@@ -89,9 +89,9 @@ import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymen
 import { API_SYNC_BASE } from "./api/apiConfig";
 import { getRealtimeConnectionStatus, subscribeToSseMessages, subscribeToRealtimeEvents } from "./realtime/realtimeService";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
-import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
+import { compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
-import { getBusinessDayKey, getTodayDateString } from "./utils/invoiceCounter";
+import { getTodayDateString } from "./utils/invoiceCounter";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
 import {
@@ -121,44 +121,35 @@ const readStoredArray = (key) => {
   }
 };
 
-const mergeCurrentBusinessDayOrders = (tables, orders) => {
-  const today = getBusinessDayKey(new Date());
+const mergeActiveDiningOrders = (tables, orders) => {
   const orderByTableId = new Map();
-  const orderByTableNumber = new Map();
 
   (Array.isArray(orders) ? orders : []).forEach((order) => {
     const status = String(order?.status || order?.Status || "").toLowerCase();
     const orderType = String(order?.orderType || order?.OrderType || "").toLowerCase();
-    const createdAt = order?.createdAt || order?.CreatedAt || order?.orderTimestamp;
     if (
       !order ||
       !["active", "billed"].includes(status) ||
-      orderType === "takeaway" ||
-      !createdAt ||
-      getBusinessDayKey(createdAt) !== today
+      orderType === "takeaway"
     ) {
       return;
     }
 
     const tableId = order.tableId ?? order.TableId;
-    const tableNumber = parseTableNumber({
-      tableNumber: order.tableNumber ?? order.TableNumber,
-      tableName: order.tableName ?? order.TableName,
-      name: order.tableName ?? order.TableName,
-    });
-    if (Number(tableId) > 0 && !orderByTableId.has(String(tableId))) {
-      orderByTableId.set(String(tableId), order);
-    }
-    if (tableNumber > 0 && !orderByTableNumber.has(String(tableNumber))) {
-      orderByTableNumber.set(String(tableNumber), order);
-    }
+    if (!(Number(tableId) > 0)) return;
+    const key = String(tableId);
+    const existing = orderByTableId.get(key);
+    const timestamp = (value) => new Date(value?.createdAt ?? value?.CreatedAt ?? 0).getTime() || 0;
+    if (!existing || timestamp(order) > timestamp(existing)) orderByTableId.set(key, order);
   });
 
   return tables.map((table) => {
-    const order =
-      orderByTableId.get(String(table.backendTableId ?? table.tableId ?? "")) ||
-      orderByTableNumber.get(String(parseTableNumber(table) || ""));
-    if (!order) return table;
+    const backendTableId = table.backendTableId ?? table.tableId ?? table.TableId;
+    const order = backendTableId == null ? null : orderByTableId.get(String(backendTableId));
+    if (!order) {
+      if (["reserved", "cleaning", "inactive"].includes(String(table.status || "").toLowerCase())) return table;
+      return clearCachedTableOrder(table);
+    }
 
     const orderItems = Array.isArray(order.items)
       ? order.items
@@ -183,11 +174,14 @@ const mergeCurrentBusinessDayOrders = (tables, orders) => {
         notes: item.notes ?? item.Notes ?? "",
         status: "active",
         kotStatus: String(item.kotStatus ?? item.KotStatus ?? "queued").toLowerCase(),
+        kotSent: Number(item.kotId ?? item.KotId ?? item.botId ?? item.BotId) > 0,
         orderId: item.orderId ?? item.OrderId ?? order.id ?? order.Id,
       }));
 
-    if (items.length === 0) return table;
     const orderStatus = String(order.status ?? order.Status).toLowerCase();
+    if (items.length === 0 || !["active", "billed"].includes(orderStatus)) {
+      return clearCachedTableOrder({ ...table, status: "vacant" });
+    }
     const guests = Number(order.guests ?? order.Guests) || 0;
     const createdAt = order.createdAt ?? order.CreatedAt;
     return {
@@ -198,6 +192,7 @@ const mergeCurrentBusinessDayOrders = (tables, orders) => {
       selectedSeats: [],
       items,
       activeOrderId: order.id ?? order.Id,
+      backendOrderId: order.id ?? order.Id,
       orderTime: createdAt,
       orderTimestamp: new Date(createdAt).getTime() || null,
       subtotal: Number(order.subtotal ?? order.Subtotal) || 0,
@@ -339,7 +334,24 @@ const isRogueName = (name) => {
 };
 
 const parseTableNumber = (table) => {
-  return getTableSortNumber(table);
+  const rawName = String(table?.tableNumber || table?.TableNumber || table?.name || table?.tableName || table?.TableName || "").trim();
+  const match = rawName.match(/(\d+)/);
+  if (match) {
+    const number = Number(match[1]);
+    if (Number.isSafeInteger(number) && number > 0) return number;
+  }
+  const rawId = Number(table?.tableId ?? table?.TableId ?? table?.id ?? table?.Id);
+  return Number.isSafeInteger(rawId) && rawId > 0 ? rawId : null;
+};
+
+const isSyntheticOverflowTable = (table) => {
+  const tableId = Number(table?.id ?? table?.Id);
+  const label = String(table?.name ?? table?.tableName ?? "").trim();
+  const hasBackendIdentity = [table?.backendTableId, table?.tableId, table?.TableId]
+    .some((value) => value != null && String(value).trim() !== "");
+  return !hasBackendIdentity &&
+    (tableId === 999999 || parseTableNumber(table) === 999999) &&
+    (!label || /^(?:t|table)[\s-]*999999$/i.test(label));
 };
 
 const clearCachedTableOrder = (table) => ({
@@ -390,9 +402,9 @@ const mergeIncomingTables = (
             const st = preserveCachedOrders
               ? savedTable
               : clearCachedTableOrder(savedTable);
-            if (st && st.id && !deletedIds.includes(String(st.id))) {
-              const num = parseTableNumber(st) || Number(st.id);
-              if (num) {
+            if (st && st.id && !isSyntheticOverflowTable(st) && !deletedIds.includes(String(st.id))) {
+              const num = parseTableNumber(st);
+              if (num != null) {
                 const existingDef = tablesById.get(num) || {};
                 tablesById.set(num, { ...existingDef, ...st });
               }
@@ -407,14 +419,16 @@ const mergeIncomingTables = (
   if (Array.isArray(incomingTables)) {
     incomingTables.forEach((table) => {
       if (!table || typeof table !== "object") return;
-      const rawName = String(table.tableName || table.name || "").trim();
+      const rawName = String(table.tableName || table.name || table.TableName || "").trim();
+      if (isSyntheticOverflowTable(table)) return;
       const num = parseTableNumber(table);
 
       let targetId = null;
-      if (num && num >= 1) {
+      const sourceId = Number(table.id ?? table.Id);
+      if (num != null) {
         targetId = num;
-      } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
-        targetId = Number(table.id);
+      } else if (Number.isSafeInteger(sourceId) && sourceId > 0 && sourceId !== 999999) {
+        targetId = sourceId;
       }
 
       if (!targetId || deletedIds.includes(String(targetId))) return;
@@ -427,9 +441,9 @@ const mergeIncomingTables = (
       }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = rawName || String(table.tableNumber || table.number || `Table-${num || targetId}`).trim();
+      const cleanName = rawName || String(table.tableNumber || table.TableNumber || table.number || `Table-${num || targetId}`).trim();
       const cleanNumber = String(
-        table.tableNumberNumeric ?? table.number ?? num ?? targetId,
+        table.tableNumberNumeric ?? table.tableNumber ?? table.TableNumber ?? table.number ?? num ?? targetId,
       ).trim();
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
@@ -481,7 +495,7 @@ const mergeIncomingTables = (
         tableNumber: cleanNumber,
         tableNumberNumeric: cleanNumber,
         backendTableId:
-          table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
+          table.tableId ?? table.TableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
         section:
           table.sectionArea || table.section || existing.section || "Main Hall",
         capacity: Number(
@@ -581,7 +595,31 @@ export function App() {
       if (!settings || typeof settings !== "object") return;
       let local = {};
       try { local = JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}"); } catch {}
-      const merged = { ...local, ...settings };
+
+      const cleanServer = {};
+      Object.entries(settings).forEach(([key, val]) => {
+        if (val !== null && val !== undefined && val !== "") {
+          cleanServer[key] = val;
+        }
+      });
+
+      const hasLocalCustomizations =
+        Boolean(local.isUserConfigured) ||
+        Boolean(local.updatedAt) ||
+        (Boolean(local.restaurantName) && local.restaurantName.trim() !== "AVSR FOOD COURT");
+
+      const merged = {
+        ...cleanServer,
+        ...local,
+        ...(hasLocalCustomizations
+          ? {
+              restaurantName: local.restaurantName || cleanServer.restaurantName || "",
+              tagline: local.tagline !== undefined ? local.tagline : cleanServer.tagline || "",
+            }
+          : {}),
+        logo: local.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+      };
+
       try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {
         setRestaurantSettings(merged);
@@ -850,7 +888,7 @@ export function App() {
         // Older table/order requests must not restore a snapshot taken before settlement.
         if (requestGeneration !== tableRefreshGenerationRef.current) return;
 
-        const merged = mergeCurrentBusinessDayOrders(tableDefinitions, activeOrders);
+        const merged = mergeActiveDiningOrders(tableDefinitions, activeOrders);
         replaceCachedTableOrdersRef.current = true;
         setTables(merged);
         setSharedRecordLoad((state) => ({ ...state, tables: "ready", tableError: "" }));
@@ -861,7 +899,12 @@ export function App() {
           cachedTables = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLES) || "[]");
         } catch {}
         if (Array.isArray(cachedTables) && cachedTables.length > 0) {
-          setTables(cachedTables);
+          const cleanCachedTables = mergeIncomingTables(
+            cachedTables,
+            getDeletedTableIds(),
+            { preserveCachedOrders: false, preserveCachedDefinitions: false },
+          );
+          setTables(cleanCachedTables);
         } else {
           const cleanCachedTables = mergeIncomingTables(
             [],
@@ -1706,12 +1749,95 @@ export function App() {
     const unsubscribeSse = subscribeToSseMessages(handleSseMessage);
 
     const handleRealtimeEvent = ({ name, payload }) => {
-      if (name === "OrderUpdated" && payload?.tableId != null && Array.isArray(payload.items)) {
-        const eventOrderId = payload.orderId ?? payload.OrderId;
+      if (name === "OrderUpdated") {
+        const eventOrderId = payload?.orderId ?? payload?.OrderId ?? payload?.id ?? payload?.Id;
+        const eventTableId = payload?.tableId ?? payload?.TableId;
+        const eventItems = payload?.items ?? payload?.Items;
+        const incomingStatus = String(payload?.status ?? payload?.Status ?? "active").toLowerCase();
         if (eventOrderId != null && settledOrderIdsRef.current.has(String(eventOrderId))) return;
-        setTables((current) => current.map((table) => String(table.id) === String(payload.tableId)
-          ? { ...table, items: payload.items, grandTotal: payload.grandTotal ?? table.grandTotal }
-          : table));
+        if (eventTableId != null || eventOrderId != null) {
+          setTables((current) => current.map((table) => {
+            const matchesTable = eventTableId != null &&
+              [table.backendTableId, table.tableId, table.id]
+                .filter((value) => value != null)
+                .some((value) => String(value) === String(eventTableId));
+            const matchesOrder = eventOrderId != null &&
+              [table.backendOrderId, table.activeOrderId]
+                .filter((value) => value != null)
+                .some((value) => String(value) === String(eventOrderId));
+            if (!matchesTable && !matchesOrder) return table;
+            if (["settled", "cancelled", "canceled", "completed", "deleted"].includes(incomingStatus)) {
+              return clearCachedTableOrder(table);
+            }
+            const guests = Number(payload?.guests ?? payload?.Guests ?? table.guests) || table.guests || 1;
+            return {
+              ...table,
+              status: incomingStatus === "billed" ? "billed" : "occupied",
+              activeOrderId: eventOrderId ?? table.activeOrderId,
+              backendOrderId: eventOrderId ?? table.backendOrderId,
+              guests,
+              occupiedChairs: guests,
+              items: Array.isArray(eventItems)
+                ? eventItems.map((item) => ({
+                    ...item,
+                    id: item.id ?? item.Id,
+                    orderItemId: item.orderItemId ?? item.OrderItemId ?? item.id ?? item.Id,
+                    menuItemId: item.menuItemId ?? item.MenuItemId,
+                    name: item.name ?? item.Name ?? item.dishName ?? item.DishName ?? "Order Item",
+                    quantity: Number(item.quantity ?? item.Quantity) || 1,
+                    price: Number(item.price ?? item.Price) || 0,
+                    kotStatus: String(item.kotStatus ?? item.KotStatus ?? "queued").toLowerCase(),
+                    kotSent: Number(item.kotId ?? item.KotId ?? item.botId ?? item.BotId) > 0,
+                    orderId: item.orderId ?? item.OrderId ?? eventOrderId,
+                    status: "active",
+                  }))
+                : table.items,
+              grandTotal: payload?.grandTotal ?? payload?.GrandTotal ?? table.grandTotal,
+              subtotal: payload?.subtotal ?? payload?.Subtotal ?? table.subtotal,
+            };
+          }));
+        }
+      } else if (["KotItemUpdated", "kot:itemUpdated"].includes(name)) {
+        const eventOrderId = payload?.orderId ?? payload?.OrderId;
+        const eventTableId = payload?.tableId ?? payload?.TableId;
+        const itemId = payload?.itemId ?? payload?.ItemId ?? payload?.orderItemId;
+        const status = payload?.kotStatus ?? payload?.KotStatus;
+        if (itemId != null && status) {
+          setTables((current) => current.map((table) => {
+            const matchesTable = eventTableId != null &&
+              [table.backendTableId, table.tableId, table.id].some((value) => String(value) === String(eventTableId));
+            const matchesOrder = eventOrderId != null &&
+              [table.backendOrderId, table.activeOrderId].some((value) => String(value) === String(eventOrderId));
+            if (!matchesTable && !matchesOrder) return table;
+            return {
+              ...table,
+              items: (table.items || []).map((item) =>
+                String(item.id ?? item.orderItemId) === String(itemId)
+                  ? { ...item, kotStatus: String(status).toLowerCase(), kotSent: true }
+                  : item,
+              ),
+            };
+          }));
+        }
+      } else if (["KotOrderUpdated", "kot:statusChanged"].includes(name)) {
+        const eventOrderId = payload?.orderId ?? payload?.OrderId;
+        const batch = Number(payload?.batch ?? payload?.kotBatch);
+        const status = String(payload?.status ?? payload?.Status ?? "").toLowerCase();
+        if (eventOrderId != null && ["cooking", "ready", "queued"].includes(status)) {
+          setTables((current) => current.map((table) => {
+            const tableOrderId = table.backendOrderId ?? table.activeOrderId;
+            if (String(tableOrderId) !== String(eventOrderId)) return table;
+            return {
+              ...table,
+              items: (table.items || []).map((item) =>
+                (!batch || Number(item.kotBatch) === batch) &&
+                !["cancelled", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase())
+                  ? { ...item, kotStatus: status, kotSent: true }
+                  : item,
+              ),
+            };
+          }));
+        }
       } else if (name === "TableStatusUpdated" && payload?.tableId != null) {
         const incomingStatus = String(payload.status || "").toLowerCase();
         const isVacant = ["vacant", "available", "free"].includes(incomingStatus);
@@ -1725,6 +1851,39 @@ export function App() {
             : { ...table, status: payload.status ?? table.status, activeKOTCount: payload.activeKOTCount ?? table.activeKOTCount, grandTotal: payload.orderTotal ?? table.grandTotal };
         }));
       } else if (name === "KitchenStatusAlert" && payload && typeof payload === "object") {
+        const alertTableId = payload.tableId ?? payload.TableId;
+        const alertItemId = payload.itemId ?? payload.ItemId;
+        const alertKotStatus = payload.kotStatus ?? payload.KotStatus;
+        if (alertItemId != null && alertKotStatus && alertTableId != null) {
+          setTables((current) => current.map((table) => {
+            const tableIds = [table.backendTableId, table.tableId, table.id]
+              .filter((value) => value != null)
+              .map(String);
+            if (!tableIds.includes(String(alertTableId))) return table;
+            return {
+              ...table,
+              items: (table.items || []).map((item) =>
+                String(item.id ?? item.orderItemId) === String(alertItemId)
+                  ? { ...item, kotStatus: String(alertKotStatus).toLowerCase(), kotSent: true }
+                  : item,
+              ),
+            };
+          }));
+        } else if (alertTableId != null && ["cooking_started", "cooking_completed"].includes(String(payload.type || ""))) {
+          apiGetOrderForTable(alertTableId).then((response) => {
+            if (!response?.success) return;
+            const order = response.data?.data ?? response.data?.order ?? response.data;
+            if (!order || String(order.tableId ?? order.TableId) !== String(alertTableId)) return;
+            setTables((current) => current.map((table) => {
+              const matchesTable = [table.backendTableId, table.tableId, table.id]
+                .filter((value) => value != null)
+                .some((value) => String(value) === String(alertTableId));
+              return matchesTable
+                ? mergeActiveDiningOrders([table], [order])[0]
+                : table;
+            }));
+          }).catch(() => {});
+        }
         const alert = sanitizeKitchenAlert({
           id: payload.id || `realtime-${payload.tableId ?? "order"}-${payload.type || "status"}-${payload.title || "update"}`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
@@ -2143,7 +2302,7 @@ export function App() {
     : (tables.find((t) => String(t.id) === String(selectedTableId)) || tables[0] || null);
 
   // Table selection handler with multi-waiter concurrency enforcement
-  const handleSelectTable = (id) => {
+  const handleSelectTable = async (id) => {
     const rawId = typeof id === "object" && id !== null ? (id.id || id.tableId) : id;
     if (String(rawId) !== "takeaway") {
       const lockResult = acquireTableLock(rawId, posSession);
@@ -2153,6 +2312,35 @@ export function App() {
       if (!lockResult.success) {
         showToast(`🔒 ${tblName} is currently in use by ${lockResult.lockedBy.serverName}. Order taking is restricted to 1 waiter at a time.`);
         return;
+      }
+    }
+
+    if (String(rawId) !== "takeaway") {
+      const targetTable = tables.find((table) => String(table.id) === String(rawId));
+      const backendTableId = targetTable?.backendTableId ?? targetTable?.tableId;
+      if (Number(backendTableId) > 0) {
+        try {
+          const response = await apiGetOrderForTable(backendTableId);
+          if (!response?.success) {
+            throw new Error(response?.error || "The existing table order could not be loaded.");
+          }
+          const order = response.data?.data ?? response.data?.order ?? response.data;
+          if (order && String(order.tableId ?? order.TableId) === String(backendTableId)) {
+            const refreshedTable = mergeActiveDiningOrders([targetTable], [order])[0];
+            setTables((current) => current.map((table) =>
+              String(table.id) === String(rawId) ? refreshedTable : table,
+            ));
+          } else if (!order) {
+            const vacantTable = clearCachedTableOrder(targetTable);
+            setTables((current) => current.map((table) =>
+              String(table.id) === String(rawId) ? vacantTable : table,
+            ));
+          }
+        } catch (error) {
+          showToast(error?.message || "The existing table order could not be loaded.");
+          releaseTableLock(rawId);
+          return;
+        }
       }
     }
 
@@ -2170,19 +2358,21 @@ export function App() {
 
   // Add Item to Table Order
   const handleAddItemToTable = (tableId, menuItem) => {
+    if (!menuItem) return;
     if (String(tableId) === "takeaway") {
       setTakeawayOrder((prev) => {
         const currentItems = Array.isArray(prev.items) ? prev.items : [];
-        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        const existingIndex = currentItems.findIndex((i) => isSameMenuItem(i, menuItem));
+        const requestedQty = typeof menuItem.quantity === "number" && menuItem.quantity > 0 ? menuItem.quantity : 1;
         let newItems;
         if (existingIndex > -1) {
           newItems = currentItems.map((item, idx) =>
             idx === existingIndex
-              ? { ...item, quantity: item.quantity + (menuItem.quantity || 1) }
+              ? { ...item, quantity: item.quantity + requestedQty }
               : item
           );
         } else {
-          newItems = [...currentItems, { ...menuItem, quantity: menuItem.quantity || 1, kotSent: false }];
+          newItems = [...currentItems, { ...menuItem, quantity: requestedQty, kotSent: false }];
         }
         return { ...prev, items: newItems, status: "occupied" };
       });
@@ -2196,7 +2386,7 @@ export function App() {
         if (String(t.id) !== String(tableId)) return t;
 
         const currentItems = Array.isArray(t.items) ? t.items : [];
-        const existingIndex = currentItems.findIndex((i) => String(i.id) === String(menuItem.id));
+        const existingIndex = currentItems.findIndex((i) => isSameMenuItem(i, menuItem));
         let newItems;
 
         const specifiedQty =
@@ -2205,7 +2395,7 @@ export function App() {
           typeof menuItem.notes === "string" ? menuItem.notes : null;
 
         if (specifiedQty === 0) {
-          newItems = currentItems.filter((i) => String(i.id) !== String(menuItem.id));
+          newItems = currentItems.filter((i) => !isSameMenuItem(i, menuItem));
         } else if (existingIndex > -1) {
           newItems = currentItems.map((item, idx) =>
             idx === existingIndex
@@ -2293,10 +2483,10 @@ export function App() {
         const currentItems = Array.isArray(prev.items) ? prev.items : [];
         let newItems;
         if (newQty <= 0) {
-          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+          newItems = currentItems.filter((i) => !isSameMenuItem(i, { id: itemId, menuItemId: itemId }));
         } else {
           newItems = currentItems.map((i) =>
-            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i
+            isSameMenuItem(i, { id: itemId, menuItemId: itemId }) ? { ...i, quantity: newQty } : i
           );
         }
         return { ...prev, items: newItems, status: newItems.length > 0 ? "occupied" : "vacant" };
@@ -2311,10 +2501,10 @@ export function App() {
         const currentItems = Array.isArray(t.items) ? t.items : [];
         let newItems;
         if (newQty <= 0) {
-          newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+          newItems = currentItems.filter((i) => !isSameMenuItem(i, { id: itemId, menuItemId: itemId }));
         } else {
           newItems = currentItems.map((i) =>
-            String(i.id) === String(itemId) ? { ...i, quantity: newQty } : i,
+            isSameMenuItem(i, { id: itemId, menuItemId: itemId }) ? { ...i, quantity: newQty } : i,
           );
         }
 
@@ -2359,7 +2549,7 @@ export function App() {
       const nextTables = prevTables.map((t) => {
         if (String(t.id) !== String(tableId)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
-        const newItems = currentItems.filter((i) => String(i.id) !== String(itemId));
+        const newItems = currentItems.filter((i) => !isSameMenuItem(i, { id: itemId, menuItemId: itemId }));
         const hasActive = newItems.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
         const updated = {
           ...t,
@@ -2463,6 +2653,17 @@ export function App() {
       selectedSeats: updatedSeats,
       status: targetStatus,
     }).catch(() => {});
+
+    const activeOrderId = tbl?.backendOrderId ?? tbl?.activeOrderId;
+    if (Number(activeOrderId) > 0 && newCount > 0) {
+      apiUpdateOrderGuests(activeOrderId, newCount).then((response) => {
+        if (!response?.success) {
+          showToast(response?.error || "The order guest count could not be saved.");
+        }
+      }).catch((error) => {
+        showToast(error?.message || "The order guest count could not be saved.");
+      });
+    }
   };
 
   // Update Discount
@@ -2578,6 +2779,9 @@ export function App() {
               notes: item.notes || "",
             })),
           });
+          if (!createResult?.success) {
+            throw new Error(createResult?.error || "The backend could not save the order items for KOT.");
+          }
           if (createResult?.success) {
             orderData = createResult.data?.data ?? createResult.data ?? orderData;
             backendOrderId = Number(orderData?.id ?? orderData?.Id ?? backendOrderId) || null;
@@ -2585,6 +2789,8 @@ export function App() {
         }
         if (backendOrderId) {
           await apiSendOrderKot(backendOrderId);
+        } else {
+          throw new Error("The backend did not return an order ID for KOT dispatch.");
         }
       } catch (apiErr) {
         console.warn("KOT background API sync failed, preserved locally:", apiErr);
@@ -3168,7 +3374,6 @@ export function App() {
           const returnedId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
           if (returnedId) backendOrderId = returnedId;
           enrichedSettlement.serverInvoiceNo = backendOrder?.invoiceNo ?? backendOrder?.InvoiceNo ?? settlementData.invoiceNo;
-          apiSendTakeawayOrderToKitchen(backendOrderId).catch(() => {});
         }
       } catch (error) {
         console.warn("Takeaway API sync failed, recorded locally:", error);
@@ -3220,15 +3425,35 @@ export function App() {
       if (dineInSettlementInFlightRef.current) return false;
       dineInSettlementInFlightRef.current = true;
 
-      // Settle dine-in order and vacate table in backend
+      // The order settlement API records full payment and closes the backend table.
       const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
       const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
       try {
-        const currentResult = await apiGetOrderForTable(backendTableId).catch(() => null);
-        let orderData = currentResult?.success
-          ? (currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data)
-          : null;
+        const currentResult = await apiGetOrderForTable(backendTableId);
+        if (!currentResult?.success) {
+          throw new Error(currentResult?.error || currentResult?.data?.message || "The active order could not be confirmed. Payment was not submitted.");
+        }
+        let orderData = currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data")
+          ? currentResult.data.data
+          : currentResult.data;
         let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        if (backendOrderId) {
+          const invoiceResult = await apiGetInvoiceByOrder(backendOrderId);
+          if (invoiceResult?.success) {
+            const invoice = invoiceResult.data?.data ?? invoiceResult.data;
+            const invoiceTotal = Number(invoice?.totalAmount ?? invoice?.TotalAmount) || 0;
+            const paidAmount = Number(invoice?.paidAmount ?? invoice?.PaidAmount ?? invoice?.amountPaid ?? invoice?.AmountPaid) || 0;
+            const invoiceStatus = String(invoice?.status ?? invoice?.Status ?? "").toLowerCase();
+            if (paidAmount > 0 && (paidAmount >= invoiceTotal || ["paid", "settled"].includes(invoiceStatus))) {
+              throw new Error("This order already has a fully paid invoice. No additional payment was submitted; backend order and table closure synchronization is required.");
+            }
+            if (paidAmount > 0 || invoiceStatus === "partial") {
+              throw new Error("This order has a partial invoice payment. No additional payment was submitted because the order settlement API would charge the full bill again.");
+            }
+          } else if (invoiceResult?.status !== 404) {
+            throw new Error(invoiceResult?.error || "The existing invoice payment status could not be confirmed. Payment was not submitted.");
+          }
+        }
         const itemsToPersist = billableItems.map((item) => ({
           menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
           name: item.name,
@@ -3238,6 +3463,10 @@ export function App() {
         }));
         const unsavedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
         if (!orderData) {
+          const knownOrderId = Number(settlementTable?.backendOrderId ?? settlementTable?.activeOrderId);
+          if (knownOrderId > 0) {
+            throw new Error("The table has a known active order, but the backend did not return it. Payment was not submitted to prevent a duplicate order.");
+          }
           const createResult = await apiCreateOrder({
             tableId: backendTableId,
             tableName: settlementData.tableName,
@@ -3250,53 +3479,73 @@ export function App() {
             status: "Active",
             items: itemsToPersist,
           }).catch(() => null);
-          if (createResult?.success) {
-            orderData = createResult.data?.data ?? createResult.data;
-            backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+          if (!createResult?.success || createResult?.data?.success === false) {
+            throw new Error(createResult?.error || createResult?.data?.message || "The backend could not create the order; payment was not submitted.");
           }
+          orderData = createResult.data?.data ?? createResult.data;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
         } else if (unsavedItems.length > 0 && backendOrderId) {
-          await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
+          const addItemsResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
             menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
             name: item.name || item.dishName,
             price: Number(item.price ?? item.unitPrice ?? 0) || 0,
             quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
             notes: item.notes || "",
-          }))).catch(() => null);
+          })));
+          if (!addItemsResult?.success || addItemsResult?.data?.success === false) {
+            throw new Error(addItemsResult?.error || addItemsResult?.data?.message || "The backend could not save the new order items; payment was not submitted.");
+          }
         }
-        if (backendOrderId) {
-          await apiSettleOrder(backendOrderId, {
+        if (!backendOrderId) {
+          throw new Error("The server did not return an order ID. Payment was not confirmed, so the table remains active.");
+        }
+
+        const settlementResult = await apiSettleOrder(backendOrderId, {
             discountPercent: settlementData.discountPercent,
             serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
             tipAmount: settlementData.tipAmount,
             paymentMethod: enrichedSettlement.paymentMethod,
             invoiceNumber: enrichedSettlement.invoiceNo,
-          }).catch(() => null);
-          settledOrderIdsRef.current?.add(String(backendOrderId));
-          try {
-            localStorage.setItem(
-              STORAGE_KEY_SETTLED_ORDER_IDS,
-              JSON.stringify(Array.from(settledOrderIdsRef.current || []).slice(-500)),
-            );
-          } catch {}
-          tableRefreshGenerationRef.current += 1;
-          enrichedSettlement.backendOrderId = backendOrderId;
-          enrichedSettlement.billingSessionId = String(backendOrderId);
+          });
+        const settledOrder = settlementResult?.data?.data ?? settlementResult?.data ?? settlementResult?.order ?? null;
+        const confirmedOrderId = Number(
+          settlementResult?.data?.orderId ?? settledOrder?.id ?? settledOrder?.Id ?? backendOrderId,
+        );
+        const confirmedInvoiceId = Number(settlementResult?.data?.invoiceId ?? settledOrder?.invoiceId ?? settledOrder?.InvoiceId);
+        const confirmedStatus = String(settledOrder?.status ?? settledOrder?.Status ?? "").toLowerCase();
+        if (
+          !settlementResult?.success ||
+          settlementResult?.data?.success === false ||
+          confirmedOrderId !== backendOrderId ||
+          confirmedInvoiceId <= 0 ||
+          confirmedStatus !== "settled"
+        ) {
+          throw new Error(settlementResult?.error || settlementResult?.data?.message || "The backend did not confirm full payment. The table remains active.");
         }
 
-        // Always vacate table in backend
-        apiVacateTable(backendTableId).catch(() => {});
-        apiUpdateTableStatus(backendTableId, "vacant").catch(() => {});
+        settledOrderIdsRef.current?.add(String(confirmedOrderId));
+        try {
+          localStorage.setItem(
+            STORAGE_KEY_SETTLED_ORDER_IDS,
+            JSON.stringify(Array.from(settledOrderIdsRef.current || []).slice(-500)),
+          );
+        } catch {}
+        tableRefreshGenerationRef.current += 1;
+        enrichedSettlement.backendOrderId = confirmedOrderId;
+        enrichedSettlement.billingSessionId = String(confirmedOrderId);
         apiUnlockTable(backendTableId).catch(() => {});
         dineInBackendTableVacated = true;
       } catch (error) {
         console.warn("Backend dine-in order settlement sync warning:", error);
-        apiVacateTable(backendTableId).catch(() => {});
-        apiUpdateTableStatus(backendTableId, "vacant").catch(() => {});
-        apiUnlockTable(backendTableId).catch(() => {});
-        dineInBackendTableVacated = true;
+        showToast(error?.message || "Payment was not confirmed by the backend. The table remains active.");
+        return false;
       } finally {
         dineInSettlementInFlightRef.current = false;
       }
+    }
+
+    if (!isTakeawayOrder && !dineInBackendTableVacated) {
+      return false;
     }
 
     // Deduct recipe ingredients once the bill is paid. A ledger prevents
@@ -3448,28 +3697,7 @@ export function App() {
         tableIds.includes(String(settlementData.backendTableId)) ||
         t.name === settlementData.tableName || t.tableName === settlementData.tableName;
       if (!isTarget) return t;
-      return {
-        ...t,
-        status: "vacant",
-        items: [],
-        guests: 0,
-        occupiedChairs: 0,
-        selectedSeats: [],
-        occupiedSince: null,
-        activeOrderId: null,
-        backendOrderId: null,
-        orderTime: null,
-        orderTimestamp: null,
-        cookingStartedAt: null,
-        completedAt: null,
-        completedDuration: null,
-        discountPercent: 0,
-        discountAmount: 0,
-        subtotal: 0,
-        taxAmount: 0,
-        serviceChargeAmount: 0,
-        grandTotal: 0,
-      };
+      return clearCachedTableOrder(t);
     });
     setTables(updatedTables);
     try {
@@ -3497,12 +3725,12 @@ export function App() {
         const activeOrders = Array.isArray(ordersResponse?.data)
           ? ordersResponse.data
           : ordersResponse?.data?.orders ?? ordersResponse?.data?.data ?? ordersResponse?.orders;
-        if (refreshGeneration === tableRefreshGenerationRef.current && Array.isArray(serverTables) && Array.isArray(activeOrders)) {
+        if (tableResponse?.success && ordersResponse?.success && refreshGeneration === tableRefreshGenerationRef.current && Array.isArray(serverTables) && Array.isArray(activeOrders)) {
           const definitions = mergeIncomingTables(serverTables, getDeletedTableIds(), {
             preserveCachedOrders: false,
             preserveCachedDefinitions: false,
           });
-          const freshTables = mergeCurrentBusinessDayOrders(definitions, activeOrders);
+          const freshTables = mergeActiveDiningOrders(definitions, activeOrders);
           setTables(freshTables);
           localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(freshTables));
           pushGlobalSync({ [STORAGE_KEY_TABLES]: freshTables });

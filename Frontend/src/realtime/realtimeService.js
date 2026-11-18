@@ -92,13 +92,9 @@ let generation = 0;
 let sessionLifecycle = Promise.resolve();
 let pendingStop = null;
 
-const getEventUrl = () => import.meta.env.DEV
-  ? "/api/events"
-  : `${API_BASE_URL || window.location.origin}/api/events`;
+const getEventUrl = () => `${API_BASE_URL}/api/events`;
 
-const getHubUrl = () => import.meta.env.DEV
-  ? `${window.location.origin}/hubs/pos`
-  : `${API_BASE_URL || window.location.origin}/hubs/pos`;
+const getHubUrl = () => `${API_BASE_URL}/hubs/pos`;
 
 function notifyStatus() {
   const status = {

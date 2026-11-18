@@ -1688,7 +1688,7 @@
 //   );
 // }
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   Search,
@@ -1727,6 +1727,7 @@ import {
   getTimerUrgencyColor,
 } from "../utils/timer";
 import { ItemDetailModal } from "./ItemDetailModal";
+import { isSameMenuItem, consolidateOrderItems } from "../utils/orderItemMatcher";
 import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonMenuCard, SkeletonText, SkeletonAvatar, SkeletonButton } from "../common/Skeletons";
@@ -1901,7 +1902,8 @@ export function TableDetailView({
   // Financial calculations in Rupees
   const activeItems = Array.isArray(activeTable?.items) ? activeTable.items : [];
   const propItems = Array.isArray(table?.items) ? table.items : [];
-  const safeItems = activeItems.length > 0 ? activeItems : propItems;
+  const rawSafeItems = activeItems.length > 0 ? activeItems : propItems;
+  const safeItems = useMemo(() => consolidateOrderItems(rawSafeItems), [rawSafeItems]);
   const safeItemKeys = createOrderLineKeys(safeItems);
   const targetTableId = activeTable?.id ?? table?.id;
 
@@ -1966,14 +1968,30 @@ export function TableDetailView({
   );
 
   // Find quantity of an item already in the table order
-  const getItemQuantityInCart = (itemId) => {
-    const found = safeItems.find((i) => String(i.id) === String(itemId));
-    return found ? found.quantity : 0;
+  const getItemQuantityInCart = (itemOrId) => {
+    if (!itemOrId) return 0;
+    const target = typeof itemOrId === "object" ? itemOrId : { id: itemOrId };
+    return safeItems
+      .filter((i) => isSameMenuItem(i, target))
+      .reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
   };
 
+  const addDebounceRef = useRef({});
+  const lastAddTimestampRef = useRef({});
+
   const handleAddItem = (item) => {
+    if (!item) return;
+    const key = String(item.id || item.menuItemId || item.name);
+    const now = Date.now();
+    // Guard against rapid duplicate clicks (double-click, touch bounce) within 450ms
+    if (addDebounceRef.current[key] && now - addDebounceRef.current[key] < 450) {
+      return;
+    }
+    addDebounceRef.current[key] = now;
+    lastAddTimestampRef.current[key] = now;
+
     sounds.playAddItem();
-    onAddItemToTable(targetTableId, item);
+    onAddItemToTable(targetTableId, { ...item, quantity: 1 });
   };
 
   const handleSaveNote = (itemId) => {
@@ -3200,7 +3218,7 @@ export function TableDetailView({
                     <tbody>
                       {filteredMenuItems.map((item) => {
                         const isAvailable = item.isAvailable !== false;
-                        const currentQty = getItemQuantityInCart(item.id);
+                        const currentQty = getItemQuantityInCart(item);
                         const isVeg = item.dietaryType?.toUpperCase() === "VEG" || item.isVeg;
 
                         return (
@@ -3357,7 +3375,7 @@ export function TableDetailView({
                             </td>
 
                             {/* Actions */}
-                            <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                            <td style={{ textAlign: "right", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
                               {!isAvailable ? (
                                 <span
                                   style={{
@@ -3457,6 +3475,11 @@ export function TableDetailView({
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      const key = String(item.id || item.menuItemId || item.name);
+                                      const now = Date.now();
+                                      if (lastAddTimestampRef.current[key] && now - lastAddTimestampRef.current[key] < 400) {
+                                        return;
+                                      }
                                       sounds.playAddItem();
                                       onUpdateItemQuantity(table.id, item.id, currentQty + 1);
                                     }}
@@ -3537,7 +3560,7 @@ export function TableDetailView({
                 </div>
               ) : (
                 filteredMenuItems.map((item) => {
-                  const currentQty = getItemQuantityInCart(item.id);
+                  const currentQty = getItemQuantityInCart(item);
                   return (
                     <MenuItemCard
                       key={item.id}

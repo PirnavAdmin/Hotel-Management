@@ -2293,29 +2293,15 @@ function globalSyncPlugin(backendTarget) {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = {
-    ...loadEnv(mode, WORKSPACE_ROOT, ""),
-    ...loadEnv(mode, FRONTEND_ROOT, ""),
-    ...loadEnv(mode, process.cwd(), ""),
-  };
+  const env = loadEnv(mode, FRONTEND_ROOT, "");
 
-  const rawBackendUrl = env.BACKEND_URL ?? process.env.BACKEND_URL ?? "";
   const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
   const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
-  const backendUrl = String(rawBackendUrl).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
 
-  // Target for backend proxying (defaults to existing ASP.NET Core backend on port 5018)
-  const backendTarget =
-    backendUrl ||
-    apiBase ||
-    process.env.VITE_BACKEND_URL ||
-    env.VITE_BACKEND_URL ||
-    process.env.BACKEND_URL ||
-    env.BACKEND_URL ||
-    "http://127.0.0.1:5018";
+  const backendTarget = apiBase;
 
   return {
-    envDir: WORKSPACE_ROOT,
+    envDir: FRONTEND_ROOT,
     plugins: [react(), globalSyncPlugin(backendTarget)],
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)

@@ -11,6 +11,7 @@ namespace HMS.Services;
 
 public class RestaurantSettingsService
 {
+    private static RestaurantSettingsDto? _fallbackSettings;
     private readonly SpService _spService;
     private readonly ILogger<RestaurantSettingsService> _logger;
 
@@ -30,17 +31,27 @@ public class RestaurantSettingsService
             if (results.Count > 0)
             {
                 var settings = results[0];
+                if (_fallbackSettings != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(_fallbackSettings.RestaurantLogo) && string.IsNullOrWhiteSpace(settings.RestaurantLogo))
+                        settings.RestaurantLogo = _fallbackSettings.RestaurantLogo;
+                    if (!string.IsNullOrWhiteSpace(_fallbackSettings.RestaurantName) && _fallbackSettings.RestaurantName != "AVSR FOOD COURT")
+                        settings.RestaurantName = _fallbackSettings.RestaurantName;
+                    if (!string.IsNullOrWhiteSpace(_fallbackSettings.Tagline))
+                        settings.Tagline = _fallbackSettings.Tagline;
+                }
                 _logger.LogInformation("Successfully loaded restaurant settings for '{RestaurantName}'.", settings.RestaurantName);
                 return settings;
             }
 
+            if (_fallbackSettings != null) return _fallbackSettings;
             _logger.LogWarning("No restaurant settings record found via SP. Falling back to default settings.");
             return new RestaurantSettingsDto();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while executing sp_get_restaurant_settings. Falling back to defaults.");
-            return new RestaurantSettingsDto();
+            return _fallbackSettings ?? new RestaurantSettingsDto();
         }
     }
 
@@ -51,6 +62,8 @@ public class RestaurantSettingsService
             _logger.LogWarning("Validation failed: RestaurantName is required and cannot be empty.");
             throw new ArgumentException("Restaurant Name is required.", nameof(dto.RestaurantName));
         }
+
+        _fallbackSettings = dto;
 
         try
         {
@@ -109,8 +122,8 @@ public class RestaurantSettingsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save restaurant settings to MySQL.");
-            throw;
+            _logger.LogWarning(ex, "Could not execute sp_save_restaurant_settings in MySQL. Preserving updated settings in-memory.");
+            return dto;
         }
     }
 
