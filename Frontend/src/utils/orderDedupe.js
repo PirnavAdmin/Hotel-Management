@@ -1,3 +1,5 @@
+import { sanitizeDishName } from "./sanitizeDishName";
+
 const normalize = (value) => String(value ?? "").trim().toLocaleLowerCase();
 
 const EXCLUDED_SALE_STATUSES = new Set([
@@ -337,7 +339,16 @@ export function dedupeOrders(orders = []) {
   for (const rawOrder of validOrders) {
     if (!rawOrder || typeof rawOrder !== "object") continue;
 
-    const items = Array.isArray(rawOrder.items) ? rawOrder.items : [];
+    const rawItems = Array.isArray(rawOrder.items) ? rawOrder.items : [];
+    const items = rawItems.map((it) => {
+      const rawName = it?.name || it?.dishName || it?.DishName || it?.Name || "";
+      const cleanName = sanitizeDishName(rawName);
+      return {
+        ...it,
+        name: cleanName,
+        dishName: cleanName,
+      };
+    });
     const itemsTotal = items.reduce(
       (sum, it) => sum + (Number(it.price || it.unitPrice || 0) * Number(it.quantity || it.qty || 1)),
       0,
@@ -353,6 +364,7 @@ export function dedupeOrders(orders = []) {
     const invNumber = formatInvoiceNumber(rawOrder);
     const order = {
       ...rawOrder,
+      items,
       invoiceNo: invNumber,
       invoiceNumber: invNumber,
       subtotal: orderSubtotal,

@@ -7,6 +7,7 @@ import {
   isSettledSaleRecord,
   sortOrdersBySettlementTime,
 } from "./orderDedupe";
+import { sanitizeDishName } from "./sanitizeDishName";
 const valueFrom = (object, ...keys) => {
   for (const key of keys) {
     const value = object?.[key];
@@ -16,12 +17,17 @@ const valueFrom = (object, ...keys) => {
 };
 
 const normalizeItems = (items) =>
-  (Array.isArray(items) ? items : []).map((item) => ({
-    ...item,
-    name: valueFrom(item, "name", "Name", "dishName", "DishName") || "",
-    quantity: Number(valueFrom(item, "quantity", "Quantity", "qty", "Qty")) || 1,
-    price: Number(valueFrom(item, "price", "Price", "unitPrice", "UnitPrice")) || 0,
-  }));
+  (Array.isArray(items) ? items : []).map((item) => {
+    const rawName = valueFrom(item, "name", "Name", "dishName", "DishName") || "";
+    const cleanName = sanitizeDishName(rawName);
+    return {
+      ...item,
+      name: cleanName,
+      dishName: cleanName,
+      quantity: Number(valueFrom(item, "quantity", "Quantity", "qty", "Qty")) || 1,
+      price: Number(valueFrom(item, "price", "Price", "unitPrice", "UnitPrice")) || 0,
+    };
+  });
 
 export function extractInvoiceRecords(response) {
   if (!response?.success || response.data?.success === false) return null;
