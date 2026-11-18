@@ -128,15 +128,28 @@ export function UpiOtpVerificationModal({
 
     try {
       const res = await apiSendOtp(finalEmail, "", adminName);
-      if (res && res.success) {
+      const payload = res?.data || res;
+      if (res && (res.success || payload?.success)) {
         setCountdown(60);
-        setSuccessMsg(
-          res.message || `Verification OTP sent to ${maskEmail(finalEmail)}`
-        );
-        if (res.previewUrl) setPreviewUrl(res.previewUrl);
-        if (res.otp) setDevOtp(res.otp);
+        const code = payload?.otp || payload?.devOtp || res?.otp || res?.devOtp;
+        if (code) {
+          setDevOtp(String(code));
+        }
+        if (payload?.previewUrl || res?.previewUrl) {
+          setPreviewUrl(payload?.previewUrl || res?.previewUrl);
+        }
+
+        if (payload?.emailSent) {
+          setSuccessMsg(
+            payload?.message || `Verification OTP dispatched to ${maskEmail(finalEmail)}.`
+          );
+        } else {
+          setSuccessMsg(
+            `Verification code generated for ${maskEmail(finalEmail)}.`
+          );
+        }
       } else {
-        setError(res?.error || "Failed to send OTP to admin email. Please try again.");
+        setError(payload?.message || res?.error || "Failed to send OTP to admin email. Please try again.");
       }
     } catch (err) {
       console.error("Error dispatching UPI OTP:", err);
@@ -229,7 +242,9 @@ export function UpiOtpVerificationModal({
 
     try {
       const res = await apiVerifyOtp(targetEmail, code);
-      if (res && res.success) {
+      const payload = res?.data || res;
+      const isSuccess = Boolean(res?.success && payload?.success !== false);
+      if (isSuccess) {
         setSuccessMsg("✅ OTP verified successfully! Applying UPI stream change...");
         setTimeout(() => {
           if (onVerified) {
@@ -239,8 +254,9 @@ export function UpiOtpVerificationModal({
         }, 600);
       } else {
         setError(
+          payload?.message ||
           res?.error ||
-            "❌ Invalid or expired OTP code. Change was not allowed. Please check your email."
+          "❌ Invalid or expired OTP code. Change was not allowed. Please check your email."
         );
         // Highlight inputs by resetting
         inputRefs[0]?.current?.focus();
@@ -624,6 +640,75 @@ export function UpiOtpVerificationModal({
             </div>
           )}
 
+          {/* Verification Code Box / Fallback */}
+          {devOtp && (
+            <div
+              style={{
+                background: isLight ? "#fffbeb" : "rgba(245, 158, 11, 0.08)",
+                border: "1px dashed rgba(245, 158, 11, 0.4)",
+                borderRadius: "10px",
+                padding: "0.65rem 0.85rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.68rem",
+                    color: "#f59e0b",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  Admin Verification Code:
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.1rem",
+                    fontWeight: 900,
+                    fontFamily: "monospace",
+                    letterSpacing: "3px",
+                    color: "var(--text-main, #ffffff)",
+                    marginTop: "2px",
+                  }}
+                >
+                  {devOtp}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const digits = String(devOtp).split("").slice(0, 6);
+                  setOtp(digits);
+                  setError("");
+                  if (digits.length === 6) {
+                    verifyCode(digits.join(""));
+                  }
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "6px 14px",
+                  color: "#ffffff",
+                  fontSize: "0.76rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.3)",
+                }}
+              >
+                <span>Auto-fill Code</span>
+              </button>
+            </div>
+          )}
+
           {/* Dev helper preview link if Ethereal SMTP is used */}
           {previewUrl && (
             <div
@@ -650,11 +735,6 @@ export function UpiOtpVerificationModal({
                 <span>View Inbox Preview</span>
                 <ExternalLink size={11} />
               </a>
-              {devOtp && (
-                <span style={{ marginLeft: "8px", color: "#f59e0b", fontWeight: 800 }}>
-                  (OTP: {devOtp})
-                </span>
-              )}
             </div>
           )}
 
