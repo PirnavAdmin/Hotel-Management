@@ -26,8 +26,6 @@ import {
   apiCreateTable,
   apiUpdateTable,
   apiDeleteTable,
-  apiVacateTable,
-  apiUpdateTableStatus,
   apiLockTable,
   apiUnlockTable,
   apiGetTableLocks,
@@ -79,6 +77,7 @@ import {
   apiUpdateOrderDiscount,
   apiSettleOrder,
 } from "./api/orderApi";
+import { apiGetInvoiceByOrder } from "./api/invoiceApi";
 import {
   apiAdjustStock,
   apiCreateInventoryPurchase,
@@ -89,7 +88,7 @@ import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymen
 import { API_SYNC_BASE } from "./api/apiConfig";
 import { getRealtimeConnectionStatus, subscribeToSseMessages, subscribeToRealtimeEvents } from "./realtime/realtimeService";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
-import { getTableSortNumber, compareTablesNaturally } from "./utils/tableSortHelper";
+import { compareTablesNaturally } from "./utils/tableSortHelper";
 import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { useAppDialog } from "./common/DialogContext";
@@ -146,7 +145,10 @@ const mergeActiveDiningOrders = (tables, orders) => {
   return tables.map((table) => {
     const backendTableId = table.backendTableId ?? table.tableId ?? table.TableId;
     const order = backendTableId == null ? null : orderByTableId.get(String(backendTableId));
-    if (!order) return table;
+    if (!order) {
+      if (["reserved", "cleaning", "inactive"].includes(String(table.status || "").toLowerCase())) return table;
+      return clearCachedTableOrder(table);
+    }
 
     const orderItems = Array.isArray(order.items)
       ? order.items
@@ -175,8 +177,10 @@ const mergeActiveDiningOrders = (tables, orders) => {
         orderId: item.orderId ?? item.OrderId ?? order.id ?? order.Id,
       }));
 
-    if (items.length === 0) return table;
     const orderStatus = String(order.status ?? order.Status).toLowerCase();
+    if (items.length === 0 || !["active", "billed"].includes(orderStatus)) {
+      return clearCachedTableOrder({ ...table, status: "vacant" });
+    }
     const guests = Number(order.guests ?? order.Guests) || 0;
     const createdAt = order.createdAt ?? order.CreatedAt;
     return {
@@ -329,7 +333,24 @@ const isRogueName = (name) => {
 };
 
 const parseTableNumber = (table) => {
-  return getTableSortNumber(table);
+  const rawName = String(table?.tableNumber || table?.TableNumber || table?.name || table?.tableName || table?.TableName || "").trim();
+  const match = rawName.match(/(\d+)/);
+  if (match) {
+    const number = Number(match[1]);
+    if (Number.isSafeInteger(number) && number > 0) return number;
+  }
+  const rawId = Number(table?.tableId ?? table?.TableId ?? table?.id ?? table?.Id);
+  return Number.isSafeInteger(rawId) && rawId > 0 ? rawId : null;
+};
+
+const isSyntheticOverflowTable = (table) => {
+  const tableId = Number(table?.id ?? table?.Id);
+  const label = String(table?.name ?? table?.tableName ?? "").trim();
+  const hasBackendIdentity = [table?.backendTableId, table?.tableId, table?.TableId]
+    .some((value) => value != null && String(value).trim() !== "");
+  return !hasBackendIdentity &&
+    (tableId === 999999 || parseTableNumber(table) === 999999) &&
+    (!label || /^(?:t|table)[\s-]*999999$/i.test(label));
 };
 
 const clearCachedTableOrder = (table) => ({
@@ -380,9 +401,9 @@ const mergeIncomingTables = (
             const st = preserveCachedOrders
               ? savedTable
               : clearCachedTableOrder(savedTable);
-            if (st && st.id && !deletedIds.includes(String(st.id))) {
-              const num = parseTableNumber(st) || Number(st.id);
-              if (num) {
+            if (st && st.id && !isSyntheticOverflowTable(st) && !deletedIds.includes(String(st.id))) {
+              const num = parseTableNumber(st);
+              if (num != null) {
                 const existingDef = tablesById.get(num) || {};
                 tablesById.set(num, { ...existingDef, ...st });
               }
@@ -397,14 +418,16 @@ const mergeIncomingTables = (
   if (Array.isArray(incomingTables)) {
     incomingTables.forEach((table) => {
       if (!table || typeof table !== "object") return;
-      const rawName = String(table.tableName || table.name || "").trim();
+      const rawName = String(table.tableName || table.name || table.TableName || "").trim();
+      if (isSyntheticOverflowTable(table)) return;
       const num = parseTableNumber(table);
 
       let targetId = null;
-      if (num && num >= 1) {
+      const sourceId = Number(table.id ?? table.Id);
+      if (num != null) {
         targetId = num;
-      } else if (Number.isFinite(Number(table.id)) && Number(table.id) > 0) {
-        targetId = Number(table.id);
+      } else if (Number.isSafeInteger(sourceId) && sourceId > 0 && sourceId !== 999999) {
+        targetId = sourceId;
       }
 
       if (!targetId || deletedIds.includes(String(targetId))) return;
@@ -417,9 +440,9 @@ const mergeIncomingTables = (
       }
 
       const existing = tablesById.get(targetId) || {};
-      const cleanName = rawName || String(table.tableNumber || table.number || `Table-${num || targetId}`).trim();
+      const cleanName = rawName || String(table.tableNumber || table.TableNumber || table.number || `Table-${num || targetId}`).trim();
       const cleanNumber = String(
-        table.tableNumberNumeric ?? table.number ?? num ?? targetId,
+        table.tableNumberNumeric ?? table.tableNumber ?? table.TableNumber ?? table.number ?? num ?? targetId,
       ).trim();
 
       const rawStatus = String(table.status || "").trim().toLowerCase();
@@ -471,7 +494,7 @@ const mergeIncomingTables = (
         tableNumber: cleanNumber,
         tableNumberNumeric: cleanNumber,
         backendTableId:
-          table.tableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
+          table.tableId ?? table.TableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
         section:
           table.sectionArea || table.section || existing.section || "Main Hall",
         capacity: Number(
@@ -851,7 +874,12 @@ export function App() {
           cachedTables = JSON.parse(localStorage.getItem(STORAGE_KEY_TABLES) || "[]");
         } catch {}
         if (Array.isArray(cachedTables) && cachedTables.length > 0) {
-          setTables(cachedTables);
+          const cleanCachedTables = mergeIncomingTables(
+            cachedTables,
+            getDeletedTableIds(),
+            { preserveCachedOrders: false, preserveCachedDefinitions: false },
+          );
+          setTables(cleanCachedTables);
         } else {
           const cleanCachedTables = mergeIncomingTables(
             [],
@@ -2277,6 +2305,11 @@ export function App() {
             setTables((current) => current.map((table) =>
               String(table.id) === String(rawId) ? refreshedTable : table,
             ));
+          } else if (!order) {
+            const vacantTable = clearCachedTableOrder(targetTable);
+            setTables((current) => current.map((table) =>
+              String(table.id) === String(rawId) ? vacantTable : table,
+            ));
           }
         } catch (error) {
           showToast(error?.message || "The existing table order could not be loaded.");
@@ -3365,15 +3398,35 @@ export function App() {
       if (dineInSettlementInFlightRef.current) return false;
       dineInSettlementInFlightRef.current = true;
 
-      // Settle dine-in order and vacate table in backend
+      // The order settlement API records full payment and closes the backend table.
       const settlementTable = tables.find((table) => String(table.id) === String(settlementData.tableId) || table.name === settlementData.tableName);
       const backendTableId = settlementTable?.backendTableId ?? settlementTable?.tableId ?? settlementData.tableId;
       try {
-        const currentResult = await apiGetOrderForTable(backendTableId).catch(() => null);
-        let orderData = currentResult?.success
-          ? (currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data") ? currentResult.data.data : currentResult.data)
-          : null;
+        const currentResult = await apiGetOrderForTable(backendTableId);
+        if (!currentResult?.success) {
+          throw new Error(currentResult?.error || currentResult?.data?.message || "The active order could not be confirmed. Payment was not submitted.");
+        }
+        let orderData = currentResult.data && Object.prototype.hasOwnProperty.call(currentResult.data, "data")
+          ? currentResult.data.data
+          : currentResult.data;
         let backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+        if (backendOrderId) {
+          const invoiceResult = await apiGetInvoiceByOrder(backendOrderId);
+          if (invoiceResult?.success) {
+            const invoice = invoiceResult.data?.data ?? invoiceResult.data;
+            const invoiceTotal = Number(invoice?.totalAmount ?? invoice?.TotalAmount) || 0;
+            const paidAmount = Number(invoice?.paidAmount ?? invoice?.PaidAmount ?? invoice?.amountPaid ?? invoice?.AmountPaid) || 0;
+            const invoiceStatus = String(invoice?.status ?? invoice?.Status ?? "").toLowerCase();
+            if (paidAmount > 0 && (paidAmount >= invoiceTotal || ["paid", "settled"].includes(invoiceStatus))) {
+              throw new Error("This order already has a fully paid invoice. No additional payment was submitted; backend order and table closure synchronization is required.");
+            }
+            if (paidAmount > 0 || invoiceStatus === "partial") {
+              throw new Error("This order has a partial invoice payment. No additional payment was submitted because the order settlement API would charge the full bill again.");
+            }
+          } else if (invoiceResult?.status !== 404) {
+            throw new Error(invoiceResult?.error || "The existing invoice payment status could not be confirmed. Payment was not submitted.");
+          }
+        }
         const itemsToPersist = billableItems.map((item) => ({
           menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
           name: item.name,
@@ -3383,6 +3436,10 @@ export function App() {
         }));
         const unsavedItems = (settlementTable?.items || []).filter((item) => !item.kotSent && !item.kotPendingServer);
         if (!orderData) {
+          const knownOrderId = Number(settlementTable?.backendOrderId ?? settlementTable?.activeOrderId);
+          if (knownOrderId > 0) {
+            throw new Error("The table has a known active order, but the backend did not return it. Payment was not submitted to prevent a duplicate order.");
+          }
           const createResult = await apiCreateOrder({
             tableId: backendTableId,
             tableName: settlementData.tableName,
@@ -3395,53 +3452,73 @@ export function App() {
             status: "Active",
             items: itemsToPersist,
           }).catch(() => null);
-          if (createResult?.success) {
-            orderData = createResult.data?.data ?? createResult.data;
-            backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
+          if (!createResult?.success || createResult?.data?.success === false) {
+            throw new Error(createResult?.error || createResult?.data?.message || "The backend could not create the order; payment was not submitted.");
           }
+          orderData = createResult.data?.data ?? createResult.data;
+          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
         } else if (unsavedItems.length > 0 && backendOrderId) {
-          await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
+          const addItemsResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
             menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
             name: item.name || item.dishName,
             price: Number(item.price ?? item.unitPrice ?? 0) || 0,
             quantity: Number(item.quantity ?? item.qty ?? 1) || 1,
             notes: item.notes || "",
-          }))).catch(() => null);
+          })));
+          if (!addItemsResult?.success || addItemsResult?.data?.success === false) {
+            throw new Error(addItemsResult?.error || addItemsResult?.data?.message || "The backend could not save the new order items; payment was not submitted.");
+          }
         }
-        if (backendOrderId) {
-          await apiSettleOrder(backendOrderId, {
+        if (!backendOrderId) {
+          throw new Error("The server did not return an order ID. Payment was not confirmed, so the table remains active.");
+        }
+
+        const settlementResult = await apiSettleOrder(backendOrderId, {
             discountPercent: settlementData.discountPercent,
             serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
             tipAmount: settlementData.tipAmount,
             paymentMethod: enrichedSettlement.paymentMethod,
             invoiceNumber: enrichedSettlement.invoiceNo,
-          }).catch(() => null);
-          settledOrderIdsRef.current?.add(String(backendOrderId));
-          try {
-            localStorage.setItem(
-              STORAGE_KEY_SETTLED_ORDER_IDS,
-              JSON.stringify(Array.from(settledOrderIdsRef.current || []).slice(-500)),
-            );
-          } catch {}
-          tableRefreshGenerationRef.current += 1;
-          enrichedSettlement.backendOrderId = backendOrderId;
-          enrichedSettlement.billingSessionId = String(backendOrderId);
+          });
+        const settledOrder = settlementResult?.data?.data ?? settlementResult?.data ?? settlementResult?.order ?? null;
+        const confirmedOrderId = Number(
+          settlementResult?.data?.orderId ?? settledOrder?.id ?? settledOrder?.Id ?? backendOrderId,
+        );
+        const confirmedInvoiceId = Number(settlementResult?.data?.invoiceId ?? settledOrder?.invoiceId ?? settledOrder?.InvoiceId);
+        const confirmedStatus = String(settledOrder?.status ?? settledOrder?.Status ?? "").toLowerCase();
+        if (
+          !settlementResult?.success ||
+          settlementResult?.data?.success === false ||
+          confirmedOrderId !== backendOrderId ||
+          confirmedInvoiceId <= 0 ||
+          confirmedStatus !== "settled"
+        ) {
+          throw new Error(settlementResult?.error || settlementResult?.data?.message || "The backend did not confirm full payment. The table remains active.");
         }
 
-        // Always vacate table in backend
-        apiVacateTable(backendTableId).catch(() => {});
-        apiUpdateTableStatus(backendTableId, "vacant").catch(() => {});
+        settledOrderIdsRef.current?.add(String(confirmedOrderId));
+        try {
+          localStorage.setItem(
+            STORAGE_KEY_SETTLED_ORDER_IDS,
+            JSON.stringify(Array.from(settledOrderIdsRef.current || []).slice(-500)),
+          );
+        } catch {}
+        tableRefreshGenerationRef.current += 1;
+        enrichedSettlement.backendOrderId = confirmedOrderId;
+        enrichedSettlement.billingSessionId = String(confirmedOrderId);
         apiUnlockTable(backendTableId).catch(() => {});
         dineInBackendTableVacated = true;
       } catch (error) {
         console.warn("Backend dine-in order settlement sync warning:", error);
-        apiVacateTable(backendTableId).catch(() => {});
-        apiUpdateTableStatus(backendTableId, "vacant").catch(() => {});
-        apiUnlockTable(backendTableId).catch(() => {});
-        dineInBackendTableVacated = true;
+        showToast(error?.message || "Payment was not confirmed by the backend. The table remains active.");
+        return false;
       } finally {
         dineInSettlementInFlightRef.current = false;
       }
+    }
+
+    if (!isTakeawayOrder && !dineInBackendTableVacated) {
+      return false;
     }
 
     // Deduct recipe ingredients once the bill is paid. A ledger prevents
@@ -3593,28 +3670,7 @@ export function App() {
         tableIds.includes(String(settlementData.backendTableId)) ||
         t.name === settlementData.tableName || t.tableName === settlementData.tableName;
       if (!isTarget) return t;
-      return {
-        ...t,
-        status: "vacant",
-        items: [],
-        guests: 0,
-        occupiedChairs: 0,
-        selectedSeats: [],
-        occupiedSince: null,
-        activeOrderId: null,
-        backendOrderId: null,
-        orderTime: null,
-        orderTimestamp: null,
-        cookingStartedAt: null,
-        completedAt: null,
-        completedDuration: null,
-        discountPercent: 0,
-        discountAmount: 0,
-        subtotal: 0,
-        taxAmount: 0,
-        serviceChargeAmount: 0,
-        grandTotal: 0,
-      };
+      return clearCachedTableOrder(t);
     });
     setTables(updatedTables);
     try {
@@ -3642,7 +3698,7 @@ export function App() {
         const activeOrders = Array.isArray(ordersResponse?.data)
           ? ordersResponse.data
           : ordersResponse?.data?.orders ?? ordersResponse?.data?.data ?? ordersResponse?.orders;
-        if (refreshGeneration === tableRefreshGenerationRef.current && Array.isArray(serverTables) && Array.isArray(activeOrders)) {
+        if (tableResponse?.success && ordersResponse?.success && refreshGeneration === tableRefreshGenerationRef.current && Array.isArray(serverTables) && Array.isArray(activeOrders)) {
           const definitions = mergeIncomingTables(serverTables, getDeletedTableIds(), {
             preserveCachedOrders: false,
             preserveCachedDefinitions: false,
