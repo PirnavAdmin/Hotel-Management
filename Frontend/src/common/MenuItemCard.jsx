@@ -93,7 +93,7 @@ export function MenuItemCard({
               title="Add to Cart"
               onClick={(event) => {
                 stopCardClick(event);
-                onAdd?.(item);
+                onAdd?.({ ...item, quantity: 1 });
               }}
             >
               <Plus size={13} />
