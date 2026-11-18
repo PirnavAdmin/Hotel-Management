@@ -98,16 +98,37 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const [selectedQrIndex, setSelectedQrIndex] = useState(qrConfig.initialIndex);
 
   useEffect(() => {
-    const syncQrConfig = () => {
+    const syncQrConfig = (e) => {
+      const freshDetail = e?.detail;
+      if (freshDetail && Array.isArray(freshDetail.paymentQrs)) {
+        const valid = freshDetail.paymentQrs.filter((q) => q && q.image);
+        if (valid.length > 0) {
+          let activeIdx = -1;
+          if (freshDetail.selectedQrId) {
+            activeIdx = valid.findIndex((q) => q.id === freshDetail.selectedQrId);
+          }
+          if (activeIdx === -1) {
+            activeIdx = valid.findIndex((q) => q.active);
+          }
+          if (activeIdx === -1) activeIdx = 0;
+          setQrConfig({ configuredQrs: valid, initialIndex: activeIdx });
+          setSelectedQrIndex(activeIdx);
+          return;
+        }
+      }
       const latest = getQrConfig();
       setQrConfig(latest);
       setSelectedQrIndex(latest.initialIndex);
     };
     window.addEventListener("storage", syncQrConfig);
     window.addEventListener("focus", syncQrConfig);
+    window.addEventListener("restaurant-settings-updated", syncQrConfig);
+    window.addEventListener("avsr-settings-updated", syncQrConfig);
     return () => {
       window.removeEventListener("storage", syncQrConfig);
       window.removeEventListener("focus", syncQrConfig);
+      window.removeEventListener("restaurant-settings-updated", syncQrConfig);
+      window.removeEventListener("avsr-settings-updated", syncQrConfig);
     };
   }, []);
 
@@ -134,6 +155,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           parsed.selectedQrId = chosenQr.id;
           localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(parsed));
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new Event("restaurant-settings-updated"));
+          window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: parsed }));
         }
       } catch (err) {
         console.error("Failed to update active QR in settings", err);

@@ -64,7 +64,7 @@ export function Header({
     const stored = getStoredName();
     if (stored && stored.trim() && stored.trim().toLowerCase() !== "restaurant") return stored.trim();
     if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
-    return stored || restaurantName || "Bhanu Bistro";
+    return stored || restaurantName || "AVSR FOOD COURT";
   });
 
   useEffect(() => {
@@ -288,7 +288,7 @@ export function Header({
                   lineHeight: 1.1,
                 }}
               >
-                {liveRestaurantName || restaurantName || "Bhanu Bistro"}
+                {liveRestaurantName || restaurantName || "AVSR FOOD COURT"}
               </h1>
               <span
                 style={{

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using HMS.Data;
 using HMS.DTOs;
+using HMS.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace HMS.Services;
@@ -12,11 +15,14 @@ namespace HMS.Services;
 public class RestaurantSettingsService
 {
     private static RestaurantSettingsDto? _fallbackSettings;
+    private static readonly string SettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "restaurant_settings.json");
+    private readonly AppDbContext _context;
     private readonly SpService _spService;
     private readonly ILogger<RestaurantSettingsService> _logger;
 
-    public RestaurantSettingsService(SpService spService, ILogger<RestaurantSettingsService> logger)
+    public RestaurantSettingsService(AppDbContext context, SpService spService, ILogger<RestaurantSettingsService> logger)
     {
+        _context = context;
         _spService = spService;
         _logger = logger;
     }
@@ -27,31 +33,67 @@ public class RestaurantSettingsService
         {
             _logger.LogInformation("Retrieving restaurant brand identity & settings from MySQL database.");
 
-            var results = await _spService.ExecuteQueryAsync("sp_get_restaurant_settings", MapFromReader);
-            if (results.Count > 0)
+            // 1. Try MySQL Stored Procedure
+            try
             {
-                var settings = results[0];
-                if (_fallbackSettings != null)
+                var results = await _spService.ExecuteQueryAsync("sp_get_restaurant_settings", MapFromReader);
+                if (results.Count > 0 && !string.IsNullOrWhiteSpace(results[0].RestaurantName))
                 {
-                    if (!string.IsNullOrWhiteSpace(_fallbackSettings.RestaurantLogo) && string.IsNullOrWhiteSpace(settings.RestaurantLogo))
-                        settings.RestaurantLogo = _fallbackSettings.RestaurantLogo;
-                    if (!string.IsNullOrWhiteSpace(_fallbackSettings.RestaurantName) && _fallbackSettings.RestaurantName != "AVSR FOOD COURT")
-                        settings.RestaurantName = _fallbackSettings.RestaurantName;
-                    if (!string.IsNullOrWhiteSpace(_fallbackSettings.Tagline))
-                        settings.Tagline = _fallbackSettings.Tagline;
+                    var settings = results[0];
+                    if (_fallbackSettings != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(_fallbackSettings.RestaurantLogo) && string.IsNullOrWhiteSpace(settings.RestaurantLogo))
+                            settings.RestaurantLogo = _fallbackSettings.RestaurantLogo;
+                        if (!string.IsNullOrWhiteSpace(_fallbackSettings.RestaurantName) && _fallbackSettings.RestaurantName != "AVSR FOOD COURT")
+                            settings.RestaurantName = _fallbackSettings.RestaurantName;
+                        if (!string.IsNullOrWhiteSpace(_fallbackSettings.Tagline) && string.IsNullOrWhiteSpace(settings.Tagline))
+                            settings.Tagline = _fallbackSettings.Tagline;
+                    }
+                    _logger.LogInformation("Successfully loaded restaurant settings for '{RestaurantName}' via SP.", settings.RestaurantName);
+                    _fallbackSettings = settings;
+                    SaveToFile(settings);
+                    return settings;
                 }
-                _logger.LogInformation("Successfully loaded restaurant settings for '{RestaurantName}'.", settings.RestaurantName);
-                return settings;
+            }
+            catch (Exception spEx)
+            {
+                _logger.LogWarning(spEx, "sp_get_restaurant_settings failed. Falling back to EF Core AppDbContext.");
+            }
+
+            // 2. Try EF Core AppDbContext directly
+            try
+            {
+                var entity = await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1);
+                if (entity != null && !string.IsNullOrWhiteSpace(entity.RestaurantName))
+                {
+                    var dto = MapFromEntity(entity);
+                    _logger.LogInformation("Successfully loaded restaurant settings for '{RestaurantName}' via EF Core.", dto.RestaurantName);
+                    _fallbackSettings = dto;
+                    SaveToFile(dto);
+                    return dto;
+                }
+            }
+            catch (Exception efEx)
+            {
+                _logger.LogWarning(efEx, "EF Core RestaurantSettings lookup failed.");
+            }
+
+            // 3. Try persisted file on disk
+            var diskSettings = LoadFromFile();
+            if (diskSettings != null && !string.IsNullOrWhiteSpace(diskSettings.RestaurantName))
+            {
+                _fallbackSettings = diskSettings;
+                return diskSettings;
             }
 
             if (_fallbackSettings != null) return _fallbackSettings;
-            _logger.LogWarning("No restaurant settings record found via SP. Falling back to default settings.");
+            _logger.LogWarning("No restaurant settings record found. Falling back to default settings.");
             return new RestaurantSettingsDto();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while executing sp_get_restaurant_settings. Falling back to defaults.");
-            return _fallbackSettings ?? new RestaurantSettingsDto();
+            _logger.LogError(ex, "Error occurred while retrieving restaurant settings. Falling back to defaults.");
+            return _fallbackSettings ?? LoadFromFile() ?? new RestaurantSettingsDto();
         }
     }
 
@@ -64,28 +106,68 @@ public class RestaurantSettingsService
         }
 
         _fallbackSettings = dto;
+        SaveToFile(dto);
 
+        string? paymentQrsJson = null;
+        if (dto.PaymentQrs != null)
+        {
+            if (dto.PaymentQrs is JsonElement je)
+            {
+                paymentQrsJson = je.GetRawText();
+            }
+            else if (dto.PaymentQrs is string s)
+            {
+                paymentQrsJson = s;
+            }
+            else
+            {
+                paymentQrsJson = JsonSerializer.Serialize(dto.PaymentQrs);
+            }
+        }
+
+        // 1. Persist directly via EF Core AppDbContext
         try
         {
-            _logger.LogInformation("Saving updated restaurant settings to MySQL. Target Restaurant Name: {RestaurantName}", dto.RestaurantName.Trim());
-
-            string? paymentQrsJson = null;
-            if (dto.PaymentQrs != null)
+            var entity = await _context.RestaurantSettings.FirstOrDefaultAsync(s => s.Id == 1);
+            if (entity == null)
             {
-                if (dto.PaymentQrs is JsonElement je)
-                {
-                    paymentQrsJson = je.GetRawText();
-                }
-                else if (dto.PaymentQrs is string s)
-                {
-                    paymentQrsJson = s;
-                }
-                else
-                {
-                    paymentQrsJson = JsonSerializer.Serialize(dto.PaymentQrs);
-                }
+                entity = new RestaurantSetting { Id = 1 };
+                _context.RestaurantSettings.Add(entity);
             }
 
+            entity.RestaurantName = dto.RestaurantName.Trim();
+            entity.Tagline = dto.Tagline?.Trim();
+            entity.ContactNumber = (dto.ContactNumber ?? dto.Phone)?.Trim();
+            entity.Address = dto.Address?.Trim();
+            entity.Gstin = dto.Gstin?.Trim();
+            entity.RestaurantLogo = dto.RestaurantLogo ?? dto.Logo;
+            entity.FoodGstRate = dto.FoodGstRate;
+            entity.ServiceChargeRate = dto.ServiceChargeRate;
+            entity.ServiceChargeEnabled = dto.ServiceChargeEnabled;
+            entity.RoundingMode = dto.RoundingMode ?? "nearest";
+            entity.Currency = dto.Currency ?? "₹";
+            entity.ReceiptHeader = dto.ReceiptHeader?.Trim();
+            entity.ReceiptFooter = dto.ReceiptFooter?.Trim();
+            entity.SelectedQrId = dto.SelectedQrId;
+            entity.PaymentQrs = paymentQrsJson;
+            entity.ShowLogoOnReceipt = dto.ShowLogoOnReceipt;
+            entity.ShowAddressOnReceipt = dto.ShowAddressOnReceipt;
+            entity.ShowGstBreakdown = dto.ShowGstBreakdown;
+            entity.LowStockAlertsEnabled = dto.LowStockAlertsEnabled;
+            entity.DisplayTheme = dto.DisplayTheme ?? dto.Theme ?? "royal-saffron";
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Saved restaurant settings directly to AppDbContext.RestaurantSettings.");
+        }
+        catch (Exception efEx)
+        {
+            _logger.LogWarning(efEx, "Could not persist restaurant settings via AppDbContext.");
+        }
+
+        // 2. Also try MySQL Stored Procedure
+        try
+        {
             var parameters = new Dictionary<string, object?>
             {
                 { "p_restaurant_name", dto.RestaurantName.Trim() },
@@ -113,18 +195,91 @@ public class RestaurantSettingsService
             var results = await _spService.ExecuteQueryAsync("sp_save_restaurant_settings", MapFromReader, parameters);
             if (results.Count > 0)
             {
-                _logger.LogInformation("Database UPDATE succeeded for restaurant settings. Restaurant Name is now '{RestaurantName}'.", results[0].RestaurantName);
+                _logger.LogInformation("sp_save_restaurant_settings succeeded. Name: '{RestaurantName}'.", results[0].RestaurantName);
+                _fallbackSettings = results[0];
+                SaveToFile(results[0]);
                 return results[0];
             }
+        }
+        catch (Exception spEx)
+        {
+            _logger.LogWarning(spEx, "sp_save_restaurant_settings execution failed (changes saved to EF Core / disk).");
+        }
 
-            _logger.LogInformation("Database UPDATE completed via sp_save_restaurant_settings.");
-            return dto;
+        return dto;
+    }
+
+    private void SaveToFile(RestaurantSettingsDto dto)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(dto, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(SettingsFilePath, json);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not execute sp_save_restaurant_settings in MySQL. Preserving updated settings in-memory.");
-            return dto;
+            _logger.LogWarning(ex, "Failed to write restaurant settings to disk file {Path}", SettingsFilePath);
         }
+    }
+
+    private RestaurantSettingsDto? LoadFromFile()
+    {
+        try
+        {
+            if (File.Exists(SettingsFilePath))
+            {
+                var json = File.ReadAllText(SettingsFilePath);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<RestaurantSettingsDto>(json, options);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read restaurant settings from disk file {Path}", SettingsFilePath);
+        }
+        return null;
+    }
+
+    private static RestaurantSettingsDto MapFromEntity(RestaurantSetting entity)
+    {
+        var dto = new RestaurantSettingsDto
+        {
+            RestaurantName = entity.RestaurantName,
+            Tagline = entity.Tagline,
+            ContactNumber = entity.ContactNumber,
+            Address = entity.Address,
+            Gstin = entity.Gstin,
+            RestaurantLogo = entity.RestaurantLogo,
+            FoodGstRate = entity.FoodGstRate,
+            ServiceChargeRate = entity.ServiceChargeRate,
+            ServiceChargeEnabled = entity.ServiceChargeEnabled,
+            RoundingMode = entity.RoundingMode,
+            Currency = entity.Currency,
+            ReceiptHeader = entity.ReceiptHeader,
+            ReceiptFooter = entity.ReceiptFooter,
+            SelectedQrId = entity.SelectedQrId,
+            ShowLogoOnReceipt = entity.ShowLogoOnReceipt,
+            ShowAddressOnReceipt = entity.ShowAddressOnReceipt,
+            ShowGstBreakdown = entity.ShowGstBreakdown,
+            LowStockAlertsEnabled = entity.LowStockAlertsEnabled,
+            DisplayTheme = entity.DisplayTheme,
+            UpdatedAt = entity.UpdatedAt
+        };
+
+        if (!string.IsNullOrWhiteSpace(entity.PaymentQrs))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(entity.PaymentQrs);
+                dto.PaymentQrs = doc.RootElement.Clone();
+            }
+            catch
+            {
+                dto.PaymentQrs = entity.PaymentQrs;
+            }
+        }
+
+        return dto;
     }
 
     private static RestaurantSettingsDto MapFromReader(DbDataReader reader)

@@ -87,6 +87,7 @@ import {
   apiGetInventoryPurchases,
 } from "./api/inventoryApi";
 import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymentApi";
+import { apiGetRestaurantSettings } from "./api/settingsApi";
 import { API_SYNC_BASE } from "./api/apiConfig";
 import { getRealtimeConnectionStatus, subscribeToSseMessages, subscribeToRealtimeEvents } from "./realtime/realtimeService";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
@@ -618,33 +619,37 @@ export function App() {
         }
       });
 
-      const hasLocalCustomizations =
-        Boolean(local.isUserConfigured) ||
-        Boolean(local.updatedAt) ||
-        (Boolean(local.restaurantName) && local.restaurantName.trim() !== "AVSR FOOD COURT");
-
+      // Server data is authoritative for restaurant branding and payment QRs
       const merged = {
-        ...cleanServer,
         ...local,
-        ...(hasLocalCustomizations
-          ? {
-              restaurantName: local.restaurantName || cleanServer.restaurantName || "",
-              tagline: local.tagline !== undefined ? local.tagline : cleanServer.tagline || "",
-            }
-          : {}),
-        logo: local.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+        ...cleanServer,
+        restaurantName: cleanServer.restaurantName || cleanServer.name || local.restaurantName || "AVSR FOOD COURT",
+        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline || ""),
+        logo: cleanServer.logo || cleanServer.restaurantLogo || local.logo || local.restaurantLogo || "",
+        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || local.restaurantLogo || local.logo || "",
+        paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
+        selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
 
       try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {
         setRestaurantSettings(merged);
         window.dispatchEvent(new Event("restaurant-settings-updated"));
+        window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: merged }));
       }
     };
     const loadInitialSettings = async () => {
+      try {
+        const res = await apiGetRestaurantSettings();
+        const serverData = res?.data || res?.settings;
+        if (serverData && active && (serverData.restaurantName || serverData.logo)) {
+          applySharedSettings(serverData);
+          return;
+        }
+      } catch {}
       const data = await requestSharedNetworkState();
       if (data && active) {
-        applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
+        applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY] || data?.restaurantSettings);
       }
     };
     loadInitialSettings();
@@ -652,15 +657,28 @@ export function App() {
     const handleSettingsMsg = (event) => {
       try {
         const message = JSON.parse(event.data);
-        applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+        const settings =
+          message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.restaurantSettings ||
+          (message?.type === "restaurantSetting:updated" ? (message?.payload?.data || message?.payload) : null);
+        if (settings) applySharedSettings(settings);
       } catch {}
     };
 
     const unsubscribe = subscribeToSseMessages(handleSettingsMsg);
 
+    const handleWindowSettingsUpdate = (e) => {
+      if (e?.detail && typeof e.detail === "object") {
+        applySharedSettings(e.detail);
+      }
+    };
+    window.addEventListener("avsr-settings-updated", handleWindowSettingsUpdate);
+
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener("avsr-settings-updated", handleWindowSettingsUpdate);
     };
   }, []);
 
@@ -1947,6 +1965,12 @@ export function App() {
               window.dispatchEvent(new CustomEvent("avsr-table-locks-updated", { detail: locks }));
             } catch {}
           }).catch(() => {});
+        }
+      } else if (name === "restaurantSetting:updated" || name === "ReceiveRestaurantSettingUpdated" || name === "module:settings") {
+        const settingsData = payload?.data ?? payload?.Data ?? payload;
+        if (settingsData && typeof settingsData === "object") {
+          window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settingsData }));
+          window.dispatchEvent(new Event("restaurant-settings-updated"));
         }
       } else if (name.startsWith("module:")) {
         const moduleName = name.slice("module:".length).toLowerCase();

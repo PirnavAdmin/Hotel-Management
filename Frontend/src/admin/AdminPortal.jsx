@@ -77,7 +77,7 @@ import { apiGetInventory, apiCreateIngredient } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { apiGetOrder } from "../api/orderApi";
 import { API_SYNC_BASE } from "../api/apiConfig";
-import { subscribeToSseMessages } from "../realtime/realtimeService";
+import { subscribeToSseMessages, subscribeToRealtimeEvents } from "../realtime/realtimeService";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -1229,8 +1229,8 @@ export function AdminPortal({
   });
   const restaurantLogo = restaurantSettings?.logo || "";
   const restaurantName =
-    restaurantSettings?.restaurantName?.trim() || "Bhanu Bistro";
-  const restaurantTagline = restaurantSettings?.tagline?.trim() || "BAR & CAFE";
+    restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+  const restaurantTagline = restaurantSettings?.tagline?.trim() || "Restaurant Management & Fine Dining";
 
   useEffect(() => {
     const handleSettingsUpdated = (e) => {
@@ -1270,23 +1270,16 @@ export function AdminPortal({
         }
       });
 
-      // If user has explicitly saved settings locally, protect custom brand identity (name, logo, tagline)
-      const hasLocalCustomizations =
-        Boolean(localSettings.isUserConfigured) ||
-        Boolean(localSettings.updatedAt) ||
-        (Boolean(localSettings.restaurantName) && localSettings.restaurantName.trim() !== "AVSR FOOD COURT");
-
+      // Server data is authoritative for restaurant branding and payment settings
       const mergedSettings = {
-        ...cleanServer,
         ...localSettings,
-        ...(hasLocalCustomizations
-          ? {
-              restaurantName: localSettings.restaurantName || cleanServer.restaurantName || "",
-              tagline: localSettings.tagline !== undefined ? localSettings.tagline : cleanServer.tagline || "",
-            }
-          : {}),
-        // Never erase local base64 logo if server returned none
-        logo: localSettings.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+        ...cleanServer,
+        restaurantName: cleanServer.restaurantName || cleanServer.name || localSettings.restaurantName || "AVSR FOOD COURT",
+        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (localSettings.tagline || ""),
+        logo: cleanServer.logo || cleanServer.restaurantLogo || localSettings.logo || localSettings.restaurantLogo || "",
+        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || localSettings.restaurantLogo || localSettings.logo || "",
+        paymentQrs: cleanServer.paymentQrs || localSettings.paymentQrs || [],
+        selectedQrId: cleanServer.selectedQrId || localSettings.selectedQrId || "qr-1",
       };
 
       try {
@@ -1320,19 +1313,31 @@ export function AdminPortal({
       })
       .catch(() => {});
 
-    const unsubscribe = subscribeToSseMessages((event) => {
+    const unsubscribeSse = subscribeToSseMessages((event) => {
       try {
         const message = JSON.parse(event.data);
         const settings =
           message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
-          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
+          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.restaurantSettings ||
+          (message?.type === "restaurantSetting:updated" ? (message?.payload?.data || message?.payload) : null);
         if (settings) applySettings(settings);
       } catch {}
     });
 
+    const unsubscribeRealtime = subscribeToRealtimeEvents(({ name, payload }) => {
+      if (name === "restaurantSetting:updated" || name === "ReceiveRestaurantSettingUpdated" || name === "module:settings") {
+        const settingsData = payload?.data ?? payload?.Data ?? payload;
+        if (settingsData && typeof settingsData === "object") {
+          applySettings(settingsData);
+        }
+      }
+    });
+
     return () => {
       active = false;
-      unsubscribe();
+      unsubscribeSse();
+      unsubscribeRealtime();
     };
   }, []);
 

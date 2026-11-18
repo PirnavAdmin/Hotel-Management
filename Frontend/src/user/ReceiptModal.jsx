@@ -140,7 +140,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const restaurantName =
     restaurantSettings.restaurantName?.trim() ||
     storedSettings.restaurantName?.trim() ||
-    "BHANU BISTRO";
+    "AVSR FOOD COURT";
   const restaurantTagline =
     restaurantSettings.tagline?.trim() ||
     storedSettings.tagline?.trim() ||

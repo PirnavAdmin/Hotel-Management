@@ -410,6 +410,8 @@ export function AdminSettings({
       };
       localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(toSave));
       window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("restaurant-settings-updated"));
+      window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: toSave }));
     } catch (err) {
       console.error("Failed to save active QR to localStorage:", err);
     }
@@ -432,11 +434,14 @@ export function AdminSettings({
         try {
           const saved = localStorage.getItem("gourmet_pos_settings_v1");
           const parsed = saved ? JSON.parse(saved) : {};
+          const savedObj = { ...parsed, ...updated, paymentQrs: nextQrs };
           localStorage.setItem(
             "gourmet_pos_settings_v1",
-            JSON.stringify({ ...parsed, ...updated, paymentQrs: nextQrs })
+            JSON.stringify(savedObj)
           );
           window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new Event("restaurant-settings-updated"));
+          window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: savedObj }));
         } catch (err) {
           console.error("Failed to save uploaded QR:", err);
         }
@@ -459,13 +464,19 @@ export function AdminSettings({
       try {
         const saved = localStorage.getItem("gourmet_pos_settings_v1");
         const parsed = saved ? JSON.parse(saved) : {};
+        const savedObj = { ...parsed, ...updated, paymentQrs: nextQrs };
         localStorage.setItem(
           "gourmet_pos_settings_v1",
-          JSON.stringify({ ...parsed, ...updated, paymentQrs: nextQrs })
+          JSON.stringify(savedObj)
         );
         window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("restaurant-settings-updated"));
+        window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: savedObj }));
       } catch (err) {
         console.error("Failed to save updated QR label:", err);
+      }
+      if (onSaveSettings) {
+        onSaveSettings(updated).catch(() => {});
       }
       return updated;
     });
@@ -497,11 +508,14 @@ export function AdminSettings({
       try {
         const saved = localStorage.getItem("gourmet_pos_settings_v1");
         const parsed = saved ? JSON.parse(saved) : {};
+        const savedObj = { ...parsed, ...updated };
         localStorage.setItem(
           "gourmet_pos_settings_v1",
-          JSON.stringify({ ...parsed, ...updated })
+          JSON.stringify(savedObj)
         );
         window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new Event("restaurant-settings-updated"));
+        window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: savedObj }));
       } catch (err) {
         console.error("Failed to save removed QR:", err);
       }
