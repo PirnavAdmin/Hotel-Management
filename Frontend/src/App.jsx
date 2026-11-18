@@ -2490,7 +2490,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2557,7 +2561,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2596,7 +2604,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2623,7 +2635,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2657,8 +2673,11 @@ export function App() {
         };
       });
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });
@@ -2763,6 +2782,9 @@ export function App() {
         localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
         lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+        window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
       } catch {}
 
       sounds.playBell();
@@ -3008,7 +3030,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -3155,7 +3181,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -3219,8 +3249,11 @@ export function App() {
         };
       });
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });
@@ -3282,8 +3315,11 @@ export function App() {
         return t;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });

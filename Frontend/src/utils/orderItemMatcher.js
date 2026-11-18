@@ -5,8 +5,16 @@
 export function isSameMenuItem(a, b) {
   if (!a || !b) return false;
 
-  // 1. Exact ID match
-  if (a.id != null && b.id != null && String(a.id) === String(b.id)) {
+  const aName = String(a.name || a.dishName || "").trim().toLowerCase();
+  const bName = String(b.name || b.dishName || "").trim().toLowerCase();
+
+  // If both items have valid non-empty names and they differ, they CANNOT be the same menu item!
+  if (aName && bName && aName !== bName) {
+    return false;
+  }
+
+  // 1. Exact dish name match (case-insensitive, trimmed)
+  if (aName && bName && aName === bName) {
     return true;
   }
 
@@ -24,10 +32,8 @@ export function isSameMenuItem(a, b) {
     return true;
   }
 
-  // 4. Exact dish name match (case-insensitive, trimmed)
-  const aName = String(a.name || a.dishName || "").trim().toLowerCase();
-  const bName = String(b.name || b.dishName || "").trim().toLowerCase();
-  if (aName && bName && aName === bName) {
+  // 4. Exact ID match (only if neither has conflicting name)
+  if (a.id != null && b.id != null && String(a.id) === String(b.id)) {
     return true;
   }
 

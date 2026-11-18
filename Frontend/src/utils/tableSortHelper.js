@@ -6,7 +6,8 @@
  */
 export const getTableSortNumber = (table) => {
   if (!table) return 0;
-  const rawStr = String(table.tableNumber || table.name || table.tableName || "").trim();
+  // Prioritize the display name or table name so "Spin - 1", "Spin - 2", "Spin - 3" sort by their visual number
+  const rawStr = String(table.name || table.tableName || table.tableNumber || "").trim();
   const match = rawStr.match(/(\d+)/);
   if (match) {
     const num = parseInt(match[1], 10);

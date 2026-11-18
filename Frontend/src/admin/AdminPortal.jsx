@@ -953,7 +953,6 @@ export function AdminPortal({
     const combined = [
       ...(Array.isArray(takeawayOrders) ? takeawayOrders : []),
       ...localTakeawayOrders,
-      ...(Array.isArray(pastOrders) ? pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway")) : [])
     ];
     const seen = new Set();
     const result = [];
