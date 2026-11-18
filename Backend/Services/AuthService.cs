@@ -200,7 +200,7 @@ public class AuthService
                     UserId = 1,
                     UserName = normUser.Contains("pirnav") ? "pirnav" : "admin",
                     FullName = "pirnav",
-                    Email = normUser.Contains("pirnav") ? "maturi.vikas@pirnav.com" : "admin@bhanupos.com",
+                    Email = normUser.Contains("pirnav") ? "pasupuleti.bhanu7@gmail.com" : "admin@bhanupos.com",
                     Phone = "9999999999",
                     RoleId = 1,
                     BranchId = 1,
@@ -248,7 +248,7 @@ public class AuthService
                 UserId = 1,
                 UserName = normUser.Contains("pirnav") ? "pirnav" : "admin",
                 FullName = "pirnav",
-                Email = normUser.Contains("pirnav") ? "maturi.vikas@pirnav.com" : "admin@bhanupos.com",
+                Email = normUser.Contains("pirnav") ? "pasupuleti.bhanu7@gmail.com" : "admin@bhanupos.com",
                 Phone = "9999999999",
                 RoleId = 1,
                 BranchId = 1,
@@ -366,6 +366,10 @@ public class AuthService
             effectiveFullName = "pirnav";
         }
 
+        var effectiveEmail = (normUser.Contains("pirnav") || user.UserName == "pirnav" || string.Equals(user.Email, "maturi.vikas@pirnav.com", StringComparison.OrdinalIgnoreCase))
+            ? "pasupuleti.bhanu7@gmail.com"
+            : user.Email;
+
         return new LoginResponseDto
         {
             Success = true,
@@ -376,7 +380,7 @@ public class AuthService
                 UserId = user.UserId,
                 FullName = effectiveFullName,
                 UserName = user.UserName,
-                Email = user.Email,
+                Email = effectiveEmail,
                 Phone = user.Phone,
                 RoleId = user.RoleId,
                 RoleName = user.Role.RoleName,

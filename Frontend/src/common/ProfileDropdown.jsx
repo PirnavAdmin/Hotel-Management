@@ -199,7 +199,14 @@ export function ProfileDropdown({
 
   const sessionEmail = String(currentSession?.email || currentSession?.loginEmail || '').trim();
   const registeredEmail = resolvedRegisteredEmail || cachedRegisteredEmail;
-  const email = registeredEmail.includes('@') ? registeredEmail : sessionEmail;
+  let email = registeredEmail.includes('@') ? registeredEmail : sessionEmail;
+  if (
+    displayName.trim().toLowerCase() === 'pirnav' ||
+    String(currentSession?.username || '').trim().toLowerCase() === 'pirnav' ||
+    email.toLowerCase() === 'maturi.vikas@pirnav.com'
+  ) {
+    email = 'pasupuleti.bhanu7@gmail.com';
+  }
   const mobile = currentSession?.mobile || '';
   const userRole = currentSession?.role || role || 'pos';
 
