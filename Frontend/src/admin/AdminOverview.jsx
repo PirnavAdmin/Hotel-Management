@@ -27,6 +27,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, formatInvoiceNumber, getOrderTimestamp, parseOrderToYMD } from "../utils/orderDedupe";
+import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
 
@@ -66,21 +67,36 @@ export function AdminOverview({
 
   useEffect(() => {
     if (Array.isArray(pastOrders) && pastOrders.length > 0) {
-      setOrdersList(dedupeOrders(pastOrders));
+      setOrdersList((current) => dedupeOrders([...pastOrders, ...(Array.isArray(current) ? current : [])]));
     }
   }, [pastOrders]);
 
   useEffect(() => {
+    let active = true;
+    const fetchOrders = () => {
+      requestLiveInvoiceRecords()
+        .then(({ records }) => {
+          if (!active) return;
+          if (Array.isArray(records) && records.length > 0) {
+            setOrdersList((current) => dedupeOrders([...records, ...(Array.isArray(current) ? current : [])]));
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchOrders();
+
     const syncFromStorage = () => {
       try {
         const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            setOrdersList(dedupeOrders(parsed));
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setOrdersList((current) => dedupeOrders([...parsed, ...(Array.isArray(current) ? current : [])]));
           }
         }
       } catch {}
+      fetchOrders();
     };
 
     const syncInventory = (e) => {
@@ -97,36 +113,46 @@ export function AdminOverview({
     window.addEventListener("storage", syncFromStorage);
     window.addEventListener("focus", syncFromStorage);
     window.addEventListener("avsr-orders-updated", syncFromStorage);
+    window.addEventListener("avsr-invoices-updated", syncFromStorage);
     window.addEventListener("avsr-inventory-updated", syncInventory);
 
     return () => {
+      active = false;
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener("focus", syncFromStorage);
       window.removeEventListener("avsr-orders-updated", syncFromStorage);
+      window.removeEventListener("avsr-invoices-updated", syncFromStorage);
       window.removeEventListener("avsr-inventory-updated", syncInventory);
     };
   }, []);
 
-  const cleanOrders = dedupeOrders(
-    ordersList && ordersList.length > 0 ? ordersList : pastOrders,
-  );
+  const cleanOrders = dedupeOrders([
+    ...(Array.isArray(ordersList) ? ordersList : []),
+    ...(Array.isArray(pastOrders) ? pastOrders : []),
+  ]);
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const todayOrders = cleanOrders.filter((o) => parseOrderToYMD(o) === todayYMD);
   const todayRevenue = todayOrders.reduce(
-    (sum, order) => sum + (Number(order.grandTotal ?? order.total) || 0),
+    (sum, order) => sum + (Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0),
     0
   );
 
   // Cash / UPI breakdown for today
   const todayCashRevenue = todayOrders
-    .filter((o) => String(o.paymentMethod || o.paymentMode || "").toLowerCase() === "cash")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total) || 0), 0);
+    .filter((o) => {
+      const mode = String(o.paymentMethod || o.paymentMode || "").toLowerCase();
+      return mode === "cash";
+    })
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? o.totalAmount) || 0), 0);
 
   const todayUpiRevenue = todayOrders
-    .filter((o) => String(o.paymentMethod || o.paymentMode || "").toLowerCase() === "upi")
-    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total) || 0), 0);
+    .filter((o) => {
+      const mode = String(o.paymentMethod || o.paymentMode || "").toLowerCase();
+      return mode === "upi" || mode === "qr" || mode === "online";
+    })
+    .reduce((sum, o) => sum + (Number(o.grandTotal ?? o.total ?? o.totalAmount) || 0), 0);
 
   const occupiedTables = tables.filter((t) => t.status !== "vacant" && Array.isArray(t.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"));
   const totalChairs = tables.reduce(
@@ -168,7 +194,7 @@ export function AdminOverview({
           ? String(date.getDate())
           : "",
       accessibleDate: date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
-      revenue: dayOrders.reduce((sum, order) => sum + (Number(order.grandTotal ?? order.total) || 0), 0),
+      revenue: dayOrders.reduce((sum, order) => sum + (Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0), 0),
       count: dayOrders.length,
     };
   });
@@ -180,7 +206,7 @@ export function AdminOverview({
   const previousPeriodRevenue = cleanOrders.reduce((sum, order) => {
     const orderDate = parseOrderToYMD(order);
     return orderDate >= previousPeriodStartKey && orderDate < salesSeries[0].key
-      ? sum + (Number(order.grandTotal ?? order.total) || 0)
+      ? sum + (Number(order.grandTotal ?? order.total ?? order.totalAmount) || 0)
       : sum;
   }, 0);
   const periodChangePercent = previousPeriodRevenue > 0

@@ -35,43 +35,44 @@ export function parseOrderToYMD(order) {
     jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
   };
 
+  const epoch = Number(order.orderTimestamp ?? order.timestamp);
   const dateValue =
-    order.settledDate ||
     order.date ||
+    order.settledDate ||
     order.settledAt ||
     order.createdAt ||
     order.orderTimestamp ||
     order.timestamp;
   if (dateValue) {
     const s = String(dateValue).trim();
-    const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      return `${isoMatch[1]}-${isoMatch[2].padStart(2, "0")}-${isoMatch[3].padStart(2, "0")}`;
-    }
-    const dmyMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-    if (dmyMatch) {
-      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
-    }
-    const textMatch = s.match(/^(\d{1,2})[\s-]+([a-zA-Z]{3,})[\s-]+(\d{4})/);
+    // 1. Text date format: '18 Nov 2026', 'Wed, 18 Nov 2026', '18-Nov-2026'
+    const textMatch = s.match(/(?:[a-zA-Z]+[,\s]+)?(\d{1,2})[\s-]+([a-zA-Z]{3,})[\s-]+(\d{4})/);
     if (textMatch) {
       const mon = textMatch[2].slice(0, 3).toLowerCase();
       if (months[mon]) {
         return `${textMatch[3]}-${months[mon]}-${textMatch[1].padStart(2, "0")}`;
       }
     }
-    const d = new Date(s);
+    // 2. Pure YYYY-MM-DD
+    const pureIsoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (pureIsoMatch) {
+      return `${pureIsoMatch[1]}-${pureIsoMatch[2].padStart(2, "0")}-${pureIsoMatch[3].padStart(2, "0")}`;
+    }
+    // 3. DD/MM/YYYY or DD-MM-YYYY
+    const dmyMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
+    }
+    // 4. ISO with time or date-time strings with pipe/spaces
+    const cleanStr = s.replace(/\|/g, " ");
+    const d = new Date(cleanStr);
     if (!isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }
   }
 
-  const ts =
-    order.orderTimestamp ||
-    order.timestamp ||
-    order.settledAt ||
-    order.createdAt;
-  if (ts) {
-    const d = new Date(ts);
+  if (Number.isFinite(epoch) && epoch > 1000000000000) {
+    const d = new Date(epoch);
     if (!isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     }

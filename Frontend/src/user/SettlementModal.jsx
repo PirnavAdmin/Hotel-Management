@@ -16,7 +16,7 @@ Zap,
 import { sounds } from '../utils/audio';
 import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
-import { getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
+import { getBusinessDayKey, getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment, confirmLabel }) {
   // 'upi' | 'cash'
@@ -211,7 +211,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         changeDue: paymentMethod === 'cash' ? changeDue : 0,
         settledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: getTodayDateString(),
-        settledDate: getBusinessDayStart().toISOString().slice(0, 10),
+        settledDate: getBusinessDayKey(new Date()),
         invoiceNo: getNextInvoiceNumber()
         });
         if (result === false) {
