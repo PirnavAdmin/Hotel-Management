@@ -1958,10 +1958,10 @@ export function AdminPortal({
     if (tbl) {
       setEditingTable(tbl);
       setTableForm({
-        name: tbl.name,
-        section: tbl.section,
-        capacity: tbl.capacity,
-        server: tbl.server,
+        name: tbl.name || tbl.tableName || "",
+        section: tbl.section || tbl.sectionArea || "",
+        capacity: tbl.capacity || tbl.capacityChairs || "",
+        server: tbl.server || tbl.assignedServerName || "",
       });
     } else {
       setEditingTable(null);
@@ -1997,6 +1997,13 @@ export function AdminPortal({
       });
     }
 
+    const matchedStaff = (staffList || []).find((s) => {
+      const sName = String(s?.name || s?.fullName || s?.FullName || s?.username || "").trim().toLowerCase();
+      return sName && sName === String(assignedServer || "").trim().toLowerCase();
+    });
+    const assignedServerId = matchedStaff?.id ?? matchedStaff?.staffId ?? (assignedServer ? editingTable?.assignedServerId : null) ?? null;
+    const assignedServerName = assignedServer ? (matchedStaff?.name || matchedStaff?.fullName || assignedServer) : "";
+
     const formattedName = rawName || (editingTable ? (editingTable.name || `Table-${editingTable.id}`) : `Table-${chosenId}`);
 
     if (editingTable) {
@@ -2008,7 +2015,9 @@ export function AdminPortal({
         tableNumber: rawName || editingTable.tableNumber || String(editingTable.id),
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
-        server: assignedServer,
+        server: assignedServerName,
+        assignedServerName: assignedServerName,
+        assignedServerId: assignedServerId,
       });
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
@@ -2027,7 +2036,9 @@ export function AdminPortal({
         discountPercent: 0,
         serviceCharge: 5,
         orderTime: null,
-        server: assignedServer,
+        server: assignedServerName,
+        assignedServerName: assignedServerName,
+        assignedServerId: assignedServerId,
       });
     }
     setIsTableModalOpen(false);

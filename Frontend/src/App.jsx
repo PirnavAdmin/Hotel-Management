@@ -520,7 +520,11 @@ const mergeIncomingTables = (
         ),
         status: finalStatus,
         server:
-          table.assignedServerName || table.server || existing.server || "Staff",
+          table.server || table.assignedServerName || existing.server || "Staff",
+        assignedServerName:
+          table.server || table.assignedServerName || existing.assignedServerName || existing.server || "Staff",
+        assignedServerId:
+          table.assignedServerId !== undefined ? table.assignedServerId : (existing.assignedServerId ?? null),
         guests: isFinalVacant ? 0 : incomingGuests,
         occupiedChairs: isFinalVacant ? 0 : incomingGuests,
         selectedSeats: isFinalVacant
@@ -4047,6 +4051,17 @@ export function App() {
     const previousTable = tables.find((table) => String(table.id) === String(updatedTable.id));
     const cap = Number(updatedTable.capacity || updatedTable.capacityChairs || updatedTable.chairs || (previousTable?.capacity || 4));
     const persons = Number(updatedTable.persons || updatedTable.guests || cap);
+
+    const targetServerName = updatedTable.server !== undefined
+      ? updatedTable.server
+      : (updatedTable.assignedServerName !== undefined ? updatedTable.assignedServerName : (previousTable?.server || ""));
+
+    const matchedStaff = (staffList || []).find((s) => {
+      const sName = String(s?.name || s?.fullName || s?.FullName || s?.username || "").trim().toLowerCase();
+      return sName && sName === String(targetServerName || "").trim().toLowerCase();
+    });
+    const targetServerId = matchedStaff?.id ?? matchedStaff?.staffId ?? (targetServerName ? updatedTable.assignedServerId : null) ?? null;
+
     const normalized = {
       ...updatedTable,
       capacity: cap,
@@ -4054,6 +4069,9 @@ export function App() {
       capacityChairs: cap,
       persons: persons,
       guests: persons,
+      server: targetServerName || "",
+      assignedServerName: targetServerName || "",
+      assignedServerId: targetServerId,
     };
 
     setTables((prev) => {
