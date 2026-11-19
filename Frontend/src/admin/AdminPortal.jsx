@@ -40,7 +40,12 @@ import {
   Settings,
   Sparkles,
   Boxes,
+  QrCode,
+  Printer,
+  Copy,
+  Download,
 } from "lucide-react";
+import QRCode from "../utils/qrCode";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
@@ -1765,6 +1770,31 @@ export function AdminPortal({
       }
     }
   }, [tables, seatingStructureTable]);
+
+  // --- TABLE QR CODE MODAL STATE ---
+  const [qrModalTable, setQrModalTable] = useState(null);
+  const [selectedQrTableId, setSelectedQrTableId] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    if (!qrModalTable) {
+      setQrDataUrl("");
+      return;
+    }
+    const currentTbl = selectedQrTableId === "GLOBAL" 
+      ? null 
+      : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)) || (qrModalTable !== "ALL" ? qrModalTable : (tables?.[0] || null)));
+    
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const targetUrl = !currentTbl
+      ? `${origin}/menu`
+      : `${origin}/menu?table=${encodeURIComponent(currentTbl.name || currentTbl.tableName || `Table-${currentTbl.id}`)}`;
+
+    QRCode.toDataURL(targetUrl, { errorCorrectionLevel: "H" }).then((url) => {
+      setQrDataUrl(url);
+    });
+  }, [qrModalTable, selectedQrTableId, tables]);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerRole, setNewServerRole] = useState("");
@@ -3409,36 +3439,72 @@ export function AdminPortal({
                         </h2>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenTableModal()}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.45rem",
-                          padding: "0.55rem 1.3rem",
-                          background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                          color: "#ffffff",
-                          borderRadius: "8px",
-                          fontWeight: 700,
-                          fontSize: "0.85rem",
-                          boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
-                          border: "none",
-                          cursor: "pointer",
-                          transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = "translateY(-1px)";
-                          e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
-                        }}
-                      >
-                        <Plus size={16} strokeWidth={2.5} />
-                        <span>Add New Table</span>
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQrModalTable("ALL");
+                            setSelectedQrTableId(tables?.[0]?.id || "GLOBAL");
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            padding: "0.55rem 1.15rem",
+                            background: "rgba(59, 130, 246, 0.12)",
+                            color: "#60a5fa",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            border: "1px solid rgba(59, 130, 246, 0.4)",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.22)";
+                            e.currentTarget.style.borderColor = "#60a5fa";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)";
+                            e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.4)";
+                          }}
+                          title="Generate, View and Print Menu QR Codes for tables"
+                        >
+                          <QrCode size={16} strokeWidth={2.2} />
+                          <span>Table QR Codes</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenTableModal()}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            padding: "0.55rem 1.3rem",
+                            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                            color: "#ffffff",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+                          }}
+                        >
+                          <Plus size={16} strokeWidth={2.5} />
+                          <span>Add New Table</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Table Rows Container */}
@@ -3916,6 +3982,41 @@ export function AdminPortal({
 
                                 {/* Col 6: Actions */}
                                 <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+                                  {/* View / Print Table Menu QR Code */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setQrModalTable(tbl);
+                                      setSelectedQrTableId(tbl.id);
+                                    }}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      padding: "0.32rem 0.5rem",
+                                      background: "rgba(59, 130, 246, 0.08)",
+                                      color: "#3b82f6",
+                                      border: "1px solid rgba(59, 130, 246, 0.45)",
+                                      borderRadius: "6px",
+                                      fontSize: "0.74rem",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                      flexShrink: 0,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
+                                      e.currentTarget.style.borderColor = "#3b82f6";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.08)";
+                                      e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.45)";
+                                    }}
+                                    title={`View & Print Menu QR Code for ${tbl.name || tbl.tableName}`}
+                                    aria-label={`View & Print Menu QR Code for ${tbl.name || tbl.tableName}`}
+                                  >
+                                    <QrCode size={13} color="#3b82f6" />
+                                  </button>
+
                                   {/* Set / View Seating Structure Modal Button */}
                                   <button
                                     type="button"
@@ -8050,6 +8151,289 @@ export function AdminPortal({
       )}
       {/* Global Custom Delete Confirmation Modal */}
       <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
+
+      {/* Table Menu QR Code Modal */}
+      {qrModalTable && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: "1rem",
+          }}
+          onClick={() => setQrModalTable(null)}
+        >
+          <div
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "460px",
+              padding: "1.75rem",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              color: "var(--text-main)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <QrCode size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Table Menu QR Code</h3>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>Scan to browse live menu</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQrModalTable(null)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "0.25rem" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Table Selector Dropdown */}
+            <div style={{ marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                SELECT DINING TABLE
+              </label>
+              <select
+                value={selectedQrTableId}
+                onChange={(e) => setSelectedQrTableId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.6rem 0.8rem",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--neutral-border)",
+                  borderRadius: "8px",
+                  color: "var(--text-main)",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                <option value="GLOBAL">General Menu (All Tables / Global)</option>
+                {(tables || []).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name || t.tableName || `Table ${t.id}`} ({t.section || "Main Hall"} - {t.capacity || 4} Chairs)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* QR Card Preview */}
+            <div
+              style={{
+                background: "#ffffff",
+                color: "#0f172a",
+                borderRadius: "14px",
+                padding: "1.5rem",
+                textAlign: "center",
+                border: "2px dashed #cbd5e1",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                margin: "1rem 0",
+              }}
+            >
+              <div style={{ fontSize: "1rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px", color: "#ea580c" }}>
+                {restaurantSettings?.restaurantName || "THE RUSTIC SPIN"}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#64748b", margin: "0.2rem 0 0.8rem" }}>
+                {restaurantSettings?.tagline || "Delicious Food & Refreshments"}
+              </div>
+
+              {qrDataUrl ? (
+                <div style={{ display: "inline-block", padding: "0.5rem", background: "#fff", borderRadius: "10px" }}>
+                  <img
+                    src={qrDataUrl}
+                    alt="Menu QR"
+                    style={{ width: "200px", height: "200px", display: "block", margin: "0 auto" }}
+                  />
+                </div>
+              ) : (
+                <div style={{ width: "200px", height: "200px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", color: "#94a3b8" }}>
+                  Generating QR...
+                </div>
+              )}
+
+              <div style={{ marginTop: "0.75rem" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    background: "#ea580c",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                    padding: "0.3rem 1.1rem",
+                    borderRadius: "20px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {selectedQrTableId === "GLOBAL"
+                    ? "RESTAURANT MENU"
+                    : `TABLE: ${((tables || []).find((t) => String(t.id) === String(selectedQrTableId))?.name || "DINE-IN")}`}
+                </span>
+              </div>
+              <p style={{ margin: "0.6rem 0 0", fontSize: "0.76rem", color: "#475569", fontWeight: 600 }}>
+                Scan with phone camera to view menu & prices!
+              </p>
+            </div>
+
+            {/* Menu Link URL & Copy */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--bg-tertiary)", padding: "0.5rem 0.75rem", borderRadius: "8px", border: "1px solid var(--neutral-border)", marginBottom: "1.25rem" }}>
+              <input
+                type="text"
+                readOnly
+                value={(() => {
+                  const currentTbl = selectedQrTableId === "GLOBAL" ? null : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)));
+                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  return !currentTbl ? `${origin}/menu` : `${origin}/menu?table=${encodeURIComponent(currentTbl.name || currentTbl.tableName || `Table-${currentTbl.id}`)}`;
+                })()}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontSize: "0.76rem",
+                  fontFamily: "monospace",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const currentTbl = selectedQrTableId === "GLOBAL" ? null : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)));
+                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  const url = !currentTbl ? `${origin}/menu` : `${origin}/menu?table=${encodeURIComponent(currentTbl.name || currentTbl.tableName || `Table-${currentTbl.id}`)}`;
+                  navigator.clipboard.writeText(url).then(() => {
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  });
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  background: copiedLink ? "#10b981" : "rgba(255, 255, 255, 0.08)",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "0.35rem 0.65rem",
+                  borderRadius: "6px",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copiedLink ? "Copied!" : "Copy"}</span>
+              </button>
+            </div>
+
+            {/* Actions: Print Slip & Download PNG */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentTbl = selectedQrTableId === "GLOBAL" ? null : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)));
+                  const tName = currentTbl ? (currentTbl.name || currentTbl.tableName || "Dine-In") : "General Menu";
+                  const printWin = window.open("", "_blank", "width=600,height=700");
+                  if (!printWin) return;
+                  printWin.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>Table QR - \${tName}</title>
+                      <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 40px 20px; background: #fff; color: #111; }
+                        .card { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 32px 24px; max-width: 360px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+                        .rest-name { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; color: #ea580c; }
+                        .tagline { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+                        .qr-box { margin: 16px auto; }
+                        .qr-box img { width: 220px; height: 220px; display: block; margin: 0 auto; }
+                        .table-badge { display: inline-block; background: #ea580c; color: #fff; font-size: 16px; font-weight: 800; padding: 6px 18px; border-radius: 20px; margin-top: 14px; text-transform: uppercase; }
+                        .instruction { font-size: 13px; font-weight: 600; color: #475569; margin-top: 14px; line-height: 1.4; }
+                        .instruction span { color: #ea580c; font-weight: 700; }
+                        @media print { body { padding: 0; } .card { border: 2px solid #000; box-shadow: none; } }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="card">
+                        <div class="rest-name">\${restaurantSettings?.restaurantName || "THE RUSTIC SPIN"}</div>
+                        <div class="tagline">\${restaurantSettings?.tagline || "Scan with your phone camera to browse our menu"}</div>
+                        <div class="qr-box">
+                          <img src="\${qrDataUrl}" alt="Menu QR" />
+                        </div>
+                        <div class="table-badge">\${selectedQrTableId === "GLOBAL" ? "RESTAURANT MENU" : \`TABLE: \${tName}\`}</div>
+                        <div class="instruction">Point your mobile camera to scan<br/>and browse our complete <span>Digital Menu</span>!</div>
+                      </div>
+                      <script>window.onload = function() { window.print(); };</script>
+                    </body>
+                    </html>
+                  `);
+                  printWin.document.close();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.45rem",
+                  padding: "0.65rem 1rem",
+                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(249, 115, 22, 0.3)",
+                }}
+              >
+                <Printer size={15} />
+                <span>Print QR Slip</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const currentTbl = selectedQrTableId === "GLOBAL" ? null : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)));
+                  const tName = currentTbl ? (currentTbl.name || currentTbl.tableName || "Dine-In") : "General-Menu";
+                  const a = document.createElement("a");
+                  a.href = qrDataUrl;
+                  a.download = `QR-${tName}.png`;
+                  a.click();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.45rem",
+                  padding: "0.65rem 1rem",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  border: "1px solid var(--border-card)",
+                  cursor: "pointer",
+                }}
+              >
+                <Download size={15} />
+                <span>Download PNG</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Select Seats & Seating Structure Popup Modal (Matching Image 1) */}
       <SelectSeatsModal

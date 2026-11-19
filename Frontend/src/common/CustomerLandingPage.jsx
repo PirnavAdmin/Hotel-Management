@@ -231,8 +231,8 @@ export function CustomerLandingPage({
     const path = window.location.pathname;
     const user = getInitialCustomer();
     if (hash === "#auth") return "auth";
-    if (hash === "#menu" || path === "/menu") return user ? "menu" : "auth";
-    if (hash === "#cart") return user ? "cart" : "auth";
+    if (hash === "#menu" || path === "/menu") return "menu";
+    if (hash === "#cart") return "menu";
     if (hash === "#checkout") return user ? "checkout" : "auth";
     if (hash === "#payment") return user ? "payment" : "auth";
     if (hash === "#orders" || hash === "#my-orders" || path === "/my-orders")
@@ -269,6 +269,14 @@ export function CustomerLandingPage({
   );
   const [customerPhoneError, setCustomerPhoneError] = useState("");
   const [customerNotes, setCustomerNotes] = useState("");
+  const [tableParam, setTableParam] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("table") || params.get("t") || "";
+    } catch {
+      return "";
+    }
+  });
 
   // Sync customer details when customerUser changes
   useEffect(() => {
@@ -1922,8 +1930,8 @@ export function CustomerLandingPage({
                 </button>
                 <div className="pos-takeaway-status-tag">
                   <span className="pos-status-indicator" />
-                  <strong>Takeaway Counter</strong>
-                  <span className="pos-tag-label">ORDERING</span>
+                  <strong>{tableParam ? `Table: ${tableParam}` : "Digital Menu"}</strong>
+                  <span className="pos-tag-label">{tableParam ? "DINE-IN MENU" : "LIVE MENU"}</span>
                 </div>
               </div>
 
