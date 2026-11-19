@@ -1,5 +1,6 @@
 import { ThemeToggle } from '../common/ThemeToggle';
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Calendar, Clock, Utensils, Wine, Bell, ChefHat, CheckCircle2, Trash2 } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 
@@ -562,8 +563,8 @@ export function AdminHeader({
             )}
           </button>
 
-          {/* Notifications Dropdown Panel - Anchored in fixed viewport space to guarantee rendering in front */}
-          {isNotifOpen && (
+          {/* Notifications Dropdown Panel - Portaled to document.body to guarantee 100% topmost layer */}
+          {isNotifOpen && typeof document !== "undefined" && createPortal(
             <div
               style={{
                 position: "fixed",
@@ -577,7 +578,7 @@ export function AdminHeader({
                 border: "1px solid var(--border-card)",
                 borderRadius: "14px",
                 boxShadow: "0 20px 50px rgba(0,0,0,0.7), 0 0 20px rgba(245, 158, 11, 0.2)",
-                zIndex: 999999,
+                zIndex: 9999999,
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
@@ -655,7 +656,8 @@ export function AdminHeader({
                   ))
                 )}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 

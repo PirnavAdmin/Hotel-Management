@@ -1,5 +1,6 @@
 import { ThemeToggle } from './ThemeToggle';
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   UtensilsCrossed,
@@ -63,7 +64,7 @@ export function Header({
     const stored = getStoredName();
     if (stored && stored.trim() && stored.trim().toLowerCase() !== "restaurant") return stored.trim();
     if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
-    return stored || restaurantName || "Bhanu Bistro";
+    return stored || restaurantName || "AVSR FOOD COURT";
   });
 
   useEffect(() => {
@@ -287,7 +288,7 @@ export function Header({
                   lineHeight: 1.1,
                 }}
               >
-                {liveRestaurantName || restaurantName || "Bhanu Bistro"}
+                {liveRestaurantName || restaurantName || "AVSR FOOD COURT"}
               </h1>
               <span
                 style={{
@@ -555,8 +556,8 @@ export function Header({
             )}
           </button>
 
-          {/* Notifications Dropdown Panel - Always 100% within screen bounds */}
-          {showNotifMenu && (
+          {/* Notifications Dropdown Panel - Portaled to document.body to guarantee 100% topmost layer */}
+          {showNotifMenu && typeof document !== "undefined" && createPortal(
             <div
               style={{
                 position: "fixed",
@@ -569,7 +570,7 @@ export function Header({
                 borderRadius: "14px",
                 boxShadow:
                   "0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(245, 158, 11, 0.2)",
-                zIndex: 999999,
+                zIndex: 9999999,
                 overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
@@ -818,7 +819,8 @@ export function Header({
                   })
                 )}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 

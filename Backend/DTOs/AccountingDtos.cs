@@ -359,3 +359,18 @@ public class VoidJournalVoucherRequestDto
     public string? Reason { get; set; }
     public string? VoidedBy { get; set; }
 }
+
+public class SaveDailyBalanceDto
+{
+    public string? Date { get; set; }
+    public decimal OpeningCash { get; set; }
+    public decimal OpeningBank { get; set; }
+    public decimal? ClosingCash { get; set; }
+    public decimal? ClosingBank { get; set; }
+    public decimal? ExpectedCash { get; set; }
+    public decimal? CashDifference { get; set; }
+    public bool IsClosed { get; set; }
+    public string? OpenedBy { get; set; }
+    public string? ClosedBy { get; set; }
+    public string? Notes { get; set; }
+}

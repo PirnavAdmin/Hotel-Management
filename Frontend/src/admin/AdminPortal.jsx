@@ -40,7 +40,12 @@ import {
   Settings,
   Sparkles,
   Boxes,
+  QrCode,
+  Printer,
+  Copy,
+  Download,
 } from "lucide-react";
+import QRCode from "../utils/qrCode";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
@@ -77,7 +82,7 @@ import { apiGetInventory, apiCreateIngredient } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { apiGetOrder } from "../api/orderApi";
 import { API_SYNC_BASE } from "../api/apiConfig";
-import { subscribeToSseMessages } from "../realtime/realtimeService";
+import { subscribeToSseMessages, subscribeToRealtimeEvents } from "../realtime/realtimeService";
 import {
   apiCreateMenuCategory,
   apiGetMenuCategories,
@@ -954,7 +959,6 @@ export function AdminPortal({
     const combined = [
       ...(Array.isArray(takeawayOrders) ? takeawayOrders : []),
       ...localTakeawayOrders,
-      ...(Array.isArray(pastOrders) ? pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway")) : [])
     ];
     const seen = new Set();
     const result = [];
@@ -1231,8 +1235,8 @@ export function AdminPortal({
   });
   const restaurantLogo = restaurantSettings?.logo || "";
   const restaurantName =
-    restaurantSettings?.restaurantName?.trim() || "Bhanu Bistro";
-  const restaurantTagline = restaurantSettings?.tagline?.trim() || "BAR & CAFE";
+    restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+  const restaurantTagline = restaurantSettings?.tagline?.trim() || "Restaurant Management & Fine Dining";
 
   useEffect(() => {
     const handleSettingsUpdated = (e) => {
@@ -1272,23 +1276,16 @@ export function AdminPortal({
         }
       });
 
-      // If user has explicitly saved settings locally, protect custom brand identity (name, logo, tagline)
-      const hasLocalCustomizations =
-        Boolean(localSettings.isUserConfigured) ||
-        Boolean(localSettings.updatedAt) ||
-        (Boolean(localSettings.restaurantName) && localSettings.restaurantName.trim() !== "AVSR FOOD COURT");
-
+      // Server data is authoritative for restaurant branding and payment settings
       const mergedSettings = {
-        ...cleanServer,
         ...localSettings,
-        ...(hasLocalCustomizations
-          ? {
-              restaurantName: localSettings.restaurantName || cleanServer.restaurantName || "",
-              tagline: localSettings.tagline !== undefined ? localSettings.tagline : cleanServer.tagline || "",
-            }
-          : {}),
-        // Never erase local base64 logo if server returned none
-        logo: localSettings.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+        ...cleanServer,
+        restaurantName: cleanServer.restaurantName || cleanServer.name || localSettings.restaurantName || "AVSR FOOD COURT",
+        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (localSettings.tagline || ""),
+        logo: cleanServer.logo || cleanServer.restaurantLogo || localSettings.logo || localSettings.restaurantLogo || "",
+        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || localSettings.restaurantLogo || localSettings.logo || "",
+        paymentQrs: cleanServer.paymentQrs || localSettings.paymentQrs || [],
+        selectedQrId: cleanServer.selectedQrId || localSettings.selectedQrId || "qr-1",
       };
 
       try {
@@ -1308,19 +1305,31 @@ export function AdminPortal({
       })
       .catch(() => {});
 
-    const unsubscribe = subscribeToSseMessages((event) => {
+    const unsubscribeSse = subscribeToSseMessages((event) => {
       try {
         const message = JSON.parse(event.data);
         const settings =
           message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
-          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY];
+          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.restaurantSettings ||
+          (message?.type === "restaurantSetting:updated" ? (message?.payload?.data || message?.payload) : null);
         if (settings) applySettings(settings);
       } catch {}
     });
 
+    const unsubscribeRealtime = subscribeToRealtimeEvents(({ name, payload }) => {
+      if (name === "restaurantSetting:updated" || name === "ReceiveRestaurantSettingUpdated" || name === "module:settings") {
+        const settingsData = payload?.data ?? payload?.Data ?? payload;
+        if (settingsData && typeof settingsData === "object") {
+          applySettings(settingsData);
+        }
+      }
+    });
+
     return () => {
       active = false;
-      unsubscribe();
+      unsubscribeSse();
+      unsubscribeRealtime();
     };
   }, []);
 
@@ -1755,6 +1764,56 @@ export function AdminPortal({
       }
     }
   }, [tables, seatingStructureTable]);
+
+  // --- SINGLE UNIVERSAL RESTAURANT MENU QR MODAL STATE ---
+  const [isMenuQrModalOpen, setIsMenuQrModalOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [selectedQrTableId, setSelectedQrTableId] = useState("GLOBAL");
+  const [customQrHost, setCustomQrHost] = useState("");
+
+  const getEffectiveOrigin = () => {
+    if (customQrHost) return customQrHost;
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.")) {
+      return "http://65.0.8.48:3000";
+    }
+    return window.location.origin;
+  };
+
+  // The modal's open state is shared by all menu QR entry points.
+  const qrModalTable = isMenuQrModalOpen;
+  const setQrModalTable = setIsMenuQrModalOpen;
+
+  const menuPublicUrl = useMemo(() => {
+    if (typeof window === "undefined") return "http://65.0.8.48:3000/menu";
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.")) {
+      return "http://65.0.8.48:3000/menu";
+    }
+    return `${window.location.origin}/menu`;
+  }, []);
+
+  useEffect(() => {
+    if (!isMenuQrModalOpen) {
+      setQrDataUrl("");
+      return;
+    }
+    const currentTable = selectedQrTableId === "GLOBAL"
+      ? null
+      : (tables || []).find((table) => String(table.id) === String(selectedQrTableId));
+    const origin = getEffectiveOrigin();
+    const url = !currentTable
+      ? `${origin}/menu`
+      : `${origin}/menu?table=${encodeURIComponent(currentTable.name || currentTable.tableName || `Table-${currentTable.id}`)}`;
+    QRCode.toDataURL(url, { width: 320, margin: 2, errorCorrectionLevel: "M" })
+      .then((url) => {
+        setQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error("QR Code generation error:", err);
+      });
+  }, [isMenuQrModalOpen, menuPublicUrl, selectedQrTableId, tables, customQrHost]);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerRole, setNewServerRole] = useState("");
@@ -1948,10 +2007,10 @@ export function AdminPortal({
     if (tbl) {
       setEditingTable(tbl);
       setTableForm({
-        name: tbl.name,
-        section: tbl.section,
-        capacity: tbl.capacity,
-        server: tbl.server,
+        name: tbl.name || tbl.tableName || "",
+        section: tbl.section || tbl.sectionArea || "",
+        capacity: tbl.capacity || tbl.capacityChairs || "",
+        server: tbl.server || tbl.assignedServerName || "",
       });
     } else {
       setEditingTable(null);
@@ -1987,6 +2046,13 @@ export function AdminPortal({
       });
     }
 
+    const matchedStaff = (staffList || []).find((s) => {
+      const sName = String(s?.name || s?.fullName || s?.FullName || s?.username || "").trim().toLowerCase();
+      return sName && sName === String(assignedServer || "").trim().toLowerCase();
+    });
+    const assignedServerId = matchedStaff?.id ?? matchedStaff?.staffId ?? (assignedServer ? editingTable?.assignedServerId : null) ?? null;
+    const assignedServerName = assignedServer ? (matchedStaff?.name || matchedStaff?.fullName || assignedServer) : "";
+
     const formattedName = rawName || (editingTable ? (editingTable.name || `Table-${editingTable.id}`) : `Table-${chosenId}`);
 
     if (editingTable) {
@@ -1998,7 +2064,9 @@ export function AdminPortal({
         tableNumber: rawName || editingTable.tableNumber || String(editingTable.id),
         section: tableForm.section,
         capacity: Number(tableForm.capacity) || 2,
-        server: assignedServer,
+        server: assignedServerName,
+        assignedServerName: assignedServerName,
+        assignedServerId: assignedServerId,
       });
     } else {
       const maxId = tables.reduce((m, t) => Math.max(m, Number(t.id) || 0), 0);
@@ -2017,7 +2085,9 @@ export function AdminPortal({
         discountPercent: 0,
         serviceCharge: 5,
         orderTime: null,
-        server: assignedServer,
+        server: assignedServerName,
+        assignedServerName: assignedServerName,
+        assignedServerId: assignedServerId,
       });
     }
     setIsTableModalOpen(false);
@@ -2504,6 +2574,38 @@ export function AdminPortal({
                           flexWrap: "wrap",
                         }}
                       >
+                        <button
+                          type="button"
+                          onClick={() => setIsMenuQrModalOpen(true)}
+                          style={{
+                            height: "36px",
+                            background: "rgba(59, 130, 246, 0.12)",
+                            color: "#60a5fa",
+                            border: "1px solid rgba(59, 130, 246, 0.4)",
+                            borderRadius: "8px",
+                            padding: "0 1rem",
+                            fontWeight: 700,
+                            fontSize: "0.82rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.22)";
+                            e.currentTarget.style.borderColor = "#60a5fa";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)";
+                            e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.4)";
+                          }}
+                          title="Generate and Print Single Restaurant Menu QR Code for all tables"
+                        >
+                          <QrCode size={15} strokeWidth={2.2} />
+                          <span>Menu QR Code</span>
+                        </button>
+
                         <button
                           onClick={() => handleOpenItemModal()}
                           style={{
@@ -3388,36 +3490,69 @@ export function AdminPortal({
                         </h2>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenTableModal()}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.45rem",
-                          padding: "0.55rem 1.3rem",
-                          background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                          color: "#ffffff",
-                          borderRadius: "8px",
-                          fontWeight: 700,
-                          fontSize: "0.85rem",
-                          boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
-                          border: "none",
-                          cursor: "pointer",
-                          transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = "translateY(-1px)";
-                          e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = "translateY(0)";
-                          e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
-                        }}
-                      >
-                        <Plus size={16} strokeWidth={2.5} />
-                        <span>Add New Table</span>
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          onClick={() => setIsMenuQrModalOpen(true)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            padding: "0.55rem 1.15rem",
+                            background: "rgba(59, 130, 246, 0.12)",
+                            color: "#60a5fa",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            border: "1px solid rgba(59, 130, 246, 0.4)",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.22)";
+                            e.currentTarget.style.borderColor = "#60a5fa";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)";
+                            e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.4)";
+                          }}
+                          title="Generate and print single Restaurant Menu QR code for all tables"
+                        >
+                          <QrCode size={16} strokeWidth={2.2} />
+                          <span>Menu QR Code</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenTableModal()}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.45rem",
+                            padding: "0.55rem 1.3rem",
+                            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                            color: "#ffffff",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "0.85rem",
+                            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+                          }}
+                        >
+                          <Plus size={16} strokeWidth={2.5} />
+                          <span>Add New Table</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Table Rows Container */}
@@ -3895,6 +4030,38 @@ export function AdminPortal({
 
                                 {/* Col 6: Actions */}
                                 <div className="floor-table-actions" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.45rem" }}>
+                                  {/* View / Print Restaurant Menu QR Code */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsMenuQrModalOpen(true)}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      padding: "0.32rem 0.5rem",
+                                      background: "rgba(59, 130, 246, 0.08)",
+                                      color: "#3b82f6",
+                                      border: "1px solid rgba(59, 130, 246, 0.45)",
+                                      borderRadius: "6px",
+                                      fontSize: "0.74rem",
+                                      cursor: "pointer",
+                                      transition: "all 0.15s ease",
+                                      flexShrink: 0,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
+                                      e.currentTarget.style.borderColor = "#3b82f6";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.08)";
+                                      e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.45)";
+                                    }}
+                                    title="View & Print Restaurant Menu QR Code"
+                                    aria-label="View & Print Restaurant Menu QR Code"
+                                  >
+                                    <QrCode size={13} color="#3b82f6" />
+                                  </button>
+
                                   {/* Set / View Seating Structure Modal Button */}
                                   <button
                                     type="button"
@@ -8029,6 +8196,248 @@ export function AdminPortal({
       )}
       {/* Global Custom Delete Confirmation Modal */}
       <ConfirmDeleteModal {...confirmState} onCancel={cancelDelete} />
+
+      {/* Single Universal Restaurant Menu QR Code Modal */}
+      {isMenuQrModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: "1rem",
+          }}
+          onClick={() => setIsMenuQrModalOpen(false)}
+        >
+          <div
+            style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "460px",
+              padding: "1.75rem",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              color: "var(--text-main)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <QrCode size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Restaurant Menu QR Code</h3>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)" }}>Place on all dining tables for instant customer menu view</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMenuQrModalOpen(false)}
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "0.25rem" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* QR Card Preview */}
+            <div
+              style={{
+                background: "#ffffff",
+                color: "#0f172a",
+                borderRadius: "14px",
+                padding: "1.5rem",
+                textAlign: "center",
+                border: "2px dashed #cbd5e1",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+                margin: "0.75rem 0",
+              }}
+            >
+              <div style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px", color: "#ea580c" }}>
+                {restaurantSettings?.restaurantName || "THE RUSTIC SPIN"}
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "#64748b", margin: "0.2rem 0 0.8rem" }}>
+                {restaurantSettings?.tagline || "Scan with camera to view live menu & prices"}
+              </div>
+
+              {qrDataUrl ? (
+                <div style={{ display: "inline-block", padding: "0.5rem", background: "#fff", borderRadius: "10px" }}>
+                  <img
+                    src={qrDataUrl}
+                    alt="Menu QR Code"
+                    style={{ width: "220px", height: "220px", display: "block", margin: "0 auto" }}
+                  />
+                </div>
+              ) : (
+                <div style={{ width: "220px", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto", color: "#94a3b8" }}>
+                  Generating QR...
+                </div>
+              )}
+
+              <div style={{ marginTop: "0.85rem" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    background: "#ea580c",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                    padding: "0.35rem 1.25rem",
+                    borderRadius: "20px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  DIGITAL MENU
+                </span>
+              </div>
+              <p style={{ margin: "0.6rem 0 0", fontSize: "0.76rem", color: "#475569", fontWeight: 600 }}>
+                Scan with any mobile camera (4G / 5G / Wi-Fi) — no app or login needed!
+              </p>
+            </div>
+
+            {/* Menu Link URL & Copy */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "var(--bg-tertiary)", padding: "0.5rem 0.75rem", borderRadius: "8px", border: "1px solid var(--neutral-border)", marginBottom: "1.25rem" }}>
+              <input
+                type="text"
+                readOnly
+                value={menuPublicUrl}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  fontSize: "0.76rem",
+                  fontFamily: "monospace",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(menuPublicUrl).then(() => {
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  });
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  background: copiedLink ? "#10b981" : "rgba(255, 255, 255, 0.08)",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "0.35rem 0.65rem",
+                  borderRadius: "6px",
+                  fontSize: "0.74rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+                <span>{copiedLink ? "Copied!" : "Copy"}</span>
+              </button>
+            </div>
+
+            {/* Actions: Print Slip & Download PNG */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const printWin = window.open("", "_blank", "width=600,height=700");
+                  if (!printWin) return;
+                  printWin.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>Restaurant Menu QR Code</title>
+                      <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 40px 20px; background: #fff; color: #111; }
+                        .card { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 32px 24px; max-width: 360px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+                        .rest-name { font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; color: #ea580c; }
+                        .tagline { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+                        .qr-box { margin: 16px auto; }
+                        .qr-box img { width: 230px; height: 230px; display: block; margin: 0 auto; }
+                        .table-badge { display: inline-block; background: #ea580c; color: #fff; font-size: 16px; font-weight: 800; padding: 6px 20px; border-radius: 20px; margin-top: 14px; text-transform: uppercase; }
+                        .instruction { font-size: 13px; font-weight: 600; color: #475569; margin-top: 14px; line-height: 1.4; }
+                        .instruction span { color: #ea580c; font-weight: 700; }
+                        @media print { body { padding: 0; } .card { border: 2px solid #000; box-shadow: none; } }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="card">
+                        <div class="rest-name">\${restaurantSettings?.restaurantName || "THE RUSTIC SPIN"}</div>
+                        <div class="tagline">\${restaurantSettings?.tagline || "Scan with your phone camera to browse our menu"}</div>
+                        <div class="qr-box">
+                          <img src="\${qrDataUrl}" alt="Menu QR Code" />
+                        </div>
+                        <div class="table-badge">DIGITAL MENU</div>
+                        <div class="instruction">Point your mobile camera to scan<br/>and browse our complete <span>Restaurant Menu</span>!</div>
+                      </div>
+                      <script>window.onload = function() { window.print(); };</script>
+                    </body>
+                    </html>
+                  `);
+                  printWin.document.close();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.45rem",
+                  padding: "0.65rem 1rem",
+                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  fontWeight: 800,
+                  fontSize: "0.82rem",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(249, 115, 22, 0.3)",
+                }}
+              >
+                <Printer size={15} />
+                <span>Print QR Slip</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = qrDataUrl;
+                  a.download = "Restaurant-Menu-QR.png";
+                  a.click();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.45rem",
+                  padding: "0.65rem 1rem",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  color: "var(--text-main)",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  border: "1px solid var(--border-card)",
+                  cursor: "pointer",
+                }}
+              >
+                <Download size={15} />
+                <span>Download PNG</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Select Seats & Seating Structure Popup Modal (Matching Image 1) */}
       <SelectSeatsModal

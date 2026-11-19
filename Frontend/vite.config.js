@@ -2298,7 +2298,7 @@ export default defineConfig(({ mode }) => {
   const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
   const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
 
-  const backendTarget = apiBase;
+  const backendTarget = apiBase || "http://65.0.8.48:5000";
 
   return {
     envDir: FRONTEND_ROOT,

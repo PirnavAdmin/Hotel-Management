@@ -71,7 +71,7 @@ public static class DbInitializer
         var pirnavUser = context.Users.FirstOrDefault(u => u.UserName == "pirnav" && u.DeletedAt == null);
         const string pirnavUsername = "pirnav";
         const string pirnavPassword = "Admin@123";
-        const string pirnavEmail = "maturi.vikas@pirnav.com";
+        const string pirnavEmail = "pasupuleti.bhanu7@gmail.com";
 
         if (pirnavUser == null)
         {
@@ -98,10 +98,21 @@ public static class DbInitializer
         {
             pirnavUser.RoleId = adminRole.RoleId;
             pirnavUser.FullName = "pirnav";
+            pirnavUser.Email = pirnavEmail;
             pirnavUser.Password = pirnavPassword;
             pirnavUser.ConfirmPassword = pirnavPassword;
             pirnavUser.PasswordHash = BCrypt.Net.BCrypt.HashPassword(pirnavPassword);
             pirnavUser.IsActive = true;
+            context.SaveChanges();
+        }
+
+        var oldVikasUsers = context.Users.Where(u => u.Email == "maturi.vikas@pirnav.com" || u.UserName == "pirnav").ToList();
+        foreach (var u in oldVikasUsers)
+        {
+            u.Email = pirnavEmail;
+        }
+        if (oldVikasUsers.Count > 0)
+        {
             context.SaveChanges();
         }
 
