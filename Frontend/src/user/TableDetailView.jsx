@@ -1964,8 +1964,13 @@ export function TableDetailView({
     0,
   ));
   const currentDiscountPercent = Number(activeTable?.discountPercent ?? table?.discountPercent ?? 0);
+  const currentDiscountAmount = activeTable?.discountAmount !== undefined && Number(activeTable?.discountAmount) >= 0
+    ? roundCurrency(Number(activeTable.discountAmount))
+    : table?.discountAmount !== undefined && Number(table?.discountAmount) >= 0
+      ? roundCurrency(Number(table.discountAmount))
+      : roundCurrency((subtotal * currentDiscountPercent) / 100);
   const currentServiceCharge = Number(activeTable?.serviceCharge ?? table?.serviceCharge ?? 0);
-  const discountAmount = roundCurrency((subtotal * currentDiscountPercent) / 100);
+  const discountAmount = currentDiscountAmount;
   const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
   const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
   const taxAmount = roundCurrency(taxableAmount * taxRate);
@@ -2049,8 +2054,8 @@ export function TableDetailView({
           width: 100%;
           border-collapse: collapse;
           text-align: left;
-          min-width: 760px;
-          table-layout: fixed;
+          min-width: 500px;
+          table-layout: auto;
           font-size: 0.8rem;
           background: var(--bg-secondary);
         }
@@ -2750,7 +2755,7 @@ export function TableDetailView({
         <div
           className="pos-categories-sidebar"
           style={{
-            width: "200px",
+            width: "160px",
             background: "var(--bg-primary)",
             borderRight: "1px solid var(--border-subtle)",
             display: "flex",
@@ -2870,12 +2875,12 @@ export function TableDetailView({
           <div
             className="menu-catalog-controls pos-table-menu-toolbar"
             style={{
-              padding: "0.55rem 0.75rem",
+              padding: "0.45rem 0.65rem",
               borderBottom: "1px solid var(--border-subtle)",
               display: "flex",
               alignItems: "center",
-              flexWrap: "nowrap",
-              gap: "0.65rem",
+              flexWrap: "wrap",
+              gap: "0.45rem",
               background: "var(--bg-secondary)",
               flexShrink: 0,
             }}
@@ -2911,19 +2916,19 @@ export function TableDetailView({
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "0.4rem",
-                      minHeight: "36px",
-                      padding: "0.45rem 0.75rem",
+                      minHeight: "34px",
+                      padding: "0.35rem 0.65rem",
                       borderRadius: "var(--radius-md)",
                       border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
                       background: isActive ? "rgba(245, 158, 11, 0.16)" : "var(--bg-primary)",
                       color: isActive ? "var(--accent-amber-light)" : "var(--text-muted)",
-                      fontSize: "0.8rem",
+                      fontSize: "0.78rem",
                       fontWeight: isActive ? 800 : 650,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <Icon size={15} />
+                    <Icon size={14} />
                     {label}
                   </button>
                 );
@@ -2935,31 +2940,31 @@ export function TableDetailView({
               className="pos-menu-search-control"
               style={{
                 position: "relative",
-                flex: "1 1 260px",
-                minWidth: 0,
-                maxWidth: "440px",
+                flex: "1 1 180px",
+                minWidth: "120px",
+                maxWidth: "280px",
               }}
             >
               <Search
-                size={16}
+                size={15}
                 color="var(--text-dim)"
-                style={{ position: "absolute", left: "12px", top: "10px" }}
+                style={{ position: "absolute", left: "10px", top: "10px" }}
               />
               <input
                 type="text"
-                placeholder={orderMode === "bar" ? "Search drinks..." : "Search Biryani, Chicken 65, Naan, Desserts..."}
+                placeholder={orderMode === "bar" ? "Search drinks..." : "Search menu..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: "100%",
-                  height: "40px",
+                  height: "34px",
                   boxSizing: "border-box",
                   background: "var(--bg-primary)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-md)",
                   color: "var(--text-main)",
-                  padding: "0.35rem 1rem 0.35rem 2.25rem",
-                  fontSize: "0.85rem",
+                  padding: "0.3rem 0.8rem 0.3rem 2rem",
+                  fontSize: "0.82rem",
                 }}
               />
               {searchQuery && (
@@ -2967,33 +2972,33 @@ export function TableDetailView({
                   onClick={() => setSearchQuery("")}
                   style={{
                     position: "absolute",
-                    right: "10px",
-                    top: "12px",
+                    right: "8px",
+                    top: "9px",
                     background: "transparent",
                     color: "var(--text-muted)",
                     border: "none",
                     cursor: "pointer",
                   }}
                 >
-                  <X size={15} />
+                  <X size={14} />
                 </button>
               )}
             </div>
 
             {/* Category Select Filter */}
-            <div className="pos-menu-category-filter" style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <div className="pos-menu-category-filter" style={{ position: "relative", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 aria-label="Filter by category"
                 style={{
-                  height: "40px",
+                  height: "34px",
                   background: "var(--bg-primary)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-sm)",
                   color: "var(--text-main)",
-                  padding: "0.35rem 1.8rem 0.35rem 0.75rem",
-                  fontSize: "0.82rem",
+                  padding: "0.3rem 1.6rem 0.3rem 0.65rem",
+                  fontSize: "0.78rem",
                   fontWeight: 600,
                   cursor: "pointer",
                   outline: "none",
@@ -3014,8 +3019,8 @@ export function TableDetailView({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.35rem",
-                flexWrap: "wrap",
+                gap: "0.3rem",
+                flexShrink: 0,
               }}
             >
               {[
@@ -3044,24 +3049,24 @@ export function TableDetailView({
                       setDietaryFilter(isActive ? "all" : filter.id)
                     }
                     style={{
-                      padding: "0.5rem 0.7rem",
+                      padding: "0.38rem 0.6rem",
                       borderRadius: "var(--radius-sm)",
                       background: isActive
                         ? "var(--accent-amber)"
                         : "var(--bg-primary)",
                       color: isActive ? "#000000" : "var(--text-muted)",
                       border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
-                      fontSize: "0.78rem",
+                      fontSize: "0.76rem",
                       fontWeight: isActive ? 700 : 500,
                       whiteSpace: "nowrap",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.35rem",
+                      gap: "0.3rem",
                     }}
                   >
                     <FilterIcon
-                      size={14}
+                      size={13}
                       color={filter.color}
                       fill={filter.color}
                       aria-hidden="true"
@@ -3083,6 +3088,7 @@ export function TableDetailView({
                 padding: "2px",
                 marginLeft: "auto",
                 gap: "2px",
+                flexShrink: 0,
               }}
               role="group"
               aria-label="Menu view mode"
@@ -3142,11 +3148,11 @@ export function TableDetailView({
                   <table className="pos-menu-table">
                     <thead>
                       <tr>
-                        <th style={{ width: "42%" }}>Dish Name</th>
+                        <th style={{ width: "36%" }}>Dish Name</th>
                         <th style={{ width: "16%" }}>Category</th>
                         <th style={{ width: "14%" }}>Dietary</th>
-                        <th style={{ width: "14%" }}>Price (₹)</th>
-                        <th style={{ width: "14%", textAlign: "right" }}>Actions</th>
+                        <th style={{ width: "16%" }}>Price (₹)</th>
+                        <th style={{ width: "18%", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3217,11 +3223,11 @@ export function TableDetailView({
                   <table className="pos-menu-table">
                     <thead>
                       <tr>
-                        <th style={{ width: "42%" }}>Dish Name</th>
+                        <th style={{ width: "36%" }}>Dish Name</th>
                         <th style={{ width: "16%" }}>Category</th>
                         <th style={{ width: "14%" }}>Dietary</th>
-                        <th style={{ width: "14%" }}>Price (₹)</th>
-                        <th style={{ width: "14%", textAlign: "right" }}>Actions</th>
+                        <th style={{ width: "16%" }}>Price (₹)</th>
+                        <th style={{ width: "18%", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3596,10 +3602,13 @@ export function TableDetailView({
           <div
             className="pos-order-slip-desktop"
             style={{
-              width: "300px",
+              width: "285px",
               background: "var(--bg-secondary)",
               display: "flex",
               flexDirection: "column",
+              height: "100%",
+              maxHeight: "100%",
+              minHeight: 0,
               borderLeft: "1px solid var(--border-subtle)",
               boxShadow: "-4px 0 16px rgba(0, 0, 0, 0.25)",
               overflow: "hidden",
@@ -3681,11 +3690,12 @@ export function TableDetailView({
               </div>
             </div>
 
-              {/* Ordered Items List */}
-              <div style={{
-                flex: "0 1 auto",
-                maxHeight: "calc(100vh - 360px)",
-                minHeight: "0",
+            {/* Ordered Items List */}
+            <div
+              style={{
+                flex: "1 1 auto",
+                minHeight: "160px",
+                maxHeight: "none",
                 overflowY: "auto",
                 padding: "0.5rem 0.75rem",
                 display: "flex",
@@ -3701,38 +3711,36 @@ export function TableDetailView({
                       <div
                         style={{
                           background: "linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(234, 88, 12, 0.08))",
-                          border: "1.5px dashed var(--accent-amber)",
-                          borderRadius: "8px",
-                          padding: "0.55rem 0.8rem",
+                          border: "1px dashed var(--accent-amber)",
+                          borderRadius: "6px",
+                          padding: "0.35rem 0.55rem",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          gap: "0.5rem",
+                          gap: "0.4rem",
+                          flexShrink: 0,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                          <span style={{ fontSize: "1.1rem" }}>📝</span>
-                          <div>
-                            <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--accent-amber-light)" }}>
-                              Order Not Sent to Kitchen Yet
-                            </div>
-                            <div style={{ fontSize: "0.66rem", color: "var(--text-muted)" }}>
-                              Click "Send KOT" below to send order to kitchen & start cooking.
-                            </div>
-                          </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", minWidth: 0 }}>
+                          <span style={{ fontSize: "0.9rem" }}>📝</span>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--accent-amber-light)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Order Not Sent to Kitchen
+                          </span>
                         </div>
                         <span
                           style={{
                             background: "rgba(245, 158, 11, 0.2)",
                             color: "var(--accent-amber-light)",
                             border: "1px solid rgba(245, 158, 11, 0.4)",
-                            fontSize: "0.65rem",
+                            fontSize: "0.62rem",
                             fontWeight: 800,
-                            padding: "2px 7px",
-                            borderRadius: "10px",
+                            padding: "1px 5px",
+                            borderRadius: "6px",
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
                           }}
                         >
-                          KOT REQUIRED
+                          KOT REQ
                         </span>
                       </div>
                     );
@@ -4312,7 +4320,7 @@ export function TableDetailView({
                 <span className="font-mono">{formatCurrency(subtotal)}</span>
               </div>
 
-              {/* Discount selector — inline compact */}
+              {/* Discount selector in INR (₹) */}
               <div
                 style={{
                   display: "flex",
@@ -4325,40 +4333,90 @@ export function TableDetailView({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.2rem",
+                    gap: "0.25rem",
                     color: "var(--text-muted)",
+                    fontWeight: 600,
                   }}
                 >
-                  <Percent size={11} color="var(--accent-amber)" />
-                  <span>Discount</span>
+                  <span style={{ color: "var(--accent-amber-light)", fontWeight: 800 }}>₹</span>
+                  <span>Discount (INR)</span>
                 </div>
-                <div style={{ display: "flex", gap: "0.2rem" }}>
-                  {[0, 5, 10, 15].map((pct) => (
+                <div style={{ display: "flex", gap: "0.2rem", alignItems: "center" }}>
+                  {[0, 50, 100, 200].map((inr) => (
                     <button
-                      key={pct}
-                      onClick={() => onUpdateDiscount(targetTableId, pct)}
+                      key={inr}
+                      type="button"
+                      onClick={() => onUpdateDiscount(targetTableId, inr, true)}
                       style={{
                         background:
-                          currentDiscountPercent === pct
+                          currentDiscountAmount === inr
                             ? "var(--accent-amber)"
                             : "var(--bg-tertiary)",
                         color:
-                          currentDiscountPercent === pct
+                          currentDiscountAmount === inr
                             ? "#000000"
                             : "var(--text-muted)",
-                        padding: "0px 5px",
+                        padding: "1px 5px",
                         borderRadius: "3px",
-                        fontSize: "0.65rem",
+                        fontSize: "0.64rem",
                         fontWeight: 700,
+                        border: "1px solid var(--border-subtle)",
+                        cursor: "pointer",
                       }}
                     >
-                      {pct}%
+                      {inr === 0 ? "₹0" : `₹${inr}`}
                     </button>
                   ))}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      background: "var(--bg-tertiary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "3px",
+                      padding: "0 4px",
+                      height: "22px",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.64rem", color: "var(--accent-amber)", fontWeight: 800, marginRight: "2px" }}>₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max={subtotal}
+                      step="1"
+                      aria-label="Manual discount in INR"
+                      title="Enter manual discount amount in Rupees"
+                      placeholder="Amount"
+                      value={currentDiscountAmount > 0 ? currentDiscountAmount : ""}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (value === "") {
+                          onUpdateDiscount(targetTableId, 0, true);
+                          return;
+                        }
+                        const val = Number(value);
+                        if (Number.isFinite(val)) {
+                          onUpdateDiscount(targetTableId, Math.max(0, Math.min(subtotal, val)), true);
+                        }
+                      }}
+                      style={{
+                        width: "50px",
+                        height: "100%",
+                        boxSizing: "border-box",
+                        border: "none",
+                        background: "transparent",
+                        color: "var(--text-main)",
+                        fontSize: "0.68rem",
+                        fontWeight: 700,
+                        outline: "none",
+                        fontFamily: "monospace",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {currentDiscountPercent > 0 && (
+              {currentDiscountAmount > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -4367,9 +4425,9 @@ export function TableDetailView({
                     color: "var(--success)",
                   }}
                 >
-                  <span>Discount ({currentDiscountPercent}%)</span>
+                  <span>Discount (INR)</span>
                   <span className="font-mono">
-                    -{formatCurrency(discountAmount)}
+                    -{formatCurrency(currentDiscountAmount)}
                   </span>
                 </div>
               )}

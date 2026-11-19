@@ -2732,10 +2732,21 @@ export function App() {
     }
   };
 
-  // Update Discount
-  const handleUpdateDiscount = (tableId, discountPercent) => {
+  // Update Discount (supports both manual INR amount and legacy percent)
+  const handleUpdateDiscount = (tableId, discount, isAmount = false) => {
     setTables((prevTables) =>
-      prevTables.map((t) => (t.id === tableId ? { ...t, discountPercent } : t)),
+      prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        if (typeof discount === "object" && discount !== null) {
+          return { ...t, ...discount };
+        }
+        if (isAmount) {
+          const discountAmount = Math.max(0, Number(discount) || 0);
+          return { ...t, discountAmount, discountPercent: 0 };
+        }
+        const discountPercent = Math.max(0, Number(discount) || 0);
+        return { ...t, discountPercent, discountAmount: 0 };
+      }),
     );
   };
 

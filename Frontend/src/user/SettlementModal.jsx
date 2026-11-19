@@ -180,7 +180,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   );
   const hasInvalidItems = safeItems.length === 0 || validItems.length !== safeItems.length;
   const subtotal = roundCurrency(validItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
-  const discountAmount = roundCurrency((subtotal * (table?.discountPercent || 0)) / 100);
+  const discountAmount = table?.discountAmount !== undefined && Number(table?.discountAmount) >= 0
+    ? roundCurrency(Number(table.discountAmount))
+    : roundCurrency((subtotal * (table?.discountPercent || 0)) / 100);
   const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
   const taxRate = 0.05;
   const taxAmount = roundCurrency(taxableAmount * taxRate);
