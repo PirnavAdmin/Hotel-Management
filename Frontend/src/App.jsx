@@ -4631,6 +4631,7 @@ export function App() {
               staffList={staffList}
               salaryPayments={salaryPayments}
               inventoryPurchases={inventoryPurchases}
+              parentRestaurantSettings={restaurantSettings}
               onRecordSalaryPayment={handleRecordSalaryPayment}
               onRecordInventoryPurchase={handleRecordInventoryPurchase}
               onAddStaff={handleAddStaff}
@@ -5014,6 +5015,7 @@ export function App() {
           staffList={staffList}
           salaryPayments={salaryPayments}
           inventoryPurchases={inventoryPurchases}
+          parentRestaurantSettings={restaurantSettings}
           onRecordSalaryPayment={handleRecordSalaryPayment}
           onRecordInventoryPurchase={handleRecordInventoryPurchase}
           onAddStaff={handleAddStaff}

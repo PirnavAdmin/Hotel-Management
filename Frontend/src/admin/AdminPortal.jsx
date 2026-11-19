@@ -734,6 +734,7 @@ export function AdminPortal({
   pastOrders = [],
   onUpdateInvoiceDiscount = null,
   inventory: propInventory = [],
+  parentRestaurantSettings = null,
   showToast: propShowToast = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -1299,20 +1300,6 @@ export function AdminPortal({
       if (active) setRestaurantSettings(mergedSettings);
     };
 
-    fetch(`${API_SYNC_BASE}/api/state`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) =>
-        applySettings(
-          data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.data?.[RESTAURANT_SETTINGS_KEY] ||
-            data?.restaurantSettings ||
-            data?.data?.restaurantSettings,
-        ),
-      )
-      .catch(() => {});
-
     // Also fetch directly from dedicated restaurant-settings API
     apiGetRestaurantSettings()
       .then((res) => {
@@ -1336,6 +1323,13 @@ export function AdminPortal({
       unsubscribe();
     };
   }, []);
+
+  // Shared settings are loaded by App and passed down so the portal does not
+  // repeat the parent's /api/state request when it mounts.
+  useEffect(() => {
+    if (!parentRestaurantSettings || typeof parentRestaurantSettings !== "object") return;
+    setRestaurantSettings((previous) => ({ ...(previous || {}), ...parentRestaurantSettings }));
+  }, [parentRestaurantSettings]);
 
   const handleSaveRestaurantSettings = async (settings) => {
     const stampedSettings = {

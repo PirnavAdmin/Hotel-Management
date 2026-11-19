@@ -27,7 +27,6 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, formatInvoiceNumber, getOrderTimestamp, parseOrderToYMD } from "../utils/orderDedupe";
-import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
 import { compareTablesNaturally } from "../utils/tableSortHelper";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
@@ -111,20 +110,6 @@ export function AdminOverview({
   }, [pastOrders]);
 
   useEffect(() => {
-    let active = true;
-    const fetchOrders = () => {
-      requestLiveInvoiceRecords()
-        .then(({ records }) => {
-          if (!active) return;
-          if (Array.isArray(records) && records.length > 0) {
-            setOrdersList((current) => dedupeOrders([...records, ...(Array.isArray(current) ? current : [])]));
-          }
-        })
-        .catch(() => {});
-    };
-
-    fetchOrders();
-
     const syncFromStorage = (e) => {
       if (Array.isArray(e?.detail) && e.detail.length > 0) {
         setOrdersList((current) => dedupeOrders([...e.detail, ...(Array.isArray(current) ? current : [])]));
@@ -139,7 +124,6 @@ export function AdminOverview({
           }
         }
       } catch {}
-      fetchOrders();
     };
 
     const syncInventory = (e) => {
@@ -190,7 +174,6 @@ export function AdminOverview({
     window.addEventListener("avsr-menu-updated", syncMenu);
 
     return () => {
-      active = false;
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener("focus", syncFromStorage);
       window.removeEventListener("avsr-orders-updated", syncFromStorage);
