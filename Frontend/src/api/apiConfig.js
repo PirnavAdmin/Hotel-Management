@@ -41,15 +41,25 @@ async function performApiRequest(endpoint, options = {}) {
     try {
       res = await fetch(url, config);
     } catch (initialErr) {
-      // If configured URL (like an expired tunnel) failed, attempt local backend fallback
-      const localFallbackUrl = `http://localhost:5018${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-      if (url !== localFallbackUrl) {
-        try {
-          res = await fetch(localFallbackUrl, config);
-        } catch {
-          throw initialErr;
+      // If configured URL (like an expired tunnel) failed, attempt backend fallbacks
+      const fallbackBases = [
+        "http://localhost:5018",
+        "http://65.0.8.48:5000",
+      ];
+      let resolved = false;
+      for (const fallbackBase of fallbackBases) {
+        const fallbackUrl = `${fallbackBase}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+        if (url !== fallbackUrl) {
+          try {
+            res = await fetch(fallbackUrl, config);
+            resolved = true;
+            break;
+          } catch {
+            // try next candidate
+          }
         }
-      } else {
+      }
+      if (!resolved) {
         throw initialErr;
       }
     }
