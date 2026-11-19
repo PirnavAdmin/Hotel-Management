@@ -4603,10 +4603,12 @@ export function App() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-primary)",
+        overflow: "hidden",
       }}
     >
       {/* Top Header shown only on User POS (Dining Floor & Billing) when logged in */}
@@ -4646,7 +4648,7 @@ export function App() {
         )}
 
       {/* Main Separate Routes Rendering */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
         {isLandingRoute && (
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}

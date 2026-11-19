@@ -2032,12 +2032,21 @@ export function TableDetailView({
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "calc(100dvh - 112px)",
+        height: "100%",
+        maxHeight: "100%",
         minHeight: "0",
+        flex: 1,
         overflow: "hidden",
       }}
     >
       <style>{`
+        .responsive-order-detail-layout {
+          height: 100% !important;
+          max-height: 100% !important;
+          min-height: 0 !important;
+          flex: 1 !important;
+        }
+
         .pos-menu-table-container {
           flex: 1;
           width: 100%;
@@ -2047,6 +2056,7 @@ export function TableDetailView({
           overflow-y: auto;
           overflow-x: auto;
           padding: 0.45rem;
+          padding-bottom: 4rem;
           background: var(--bg-primary);
         }
 
@@ -2154,13 +2164,11 @@ export function TableDetailView({
         .pos-category-btn { min-height: 36px; padding: 0.45rem 0.55rem !important; }
 
         @media (max-width: 1100px) {
-          .responsive-order-detail-layout { height: calc(100dvh - 112px); }
           .pos-categories-sidebar { width: 145px !important; }
           .pos-menu-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 155px), 1fr)); }
         }
 
         @media (max-width: 760px) {
-          .responsive-order-detail-layout { height: calc(100dvh - 150px) !important; }
           .pos-table-info-strip { padding: 0.4rem 0.55rem !important; }
           .pos-table-menu-toolbar { gap: 0.35rem !important; }
           .pos-categories-sidebar {
@@ -2196,7 +2204,7 @@ export function TableDetailView({
         style={{
           background: "var(--bg-secondary)",
           borderBottom: "1px solid var(--border-subtle)",
-          padding: "0.65rem 1.5rem",
+          padding: "0.45rem 1.25rem",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -2746,6 +2754,7 @@ export function TableDetailView({
         style={{
           display: "flex",
           flex: 1,
+          height: "100%",
           minHeight: 0,
           overflow: "hidden",
           position: "relative",
@@ -2760,6 +2769,8 @@ export function TableDetailView({
             borderRight: "1px solid var(--border-subtle)",
             display: "flex",
             flexDirection: "column",
+            height: "100%",
+            minHeight: 0,
             flexShrink: 0,
             overflowY: "auto",
           }}
@@ -2767,8 +2778,9 @@ export function TableDetailView({
           <div
             className="pos-categories-header"
             style={{
-              padding: "1rem",
+              padding: "0.75rem 1rem",
               borderBottom: "1px solid var(--border-subtle)",
+              flexShrink: 0,
             }}
           >
             <h4
@@ -2778,6 +2790,7 @@ export function TableDetailView({
                 color: "var(--text-muted)",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
+                margin: 0,
               }}
             >
               Categories
@@ -2789,6 +2802,7 @@ export function TableDetailView({
               display: "flex",
               flexDirection: "column",
               padding: "0.5rem",
+              paddingBottom: "3.5rem",
             }}
           >
             {[{ id: "all", name: orderMode === "bar" ? "All Drinks" : "All Items", icon: orderMode === "bar" ? "Coffee" : "Utensils" }, ...Array.from(new Map((activeMenuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category, icon: orderMode === "bar" ? "Coffee" : "Utensils" }])).values())].map((category) => {
@@ -2868,6 +2882,9 @@ export function TableDetailView({
             display: "flex",
             flexDirection: "column",
             minWidth: 0,
+            minHeight: 0,
+            height: "100%",
+            overflow: "hidden",
             background: "var(--bg-primary)",
           }}
         >
@@ -3693,14 +3710,14 @@ export function TableDetailView({
             {/* Ordered Items List */}
             <div
               style={{
-                flex: "1 1 auto",
-                minHeight: "160px",
+                flex: "1 1 0",
+                minHeight: "120px",
                 maxHeight: "none",
                 overflowY: "auto",
-                padding: "0.5rem 0.75rem",
+                padding: "0.45rem 0.65rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.4rem",
+                gap: "0.35rem",
               }}
             >
               {/* Live Kitchen Status Banner */}
@@ -4299,11 +4316,11 @@ export function TableDetailView({
             <div
               style={{
                 background: "var(--bg-primary)",
-                padding: "0.6rem 0.85rem",
+                padding: "0.45rem 0.75rem",
                 borderTop: "1px solid var(--border-subtle)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.3rem",
+                gap: "0.25rem",
                 flexShrink: 0,
               }}
             >
@@ -4537,7 +4554,7 @@ export function TableDetailView({
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "0.3rem",
-                      padding: "0.5rem",
+                      padding: "0.42rem 0.45rem",
                       borderRadius: "6px",
                       background: isSendingKot
                         ? "var(--bg-tertiary)"
@@ -4551,7 +4568,7 @@ export function TableDetailView({
                       border: hasUnsentItems && !isSendingKot
                         ? "1.5px solid var(--accent-amber)"
                         : "1px solid var(--border-subtle)",
-                      fontSize: "0.74rem",
+                      fontSize: "0.72rem",
                       fontWeight: 700,
                       cursor:
                         safeItems.length === 0 || isSendingKot ? "not-allowed" : "pointer",
@@ -4561,7 +4578,7 @@ export function TableDetailView({
                     }}
                   >
                     <ChefHat size={13} color="var(--accent-amber)" />
-                    <span>{isSendingKot ? "Sending Orders..." : (hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel)}</span>
+                    <span>{isSendingKot ? "Sending..." : (hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel)}</span>
                   </button>
                   <button
                     onClick={() => onOpenReceipt(targetTableId)}
@@ -4571,7 +4588,7 @@ export function TableDetailView({
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "0.3rem",
-                      padding: "0.5rem",
+                      padding: "0.42rem 0.45rem",
                       borderRadius: "6px",
                       background: "var(--bg-tertiary)",
                       color:
@@ -4579,7 +4596,7 @@ export function TableDetailView({
                           ? "var(--text-dim)"
                           : "var(--text-main)",
                       border: "1px solid var(--border-subtle)",
-                      fontSize: "0.74rem",
+                      fontSize: "0.72rem",
                       fontWeight: 700,
                       cursor:
                         safeItems.length === 0 ? "not-allowed" : "pointer",
@@ -4608,7 +4625,7 @@ export function TableDetailView({
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "0.4rem",
-                    padding: "0.65rem",
+                    padding: "0.5rem",
                     borderRadius: "8px",
                     background:
                       !canSettleAndCheckout
@@ -4619,7 +4636,7 @@ export function TableDetailView({
                     border: !canSettleAndCheckout
                       ? "1px solid rgba(148, 163, 184, 0.2)"
                       : "1px solid #10b981",
-                    fontSize: "0.82rem",
+                    fontSize: "0.78rem",
                     fontWeight: 800,
                     boxShadow:
                       !canSettleAndCheckout
@@ -4629,7 +4646,7 @@ export function TableDetailView({
                     transition: "all 0.2s ease",
                   }}
                 >
-                  <CreditCard size={15} />
+                  <CreditCard size={14} />
                   <span>
                     {safeItems.length === 0
                       ? `Settle & Checkout — ${formatCurrency(0)}`
