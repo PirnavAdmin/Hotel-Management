@@ -5,8 +5,8 @@
 
 .realtime-connection-indicator {
   position: fixed;
-  right: 12px;
-  bottom: 12px;
+  left: 170px;
+  bottom: 8px;
   z-index: 1100;
   display: inline-flex;
   align-items: center;
