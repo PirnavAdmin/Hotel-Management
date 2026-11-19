@@ -235,6 +235,93 @@ public class AccountingController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Save daily balance directly from frontend accounting register
+    /// POST /api/v1/accounting/daily-balances
+    /// </summary>
+    [HttpPost("daily-balances")]
+    public async Task<IActionResult> SaveDailyBalanceDirect([FromBody] SaveDailyBalanceDto dto)
+    {
+        if (dto == null) return BadRequest(new { success = false, message = "Payload required" });
+        DateTime parsedDate = DateTime.TryParse(dto.Date, out var dt) ? dt.Date : DateTime.UtcNow.Date;
+
+        try
+        {
+            if (dto.IsClosed && dto.ClosingCash.HasValue)
+            {
+                var recResult = await _accountingService.ReconcileDailyShiftAsync(new ReconcileDailyRegisterRequestDto
+                {
+                    BusinessDate = parsedDate,
+                    PhysicalCashCount = dto.ClosingCash.Value,
+                    CloseShift = true,
+                    ClosedBy = dto.ClosedBy ?? "pirnav",
+                    Notes = dto.Notes
+                });
+                return Ok(new { success = true, data = recResult, message = "Daily balance saved and shift closed." });
+            }
+
+            var openResult = await _accountingService.OpenOrUpdateDailyShiftAsync(new OpenDailyRegisterRequestDto
+            {
+                BusinessDate = parsedDate,
+                OpeningCashFloat = dto.OpeningCash,
+                OpeningBankBalance = dto.OpeningBank,
+                OpenedBy = dto.OpenedBy ?? "pirnav",
+                Notes = dto.Notes
+            });
+            return Ok(new { success = true, data = openResult, message = "Daily balance shift saved." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving daily balance");
+            return StatusCode(500, new { success = false, message = "Failed to save daily balance.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Live financial summary (Revenue, COGS, Expenses, Net Profit, Assets, Equity)
+    /// GET /api/v1/accounting/summary
+    /// </summary>
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetFinancialSummary([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
+    {
+        try
+        {
+            var tb = await _accountingService.GetTrialBalanceAsync(fromDate, toDate);
+            decimal revenue = 0m, expenses = 0m, assets = 0m, liabilities = 0m, equity = 0m;
+            if (tb?.Accounts != null)
+            {
+                foreach (var acc in tb.Accounts)
+                {
+                    var group = (acc.Group ?? string.Empty).Trim().ToLower();
+                    if (group == "income") revenue += acc.ClosingCredit - acc.ClosingDebit;
+                    else if (group == "expenses") expenses += acc.ClosingDebit - acc.ClosingCredit;
+                    else if (group == "assets") assets += acc.ClosingDebit - acc.ClosingCredit;
+                    else if (group == "liabilities") liabilities += acc.ClosingCredit - acc.ClosingDebit;
+                    else if (group == "equity") equity += acc.ClosingCredit - acc.ClosingDebit;
+                }
+            }
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    revenue = Math.Max(0m, revenue),
+                    expenses = Math.Max(0m, expenses),
+                    netProfit = revenue - expenses,
+                    assets = Math.Max(0m, assets),
+                    liabilities = Math.Max(0m, liabilities),
+                    equity = Math.Max(0m, equity),
+                    isBalanced = tb?.IsBalanced ?? true
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting financial summary");
+            return StatusCode(500, new { success = false, message = "Failed to load financial summary", error = ex.Message });
+        }
+    }
+
     // ============================================================
     // 2. CHART OF ACCOUNTS (COA)
     // ============================================================
