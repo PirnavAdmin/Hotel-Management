@@ -1456,18 +1456,24 @@ export function AdminInvoices({
                   ))}
                 </select>
               </div>
-              {/* Page Buttons: « First  < Prev  1  2  3  4  Next >  Last » */}
+              {/* Modern Compact Sliding Window Pagination */}
               {(() => {
-                const maxVisiblePages = 4;
-                let startPage = Math.max(1, visiblePage - Math.floor(maxVisiblePages / 2));
-                let endPage = startPage + maxVisiblePages - 1;
-                if (endPage > pageCount) {
-                  endPage = pageCount;
-                  startPage = Math.max(1, endPage - maxVisiblePages + 1);
-                }
-                const visiblePages = [];
-                for (let p = startPage; p <= endPage; p++) {
-                  visiblePages.push(p);
+                const total = Math.max(1, pageCount);
+                const current = visiblePage;
+                const pagesToRender = [];
+
+                if (total <= 6) {
+                  for (let i = 1; i <= total; i++) pagesToRender.push(i);
+                } else {
+                  pagesToRender.push(1);
+                  if (current > 3) pagesToRender.push("dots-left");
+                  const start = Math.max(2, current - 1);
+                  const end = Math.min(total - 1, current + 1);
+                  for (let i = start; i <= end; i++) {
+                    if (!pagesToRender.includes(i)) pagesToRender.push(i);
+                  }
+                  if (current < total - 2) pagesToRender.push("dots-right");
+                  if (!pagesToRender.includes(total)) pagesToRender.push(total);
                 }
 
                 const navBtnStyle = (disabled) => ({
@@ -1503,8 +1509,8 @@ export function AdminInvoices({
                     <button
                       type="button"
                       onClick={() => setCurrentPage(1)}
-                      disabled={visiblePage === 1}
-                      style={navBtnStyle(visiblePage === 1)}
+                      disabled={current === 1}
+                      style={navBtnStyle(current === 1)}
                       title="Go to first page"
                     >
                       « First
@@ -1514,43 +1520,58 @@ export function AdminInvoices({
                     <button
                       type="button"
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={visiblePage === 1}
-                      style={navBtnStyle(visiblePage === 1)}
+                      disabled={current === 1}
+                      style={navBtnStyle(current === 1)}
                       title="Go to previous page"
                     >
                       &lt; Prev
                     </button>
 
-                    {/* Visible Page Numbers */}
-                    {visiblePages.map((page) => {
-                      const isActive = page === visiblePage;
+                    {/* Page Numbers & Ellipsis */}
+                    {pagesToRender.map((p, idx) => {
+                      if (typeof p === "string") {
+                        return (
+                          <span
+                            key={`${p}-${idx}`}
+                            style={{
+                              padding: "0 4px",
+                              color: "var(--text-muted)",
+                              fontSize: "0.8rem",
+                              userSelect: "none",
+                            }}
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      const isActive = p === current;
                       return (
                         <button
-                          key={page}
+                          key={p}
                           type="button"
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => setCurrentPage(p)}
                           style={{
                             height: "26px",
                             minWidth: "26px",
                             padding: "0 7px",
                             borderRadius: "6px",
                             background: isActive
-                              ? "#0d5c56"
+                              ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
                               : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
                             border: isActive
-                              ? "1px solid #14b8a6"
+                              ? "1px solid #f59e0b"
                               : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
                             color: isActive ? "#ffffff" : "var(--text-main, #e2e8f0)",
                             cursor: "pointer",
                             fontSize: "0.76rem",
                             fontWeight: isActive ? 800 : 600,
                             boxShadow: isActive
-                              ? "0 2px 8px rgba(13, 92, 86, 0.45)"
+                              ? "0 2px 8px rgba(245, 158, 11, 0.4)"
                               : "none",
                             transition: "all 0.15s ease",
                           }}
                         >
-                          {page}
+                          {p}
                         </button>
                       );
                     })}
@@ -1559,10 +1580,10 @@ export function AdminInvoices({
                     <button
                       type="button"
                       onClick={() =>
-                        setCurrentPage((p) => Math.min(pageCount, p + 1))
+                        setCurrentPage((p) => Math.min(total, p + 1))
                       }
-                      disabled={visiblePage === pageCount}
-                      style={navBtnStyle(visiblePage === pageCount)}
+                      disabled={current === total}
+                      style={navBtnStyle(current === total)}
                       title="Go to next page"
                     >
                       Next &gt;
@@ -1571,9 +1592,9 @@ export function AdminInvoices({
                     {/* Last » */}
                     <button
                       type="button"
-                      onClick={() => setCurrentPage(pageCount)}
-                      disabled={visiblePage === pageCount}
-                      style={navBtnStyle(visiblePage === pageCount)}
+                      onClick={() => setCurrentPage(total)}
+                      disabled={current === total}
+                      style={navBtnStyle(current === total)}
                       title="Go to last page"
                     >
                       Last »

@@ -249,7 +249,17 @@ public class StateController : ControllerBase
                     if (settingsDto != null && !string.IsNullOrWhiteSpace(settingsDto.RestaurantName))
                     {
                         _logger.LogInformation("Syncing restaurant settings via /api/sync. Restaurant Name: {Name}", settingsDto.RestaurantName);
-                        await _settingsService.SaveSettingsAsync(settingsDto);
+                        var savedSettings = await _settingsService.SaveSettingsAsync(settingsDto);
+                        await _realtimeSync.PublishAsync(new RealtimeEvent
+                        {
+                            EventType = "restaurantSetting:updated",
+                            Module = "Settings",
+                            Action = "updated",
+                            BranchId = 1,
+                            RecordId = "1",
+                            Data = savedSettings
+                        });
+                        await _sseBroadcaster.BroadcastAsync("restaurantSetting:updated", savedSettings);
                     }
                 }
 

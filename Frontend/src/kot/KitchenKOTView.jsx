@@ -185,11 +185,15 @@ export function KitchenKOTView({
       if (syncEventNames.has(name)) scheduleRefresh();
     });
     window.addEventListener("avsr:realtime-reconnected", scheduleRefresh);
+    window.addEventListener("avsr-kot-updated", scheduleRefresh);
+    window.addEventListener("avsr-tables-updated", scheduleRefresh);
     return () => {
       cancelled = true;
       if (refreshTimer) window.clearTimeout(refreshTimer);
       unsubscribe();
       window.removeEventListener("avsr:realtime-reconnected", scheduleRefresh);
+      window.removeEventListener("avsr-kot-updated", scheduleRefresh);
+      window.removeEventListener("avsr-tables-updated", scheduleRefresh);
       refreshKitchenTicketsRef.current = null;
     };
   }, []);
@@ -2551,7 +2555,7 @@ export function KitchenKOTView({
                               margin: 0,
                             }}
                           >
-                            {modalTicket.name} Order Details
+                            Order Details
                           </h2>
                           <span
                             style={{

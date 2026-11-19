@@ -240,31 +240,41 @@ public class TableService
         }
 
         // Resolve Assigned Server
-        long? resolvedServerId = dto.AssignedServerId.HasValue && dto.AssignedServerId.Value > 0 ? dto.AssignedServerId.Value : existing.AssignedServerId;
-        if (dto.AssignedServerId.HasValue && dto.AssignedServerId.Value > 0)
+        long? resolvedServerId = existing.AssignedServerId;
+        var requestedServerName = !string.IsNullOrWhiteSpace(dto.Server) 
+            ? dto.Server.Trim() 
+            : (!string.IsNullOrWhiteSpace(dto.AssignedServerName) ? dto.AssignedServerName.Trim() : null);
+
+        if (!string.IsNullOrWhiteSpace(requestedServerName))
         {
-            var serverCount = await _spService.ExecuteSqlScalarAsync<long>(
-                "SELECT COUNT(*) FROM staff_persons WHERE staff_id = @sid AND deleted_at IS NULL",
-                new Dictionary<string, object?> { { "sid", dto.AssignedServerId.Value } });
-            if (serverCount > 0)
-            {
-                resolvedServerId = dto.AssignedServerId.Value;
-            }
-            else
-            {
-                throw new ArgumentException($"Assigned server with ID {dto.AssignedServerId.Value} does not exist.");
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(dto.Server) || !string.IsNullOrWhiteSpace(dto.AssignedServerName))
-        {
-            var serverName = !string.IsNullOrWhiteSpace(dto.Server) ? dto.Server.Trim() : dto.AssignedServerName!.Trim();
             var foundIds = await _spService.ExecuteSqlQueryAsync(
-                "SELECT staff_id FROM staff_persons WHERE LOWER(full_name) = LOWER(@name) AND deleted_at IS NULL LIMIT 1",
+                "SELECT staff_id FROM staff_persons WHERE LOWER(TRIM(full_name)) = LOWER(@name) AND deleted_at IS NULL LIMIT 1",
                 r => Convert.ToInt64(r["staff_id"]),
-                new Dictionary<string, object?> { { "name", serverName } });
+                new Dictionary<string, object?> { { "name", requestedServerName } });
             if (foundIds.Count > 0)
             {
                 resolvedServerId = foundIds[0];
+            }
+            else if (dto.AssignedServerId.HasValue && dto.AssignedServerId.Value > 0)
+            {
+                resolvedServerId = dto.AssignedServerId.Value;
+            }
+        }
+        else if (dto.AssignedServerId.HasValue)
+        {
+            if (dto.AssignedServerId.Value > 0)
+            {
+                var serverCount = await _spService.ExecuteSqlScalarAsync<long>(
+                    "SELECT COUNT(*) FROM staff_persons WHERE staff_id = @sid AND deleted_at IS NULL",
+                    new Dictionary<string, object?> { { "sid", dto.AssignedServerId.Value } });
+                if (serverCount > 0)
+                {
+                    resolvedServerId = dto.AssignedServerId.Value;
+                }
+            }
+            else
+            {
+                resolvedServerId = null;
             }
         }
 
@@ -302,6 +312,9 @@ public class TableService
             await _spService.ExecuteSqlNonQueryAsync(
                 "UPDATE dining_tables SET table_number = @tnum, seating_capacity = @cap, updated_at = NOW() WHERE dining_table_id = @tid;",
                 new Dictionary<string, object?> { { "tnum", resolvedNumber }, { "cap", capacity }, { "tid", id } });
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE restaurant_tables SET assigned_server_id = @sid, updated_at = NOW() WHERE table_id = @tid;",
+                new Dictionary<string, object?> { { "sid", resolvedServerId }, { "tid", id } });
         }
         catch { }
 

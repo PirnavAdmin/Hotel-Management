@@ -73,6 +73,7 @@ import {
   apiGetOrderForTable,
   apiCreateOrder,
   apiAddOrderItems,
+  apiGetOrder,
   apiSendOrderKot,
   apiCreatePaidTakeawayOrder,
   apiUpdateOrderGuests,
@@ -87,6 +88,7 @@ import {
   apiGetInventoryPurchases,
 } from "./api/inventoryApi";
 import { apiCreateSalaryPayment, apiGetSalaryPayments } from "./api/salaryPaymentApi";
+import { apiGetRestaurantSettings } from "./api/settingsApi";
 import { API_SYNC_BASE } from "./api/apiConfig";
 import { getRealtimeConnectionStatus, subscribeToSseMessages, subscribeToRealtimeEvents } from "./realtime/realtimeService";
 import { dedupeOrders, mergeSettledOrders } from "./utils/orderDedupe";
@@ -518,7 +520,11 @@ const mergeIncomingTables = (
         ),
         status: finalStatus,
         server:
-          table.assignedServerName || table.server || existing.server || "Staff",
+          table.server || table.assignedServerName || existing.server || "Staff",
+        assignedServerName:
+          table.server || table.assignedServerName || existing.assignedServerName || existing.server || "Staff",
+        assignedServerId:
+          table.assignedServerId !== undefined ? table.assignedServerId : (existing.assignedServerId ?? null),
         guests: isFinalVacant ? 0 : incomingGuests,
         occupiedChairs: isFinalVacant ? 0 : incomingGuests,
         selectedSeats: isFinalVacant
@@ -618,33 +624,37 @@ export function App() {
         }
       });
 
-      const hasLocalCustomizations =
-        Boolean(local.isUserConfigured) ||
-        Boolean(local.updatedAt) ||
-        (Boolean(local.restaurantName) && local.restaurantName.trim() !== "AVSR FOOD COURT");
-
+      // Server data is authoritative for restaurant branding and payment QRs
       const merged = {
-        ...cleanServer,
         ...local,
-        ...(hasLocalCustomizations
-          ? {
-              restaurantName: local.restaurantName || cleanServer.restaurantName || "",
-              tagline: local.tagline !== undefined ? local.tagline : cleanServer.tagline || "",
-            }
-          : {}),
-        logo: local.logo || cleanServer.logo || cleanServer.restaurantLogo || "",
+        ...cleanServer,
+        restaurantName: cleanServer.restaurantName || cleanServer.name || local.restaurantName || "AVSR FOOD COURT",
+        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline || ""),
+        logo: cleanServer.logo || cleanServer.restaurantLogo || local.logo || local.restaurantLogo || "",
+        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || local.restaurantLogo || local.logo || "",
+        paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
+        selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
 
       try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {
         setRestaurantSettings(merged);
         window.dispatchEvent(new Event("restaurant-settings-updated"));
+        window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: merged }));
       }
     };
     const loadInitialSettings = async () => {
+      try {
+        const res = await apiGetRestaurantSettings();
+        const serverData = res?.data || res?.settings;
+        if (serverData && active && (serverData.restaurantName || serverData.logo)) {
+          applySharedSettings(serverData);
+          return;
+        }
+      } catch {}
       const data = await requestSharedNetworkState();
       if (data && active) {
-        applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY]);
+        applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY] || data?.restaurantSettings);
       }
     };
     loadInitialSettings();
@@ -652,15 +662,28 @@ export function App() {
     const handleSettingsMsg = (event) => {
       try {
         const message = JSON.parse(event.data);
-        applySharedSettings(message?.payload?.[RESTAURANT_SETTINGS_KEY] || message?.payload?.data?.[RESTAURANT_SETTINGS_KEY]);
+        const settings =
+          message?.payload?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.data?.[RESTAURANT_SETTINGS_KEY] ||
+          message?.payload?.restaurantSettings ||
+          (message?.type === "restaurantSetting:updated" ? (message?.payload?.data || message?.payload) : null);
+        if (settings) applySharedSettings(settings);
       } catch {}
     };
 
     const unsubscribe = subscribeToSseMessages(handleSettingsMsg);
 
+    const handleWindowSettingsUpdate = (e) => {
+      if (e?.detail && typeof e.detail === "object") {
+        applySharedSettings(e.detail);
+      }
+    };
+    window.addEventListener("avsr-settings-updated", handleWindowSettingsUpdate);
+
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener("avsr-settings-updated", handleWindowSettingsUpdate);
     };
   }, []);
 
@@ -1954,6 +1977,12 @@ export function App() {
             } catch {}
           }).catch(() => {});
         }
+      } else if (name === "restaurantSetting:updated" || name === "ReceiveRestaurantSettingUpdated" || name === "module:settings") {
+        const settingsData = payload?.data ?? payload?.Data ?? payload;
+        if (settingsData && typeof settingsData === "object") {
+          window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settingsData }));
+          window.dispatchEvent(new Event("restaurant-settings-updated"));
+        }
       } else if (name.startsWith("module:")) {
         const moduleName = name.slice("module:".length).toLowerCase();
         const moduleData = payload?.data ?? payload?.Data ?? payload;
@@ -2496,7 +2525,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2563,7 +2596,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2602,7 +2639,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2629,7 +2670,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -2663,8 +2708,11 @@ export function App() {
         };
       });
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });
@@ -2690,10 +2738,21 @@ export function App() {
     }
   };
 
-  // Update Discount
-  const handleUpdateDiscount = (tableId, discountPercent) => {
+  // Update Discount (supports both manual INR amount and legacy percent)
+  const handleUpdateDiscount = (tableId, discount, isAmount = false) => {
     setTables((prevTables) =>
-      prevTables.map((t) => (t.id === tableId ? { ...t, discountPercent } : t)),
+      prevTables.map((t) => {
+        if (t.id !== tableId) return t;
+        if (typeof discount === "object" && discount !== null) {
+          return { ...t, ...discount };
+        }
+        if (isAmount) {
+          const discountAmount = Math.max(0, Number(discount) || 0);
+          return { ...t, discountAmount, discountPercent: 0 };
+        }
+        const discountPercent = Math.max(0, Number(discount) || 0);
+        return { ...t, discountPercent, discountAmount: 0 };
+      }),
     );
   };
 
@@ -2769,6 +2828,9 @@ export function App() {
         localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
         lastPushedTablesJsonRef.current = nextJson;
         pushGlobalSync({ [STORAGE_KEY_TABLES]: nextTables });
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
+        window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
       } catch {}
 
       sounds.playBell();
@@ -3014,7 +3076,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -3161,7 +3227,11 @@ export function App() {
       });
 
       try {
-
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
 
       return nextTables;
@@ -3225,8 +3295,11 @@ export function App() {
         };
       });
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });
@@ -3288,8 +3361,11 @@ export function App() {
         return t;
       });
       try {
-        localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(nextTables));
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
         broadcastSync("SYNC_TABLES", nextTables);
+        window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: nextTables }));
       } catch {}
       return nextTables;
     });
@@ -3487,25 +3563,33 @@ export function App() {
         if (!orderData) {
           const knownOrderId = Number(settlementTable?.backendOrderId ?? settlementTable?.activeOrderId);
           if (knownOrderId > 0) {
-            throw new Error("The table has a known active order, but the backend did not return it. Payment was not submitted to prevent a duplicate order.");
+            try {
+              const knownOrderRes = await apiGetOrder(knownOrderId);
+              if (knownOrderRes?.success && knownOrderRes.data) {
+                orderData = knownOrderRes.data?.data ?? knownOrderRes.data;
+                backendOrderId = Number(orderData?.id ?? orderData?.Id) || knownOrderId;
+              }
+            } catch {}
           }
-          const createResult = await apiCreateOrder({
-            tableId: backendTableId,
-            tableName: settlementData.tableName,
-            tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
-            serverName: settlementData.server || "Server",
-            guests: enrichedSettlement.guests,
-            discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
-            serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
-            tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
-            status: "Active",
-            items: itemsToPersist,
-          }).catch(() => null);
-          if (!createResult?.success || createResult?.data?.success === false) {
-            throw new Error(createResult?.error || createResult?.data?.message || "The backend could not create the order; payment was not submitted.");
+          if (!orderData) {
+            const createResult = await apiCreateOrder({
+              tableId: backendTableId,
+              tableName: settlementData.tableName,
+              tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
+              serverName: settlementData.server || "Server",
+              guests: enrichedSettlement.guests,
+              discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
+              serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
+              tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
+              status: "Active",
+              items: itemsToPersist,
+            }).catch(() => null);
+            if (!createResult?.success || createResult?.data?.success === false) {
+              throw new Error(createResult?.error || createResult?.data?.message || "The backend could not create the order; payment was not submitted.");
+            }
+            orderData = createResult.data?.data ?? createResult.data;
+            backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
           }
-          orderData = createResult.data?.data ?? createResult.data;
-          backendOrderId = Number(orderData?.id ?? orderData?.Id) || null;
         } else if (unsavedItems.length > 0 && backendOrderId) {
           const addItemsResult = await apiAddOrderItems(backendOrderId, unsavedItems.map((item) => ({
             menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
@@ -3533,14 +3617,9 @@ export function App() {
         const confirmedOrderId = Number(
           settlementResult?.data?.orderId ?? settledOrder?.id ?? settledOrder?.Id ?? backendOrderId,
         );
-        const confirmedInvoiceId = Number(settlementResult?.data?.invoiceId ?? settledOrder?.invoiceId ?? settledOrder?.InvoiceId);
-        const confirmedStatus = String(settledOrder?.status ?? settledOrder?.Status ?? "").toLowerCase();
         if (
           !settlementResult?.success ||
-          settlementResult?.data?.success === false ||
-          confirmedOrderId !== backendOrderId ||
-          confirmedInvoiceId <= 0 ||
-          confirmedStatus !== "settled"
+          settlementResult?.data?.success === false
         ) {
           throw new Error(settlementResult?.error || settlementResult?.data?.message || "The backend did not confirm full payment. The table remains active.");
         }
@@ -3560,7 +3639,7 @@ export function App() {
       } catch (error) {
         console.warn("Backend dine-in order settlement sync warning:", error);
         showToast(error?.message || "Payment was not confirmed by the backend. The table remains active.");
-        return false;
+        return typeof error?.message === "string" ? error.message : false;
       } finally {
         dineInSettlementInFlightRef.current = false;
       }
@@ -4037,6 +4116,17 @@ export function App() {
     const previousTable = tables.find((table) => String(table.id) === String(updatedTable.id));
     const cap = Number(updatedTable.capacity || updatedTable.capacityChairs || updatedTable.chairs || (previousTable?.capacity || 4));
     const persons = Number(updatedTable.persons || updatedTable.guests || cap);
+
+    const targetServerName = updatedTable.server !== undefined
+      ? updatedTable.server
+      : (updatedTable.assignedServerName !== undefined ? updatedTable.assignedServerName : (previousTable?.server || ""));
+
+    const matchedStaff = (staffList || []).find((s) => {
+      const sName = String(s?.name || s?.fullName || s?.FullName || s?.username || "").trim().toLowerCase();
+      return sName && sName === String(targetServerName || "").trim().toLowerCase();
+    });
+    const targetServerId = matchedStaff?.id ?? matchedStaff?.staffId ?? (targetServerName ? updatedTable.assignedServerId : null) ?? null;
+
     const normalized = {
       ...updatedTable,
       capacity: cap,
@@ -4044,6 +4134,9 @@ export function App() {
       capacityChairs: cap,
       persons: persons,
       guests: persons,
+      server: targetServerName || "",
+      assignedServerName: targetServerName || "",
+      assignedServerId: targetServerId,
     };
 
     setTables((prev) => {
@@ -4564,10 +4657,12 @@ export function App() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-primary)",
+        overflow: "hidden",
       }}
     >
       {/* Top Header shown only on User POS (Dining Floor & Billing) when logged in */}
@@ -4607,12 +4702,12 @@ export function App() {
         )}
 
       {/* Main Separate Routes Rendering */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
         {isLandingRoute && (
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
             restaurantLogo={restaurantSettings.logo || ""}
-            menuItems={sharedRecordLoad.menu === "ready" ? menuItems : []}
+            menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
             menuLoading={sharedRecordLoad.menu === "loading"}
             menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
             tables={tables}
@@ -4685,6 +4780,7 @@ export function App() {
               staffList={staffList}
               salaryPayments={salaryPayments}
               inventoryPurchases={inventoryPurchases}
+              parentRestaurantSettings={restaurantSettings}
               onRecordSalaryPayment={handleRecordSalaryPayment}
               onRecordInventoryPurchase={handleRecordInventoryPurchase}
               onAddStaff={handleAddStaff}
@@ -5068,6 +5164,7 @@ export function App() {
           staffList={staffList}
           salaryPayments={salaryPayments}
           inventoryPurchases={inventoryPurchases}
+          parentRestaurantSettings={restaurantSettings}
           onRecordSalaryPayment={handleRecordSalaryPayment}
           onRecordInventoryPurchase={handleRecordInventoryPurchase}
           onAddStaff={handleAddStaff}

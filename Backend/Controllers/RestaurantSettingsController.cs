@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using HMS.DTOs;
 using HMS.Models;
@@ -17,15 +18,18 @@ public class RestaurantSettingsController : ControllerBase
     private readonly RestaurantSettingsService _settingsService;
     private readonly ILogger<RestaurantSettingsController> _logger;
     private readonly IRealtimeSyncService _realtimeSync;
+    private readonly ISseBroadcaster _sseBroadcaster;
 
     public RestaurantSettingsController(
         RestaurantSettingsService settingsService,
         ILogger<RestaurantSettingsController> logger,
-        IRealtimeSyncService realtimeSync)
+        IRealtimeSyncService realtimeSync,
+        ISseBroadcaster sseBroadcaster)
     {
         _settingsService = settingsService;
         _logger = logger;
         _realtimeSync = realtimeSync;
+        _sseBroadcaster = sseBroadcaster;
     }
 
     /// <summary>
@@ -92,6 +96,7 @@ public class RestaurantSettingsController : ControllerBase
 
             var savedSettings = await _settingsService.SaveSettingsAsync(dto);
 
+            // 1. Broadcast to all SignalR clients
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
                 EventType = "restaurantSetting:updated",
@@ -100,6 +105,15 @@ public class RestaurantSettingsController : ControllerBase
                 BranchId = 1,
                 RecordId = "1",
                 Data = savedSettings
+            });
+
+            // 2. Broadcast to all SSE clients connected to /api/events
+            await _sseBroadcaster.BroadcastAsync("restaurantSetting:updated", savedSettings);
+            await _sseBroadcaster.BroadcastAsync("SYNC", new Dictionary<string, object?>
+            {
+                { "gourmet_pos_settings_v1", savedSettings },
+                { "restaurantSettings", savedSettings },
+                { "restaurant_settings", savedSettings }
             });
 
             return Ok(new

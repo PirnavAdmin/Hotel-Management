@@ -1,5 +1,5 @@
 const ACTION_SELECTOR = "button, [role=\"button\"]";
-const EXISTING_LOADING_INDICATOR = ".app-loading-spinner, .takeaway-spinner, .auth-spinner, .animate-spin, [data-loading-indicator]";
+const EXISTING_LOADING_INDICATOR = ".app-loading-spinner, .takeaway-spinner, .auth-spinner, .animate-spin, .spin, [data-loading-indicator]";
 
 function makeSpinner() {
   const spinner = document.createElement("span");
@@ -22,15 +22,22 @@ export function installButtonLoading() {
 
     if (loading) {
       if (!state) {
-        const spinner = button.querySelector(EXISTING_LOADING_INDICATOR) ? null : makeSpinner();
         state = {
           count: 0,
           wasDisabled: Boolean(button.disabled),
           wasBusy: button.getAttribute("aria-busy"),
-          spinner,
+          spinner: null,
+          pendingSpinner: null,
         };
         states.set(button, state);
-        if (spinner) button.insertBefore(spinner, button.firstChild);
+        state.pendingSpinner = window.requestAnimationFrame(() => {
+          state.pendingSpinner = null;
+          if (!button.isConnected || states.get(button) !== state || state.count === 0) return;
+          if (!button.querySelector(EXISTING_LOADING_INDICATOR)) {
+            state.spinner = makeSpinner();
+            button.insertBefore(state.spinner, button.firstChild);
+          }
+        });
         button.disabled = true;
         button.setAttribute("aria-busy", "true");
       }
@@ -42,6 +49,10 @@ export function installButtonLoading() {
     state.count = Math.max(0, state.count - 1);
     if (state.count > 0) return;
 
+    if (state.pendingSpinner !== null) {
+      window.cancelAnimationFrame(state.pendingSpinner);
+      state.pendingSpinner = null;
+    }
     state.spinner?.remove();
     button.disabled = state.wasDisabled;
     if (state.wasBusy === null) button.removeAttribute("aria-busy");

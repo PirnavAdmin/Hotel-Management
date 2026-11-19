@@ -115,7 +115,7 @@ export async function getUsers() {
   } catch {}
   if (!cachedUsers.length) {
     cachedUsers = [
-      { id: 'pirnav', username: 'pirnav', name: 'pirnav', role: 'admin', email: 'maturi.vikas@pirnav.com', mobile: '9999999999', createdAt: null },
+      { id: 'pirnav', username: 'pirnav', name: 'pirnav', role: 'admin', email: 'pasupuleti.bhanu7@gmail.com', mobile: '9999999999', createdAt: null },
       { id: 'pos-1', username: 'pos', name: 'Billing Counter Operator', role: 'pos', email: 'pos@bhanupos.com', mobile: '9999999999', createdAt: null },
       { id: 'kot-1', username: 'kot', name: 'Kitchen Master Chef', role: 'kot', email: 'kitchen@bhanupos.com', mobile: '9999999999', createdAt: null }
     ];
@@ -238,8 +238,8 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
         username: 'pirnav',
         name: 'pirnav',
         role: 'admin',
-        email: 'maturi.vikas@pirnav.com',
-        loginEmail: 'maturi.vikas@pirnav.com',
+        email: 'pasupuleti.bhanu7@gmail.com',
+        loginEmail: 'pasupuleti.bhanu7@gmail.com',
         loginIdentifier: trimmedInput,
         mobile: '9999999999',
         loginAt: new Date().toISOString()
@@ -286,15 +286,16 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
 
   const isInputEmail = trimmedInput.includes('@');
   const registeredEmail = getRegisteredEmail(user, jwt, trimmedInput);
-  const resolvedEmail = (registeredEmail ||
+  let resolvedEmail = (registeredEmail ||
     (isInputEmail
       ? trimmedInput
       : String(user?.email || user?.Email || user?.emailAddress || jwt?.email || '').trim())
   ).toLowerCase();
 
   let sessionName = user?.name || user?.FullName || user?.fullName || jwt?.name || trimmedInput;
-  if (normUser.includes('pirnav') || String(sessionName).includes('SURESH REDDY')) {
+  if (normUser.includes('pirnav') || String(sessionName).includes('SURESH REDDY') || resolvedEmail === 'maturi.vikas@pirnav.com') {
     sessionName = 'pirnav';
+    resolvedEmail = 'pasupuleti.bhanu7@gmail.com';
   }
 
   const session = {
@@ -316,7 +317,19 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
 export function getSession() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_SESSION);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && (parsed.username === 'pirnav' || parsed.name === 'pirnav' || parsed.email === 'maturi.vikas@pirnav.com')) {
+        parsed.email = 'pasupuleti.bhanu7@gmail.com';
+        parsed.loginEmail = 'pasupuleti.bhanu7@gmail.com';
+        try {
+          const sessStr = JSON.stringify(parsed);
+          localStorage.setItem(STORAGE_KEY_SESSION, sessStr);
+          localStorage.setItem('auth_user', sessStr);
+        } catch {}
+      }
+      return parsed;
+    }
   } catch {}
   return null;
 }

@@ -64,7 +64,7 @@ export function AdminSidebar({
     const sName = getStoredSettings().restaurantName;
     if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant") return sName.trim();
     if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
-    return sName || restaurantName || "Bhanu Bistro";
+    return sName || restaurantName || "AVSR FOOD COURT";
   });
   const [liveTagline, setLiveTagline] = useState(() => {
     return getStoredSettings().tagline || restaurantTagline || "BAR & CAFE";
@@ -285,7 +285,7 @@ export function AdminSidebar({
             }}
           >
             <span style={{ color: "var(--text-main)", letterSpacing: "0.2px" }}>
-              {liveName || "Bhanu Bistro"}
+              {liveName || "AVSR FOOD COURT"}
             </span>
           </div>
           <div

@@ -27,7 +27,6 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { dedupeOrders, formatInvoiceNumber, getOrderTimestamp, parseOrderToYMD } from "../utils/orderDedupe";
-import { requestLiveInvoiceRecords } from "../utils/liveInvoiceData";
 import { compareTablesNaturally } from "../utils/tableSortHelper";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
@@ -111,20 +110,6 @@ export function AdminOverview({
   }, [pastOrders]);
 
   useEffect(() => {
-    let active = true;
-    const fetchOrders = () => {
-      requestLiveInvoiceRecords()
-        .then(({ records }) => {
-          if (!active) return;
-          if (Array.isArray(records) && records.length > 0) {
-            setOrdersList((current) => dedupeOrders([...records, ...(Array.isArray(current) ? current : [])]));
-          }
-        })
-        .catch(() => {});
-    };
-
-    fetchOrders();
-
     const syncFromStorage = (e) => {
       if (Array.isArray(e?.detail) && e.detail.length > 0) {
         setOrdersList((current) => dedupeOrders([...e.detail, ...(Array.isArray(current) ? current : [])]));
@@ -139,7 +124,6 @@ export function AdminOverview({
           }
         }
       } catch {}
-      fetchOrders();
     };
 
     const syncInventory = (e) => {
@@ -190,7 +174,6 @@ export function AdminOverview({
     window.addEventListener("avsr-menu-updated", syncMenu);
 
     return () => {
-      active = false;
       window.removeEventListener("storage", syncFromStorage);
       window.removeEventListener("focus", syncFromStorage);
       window.removeEventListener("avsr-orders-updated", syncFromStorage);
@@ -207,8 +190,21 @@ export function AdminOverview({
   ]);
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const todayUtcYMD = now.toISOString().slice(0, 10);
 
-  const todayOrders = cleanOrders.filter((o) => parseOrderToYMD(o) === todayYMD);
+  const todayOrders = cleanOrders.filter((o) => {
+    if (!o) return false;
+    const ymd = parseOrderToYMD(o);
+    if (ymd === todayYMD || ymd === todayUtcYMD) return true;
+    const ts = getOrderTimestamp(o);
+    if (ts > 0) {
+      const d = new Date(ts);
+      const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const utc = d.toISOString().slice(0, 10);
+      return local === todayYMD || local === todayUtcYMD || utc === todayYMD || utc === todayUtcYMD;
+    }
+    return false;
+  });
   const getOrderAmount = (order) =>
     Number(order?.grandTotal ?? order?.totalAmount ?? order?.total ?? order?.paidAmount) || 0;
 
@@ -235,16 +231,13 @@ export function AdminOverview({
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
-    if (["vacant", "available", "free"].includes(rawStatus)) {
-      return false;
-    }
-    if (["occupied", "dining", "billed"].includes(rawStatus)) {
-      return true;
-    }
     const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
     );
-    return Boolean(hasActiveItems);
+    if (hasActiveItems) return true;
+    if (["occupied", "dining", "billed"].includes(rawStatus)) return true;
+    if (Number(tbl.guests || tbl.occupiedChairs) > 0 && !["reserved", "cleaning", "inactive", "vacant"].includes(rawStatus)) return true;
+    return false;
   };
 
   const occupiedTables = liveTables.filter(isTableOccupied);
