@@ -1718,6 +1718,8 @@ import {
   LogOut,
   LayoutGrid,
   List,
+  RotateCcw,
+  ArrowUpDown,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
@@ -1813,6 +1815,7 @@ export function TableDetailView({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [orderMode, setOrderMode] = useState("kitchen");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
+  const [menuSortOrder, setMenuSortOrder] = useState("default"); // default | price-asc | price-desc | name-asc
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
   const [tempNote, setTempNote] = useState("");
@@ -1895,7 +1898,18 @@ export function TableDetailView({
 
       return matchCat && matchSearch && matchDietary;
     });
-  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems]);
+
+    if (menuSortOrder === "price-asc") {
+      return [...items].sort((a, b) => Number(a?.price ?? a?.finalPrice ?? 0) - Number(b?.price ?? b?.finalPrice ?? 0));
+    }
+    if (menuSortOrder === "price-desc") {
+      return [...items].sort((a, b) => Number(b?.price ?? b?.finalPrice ?? 0) - Number(a?.price ?? a?.finalPrice ?? 0));
+    }
+    if (menuSortOrder === "name-asc") {
+      return [...items].sort((a, b) => String(a?.name ?? a?.dishName ?? "").localeCompare(String(b?.name ?? b?.dishName ?? "")));
+    }
+    return items;
+  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems, menuSortOrder]);
 
   const emptyStateContent = activeMenuLoadError
     ? {
@@ -2953,9 +2967,9 @@ export function TableDetailView({
               className="pos-menu-search-control"
               style={{
                 position: "relative",
-                flex: "1 1 120px",
-                minWidth: "90px",
-                maxWidth: "200px",
+                flex: "1 1 140px",
+                minWidth: "100px",
+                maxWidth: "240px",
               }}
             >
               <Search
@@ -3090,6 +3104,104 @@ export function TableDetailView({
                 );
               })}
             </div>
+
+            {/* Quick Sort Order */}
+            <div
+              style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <select
+                value={menuSortOrder}
+                onChange={(e) => setMenuSortOrder(e.target.value)}
+                aria-label="Sort dishes"
+                title="Sort menu dishes"
+                style={{
+                  height: "30px",
+                  background: "var(--bg-primary)",
+                  border: `1px solid ${menuSortOrder !== "default" ? "var(--accent-amber)" : "var(--border-subtle)"}`,
+                  borderRadius: "var(--radius-sm)",
+                  color: menuSortOrder !== "default" ? "var(--accent-amber-light)" : "var(--text-muted)",
+                  padding: "0.2rem 1.3rem 0.2rem 0.55rem",
+                  fontSize: "0.74rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              >
+                <option value="default">Default Sort</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name-asc">Name: A to Z</option>
+              </select>
+            </div>
+
+            {/* Dish Count Badge */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0 0.55rem",
+                height: "30px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "0.74rem",
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+              title="Number of dishes available"
+            >
+              <span
+                style={{
+                  color: "var(--accent-amber-light)",
+                  fontWeight: 700,
+                }}
+              >
+                {filteredMenuItems.length}
+              </span>
+              <span>{filteredMenuItems.length === 1 ? "dish" : "dishes"}</span>
+            </div>
+
+            {/* Clear / Reset Filters Button */}
+            {(Boolean(searchQuery) || selectedCategory !== "all" || dietaryFilter !== "all" || menuSortOrder !== "default") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setDietaryFilter("all");
+                  setMenuSortOrder("default");
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  height: "30px",
+                  padding: "0 0.55rem",
+                  borderRadius: "var(--radius-sm)",
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  color: "#f87171",
+                  fontSize: "0.73rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "all 0.15s ease",
+                }}
+                title="Reset search and filters to show all dishes"
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
+              </button>
+            )}
 
             {/* View Mode Switcher: Rows (default) vs Cards */}
             <div
