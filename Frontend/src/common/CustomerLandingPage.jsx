@@ -231,7 +231,7 @@ export function CustomerLandingPage({
     const path = window.location.pathname;
     const user = getInitialCustomer();
     if (hash === "#auth") return "auth";
-    if (hash === "#menu" || path === "/menu") return "menu";
+    if (hash === "#menu" || path === "/menu" || path.startsWith("/menu")) return "menu";
     if (hash === "#cart") return "menu";
     if (hash === "#checkout") return user ? "checkout" : "auth";
     if (hash === "#payment") return user ? "payment" : "auth";

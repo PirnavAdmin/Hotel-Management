@@ -1776,6 +1776,18 @@ export function AdminPortal({
   const [selectedQrTableId, setSelectedQrTableId] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
+  const [customQrHost, setCustomQrHost] = useState("");
+
+  const getEffectiveOrigin = () => {
+    if (customQrHost && customQrHost.trim()) {
+      let host = customQrHost.trim().replace(/\/$/, "");
+      if (!host.startsWith("http://") && !host.startsWith("https://")) {
+        host = `http://${host}`;
+      }
+      return host;
+    }
+    return typeof window !== "undefined" ? window.location.origin : "";
+  };
 
   useEffect(() => {
     if (!qrModalTable) {
@@ -1786,15 +1798,19 @@ export function AdminPortal({
       ? null 
       : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)) || (qrModalTable !== "ALL" ? qrModalTable : (tables?.[0] || null)));
     
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const origin = getEffectiveOrigin();
     const targetUrl = !currentTbl
       ? `${origin}/menu`
       : `${origin}/menu?table=${encodeURIComponent(currentTbl.name || currentTbl.tableName || `Table-${currentTbl.id}`)}`;
 
-    QRCode.toDataURL(targetUrl, { errorCorrectionLevel: "H" }).then((url) => {
-      setQrDataUrl(url);
-    });
-  }, [qrModalTable, selectedQrTableId, tables]);
+    QRCode.toDataURL(targetUrl, { width: 300, margin: 2, errorCorrectionLevel: "M" })
+      .then((url) => {
+        setQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error("QR Code generation error:", err);
+      });
+  }, [qrModalTable, selectedQrTableId, tables, customQrHost]);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerRole, setNewServerRole] = useState("");
@@ -8232,6 +8248,56 @@ export function AdminPortal({
               </select>
             </div>
 
+            {/* Host Network / Target Switcher */}
+            <div style={{ marginBottom: "0.85rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+                <label style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                  QR SCAN TARGET HOST
+                </label>
+                <span style={{ fontSize: "0.7rem", color: customQrHost ? "#60a5fa" : "#10b981", fontWeight: 700 }}>
+                  {customQrHost ? "Cloud Server (4G/5G)" : "Local Wi-Fi"}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setCustomQrHost("http://65.0.8.48:3000")}
+                  style={{
+                    flex: 1,
+                    minWidth: "140px",
+                    padding: "0.38rem 0.6rem",
+                    borderRadius: "6px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    background: customQrHost === "http://65.0.8.48:3000" ? "rgba(59, 130, 246, 0.2)" : "var(--bg-tertiary)",
+                    color: customQrHost === "http://65.0.8.48:3000" ? "#60a5fa" : "var(--text-muted)",
+                    border: `1px solid ${customQrHost === "http://65.0.8.48:3000" ? "#3b82f6" : "var(--neutral-border)"}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  🌐 Cloud (4G/5G Scannable)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomQrHost("")}
+                  style={{
+                    flex: 1,
+                    minWidth: "140px",
+                    padding: "0.38rem 0.6rem",
+                    borderRadius: "6px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    background: !customQrHost ? "rgba(16, 185, 129, 0.2)" : "var(--bg-tertiary)",
+                    color: !customQrHost ? "#34d399" : "var(--text-muted)",
+                    border: `1px solid ${!customQrHost ? "#10b981" : "var(--neutral-border)"}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  📶 Current Device / Wi-Fi
+                </button>
+              </div>
+            </div>
+
             {/* QR Card Preview */}
             <div
               style={{
@@ -8242,7 +8308,7 @@ export function AdminPortal({
                 textAlign: "center",
                 border: "2px dashed #cbd5e1",
                 boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                margin: "1rem 0",
+                margin: "0.75rem 0",
               }}
             >
               <div style={{ fontSize: "1rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px", color: "#ea580c" }}>
@@ -8296,7 +8362,7 @@ export function AdminPortal({
                 readOnly
                 value={(() => {
                   const currentTbl = selectedQrTableId === "GLOBAL" ? null : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)));
-                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  const origin = getEffectiveOrigin();
                   return !currentTbl ? `${origin}/menu` : `${origin}/menu?table=${encodeURIComponent(currentTbl.name || currentTbl.tableName || `Table-${currentTbl.id}`)}`;
                 })()}
                 style={{
@@ -8313,7 +8379,7 @@ export function AdminPortal({
                 type="button"
                 onClick={() => {
                   const currentTbl = selectedQrTableId === "GLOBAL" ? null : ((tables || []).find((t) => String(t.id) === String(selectedQrTableId)));
-                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  const origin = getEffectiveOrigin();
                   const url = !currentTbl ? `${origin}/menu` : `${origin}/menu?table=${encodeURIComponent(currentTbl.name || currentTbl.tableName || `Table-${currentTbl.id}`)}`;
                   navigator.clipboard.writeText(url).then(() => {
                     setCopiedLink(true);

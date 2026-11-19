@@ -4640,7 +4640,7 @@ export function App() {
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
             restaurantLogo={restaurantSettings.logo || ""}
-            menuItems={sharedRecordLoad.menu === "ready" ? menuItems : []}
+            menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
             menuLoading={sharedRecordLoad.menu === "loading"}
             menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
             tables={tables}
