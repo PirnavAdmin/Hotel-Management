@@ -1904,6 +1904,22 @@ export function App() {
         }));
       } else if (name === "KitchenStatusAlert" && payload && typeof payload === "object") {
         const alertTableId = payload.tableId ?? payload.TableId;
+        // Resolve accurate table name from in-memory tables if payload tableName is empty or generic
+        let resolvedTableName = payload.tableName || payload.TableName || "";
+        if (!resolvedTableName || /^table\s*\d+$/i.test(resolvedTableName.trim())) {
+          const matchedTbl = tables.find((t) =>
+            String(t.id) === String(alertTableId) ||
+            String(t.backendTableId) === String(alertTableId) ||
+            `table-${t.id}` === String(alertTableId)
+          );
+          if (matchedTbl?.name && !/^table\s*\d+$/i.test(matchedTbl.name.trim())) {
+            resolvedTableName = matchedTbl.name;
+          }
+        }
+        if (resolvedTableName) {
+          payload.tableName = resolvedTableName;
+          payload.TableName = resolvedTableName;
+        }
         const alertItemId = payload.itemId ?? payload.ItemId;
         const alertKotStatus = payload.kotStatus ?? payload.KotStatus;
         if (alertItemId != null && alertKotStatus && alertTableId != null) {
@@ -3174,16 +3190,31 @@ export function App() {
       return;
     }
 
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const cleanTableId = String(tableId).replace(/^table-/, "");
+    const isTableMatch = (t) =>
+      String(t.id) === String(tableId) ||
+      String(t.id) === cleanTableId ||
+      `table-${t.id}` === String(tableId) ||
+      String(t.backendTableId ?? "") === String(tableId) ||
+      String(t.backendTableId ?? "") === cleanTableId ||
+      (t.name && String(t.name).trim().toLowerCase() === String(tableId).trim().toLowerCase()) ||
+      (t.tableName && String(t.tableName).trim().toLowerCase() === String(tableId).trim().toLowerCase());
+
+    const tbl = tables.find(isTableMatch);
     const itemObj =
       itemId && tbl && Array.isArray(tbl.items)
-        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
+        ? tbl.items.find((i) =>
+            String(i.menuItemId ?? "") === String(itemId) ||
+            String(i.id ?? "") === String(itemId) ||
+            String(i.orderItemId ?? "") === String(itemId) ||
+            (i.name && String(i.name).trim().toLowerCase() === String(itemId).trim().toLowerCase()),
+          )
         : null;
 
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
-        if (String(t.id) !== String(tableId)) return t;
+        if (!isTableMatch(t)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
           if (i.isBarItem || i.isBarDrink) return i;
@@ -4945,10 +4976,26 @@ export function App() {
       {/* Real-time Kitchen Status Alert Banner (Cooking Started & Cooking Completed) */}
       {activeKitchenAlert && (() => {
         const isCompleted = activeKitchenAlert.type === "cooking_completed";
-        const titleText = getCleanAlertTitle(activeKitchenAlert);
-        const messageText = getCleanAlertMessage(activeKitchenAlert);
+        let titleText = getCleanAlertTitle(activeKitchenAlert);
+        let messageText = getCleanAlertMessage(activeKitchenAlert);
+        if (titleText.includes("()") && tableLabel) {
+          titleText = titleText.replace("()", `(${tableLabel})`);
+        }
+        if (messageText.includes("for (Batch") && tableLabel) {
+          messageText = messageText.replace("for (Batch", `for ${tableLabel} (Batch`);
+        } else if (messageText.includes("for (") && tableLabel) {
+          messageText = messageText.replace("for (", `for ${tableLabel} (`);
+        }
         const timestampText = getCleanAlertTimestamp(activeKitchenAlert);
-        const tableLabel = activeKitchenAlert.tableName || (activeKitchenAlert.tableId ? `Table ${activeKitchenAlert.tableId}` : "Table");
+        const matchedTbl = tables.find((t) =>
+          String(t.id) === String(activeKitchenAlert.tableId) ||
+          String(t.backendTableId) === String(activeKitchenAlert.tableId) ||
+          `table-${t.id}` === String(activeKitchenAlert.tableId)
+        );
+        const rawLabel = activeKitchenAlert.tableName;
+        const tableLabel = (rawLabel && !/^table\s*\d+$/i.test(rawLabel.trim()))
+          ? rawLabel
+          : (matchedTbl?.name || rawLabel || (activeKitchenAlert.tableId ? `Table ${activeKitchenAlert.tableId}` : "Table"));
 
         return (
           <div

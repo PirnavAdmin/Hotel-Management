@@ -72,10 +72,20 @@ public class KitchenController : ControllerBase
             .AsNoTracking()
             .Where(ticket => kotIds.Contains(ticket.Id) && ticket.IsActive && !ticket.IsDeleted)
             .ToDictionaryAsync(ticket => ticket.Id, ticket => ticket.CreatedAt);
+        var deletedTableIds = await _context.DiningTables.AsNoTracking()
+            .Where(d => d.IsDeleted || !d.IsActive)
+            .Select(d => d.Id)
+            .ToListAsync();
+
+        orders = orders
+            .Where(o => string.Equals(o.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase) || !o.TableId.HasValue || !deletedTableIds.Contains(o.TableId.Value))
+            .ToList();
+
         var tickets = new List<KotTicketDto>();
 
         foreach (var order in orders)
         {
+            await PopulateTableDetailsAsync(order);
             var (kitchenItems, _) = await OrderItemRouting.ClassifyOrderItemsAsync(_context, order.Items);
             var batches = kitchenItems
                 .Where(i =>
@@ -263,6 +273,7 @@ public class KitchenController : ControllerBase
 
             await _context.SaveChangesAsync();
             await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, item.OrderId);
+            if (item.Order != null) await PopulateTableDetailsAsync(item.Order);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
@@ -381,6 +392,7 @@ public class KitchenController : ControllerBase
 
         await _context.SaveChangesAsync();
         await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
+        await PopulateTableDetailsAsync(order);
 
         await _realtimeSync.PublishAsync(new RealtimeEvent
         {
@@ -408,12 +420,14 @@ public class KitchenController : ControllerBase
                     type = "cooking_started",
 
                     title =
-                        $"Cooking Started ({order.TableName})",
+                        string.IsNullOrWhiteSpace(order.TableName)
+                            ? "Cooking Started"
+                            : $"Cooking Started ({order.TableName})",
 
                     message =
-                        $"Chef has started preparing " +
-                        $"order for {order.TableName} " +
-                        $"(Batch #{batch}).",
+                        string.IsNullOrWhiteSpace(order.TableName)
+                            ? $"Chef has started preparing order (Batch #{batch})."
+                            : $"Chef has started preparing order for {order.TableName} (Batch #{batch}).",
 
                     tableId = order.TableId,
 
@@ -488,6 +502,7 @@ public class KitchenController : ControllerBase
 
         await _context.SaveChangesAsync();
         await TakeawayStatusSyncHelper.SyncTakeawayFromItemsAsync(_context, order.Id);
+        await PopulateTableDetailsAsync(order);
 
         await _realtimeSync.PublishAsync(new RealtimeEvent
         {
@@ -515,14 +530,14 @@ public class KitchenController : ControllerBase
                     type = "cooking_completed",
 
                     title =
-                        $"Food Ready to Serve! " +
-                        $"({order.TableName})",
+                        string.IsNullOrWhiteSpace(order.TableName)
+                            ? "Food Ready to Serve!"
+                            : $"Food Ready to Serve! ({order.TableName})",
 
                     message =
-                        $"All dishes for " +
-                        $"{order.TableName} " +
-                        $"(Batch #{batch}) are ready " +
-                        $"on the pass!",
+                        string.IsNullOrWhiteSpace(order.TableName)
+                            ? $"All dishes (Batch #{batch}) are ready on the pass!"
+                            : $"All dishes for {order.TableName} (Batch #{batch}) are ready on the pass!",
 
                     tableId = order.TableId,
 
@@ -533,5 +548,43 @@ public class KitchenController : ControllerBase
         {
             message = "Ticket marked as ready."
         });
+    }
+
+
+    private async Task PopulateTableDetailsAsync(Order order)
+    {
+        if (order == null) return;
+        if (string.Equals(order.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase))
+        {
+            order.TableName = "Takeaway";
+            order.Section = "Takeaway";
+            order.ServerName = "Takeaway Counter";
+            return;
+        }
+
+        if (order.TableId.HasValue && order.TableId.Value > 0)
+        {
+            var dt = await _context.DiningTables.AsNoTracking().FirstOrDefaultAsync(d => d.Id == order.TableId.Value);
+            var rt = await _context.RestaurantTables.AsNoTracking().FirstOrDefaultAsync(r => r.TableId == order.TableId.Value && r.DeletedAt == null);
+            order.TableName = dt?.Name ?? rt?.TableName ?? rt?.TableNumber ?? $"Table {order.TableId.Value}";
+            if (dt != null)
+            {
+                var sec = await _context.DiningSections.AsNoTracking().FirstOrDefaultAsync(s => s.Id == dt.SectionId);
+                order.Section = sec?.SectionName ?? rt?.SectionArea ?? rt?.Location ?? "Main Hall";
+            }
+            else
+            {
+                order.Section = rt?.SectionArea ?? rt?.Location ?? "Main Hall";
+            }
+            if (string.IsNullOrWhiteSpace(order.ServerName) && dt?.AssignedWaiterId.HasValue == true)
+            {
+                var waiter = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s => s.Id == dt.AssignedWaiterId.Value);
+                if (waiter != null) order.ServerName = waiter.Name;
+            }
+        }
+        if (string.IsNullOrWhiteSpace(order.TableName))
+        {
+            order.TableName = $"Table {order.TableId?.ToString() ?? "1"}";
+        }
     }
 }
