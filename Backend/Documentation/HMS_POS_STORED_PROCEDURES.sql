@@ -1946,3 +1946,143 @@ proc_label: BEGIN
 
     SELECT 'SUCCESS' AS status, 200 AS status_code, 'Order cancelled successfully and table released' AS message, p_order_id AS order_id;
 END;
+
+
+DROP PROCEDURE IF EXISTS `sp_get_restaurant_settings`;
+CREATE PROCEDURE `sp_get_restaurant_settings`()
+BEGIN
+    SELECT 
+        `id`,
+        `restaurant_name`,
+        `tagline`,
+        `contact_number`,
+        `address`,
+        `gstin`,
+        `restaurant_logo`,
+        `food_gst_rate`,
+        `service_charge_rate`,
+        `service_charge_enabled`,
+        `rounding_mode`,
+        `currency`,
+        `receipt_header`,
+        `receipt_footer`,
+        `selected_qr_id`,
+        `payment_qrs`,
+        `show_logo_on_receipt`,
+        `show_address_on_receipt`,
+        `show_gst_breakdown`,
+        `low_stock_alerts_enabled`,
+        `display_theme`,
+        `updated_at`
+    FROM `restaurant_settings`
+    ORDER BY `id` ASC
+    LIMIT 1;
+END;
+
+DROP PROCEDURE IF EXISTS `sp_save_restaurant_settings`;
+CREATE PROCEDURE `sp_save_restaurant_settings`(
+    IN p_restaurant_name VARCHAR(200),
+    IN p_tagline VARCHAR(255),
+    IN p_contact_number VARCHAR(50),
+    IN p_address VARCHAR(255),
+    IN p_gstin VARCHAR(50),
+    IN p_restaurant_logo LONGTEXT,
+    IN p_food_gst_rate DECIMAL(5,2),
+    IN p_service_charge_rate DECIMAL(5,2),
+    IN p_service_charge_enabled TINYINT(1),
+    IN p_rounding_mode VARCHAR(20),
+    IN p_currency VARCHAR(10),
+    IN p_receipt_header VARCHAR(255),
+    IN p_receipt_footer VARCHAR(255),
+    IN p_selected_qr_id VARCHAR(50),
+    IN p_payment_qrs LONGTEXT,
+    IN p_show_logo_on_receipt TINYINT(1),
+    IN p_show_address_on_receipt TINYINT(1),
+    IN p_show_gst_breakdown TINYINT(1),
+    IN p_low_stock_alerts_enabled TINYINT(1),
+    IN p_display_theme VARCHAR(50)
+)
+BEGIN
+    DECLARE v_count INT;
+    
+    SELECT COUNT(*) INTO v_count FROM `restaurant_settings` WHERE `id` = 1;
+    
+    IF v_count = 0 THEN
+        INSERT INTO `restaurant_settings` (
+            `id`, `restaurant_name`, `tagline`, `contact_number`, `address`, `gstin`,
+            `restaurant_logo`, `food_gst_rate`, `service_charge_rate`, `service_charge_enabled`,
+            `rounding_mode`, `currency`, `receipt_header`, `receipt_footer`,
+            `selected_qr_id`, `payment_qrs`, `show_logo_on_receipt`, `show_address_on_receipt`,
+            `show_gst_breakdown`, `low_stock_alerts_enabled`, `display_theme`
+        ) VALUES (
+            1, p_restaurant_name, p_tagline, p_contact_number, p_address, p_gstin,
+            p_restaurant_logo, p_food_gst_rate, p_service_charge_rate, p_service_charge_enabled,
+            p_rounding_mode, p_currency, p_receipt_header, p_receipt_footer,
+            p_selected_qr_id, p_payment_qrs, p_show_logo_on_receipt, p_show_address_on_receipt,
+            p_show_gst_breakdown, p_low_stock_alerts_enabled, p_display_theme
+        );
+    ELSE
+        UPDATE `restaurant_settings` SET
+            `restaurant_name` = p_restaurant_name,
+            `tagline` = p_tagline,
+            `contact_number` = p_contact_number,
+            `address` = p_address,
+            `gstin` = p_gstin,
+            `restaurant_logo` = COALESCE(p_restaurant_logo, `restaurant_logo`),
+            `food_gst_rate` = p_food_gst_rate,
+            `service_charge_rate` = p_service_charge_rate,
+            `service_charge_enabled` = p_service_charge_enabled,
+            `rounding_mode` = p_rounding_mode,
+            `currency` = p_currency,
+            `receipt_header` = p_receipt_header,
+            `receipt_footer` = p_receipt_footer,
+            `selected_qr_id` = p_selected_qr_id,
+            `payment_qrs` = COALESCE(p_payment_qrs, `payment_qrs`),
+            `show_logo_on_receipt` = p_show_logo_on_receipt,
+            `show_address_on_receipt` = p_show_address_on_receipt,
+            `show_gst_breakdown` = p_show_gst_breakdown,
+            `low_stock_alerts_enabled` = p_low_stock_alerts_enabled,
+            `display_theme` = p_display_theme,
+            `updated_at` = NOW()
+        WHERE `id` = 1;
+    END IF;
+
+    -- Update key-value settings table
+    INSERT INTO `settings` (`branch_id`, `setting_key`, `setting_value`)
+    VALUES (1, 'RESTAURANT_NAME', p_restaurant_name)
+    ON DUPLICATE KEY UPDATE `setting_value` = p_restaurant_name;
+
+    INSERT INTO `settings` (`branch_id`, `setting_key`, `setting_value`)
+    VALUES (1, 'RESTAURANT_TAGLINE', p_tagline)
+    ON DUPLICATE KEY UPDATE `setting_value` = p_tagline;
+
+    INSERT INTO `settings` (`branch_id`, `setting_key`, `setting_value`)
+    VALUES (1, 'CONTACT_NUMBER', p_contact_number)
+    ON DUPLICATE KEY UPDATE `setting_value` = p_contact_number;
+
+    SELECT 
+        `id`,
+        `restaurant_name`,
+        `tagline`,
+        `contact_number`,
+        `address`,
+        `gstin`,
+        `restaurant_logo`,
+        `food_gst_rate`,
+        `service_charge_rate`,
+        `service_charge_enabled`,
+        `rounding_mode`,
+        `currency`,
+        `receipt_header`,
+        `receipt_footer`,
+        `selected_qr_id`,
+        `payment_qrs`,
+        `show_logo_on_receipt`,
+        `show_address_on_receipt`,
+        `show_gst_breakdown`,
+        `low_stock_alerts_enabled`,
+        `display_theme`,
+        `updated_at`
+    FROM `restaurant_settings`
+    WHERE `id` = 1;
+END;

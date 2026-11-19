@@ -282,8 +282,15 @@ public class MenuItemService
 
     public async Task<MenuItemResponseDto?> ToggleAvailabilityAsync(long id, bool isAvailable)
     {
-        var existing = await GetMenuItemByIdAsync(id);
-        if (existing == null) return null;
+        var entity = await _context.MenuItems.FirstOrDefaultAsync(m => m.MenuItemId == id && m.DeletedAt == null);
+        if (entity != null)
+        {
+            entity.IsAvailable = isAvailable;
+            entity.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Menu item ID {Id} availability updated to {IsAvailable} via EF.", id, isAvailable);
+            return await GetMenuItemByIdAsync(id);
+        }
 
         var parameters = new Dictionary<string, object?>
         {
@@ -291,9 +298,49 @@ public class MenuItemService
             { "p_is_available", isAvailable ? 1 : 0 }
         };
 
-        await _spService.ExecuteNonQueryAsync("sp_ToggleMenuItemAvailability", parameters);
-        _logger.LogInformation("Menu item ID {Id} availability updated to {IsAvailable}.", id, isAvailable);
+        try
+        {
+            await _spService.ExecuteNonQueryAsync("sp_ToggleMenuItemAvailability", parameters);
+            _logger.LogInformation("Menu item ID {Id} availability updated to {IsAvailable} via SP.", id, isAvailable);
+            return await GetMenuItemByIdAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "sp_ToggleMenuItemAvailability failed for ID {Id}", id);
+        }
+
         return await GetMenuItemByIdAsync(id);
+    }
+
+    public async Task<MenuItemResponseDto?> ToggleAvailabilityAnyAsync(string identifier, bool isAvailable)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+
+        var clean = identifier.Trim();
+        if (clean.StartsWith("m-", StringComparison.OrdinalIgnoreCase))
+        {
+            clean = clean.Substring(2);
+        }
+
+        if (long.TryParse(clean, out long numId) && numId > 0)
+        {
+            var res = await ToggleAvailabilityAsync(numId, isAvailable);
+            if (res != null) return res;
+        }
+
+        // Try lookup by DishName
+        var byName = await _context.MenuItems.FirstOrDefaultAsync(m =>
+            m.DeletedAt == null &&
+            (m.DishName.ToLower() == identifier.ToLower() || m.DishName.ToLower() == clean.ToLower()));
+        if (byName != null)
+        {
+            byName.IsAvailable = isAvailable;
+            byName.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return await GetMenuItemByIdAsync(byName.MenuItemId);
+        }
+
+        return null;
     }
 
     public async Task<List<MenuItemResponseDto>> GetSpecialMenuItemsAsync(string? category = null, long? branchId = null)
@@ -320,11 +367,14 @@ public class MenuItemService
     public async Task<MenuItemResponseDto?> ToggleSpecialStatusAsync(long id, bool isSpecial)
     {
         _logger.LogInformation("Updating special status for menu item ID {Id} to {IsSpecial}", id, isSpecial);
-        var existing = await GetMenuItemByIdAsync(id);
-        if (existing == null)
+        var entity = await _context.MenuItems.FirstOrDefaultAsync(m => m.MenuItemId == id && m.DeletedAt == null);
+        if (entity != null)
         {
-            _logger.LogWarning("Cannot toggle special status: Menu item ID {Id} not found.", id);
-            return null;
+            entity.IsChefsSpecial = isSpecial;
+            entity.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Menu item ID {Id} special status updated to {IsSpecial} via EF.", id, isSpecial);
+            return await GetMenuItemByIdAsync(id);
         }
 
         var parameters = new Dictionary<string, object?>
@@ -333,10 +383,48 @@ public class MenuItemService
             { "p_is_chefs_special", isSpecial ? 1 : 0 }
         };
 
-        await _spService.ExecuteNonQueryAsync("sp_ToggleMenuItemSpecialStatus", parameters);
-        _logger.LogInformation("Menu item ID {Id} special status successfully updated to {IsSpecial}.", id, isSpecial);
+        try
+        {
+            await _spService.ExecuteNonQueryAsync("sp_ToggleMenuItemSpecialStatus", parameters);
+            _logger.LogInformation("Menu item ID {Id} special status successfully updated to {IsSpecial} via SP.", id, isSpecial);
+            return await GetMenuItemByIdAsync(id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "sp_ToggleMenuItemSpecialStatus failed for ID {Id}", id);
+        }
 
         return await GetMenuItemByIdAsync(id);
+    }
+
+    public async Task<MenuItemResponseDto?> ToggleSpecialStatusAnyAsync(string identifier, bool isSpecial)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+
+        var clean = identifier.Trim();
+        if (clean.StartsWith("m-", StringComparison.OrdinalIgnoreCase))
+        {
+            clean = clean.Substring(2);
+        }
+
+        if (long.TryParse(clean, out long numId) && numId > 0)
+        {
+            var res = await ToggleSpecialStatusAsync(numId, isSpecial);
+            if (res != null) return res;
+        }
+
+        var byName = await _context.MenuItems.FirstOrDefaultAsync(m =>
+            m.DeletedAt == null &&
+            (m.DishName.ToLower() == identifier.ToLower() || m.DishName.ToLower() == clean.ToLower()));
+        if (byName != null)
+        {
+            byName.IsChefsSpecial = isSpecial;
+            byName.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return await GetMenuItemByIdAsync(byName.MenuItemId);
+        }
+
+        return null;
     }
 
     /// <summary>

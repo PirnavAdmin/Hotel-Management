@@ -320,9 +320,39 @@ public static class DbInitializer
         catch { }
 
         SeedAccountingData(context);
+        SeedMenuItems(context);
     }
 
 
+
+    
+    private static void SeedMenuItems(AppDbContext context)
+    {
+        try
+        {
+            var count = context.MenuItems.Count(m => m.DeletedAt == null);
+            if (count > 5) return;
+
+            var conn = context.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open)
+            {
+                conn.Open();
+            }
+
+            var sqlPath = Path.Combine(AppContext.BaseDirectory, "Data", "seed_menu_items.sql");
+            if (!File.Exists(sqlPath))
+            {
+                sqlPath = Path.Combine(Directory.GetCurrentDirectory(), "Data", "seed_menu_items.sql");
+            }
+
+            if (File.Exists(sqlPath))
+            {
+                var sql = File.ReadAllText(sqlPath);
+                SafeExecuteSql(conn, sql);
+            }
+        }
+        catch { }
+    }
 
     private static void SeedAccountingData(AppDbContext context)
     {
@@ -465,6 +495,42 @@ public static class DbInitializer
             }
 
             SafeExecuteSql(conn, "ALTER DATABASE DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+            SafeExecuteSql(conn, @"
+                CREATE TABLE IF NOT EXISTS `restaurant_settings` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `restaurant_name` VARCHAR(200) NOT NULL DEFAULT 'AVSR FOOD COURT',
+                    `tagline` VARCHAR(255) NULL,
+                    `contact_number` VARCHAR(50) NULL,
+                    `address` VARCHAR(255) NULL,
+                    `gstin` VARCHAR(50) NULL,
+                    `restaurant_logo` LONGTEXT NULL,
+                    `food_gst_rate` DECIMAL(5,2) DEFAULT 5.00,
+                    `service_charge_rate` DECIMAL(5,2) DEFAULT 5.00,
+                    `service_charge_enabled` TINYINT(1) DEFAULT 1,
+                    `rounding_mode` VARCHAR(20) DEFAULT 'nearest',
+                    `currency` VARCHAR(10) DEFAULT '₹',
+                    `receipt_header` VARCHAR(255) NULL,
+                    `receipt_footer` VARCHAR(255) NULL,
+                    `selected_qr_id` VARCHAR(50) NULL,
+                    `payment_qrs` LONGTEXT NULL,
+                    `show_logo_on_receipt` TINYINT(1) DEFAULT 1,
+                    `show_address_on_receipt` TINYINT(1) DEFAULT 1,
+                    `show_gst_breakdown` TINYINT(1) DEFAULT 1,
+                    `low_stock_alerts_enabled` TINYINT(1) DEFAULT 1,
+                    `display_theme` VARCHAR(50) DEFAULT 'royal-saffron',
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+            SafeExecuteSql(conn, @"
+                INSERT INTO `restaurant_settings` (
+                    `id`, `restaurant_name`, `tagline`, `contact_number`, `address`, `gstin`,
+                    `food_gst_rate`, `service_charge_rate`, `service_charge_enabled`,
+                    `rounding_mode`, `currency`, `receipt_header`, `receipt_footer`,
+                    `display_theme`
+                )
+                SELECT 1, 'AVSR FOOD COURT', 'Restaurant Management & Fine Dining', '+91 98450 12345', 'Main Road, Near Tech Park, Hyderabad, India', '36AABCA1234F1Z5', 5.00, 5.00, 1, 'nearest', '₹', 'Welcome to AVSR Food Court!', 'Thank you for dining with us. Visit again!', 'royal-saffron'
+                FROM DUAL
+                WHERE NOT EXISTS (SELECT 1 FROM `restaurant_settings` WHERE `id` = 1);");
             SafeExecuteSql(conn, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET collation_connection = utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, @"

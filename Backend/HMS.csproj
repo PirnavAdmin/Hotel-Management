@@ -22,14 +22,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Data\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Documentation\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <!-- Auto-unlock executable before MSBuild/Visual Studio build to prevent MSB3026 / MSB3027 file lock errors -->
-  <Target Name="KillRunningHMS" BeforeTargets="BeforeBuild">
-    <Exec Command="taskkill /F /IM HMS.exe 2&gt;nul || exit 0" ContinueOnError="true" />
+  <Target Name="KillRunningHMS" BeforeTargets="_CreateAppHost;CreateAppHost;PrepareForBuild;BeforeBuild;CoreBuild;_CopyOutOfDateSourceItemsToOutputDirectory;CopyFilesToOutputDirectory">
+    <Exec Command="taskkill /F /IM HMS.exe 2&gt;nul || exit 0" ContinueOnError="true" IgnoreExitCode="true" />
   </Target>
 
 </Project>

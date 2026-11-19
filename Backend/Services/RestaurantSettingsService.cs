@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using HMS.Data;
+using HMS.Models;
 using HMS.DTOs;
 using Microsoft.Extensions.Logging;
 
@@ -13,11 +15,13 @@ public class RestaurantSettingsService
 {
     private static RestaurantSettingsDto? _fallbackSettings;
     private readonly SpService _spService;
+    private readonly AppDbContext _context;
     private readonly ILogger<RestaurantSettingsService> _logger;
 
-    public RestaurantSettingsService(SpService spService, ILogger<RestaurantSettingsService> logger)
+    public RestaurantSettingsService(SpService spService, AppDbContext context, ILogger<RestaurantSettingsService> logger)
     {
         _spService = spService;
+        _context = context;
         _logger = logger;
     }
 
@@ -50,7 +54,41 @@ public class RestaurantSettingsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error occurred while executing sp_get_restaurant_settings. Falling back to defaults.");
+            try
+            {
+                var row = await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1);
+                if (row != null)
+                {
+                    _logger.LogInformation("Loaded restaurant settings via EF Core for '{RestaurantName}'.", row.RestaurantName);
+                    return new RestaurantSettingsDto
+                    {
+                        RestaurantName = row.RestaurantName,
+                        Tagline = row.Tagline,
+                        ContactNumber = row.ContactNumber,
+                        Address = row.Address,
+                        Gstin = row.Gstin,
+                        RestaurantLogo = row.RestaurantLogo,
+                        FoodGstRate = row.FoodGstRate,
+                        ServiceChargeRate = row.ServiceChargeRate,
+                        ServiceChargeEnabled = row.ServiceChargeEnabled,
+                        RoundingMode = row.RoundingMode,
+                        Currency = row.Currency,
+                        ReceiptHeader = row.ReceiptHeader,
+                        ReceiptFooter = row.ReceiptFooter,
+                        SelectedQrId = row.SelectedQrId,
+                        PaymentQrs = row.PaymentQrs,
+                        ShowLogoOnReceipt = row.ShowLogoOnReceipt,
+                        ShowAddressOnReceipt = row.ShowAddressOnReceipt,
+                        ShowGstBreakdown = row.ShowGstBreakdown,
+                        LowStockAlertsEnabled = row.LowStockAlertsEnabled,
+                        DisplayTheme = row.DisplayTheme,
+                        UpdatedAt = row.UpdatedAt
+                    };
+                }
+            }
+            catch { }
+
+            _logger.LogWarning(ex, "sp_get_restaurant_settings not available, using fallback defaults.");
             return _fallbackSettings ?? new RestaurantSettingsDto();
         }
     }

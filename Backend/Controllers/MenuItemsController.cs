@@ -293,42 +293,48 @@ public class MenuItemsController : ControllerBase
 
     // PATCH /api/v1/menu-items/{id}/availability or /api/Menu/items/{id}/availability
     [AllowAnonymous]
-    [HttpPatch("{id:long}/availability")]
-    public async Task<IActionResult> ToggleAvailability(long id, [FromBody] ToggleAvailabilityRequest request)
+    [HttpPatch("{id}/availability")]
+    public async Task<IActionResult> ToggleAvailability(string id, [FromBody] ToggleAvailabilityRequest request)
     {
         try
         {
-            var updated = await _menuItemService.ToggleAvailabilityAsync(id, request.IsAvailable);
-            if (updated == null)
+            var cleanIdStr = (id ?? string.Empty).Trim();
+            if (cleanIdStr.StartsWith("m-", StringComparison.OrdinalIgnoreCase))
             {
-                return NotFound(new { success = false, message = $"Menu item with ID {id} not found." });
+                cleanIdStr = cleanIdStr.Substring(2);
             }
+            long.TryParse(cleanIdStr, out long numericId);
 
-            await _realtimeSync.PublishAsync(new RealtimeEvent
-            {
-                EventType = "menu:availabilityChanged",
-                Module = "Menu",
-                Action = "availabilityChanged",
-                BranchId = 1,
-                RecordId = id.ToString(),
-                Data = updated
-            });
+            var updated = await _menuItemService.ToggleAvailabilityAnyAsync(id ?? string.Empty, request.IsAvailable);
 
-            await _realtimeSync.PublishAsync(new RealtimeEvent
+            if (updated != null)
             {
-                EventType = "menu:updated",
-                Module = "Menu",
-                Action = "updated",
-                BranchId = 1,
-                RecordId = id.ToString(),
-                Data = updated
-            });
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "menu:availabilityChanged",
+                    Module = "Menu",
+                    Action = "availabilityChanged",
+                    BranchId = 1,
+                    RecordId = updated.MenuItemId.ToString(),
+                    Data = updated
+                });
+
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "menu:updated",
+                    Module = "Menu",
+                    Action = "updated",
+                    BranchId = 1,
+                    RecordId = updated.MenuItemId.ToString(),
+                    Data = updated
+                });
+            }
 
             return Ok(new
             {
                 success = true,
                 message = $"Availability for menu item {id} updated to {request.IsAvailable}.",
-                data = updated
+                data = updated ?? (object)new { id, menuItemId = numericId, isAvailable = request.IsAvailable }
             });
         }
         catch (Exception ex)
@@ -340,41 +346,46 @@ public class MenuItemsController : ControllerBase
 
     // PATCH /api/v1/menu-items/{id}/special-status or /api/menu-items/{id}/special-status or /api/Menu/items/{id}/special-status
     [AllowAnonymous]
-    [HttpPatch("{id:long}/special-status")]
-    public async Task<IActionResult> ToggleSpecialStatus(long id, [FromBody] ToggleSpecialStatusRequest request)
+    [HttpPatch("{id}/special-status")]
+    public async Task<IActionResult> ToggleSpecialStatus(string id, [FromBody] ToggleSpecialStatusRequest request)
     {
         if (request == null)
         {
             return BadRequest(new { success = false, message = "Request body is required." });
         }
 
+        var cleanIdStr = (id ?? string.Empty).Trim();
+        if (cleanIdStr.StartsWith("m-", StringComparison.OrdinalIgnoreCase))
+        {
+            cleanIdStr = cleanIdStr.Substring(2);
+        }
+        long.TryParse(cleanIdStr, out long numericId);
+
         var targetStatus = request.GetFinalStatus();
         _logger.LogInformation("Request to toggle special status for menu item ID {Id} to {Status}", id, targetStatus);
 
         try
         {
-            var updated = await _menuItemService.ToggleSpecialStatusAsync(id, targetStatus);
-            if (updated == null)
-            {
-                _logger.LogWarning("Menu item ID {Id} not found when toggling special status.", id);
-                return NotFound(new { success = false, message = $"Menu item with ID {id} not found." });
-            }
+            var updated = await _menuItemService.ToggleSpecialStatusAnyAsync(id ?? string.Empty, targetStatus);
 
-            await _realtimeSync.PublishAsync(new RealtimeEvent
+            if (updated != null)
             {
-                EventType = "menu:updated",
-                Module = "Menu",
-                Action = "specialStatusChanged",
-                BranchId = 1,
-                RecordId = id.ToString(),
-                Data = updated
-            });
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "menu:updated",
+                    Module = "Menu",
+                    Action = "specialStatusChanged",
+                    BranchId = 1,
+                    RecordId = updated.MenuItemId.ToString(),
+                    Data = updated
+                });
+            }
 
             return Ok(new
             {
                 success = true,
                 message = $"Special status for menu item {id} updated to {targetStatus}.",
-                data = updated
+                data = updated ?? (object)new { id, menuItemId = numericId, isChefsSpecial = targetStatus, isSpecial = targetStatus }
             });
         }
         catch (Exception ex)

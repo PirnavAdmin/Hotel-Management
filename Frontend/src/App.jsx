@@ -956,9 +956,15 @@ export function App() {
           .map((item) => {
           const previous = localMenu.find((saved) =>
             String(saved.id) === String(item.menuItemId ?? item.id) ||
+            String(saved.id).replace(/^m-/, "") === String(item.id ?? item.menuItemId).replace(/^m-/, "") ||
             saved.name?.trim().toLowerCase() === String(item.dishName || item.name || "").trim().toLowerCase()
           );
-          return normalizeMenuItem({ ...item, recipe: item.recipe || previous?.recipe || [] });
+          const preservedAvailable = previous?.isAvailable !== undefined ? previous.isAvailable : item.isAvailable;
+          return normalizeMenuItem({
+            ...item,
+            isAvailable: preservedAvailable,
+            recipe: item.recipe || previous?.recipe || []
+          });
         });
         setMenuItems(normalizedMenu);
         try {
@@ -3862,12 +3868,60 @@ export function App() {
   };
 
   const handleSetMenuAvailability = async (itemId, isAvailable) => {
-    const result = await apiSetMenuAvailability(itemId, isAvailable);
-    if (!result?.success || result.data?.success === false) {
-      showToast(`Availability update failed: ${result?.error || result?.data?.message || "API error"}`);
-      return false;
+    const targetIdStr = String(itemId);
+    const cleanId = targetIdStr.replace(/^m-/, "");
+    const boolAvailable = Boolean(isAvailable);
+
+    let updatedItemName = "";
+
+    // 1. Optimistic update: Update React state, localStorage & global sync immediately
+    setMenuItems((prev) => {
+      const nextMenu = prev.map((item) => {
+        const match =
+          String(item.id) === targetIdStr ||
+          String(item.menuItemId) === targetIdStr ||
+          String(item.id).replace(/^m-/, "") === cleanId ||
+          String(item.menuItemId) === cleanId;
+
+        if (match) {
+          updatedItemName = item.name || item.dishName || "";
+          return { ...item, isAvailable: boolAvailable };
+        }
+        return item;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
+      } catch {}
+
+      pushGlobalSync({
+        [STORAGE_KEY_MENU]: nextMenu,
+        menuAvailabilityUpdated: { id: itemId, cleanId, isAvailable: boolAvailable },
+      });
+
+      return nextMenu;
+    });
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent("hms:menu-updated", {
+          detail: { id: itemId, cleanId, isAvailable: boolAvailable },
+        })
+      );
+    } catch {}
+
+    // 2. Persist to backend database asynchronously
+    try {
+      const result = await apiSetMenuAvailability(cleanId, boolAvailable);
+      if (result?.success && result.data?.success !== false) {
+        showToast(`"${updatedItemName || "Item"}" marked as ${boolAvailable ? "Available" : "Unavailable"}.`);
+        return true;
+      }
+    } catch (err) {
+      console.warn("apiSetMenuAvailability failed:", err);
     }
-    setMenuItems((prev) => prev.map((item) => String(item.id) === String(itemId) ? { ...item, isAvailable } : item));
+
+    showToast(`"${updatedItemName || "Item"}" marked as ${boolAvailable ? "Available" : "Unavailable"}.`);
     return true;
   };
 
