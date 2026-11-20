@@ -286,6 +286,8 @@ export function CustomerLandingPage({
     }
   });
 
+  const isDineInMenu = Boolean(tableParam) || (typeof window !== "undefined" && (window.location.pathname === "/menu" || window.location.pathname.startsWith("/menu")));
+
   // Sync customer details when customerUser changes
   useEffect(() => {
     if (customerUser) {
@@ -1472,19 +1474,35 @@ export function CustomerLandingPage({
               <span>
                 <strong>{liveRestaurantName || restaurantName}</strong>
                 <small>
-                  {activeScreen === "menu"
-                    ? "Takeaway Ordering"
-                    : "Fine Dining & Takeaway"}
+                  {isDineInMenu
+                    ? (tableParam ? `Dining Table • ${tableParam}` : "Digital Restaurant Menu")
+                    : activeScreen === "menu"
+                      ? "Takeaway Ordering"
+                      : "Fine Dining & Takeaway"}
                 </small>
               </span>
             </a>
 
-            {/* Center Pill: Takeaway Only (Matches Mockup) */}
+            {/* Center Pill: Takeaway Only or Dine-In Menu */}
             {activeScreen === "menu" && (
-              <div className="takeaway-header-center-pill">
-                <ShoppingBag size={15} color="#f59e0b" />
-                <span>Takeaway Only</span>
-              </div>
+              isDineInMenu ? (
+                <div
+                  className="takeaway-header-center-pill"
+                  style={{
+                    background: "rgba(245, 158, 11, 0.14)",
+                    color: "var(--accent-amber-light, #fbbf24)",
+                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                  }}
+                >
+                  <Utensils size={14} color="#f59e0b" />
+                  <span>{tableParam ? `Table ${tableParam} Menu` : "Digital Dining Menu"}</span>
+                </div>
+              ) : (
+                <div className="takeaway-header-center-pill">
+                  <ShoppingBag size={15} color="#f59e0b" />
+                  <span>Takeaway Only</span>
+                </div>
+              )
             )}
 
             <div
@@ -1925,8 +1943,8 @@ export function CustomerLandingPage({
         {/* STEP 2: Browse Menu & Cart - POS Template (Sidebar + Grid + Slip) */}
         {/* ========================================================= */}
         {(activeScreen === "menu" || activeScreen === "cart") && (
-          <div className="pos-takeaway-app" id="menu">
-            {/* Top Table Switcher / Counter Strip (matches POS screen sub-strip) */}
+          <div className={`pos-takeaway-app ${isDineInMenu ? "is-dine-in-digital-menu" : ""}`} id="menu">
+            {/* Top Table Switcher / Counter Strip */}
             <div className="pos-takeaway-substrip">
               <div className="pos-takeaway-substrip-left">
                 <button
@@ -1937,63 +1955,69 @@ export function CustomerLandingPage({
                   <ArrowLeft size={14} /> Back to Home
                 </button>
                 <div className="pos-takeaway-status-tag">
-                  <span className="pos-status-indicator" />
-                  <strong>{tableParam ? `Table: ${tableParam}` : "Digital Menu"}</strong>
-                  <span className="pos-tag-label">{tableParam ? "DINE-IN MENU" : "LIVE MENU"}</span>
+                  <span className="pos-status-indicator" style={{ background: "#10b981" }} />
+                  <strong>{tableParam ? `Table: ${tableParam}` : (liveRestaurantName || restaurantName || "The Rustic Spin")}</strong>
+                  <span className="pos-tag-label" style={{ background: "#ea580c", color: "#ffffff", fontWeight: 800 }}>
+                    {tableParam ? "TABLE MENU" : "DIGITAL MENU"}
+                  </span>
                 </div>
               </div>
 
-              <div className="pos-takeaway-substrip-right">
-                <div className="pos-takeaway-info-chip">
-                  <Clock size={13} color="var(--accent-amber)" />
-                  <span>Est. Prep: 15–20 Mins</span>
+              {!isDineInMenu && (
+                <div className="pos-takeaway-substrip-right">
+                  <div className="pos-takeaway-info-chip">
+                    <Clock size={13} color="var(--accent-amber)" />
+                    <span>Est. Prep: 15–20 Mins</span>
+                  </div>
+                  <div className="pos-takeaway-info-chip is-highlight">
+                    <ShoppingBag size={13} />
+                    <span>
+                      {cartCount} item{cartCount === 1 ? "" : "s"}
+                    </span>
+                    <span className="pos-chip-sep">•</span>
+                    <strong className="font-mono">
+                      {formatPrice(totalAmount)}
+                    </strong>
+                  </div>
                 </div>
-                <div className="pos-takeaway-info-chip is-highlight">
-                  <ShoppingBag size={13} />
-                  <span>
-                    {cartCount} item{cartCount === 1 ? "" : "s"}
-                  </span>
-                  <span className="pos-chip-sep">•</span>
-                  <strong className="font-mono">
-                    {formatPrice(totalAmount)}
-                  </strong>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* 3-Panel Main Workspace (Full viewport height, exact POS template) */}
+            {/* 3-Panel Main Workspace */}
             <div className="pos-takeaway-workspace">
-              {/* ── Left Sidebar: Categories Navigation ── */}
-              <aside
-                className="pos-takeaway-sidebar"
-                aria-label="Menu Categories"
-              >
-                <div className="pos-takeaway-sidebar-header">
-                  <h4>CATEGORIES</h4>
-                </div>
-                <div className="pos-takeaway-categories-list">
-                  {takeawayCategories.map((cat) => {
-                    const IconComp = cat.icon || Utensils;
-                    const isSelected = activeCategoryId === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        className={`pos-takeaway-cat-btn ${isSelected ? "is-selected" : ""}`}
-                        onClick={() => {
-                          setSelectedCategory(cat.id);
-                          if (cat.id === "beverages") setOrderMode("bar");
-                          else if (orderMode === "bar" && cat.id !== "all")
-                            setOrderMode("kitchen");
-                        }}
-                      >
-                        <IconComp size={16} className="pos-cat-icon" />
-                        <span className="pos-cat-label">{cat.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </aside>
+              {/* ── Left Sidebar: Categories Navigation (Takeaway mode only) ── */}
+              {!isDineInMenu && (
+                <aside
+                  className="pos-takeaway-sidebar"
+                  aria-label="Menu Categories"
+                >
+                  <div className="pos-takeaway-sidebar-header">
+                    <h4>CATEGORIES</h4>
+                  </div>
+                  <div className="pos-takeaway-categories-list">
+                    {takeawayCategories.map((cat) => {
+                      const IconComp = cat.icon || Utensils;
+                      const isSelected = activeCategoryId === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          className={`pos-takeaway-cat-btn ${isSelected ? "is-selected" : ""}`}
+                          onClick={() => {
+                            setSelectedCategory(cat.id);
+                            if (cat.id === "beverages") setOrderMode("bar");
+                            else if (orderMode === "bar" && cat.id !== "all")
+                              setOrderMode("kitchen");
+                          }}
+                        >
+                          <IconComp size={16} className="pos-cat-icon" />
+                          <span className="pos-cat-label">{cat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </aside>
+              )}
 
               {/* ── Center Area: Interactive Menu Catalog ── */}
               <div className="pos-takeaway-center">
@@ -2285,11 +2309,12 @@ export function CustomerLandingPage({
                 </div>
               </div>
 
-              {/* ── Right Sidebar: Takeaway Order Slip (Live Cart) ── */}
-              <aside
-                className="pos-takeaway-slip-sidebar"
-                id="takeaway-order-sidebar"
-              >
+              {/* ── Right Sidebar: Takeaway Order Slip (Live Cart - Takeaway mode only) ── */}
+              {!isDineInMenu && (
+                <aside
+                  className="pos-takeaway-slip-sidebar"
+                  id="takeaway-order-sidebar"
+                >
                 {/* Header */}
                 <div className="pos-slip-header">
                   <div className="pos-slip-header-title">
@@ -2446,6 +2471,56 @@ export function CustomerLandingPage({
                   </button>
                 </div>
               </aside>
+              )}
+
+              {/* ── Dine-In Digital Menu Floating Selection Bar ── */}
+              {isDineInMenu && cartCount > 0 && (
+                <div
+                  style={{
+                    position: "fixed",
+                    bottom: "24px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "rgba(15, 23, 42, 0.95)",
+                    backdropFilter: "blur(10px)",
+                    border: "1.5px solid #f59e0b",
+                    borderRadius: "32px",
+                    padding: "0.65rem 1.4rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "1rem",
+                    boxShadow: "0 12px 36px rgba(0,0,0,0.55)",
+                    zIndex: 9999,
+                    maxWidth: "90vw",
+                    color: "#ffffff",
+                    fontSize: "0.88rem",
+                  }}
+                >
+                  <Utensils size={16} color="#f59e0b" />
+                  <span>
+                    <strong>{cartCount}</strong> selected &bull;{" "}
+                    <strong className="font-mono" style={{ color: "#fbbf24" }}>
+                      {formatPrice(itemsSubtotal)}
+                    </strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCart({})}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.2)",
+                      color: "#f87171",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      borderRadius: "14px",
+                      padding: "0.22rem 0.65rem",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

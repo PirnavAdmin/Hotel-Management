@@ -4517,3 +4517,132 @@
     justify-content: flex-start;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DINE-IN DIGITAL MENU (TABLE QR CODE CLEAN FULLSCREEN VIEW)
+   ═══════════════════════════════════════════════════════════════ */
+.is-dine-in-digital-menu.pos-takeaway-app {
+  height: auto !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--bg-primary, #0b1120) !important;
+  overflow-y: auto !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-workspace {
+  display: flex !important;
+  flex-direction: column !important;
+  max-width: 1300px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+  flex: 1 1 auto !important;
+  overflow: visible !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-center {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0.5rem 1.25rem 4rem !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-category-strip {
+  display: flex !important;
+  gap: 0.55rem !important;
+  overflow-x: auto !important;
+  padding: 0.65rem 0.25rem 0.85rem !important;
+  margin-bottom: 0.85rem !important;
+  scrollbar-width: none !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-category-strip::-webkit-scrollbar {
+  display: none !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 1.15rem !important;
+  overflow: visible !important;
+  padding: 0.25rem 0 3rem !important;
+}
+
+@media (max-width: 768px) {
+  .is-dine-in-digital-menu .pos-takeaway-center {
+    padding: 0.25rem 0.75rem 4rem !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-controls-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+    padding: 0.75rem !important;
+  }
+  .is-dine-in-digital-menu .pos-station-group,
+  .is-dine-in-digital-menu .pos-category-select-wrapper {
+    display: none !important;
+  }
+  .is-dine-in-digital-menu .pos-dietary-group {
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  .is-dine-in-digital-menu .pos-dietary-btn {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card {
+    display: flex !important;
+    flex-direction: row !important;
+    min-height: 110px !important;
+    border-radius: 12px !important;
+    background: var(--bg-card, #131c2e) !important;
+    border: 1px solid var(--border-card, #1e293b) !important;
+    overflow: hidden !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-image {
+    width: 110px !important;
+    min-width: 110px !important;
+    height: auto !important;
+    min-height: 100% !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-image img {
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-body {
+    padding: 0.65rem 0.75rem 0.25rem !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justifyContent: flex-start !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-title {
+    font-size: 0.92rem !important;
+    margin-bottom: 2px !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-desc {
+    font-size: 0.72rem !important;
+    line-height: 1.3 !important;
+    margin: 2px 0 0 !important;
+    -webkit-line-clamp: 2 !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-footer {
+    padding: 0.25rem 0.75rem 0.65rem !important;
+    border-top: none !important;
+    background: transparent !important;
+  }
+  .is-dine-in-digital-menu .pos-takeaway-card-price {
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
+    color: #fbbf24 !important;
+  }
+}

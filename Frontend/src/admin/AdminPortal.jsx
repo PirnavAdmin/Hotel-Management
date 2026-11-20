@@ -1772,15 +1772,22 @@ export function AdminPortal({
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectedQrTableId, setSelectedQrTableId] = useState("GLOBAL");
-  const [customQrHost, setCustomQrHost] = useState("");
+  const [customQrHost, setCustomQrHost] = useState(() => {
+    try {
+      return localStorage.getItem("rustic_spin_custom_qr_host") || "";
+    } catch {
+      return "";
+    }
+  });
 
   const getEffectiveOrigin = () => {
-    if (customQrHost) return customQrHost;
-    const host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.")) {
-      return "http://65.0.8.48:3000";
+    if (customQrHost && customQrHost.trim()) {
+      return customQrHost.trim().replace(/\/+$/, "");
     }
-    return window.location.origin;
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return "http://localhost:5173";
   };
 
   // The modal's open state is shared by all menu QR entry points.
@@ -1788,34 +1795,28 @@ export function AdminPortal({
   const setQrModalTable = setIsMenuQrModalOpen;
 
   const menuPublicUrl = useMemo(() => {
-    if (typeof window === "undefined") return "http://65.0.8.48:3000/menu";
-    const host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.")) {
-      return "http://65.0.8.48:3000/menu";
-    }
-    return `${window.location.origin}/menu`;
-  }, []);
+    const origin = getEffectiveOrigin();
+    const currentTable = selectedQrTableId === "GLOBAL"
+      ? null
+      : (tables || []).find((table) => String(table.id) === String(selectedQrTableId));
+    return !currentTable
+      ? `${origin}/menu`
+      : `${origin}/menu?table=${encodeURIComponent(currentTable.name || currentTable.tableName || `Table-${currentTable.id}`)}`;
+  }, [customQrHost, selectedQrTableId, tables]);
 
   useEffect(() => {
     if (!isMenuQrModalOpen) {
       setQrDataUrl("");
       return;
     }
-    const currentTable = selectedQrTableId === "GLOBAL"
-      ? null
-      : (tables || []).find((table) => String(table.id) === String(selectedQrTableId));
-    const origin = getEffectiveOrigin();
-    const url = !currentTable
-      ? `${origin}/menu`
-      : `${origin}/menu?table=${encodeURIComponent(currentTable.name || currentTable.tableName || `Table-${currentTable.id}`)}`;
-    QRCode.toDataURL(url, { width: 320, margin: 2, errorCorrectionLevel: "M" })
+    QRCode.toDataURL(menuPublicUrl, { width: 320, margin: 2, errorCorrectionLevel: "M" })
       .then((url) => {
         setQrDataUrl(url);
       })
       .catch((err) => {
         console.error("QR Code generation error:", err);
       });
-  }, [isMenuQrModalOpen, menuPublicUrl, selectedQrTableId, tables, customQrHost]);
+  }, [isMenuQrModalOpen, menuPublicUrl]);
   const [isNewServerMode, setIsNewServerMode] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const [newServerRole, setNewServerRole] = useState("");
@@ -8248,6 +8249,98 @@ export function AdminPortal({
               >
                 <X size={18} />
               </button>
+            </div>
+
+            {/* QR Target Network Mode (Local Wi-Fi vs Cloud / 4G-5G) */}
+            <div style={{ marginBottom: "0.85rem", background: "var(--bg-tertiary)", padding: "0.65rem 0.75rem", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.45rem" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  QR Target Network
+                </span>
+                <span style={{ fontSize: "0.72rem", color: customQrHost ? "#10b981" : "#3b82f6", fontWeight: 750 }}>
+                  {customQrHost ? "🌐 Cloud (4G / 5G Scannable)" : "📶 Local Wi-Fi / Hotspot"}
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.45rem", marginBottom: customQrHost ? "0.55rem" : "0" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomQrHost("");
+                    try { localStorage.removeItem("rustic_spin_custom_qr_host"); } catch {}
+                  }}
+                  style={{
+                    padding: "0.45rem 0.5rem",
+                    borderRadius: "7px",
+                    border: !customQrHost ? "1.5px solid #3b82f6" : "1px solid var(--border-subtle)",
+                    background: !customQrHost ? "rgba(59, 130, 246, 0.16)" : "transparent",
+                    color: !customQrHost ? "#60a5fa" : "var(--text-dim)",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.35rem",
+                  }}
+                >
+                  <span>📶 Current Wi-Fi</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const envTunnel = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api.*$/, "").trim();
+                    const defaultTunnel = envTunnel || "https://bubble-browsers-sheer-author.trycloudflare.com";
+                    const next = customQrHost || defaultTunnel;
+                    setCustomQrHost(next);
+                    try { localStorage.setItem("rustic_spin_custom_qr_host", next); } catch {}
+                  }}
+                  style={{
+                    padding: "0.45rem 0.5rem",
+                    borderRadius: "7px",
+                    border: customQrHost ? "1.5px solid #10b981" : "1px solid var(--border-subtle)",
+                    background: customQrHost ? "rgba(16, 185, 129, 0.16)" : "transparent",
+                    color: customQrHost ? "#34d399" : "var(--text-dim)",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.35rem",
+                  }}
+                >
+                  <span>🌐 Cloud (4G/5G)</span>
+                </button>
+              </div>
+              {customQrHost && (
+                <div style={{ marginTop: "0.45rem" }}>
+                  <input
+                    type="text"
+                    value={customQrHost}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomQrHost(val);
+                      try { localStorage.setItem("rustic_spin_custom_qr_host", val); } catch {}
+                    }}
+                    placeholder="Enter public tunnel URL (e.g. https://xxx.trycloudflare.com)"
+                    style={{
+                      width: "100%",
+                      padding: "0.4rem 0.6rem",
+                      borderRadius: "6px",
+                      border: "1px solid #10b981",
+                      background: "var(--bg-secondary)",
+                      color: "var(--text-main)",
+                      fontSize: "0.75rem",
+                      fontFamily: "monospace",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <small style={{ display: "block", color: "var(--text-muted)", fontSize: "0.68rem", marginTop: "3px" }}>
+                    * Customers on mobile cellular data (Jio, Airtel 4G/5G) can scan this from any phone without being on Wi-Fi.
+                  </small>
+                </div>
+              )}
             </div>
 
             {/* QR Card Preview */}
