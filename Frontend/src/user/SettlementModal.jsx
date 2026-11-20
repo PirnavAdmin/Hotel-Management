@@ -8,6 +8,7 @@ QrCode,
   Calendar,
   Clock,
   Users,
+  User,
   Building2,
 Zap,
   ShieldCheck,
@@ -207,6 +208,9 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         tableName: table.name,
         section: table.section,
         server: table.server || "",
+        customerName: table?.customerName || table?.customer || "",
+        customerPhone: table?.customerPhone || table?.phone || "",
+        customerTier: table?.customerTier || "",
         guests:
           (Number(table.guests) > 0 ? Number(table.guests) : null) ??
           (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
@@ -486,6 +490,16 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                   <Clock size={12} color="var(--accent-amber, #f59e0b)" />
                   {table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
+                {(table.customerName || table.customer) && (
+                  <>
+                    <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber-light, #fbbf24)', fontWeight: 700 }}>
+                      <User size={12} color="var(--accent-amber, #f59e0b)" />
+                      {table.customerName || table.customer}
+                      {(table.customerPhone || table.phone) ? ` (${table.customerPhone || table.phone})` : ''}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

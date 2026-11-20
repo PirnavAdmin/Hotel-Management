@@ -572,7 +572,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
 
               {/* Row 4 (Mode / Status) */}
               <div>
-                {table.customer && <span>Guest: <strong>{table.customer}</strong></span>}
+                {(table.customerName || table.customer || table.CustomerName) ? (
+                  <span style={{ fontSize: '0.7rem', color: '#0f172a' }}>
+                    Cust: <strong>{table.customerName || table.customer || table.CustomerName}</strong>
+                    {(table.customerPhone || table.CustomerPhone || table.phone) ? ` (${table.customerPhone || table.CustomerPhone || table.phone})` : ""}
+                  </span>
+                ) : null}
               </div>
               <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                 <span style={{ color: isSettled ? '#15803d' : '#b91c1c', fontWeight: 800 }}>
@@ -876,6 +881,15 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   <span style={{ width: '120px', color: '#64748b', fontWeight: 600 }}>Guests</span>
                   <span style={{ color: '#0f172a', fontWeight: 700 }}>: {guestCount}</span>
                 </div>
+                {(table.customerName || table.customer || table.CustomerName) && (
+                  <div style={{ display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '7px 12px', background: '#fafafa' }}>
+                    <span style={{ width: '120px', color: '#64748b', fontWeight: 600 }}>Customer</span>
+                    <span style={{ color: '#0f172a', fontWeight: 700 }}>
+                      : {table.customerName || table.customer || table.CustomerName}
+                      {(table.customerPhone || table.CustomerPhone || table.phone) ? ` (${table.customerPhone || table.CustomerPhone || table.phone})` : ''}
+                    </span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', padding: '7px 12px', background: '#fafafa' }}>
                   <span style={{ width: '120px', color: '#64748b', fontWeight: 600 }}>Payment Mode</span>
                   <span style={{ color: '#16a34a', fontWeight: 800 }}>

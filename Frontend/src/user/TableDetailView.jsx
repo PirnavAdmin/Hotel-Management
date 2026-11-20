@@ -1720,7 +1720,10 @@ import {
   List,
   RotateCcw,
   ArrowUpDown,
+  Phone,
+  User,
 } from "lucide-react";
+import { findCustomerByPhone } from "../utils/customerStorage";
 import { sounds } from "../utils/audio";
 import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
 import {
@@ -1796,6 +1799,7 @@ export function TableDetailView({
   onClearOrder,
   onOpenKOTView,
   onShowToast,
+  onUpdateCustomer,
 }) {
   // Active table identity and live selection
   const activeTable =
@@ -1811,6 +1815,55 @@ export function TableDetailView({
     (Array.isArray(table?.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
     (Number(table?.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
     0;
+
+  // Customer capture & recognition
+  const [custName, setCustName] = useState(activeTable?.customerName || "");
+  const [custPhone, setCustPhone] = useState(activeTable?.customerPhone || "");
+  const [custTier, setCustTier] = useState(activeTable?.customerTier || "");
+  const [custVisits, setCustVisits] = useState(activeTable?.customerVisits || 0);
+
+  useEffect(() => {
+    setCustName(activeTable?.customerName || "");
+    setCustPhone(activeTable?.customerPhone || "");
+    setCustTier(activeTable?.customerTier || "");
+    setCustVisits(activeTable?.customerVisits || 0);
+  }, [activeTable?.id, activeTable?.customerName, activeTable?.customerPhone]);
+
+  const handleCustomerPhoneChange = (val) => {
+    setCustPhone(val);
+    const match = findCustomerByPhone(val);
+    if (match) {
+      const matchName = match.fullName || match.name || "";
+      const matchTier = match.tier || (match.totalSpent > 20000 ? "VIP" : "Regular");
+      const matchVisits = match.visitsCount || 1;
+      setCustName(matchName);
+      setCustTier(matchTier);
+      setCustVisits(matchVisits);
+      onUpdateCustomer?.(activeTable?.id || table?.id, {
+        customerName: matchName,
+        customerPhone: val,
+        customerTier: matchTier,
+        customerVisits: matchVisits,
+      });
+    } else {
+      onUpdateCustomer?.(activeTable?.id || table?.id, {
+        customerName: custName,
+        customerPhone: val,
+        customerTier: custTier,
+        customerVisits: custVisits,
+      });
+    }
+  };
+
+  const handleCustomerNameChange = (val) => {
+    setCustName(val);
+    onUpdateCustomer?.(activeTable?.id || table?.id, {
+      customerName: val,
+      customerPhone: custPhone,
+      customerTier: custTier,
+      customerVisits: custVisits,
+    });
+  };
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [orderMode, setOrderMode] = useState("kitchen");
@@ -3816,6 +3869,77 @@ export function TableDetailView({
               </div>
             </div>
 
+            {/* Quick Customer Capture (Phone & Name with auto-fill & loyalty recognition) */}
+            <div
+              style={{
+                padding: "0.4rem 0.6rem",
+                background: "rgba(255, 255, 255, 0.025)",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.3rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <User size={12} color="var(--accent-amber)" /> Customer Details
+                </span>
+                {custTier && (
+                  <span style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 800,
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: custTier === "VIP" ? "rgba(168, 85, 247, 0.2)" : "rgba(34, 197, 94, 0.2)",
+                    color: custTier === "VIP" ? "#c084fc" : "#4ade80",
+                    border: custTier === "VIP" ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(34, 197, 94, 0.4)",
+                  }}>
+                    {custTier} Diner {custVisits > 1 ? `(${custVisits} visits)` : ""}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.3fr", gap: "0.35rem" }}>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <Phone size={11} style={{ position: "absolute", left: "6px", color: "var(--text-muted)", pointerEvents: "none" }} />
+                  <input
+                    type="tel"
+                    placeholder="Phone No."
+                    value={custPhone}
+                    onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "4px 4px 4px 22px",
+                      fontSize: "0.72rem",
+                      background: "var(--bg-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "5px",
+                      color: "var(--text-main)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <User size={11} style={{ position: "absolute", left: "6px", color: "var(--text-muted)", pointerEvents: "none" }} />
+                  <input
+                    type="text"
+                    placeholder="Customer Name"
+                    value={custName}
+                    onChange={(e) => handleCustomerNameChange(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "4px 4px 4px 22px",
+                      fontSize: "0.72rem",
+                      background: "var(--bg-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "5px",
+                      color: "var(--text-main)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Ordered Items List */}
             <div
               style={{
@@ -4897,6 +5021,77 @@ export function TableDetailView({
               >
                 ✕ Close
               </button>
+            </div>
+
+            {/* Quick Customer Capture (Mobile Drawer) */}
+            <div
+              style={{
+                padding: "0.5rem 0.75rem",
+                background: "rgba(255, 255, 255, 0.03)",
+                borderBottom: "1px solid var(--border-subtle)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.35rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                  <User size={13} color="var(--accent-amber)" /> Customer Details
+                </span>
+                {custTier && (
+                  <span style={{
+                    fontSize: "0.65rem",
+                    fontWeight: 800,
+                    padding: "2px 7px",
+                    borderRadius: "4px",
+                    background: custTier === "VIP" ? "rgba(168, 85, 247, 0.2)" : "rgba(34, 197, 94, 0.2)",
+                    color: custTier === "VIP" ? "#c084fc" : "#4ade80",
+                    border: custTier === "VIP" ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(34, 197, 94, 0.4)",
+                  }}>
+                    {custTier} Diner {custVisits > 1 ? `(${custVisits} visits)` : ""}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.3fr", gap: "0.4rem" }}>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <Phone size={12} style={{ position: "absolute", left: "7px", color: "var(--text-muted)", pointerEvents: "none" }} />
+                  <input
+                    type="tel"
+                    placeholder="Phone No."
+                    value={custPhone}
+                    onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "5px 5px 5px 24px",
+                      fontSize: "0.76rem",
+                      background: "var(--bg-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "6px",
+                      color: "var(--text-main)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <User size={12} style={{ position: "absolute", left: "7px", color: "var(--text-muted)", pointerEvents: "none" }} />
+                  <input
+                    type="text"
+                    placeholder="Customer Name"
+                    value={custName}
+                    onChange={(e) => handleCustomerNameChange(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "5px 5px 5px 24px",
+                      fontSize: "0.76rem",
+                      background: "var(--bg-primary)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "6px",
+                      color: "var(--text-main)",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Scrollable Items List */}

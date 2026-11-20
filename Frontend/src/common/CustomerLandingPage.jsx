@@ -73,6 +73,7 @@ import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
 import { CustomerOrdersPage } from "../customer/CustomerOrdersPage";
 import { CustomerProfilePage } from "../customer/CustomerProfilePage";
+import { saveOrUpdateCustomer } from "../utils/customerStorage";
 import {
   getMenuItemImage,
   handleDishImageError,
@@ -982,6 +983,12 @@ export function CustomerLandingPage({
             price: Number(item.price) || 0,
           }));
       const financials = response.financials || {};
+      saveOrUpdateCustomer({
+        fullName: response.customerName || customerName.trim(),
+        phone: response.customerPhone || customerPhone.trim(),
+        email: customerUser?.email || "",
+        amountSpent: Number(financials.grandTotal || response.grandTotal || 0) || 0,
+      }).catch((err) => console.warn("[Customer] auto-save takeaway order:", err));
       const newOrderData = {
         id: response.orderId,
         orderId: response.orderId,

@@ -3,7 +3,8 @@ import "./TakeawayView.css";
 import "../common/MenuCatalogLayout.css";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircle2, Clock, ChefHat, LoaderCircle, RefreshCw, Eye, ReceiptText, Send } from "lucide-react";
+import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircle2, Clock, ChefHat, LoaderCircle, RefreshCw, Eye, ReceiptText, Send, Phone, User } from "lucide-react";
+import { findCustomerByPhone } from "../utils/customerStorage";
 import { MenuItemCard } from "../common/MenuItemCard";
 import { subscribeToRealtimeEvents } from "../realtime/realtimeService";
 import {
@@ -77,6 +78,22 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   const [paidStatus, setPaidStatus] = useState("all");
   const [paidDate, setPaidDate] = useState("");
   const [historySearch, setHistorySearch] = useState("");
+
+  // Customer Capture for Takeaway
+  const [custPhone, setCustPhone] = useState("");
+  const [custName, setCustName] = useState("");
+  const [custTier, setCustTier] = useState("");
+  const [custVisits, setCustVisits] = useState(0);
+
+  const handleCustPhoneChange = (val) => {
+    setCustPhone(val);
+    const match = findCustomerByPhone(val);
+    if (match) {
+      setCustName(match.fullName || match.name || "");
+      setCustTier(match.tier || (match.totalSpent > 20000 ? "VIP" : "Regular"));
+      setCustVisits(match.visitsCount || 1);
+    }
+  };
   const [historyStatus, setHistoryStatus] = useState("all");
   const [historyDatePreset, setHistoryDatePreset] = useState("all");
   const [historyDateFrom, setHistoryDateFrom] = useState("");
@@ -473,7 +490,12 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     }
     setIsSubmittingOrder(true);
     try {
-      onCheckout?.(checkoutItems);
+      onCheckout?.(checkoutItems, {
+        customerName: custName.trim(),
+        customerPhone: custPhone.trim(),
+        customerTier: custTier,
+        customerVisits: custVisits,
+      });
     } finally {
       // Checkout opens the settlement dialog; its own processing state owns the request lifecycle.
       setIsSubmittingOrder(false);
@@ -624,6 +646,81 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
       </div>}
       <aside className="takeaway-order-panel">
         <h3 style={{ margin: "0 0 .8rem" }}>Takeaway Order</h3>
+
+        {/* Quick Customer Capture (Phone & Name with auto-fill & loyalty recognition) */}
+        <div
+          style={{
+            padding: "0.5rem 0.65rem",
+            background: "rgba(255, 255, 255, 0.03)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "8px",
+            marginBottom: "0.8rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.35rem",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+              <User size={13} color="var(--accent-amber)" /> Customer Info (Optional)
+            </span>
+            {custTier && (
+              <span style={{
+                fontSize: "0.62rem",
+                fontWeight: 800,
+                padding: "1px 6px",
+                borderRadius: "4px",
+                background: custTier === "VIP" ? "rgba(168, 85, 247, 0.2)" : "rgba(34, 197, 94, 0.2)",
+                color: custTier === "VIP" ? "#c084fc" : "#4ade80",
+                border: custTier === "VIP" ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(34, 197, 94, 0.4)",
+              }}>
+                {custTier} Diner {custVisits > 1 ? `(${custVisits} visits)` : ""}
+              </span>
+            )}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.3fr", gap: "0.35rem" }}>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <Phone size={12} style={{ position: "absolute", left: "7px", color: "var(--text-muted)", pointerEvents: "none" }} />
+              <input
+                type="tel"
+                placeholder="Phone No."
+                value={custPhone}
+                onChange={(e) => handleCustPhoneChange(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "5px 5px 5px 24px",
+                  fontSize: "0.76rem",
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  color: "var(--text-main)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <User size={12} style={{ position: "absolute", left: "7px", color: "var(--text-muted)", pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder="Customer Name"
+                value={custName}
+                onChange={(e) => setCustName(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "5px 5px 5px 24px",
+                  fontSize: "0.76rem",
+                  background: "var(--bg-primary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "6px",
+                  color: "var(--text-main)",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+          </div>
+        </div>
         {!count ? <p style={{ color: "var(--text-muted)" }}>Add menu items to start an order.</p> : <div className="takeaway-cart-items" style={{ display: "grid", gap: ".7rem" }}>
           {Object.values(cart).map(({ item, quantity }) => <div key={item.id} className="takeaway-cart-line"><div className="takeaway-cart-line-details"><strong>{item.name}</strong><div style={{ color: "var(--text-muted)", fontSize: ".85rem" }}>₹{Number(item.price || 0).toFixed(2)} each</div></div><div className="takeaway-cart-line-controls" aria-label={`Quantity for ${item.name}`}><button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeQty(item, -1)}><Minus size={12}/></button><span className="takeaway-cart-line-quantity" aria-live="polite">{quantity}</span><button type="button" aria-label={`Add one ${item.name}`} onClick={() => changeQty(item, 1)}><Plus size={12}/></button></div><span className="takeaway-cart-line-subtotal">₹{(Number(item.price || 0) * quantity).toFixed(2)}</span></div>)}
         </div>}

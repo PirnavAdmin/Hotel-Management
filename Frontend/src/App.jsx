@@ -43,6 +43,7 @@ import { apiGetBarDrinks } from "./api/barApi";
 import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
+import { saveOrUpdateCustomer } from "./utils/customerStorage";
 import { MENU_ITEMS } from "./data/menuData";
 import { isSameMenuItem, consolidateOrderItems } from "./utils/orderItemMatcher";
 import {
@@ -2828,6 +2829,29 @@ export function App() {
     }
   };
 
+  // Update Customer Info for Table
+  const handleUpdateCustomer = (tableId, customerData) => {
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        return {
+          ...t,
+          customerName: customerData.customerName || "",
+          customerPhone: customerData.customerPhone || "",
+          customerTier: customerData.customerTier || "",
+          customerVisits: customerData.customerVisits || 0,
+        };
+      });
+      try {
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+      } catch {}
+      return nextTables;
+    });
+  };
+
   // Update Discount (supports both manual INR amount and legacy percent)
   const handleUpdateDiscount = (tableId, discount, isAmount = false) => {
     setTables((prevTables) =>
@@ -2935,6 +2959,15 @@ export function App() {
       ].filter(Boolean);
       showToast(`📥 ${routes.join(" and ")} for ${tableName}.`);
 
+      // Auto-save customer if entered on order slip
+      if (tbl?.customerName || tbl?.customerPhone) {
+        saveOrUpdateCustomer({
+          fullName: tbl.customerName,
+          phone: tbl.customerPhone,
+          amountSpent: 0,
+        }).catch((err) => console.warn("[Customer] auto-save on KOT:", err));
+      }
+
       // Sync with server API in background
       try {
         const backendTableId = tbl?.backendTableId ?? tbl?.tableId ?? tableId;
@@ -2953,6 +2986,8 @@ export function App() {
             tableNumber: String(tbl?.tableNumberNumeric ?? tbl?.tableNumber ?? tbl?.id ?? tableId),
             serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
             guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
+            customerName: tbl?.customerName || undefined,
+            customerPhone: tbl?.customerPhone || undefined,
             status: "Active",
             items: consolidatedNewItems.map((item) => ({
               menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
@@ -3533,6 +3568,9 @@ export function App() {
         (Number(tableObj?.capacity) > 0 ? Number(tableObj.capacity) : null) ??
         2,
       capacity: tableObj?.capacity || settlementData.capacity || 0,
+      customerName: settlementData.customerName || tableObj?.customerName || takeawayCheckoutTable?.customerName || "",
+      customerPhone: settlementData.customerPhone || tableObj?.customerPhone || takeawayCheckoutTable?.customerPhone || "",
+      customerTier: settlementData.customerTier || tableObj?.customerTier || takeawayCheckoutTable?.customerTier || "",
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
       tableId: settlementData.tableId,
@@ -3543,6 +3581,15 @@ export function App() {
         `local:${settlementData.tableId}:${tableObj?.orderTimestamp || Date.now()}`,
       ),
     };
+
+    // Auto-save or update customer spend and visit count
+    if (enrichedSettlement.customerName || enrichedSettlement.customerPhone) {
+      saveOrUpdateCustomer({
+        fullName: enrichedSettlement.customerName,
+        phone: enrichedSettlement.customerPhone,
+        amountSpent: Number(enrichedSettlement.grandTotal || enrichedSettlement.totalAmount || 0) || 0,
+      }).catch((err) => console.warn("[Customer] auto-save on settlement error:", err));
+    }
 
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
     let dineInBackendTableVacated = false;
@@ -3560,6 +3607,8 @@ export function App() {
           tableName: "Takeaway",
           serverName: settlementData.server || posSession?.name || "Server",
           guests: 1,
+          customerName: enrichedSettlement.customerName || undefined,
+          customerPhone: enrichedSettlement.customerPhone || undefined,
           status: "Settled",
           paymentMethod: enrichedSettlement.paymentMethod,
           invoiceNumber: settlementData.invoiceNo,
@@ -3687,6 +3736,8 @@ export function App() {
               tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
               serverName: settlementData.server || "Server",
               guests: enrichedSettlement.guests,
+              customerName: enrichedSettlement.customerName || undefined,
+              customerPhone: enrichedSettlement.customerPhone || undefined,
               discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
               serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
               tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
@@ -5017,9 +5068,23 @@ export function App() {
                     });
                     setIsReceiptOpen(true);
                   }}
-                  onCheckout={(items) => {
+                  onCheckout={(items, customerInfo) => {
                     const orderTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
+                    setTakeawayCheckoutTable({
+                      id: "TAKEAWAY",
+                      name: "Takeaway",
+                      section: "Takeaway",
+                      server: posSession?.name || "Server",
+                      guests: 1,
+                      capacity: 1,
+                      items,
+                      orderTime,
+                      discountPercent: 0,
+                      serviceCharge: 0,
+                      customerName: customerInfo?.customerName || "",
+                      customerPhone: customerInfo?.customerPhone || "",
+                      customerTier: customerInfo?.customerTier || "",
+                    });
                     setIsSettlementOpen(true);
                   }}
                 />
@@ -5041,6 +5106,7 @@ export function App() {
                   onRemoveItemFromTable={handleRemoveItemFromTable}
                   onUpdateItemNotes={handleUpdateItemNotes}
                   onUpdateGuests={handleUpdateGuests}
+                  onUpdateCustomer={handleUpdateCustomer}
                   onUpdateDiscount={handleUpdateDiscount}
                   onToggleServiceCharge={handleToggleServiceCharge}
                   onSendKOT={handleSendKOT}

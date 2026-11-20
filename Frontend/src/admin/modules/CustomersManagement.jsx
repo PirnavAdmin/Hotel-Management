@@ -376,6 +376,18 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
 
   useEffect(() => {
     fetchCustomers(true);
+    const handleLocalCustomerUpdate = (e) => {
+      const updatedList = e?.detail || getStoredCustomers();
+      if (Array.isArray(updatedList) && updatedList.length > 0) {
+        setCustomers(updatedList);
+      }
+    };
+    window.addEventListener("avsr-customers-updated", handleLocalCustomerUpdate);
+    window.addEventListener("storage", handleLocalCustomerUpdate);
+    return () => {
+      window.removeEventListener("avsr-customers-updated", handleLocalCustomerUpdate);
+      window.removeEventListener("storage", handleLocalCustomerUpdate);
+    };
   }, []);
 
   useEffect(() => {
