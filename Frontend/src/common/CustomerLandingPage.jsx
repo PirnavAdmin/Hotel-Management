@@ -2170,7 +2170,7 @@ export function CustomerLandingPage({
                     <div className="pos-takeaway-empty" role="status">
                       <h4>Loading menu…</h4>
                     </div>
-                  ) : menuError ? (
+                  ) : (menuError && visibleMenuItems.length === 0) ? (
                     <div className="pos-takeaway-empty" role="alert">
                       <h4>Menu unavailable</h4>
                       <p>{menuError}</p>

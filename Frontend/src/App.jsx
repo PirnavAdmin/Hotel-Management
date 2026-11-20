@@ -874,8 +874,7 @@ export function App() {
         } catch {}
       } catch (error) {
         if (cancelled) return;
-        console.error("[Inventory] Could not sync recipe ingredients:", error);
-        showToast(`Could not sync recipe ingredients to inventory: ${error?.message || "API request failed."}`);
+        console.warn("[Inventory] Could not sync recipe ingredients:", error);
       }
     };
 
@@ -1054,9 +1053,25 @@ export function App() {
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
       } else {
-        setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
+        console.warn("[Menu] Live menu items could not be loaded from API:", response?.error || response?.data?.message);
+        let fallbackMenu = [];
+        try {
+          fallbackMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+        } catch {}
+        const itemsToUse = (Array.isArray(fallbackMenu) && fallbackMenu.length > 0) ? fallbackMenu : MENU_ITEMS;
+        setMenuItems(itemsToUse.map(normalizeMenuItem));
+        setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
+    }).catch((error) => {
+      console.warn("[Menu] Live menu API failed, using cached/standard menu:", error?.message);
+      let fallbackMenu = [];
+      try {
+        fallbackMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+      } catch {}
+      const itemsToUse = (Array.isArray(fallbackMenu) && fallbackMenu.length > 0) ? fallbackMenu : MENU_ITEMS;
+      setMenuItems(itemsToUse.map(normalizeMenuItem));
+      setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
+    });
 
     apiGetBarDrinks().then((response) => {
       const backendDrinks = [
@@ -1166,11 +1181,10 @@ export function App() {
         setInventoryPurchases(rows.map(normalizeInventoryPurchase));
       } catch (error) {
         if (cancelled) return;
-        console.error("[Inventory] Failed to load purchase records from the API:", error);
+        console.warn("[Inventory] Failed to load purchase records from the API:", error);
         inventoryPurchasesApiLoadedRef.current = true;
         setInventoryPurchasesApiLoaded(true);
         setInventoryPurchases([]);
-        showToast(`Inventory purchase history is unavailable: ${error?.message || "API request failed."}`);
       }
     };
     loadInventoryPurchases();
@@ -1380,11 +1394,10 @@ export function App() {
         setSalaryPayments(rows.map(normalizeSalaryPayment));
       } catch (error) {
         if (cancelled) return;
-        console.error("[Payroll] Failed to load salary payments from the API:", error);
+        console.warn("[Payroll] Failed to load salary payments from the API:", error);
         salaryPaymentsApiLoadedRef.current = true;
         setSalaryPaymentsApiLoaded(true);
         setSalaryPayments([]);
-        showToast(`Salary history is unavailable: ${error?.message || "API request failed."}`);
       }
     };
     loadSalaryPayments();
