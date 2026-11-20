@@ -1,7 +1,31 @@
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL || "";
+function getResolvedApiBase() {
+  const configured = (import.meta.env.VITE_API_BASE_URL || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\/$/, "");
+
+  if (typeof window !== "undefined") {
+    // 1. Guard against expired or dead trycloudflare tunnels baked into cached/stale builds
+    if (/trycloudflare\.com/i.test(configured)) {
+      if (window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+        return `${window.location.protocol}//${window.location.hostname}:5000`;
+      }
+      return "";
+    }
+
+    // 2. When browsing from a server IP/domain (e.g. 65.0.8.48), if configured is localhost or empty
+    if (window.location.hostname && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+      if (!configured || configured.includes("localhost") || configured.includes("127.0.0.1")) {
+        return `${window.location.protocol}//${window.location.hostname}:5000`;
+      }
+    }
+  }
+
+  return configured;
+}
 
 // API requests use the configured backend directly in every environment.
-export const API_BASE_URL = configuredApiBase.trim().replace(/\/$/, "");
+export const API_BASE_URL = getResolvedApiBase();
 export const RESERVATION_API_BASE_URL = API_BASE_URL;
 export const API_HTTP_BASE = API_BASE_URL;
 export const API_SYNC_BASE = API_BASE_URL;
