@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Armchair, Check, Edit3, X, CheckCircle2 } from "lucide-react";
 
 export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
+  if (!seat) return null;
   const gradId = `topChairGrad_${seat.id}`;
   const gradSelId = `topChairGradSel_${seat.id}`;
   return (
@@ -179,6 +180,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
 }
 
 export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
+  if (!seat) return null;
   const gradId = `bottomChairGrad_${seat.id}`;
   const gradSelId = `bottomChairGradSel_${seat.id}`;
   return (
@@ -345,6 +347,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
 }
 
 export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight }) {
+  if (!seat) return null;
   const isLeft = side === "left";
   const gradId = `sideChairGrad_${seat.id}`;
   const gradSelId = `sideChairGradSel_${seat.id}`;
@@ -919,7 +922,7 @@ export function SelectSeatsModal({
     return { id: seatId, defaultId: defaultSeatId, isOccupied: false, isSelected };
   });
 
-  const selectedSeats = seats.filter((seat) => seat.isSelected);
+  const selectedSeats = seats.filter((seat) => Boolean(seat?.isSelected));
   const selectedCount = selectedSeats.length;
   const availableCount = Math.max(0, capacity - selectedCount);
 
@@ -929,15 +932,30 @@ export function SelectSeatsModal({
   let leftSeats = [];
   let rightSeats = [];
 
-  if (capacity === 2) {
+  if (capacity <= 1) {
+    topSeats = seats.slice(0, 1);
+    bottomSeats = [];
+    leftSeats = [];
+    rightSeats = [];
+  } else if (capacity === 2) {
     topSeats = [seats[0]];
     bottomSeats = [seats[1]];
+  } else if (capacity === 3) {
+    topSeats = [seats[0], seats[1]];
+    bottomSeats = [seats[2]];
   } else if (capacity === 4) {
     topSeats = [seats[0], seats[1]];
     bottomSeats = [seats[2], seats[3]];
+  } else if (capacity === 5) {
+    topSeats = [seats[0], seats[1], seats[2]];
+    bottomSeats = [seats[3], seats[4]];
   } else if (capacity === 6) {
     topSeats = [seats[0], seats[1], seats[2]];
     bottomSeats = [seats[3], seats[4], seats[5]];
+  } else if (capacity === 7) {
+    topSeats = [seats[0], seats[1], seats[2]];
+    leftSeats = [seats[3]];
+    bottomSeats = [seats[4], seats[5], seats[6]];
   } else if (capacity === 8) {
     topSeats = [seats[0], seats[1], seats[2]];
     leftSeats = [seats[3]];
@@ -951,6 +969,11 @@ export function SelectSeatsModal({
     topSeats = remaining.slice(0, half);
     bottomSeats = remaining.slice(half);
   }
+
+  topSeats = topSeats.filter(Boolean);
+  bottomSeats = bottomSeats.filter(Boolean);
+  leftSeats = leftSeats.filter(Boolean);
+  rightSeats = rightSeats.filter(Boolean);
 
   const maxChairsPerRow = Math.max(2, topSeats.length, bottomSeats.length);
   const dynamicTableWidth = Math.max(260, 60 + maxChairsPerRow * 80);
@@ -1466,9 +1489,9 @@ export function SelectSeatsModal({
               >
                 {topSeats.map((seat) => (
                   <TopDiningChair
-                    key={seat.defaultId || seat.id}
+                    key={seat ? (seat.defaultId || seat.id) : Math.random()}
                     seat={seat}
-                    isSelected={seat.isSelected}
+                    isSelected={Boolean(seat?.isSelected)}
                     isOccupied={false}
                     isLight={isLight}
                     onToggle={() => {
@@ -1501,10 +1524,10 @@ export function SelectSeatsModal({
                   >
                     {leftSeats.map((seat) => (
                       <SideDiningChair
-                        key={seat.defaultId || seat.id}
+                        key={seat ? (seat.defaultId || seat.id) : Math.random()}
                         seat={seat}
                         side="left"
-                        isSelected={seat.isSelected}
+                        isSelected={Boolean(seat?.isSelected)}
                         isOccupied={false}
                         isLight={isLight}
                         onToggle={() => {
@@ -1537,10 +1560,10 @@ export function SelectSeatsModal({
                   >
                     {rightSeats.map((seat) => (
                       <SideDiningChair
-                        key={seat.defaultId || seat.id}
+                        key={seat ? (seat.defaultId || seat.id) : Math.random()}
                         seat={seat}
                         side="right"
-                        isSelected={seat.isSelected}
+                        isSelected={Boolean(seat?.isSelected)}
                         isOccupied={false}
                         isLight={isLight}
                         onToggle={() => {
@@ -1567,9 +1590,9 @@ export function SelectSeatsModal({
               >
                 {bottomSeats.map((seat) => (
                   <BottomDiningChair
-                    key={seat.defaultId || seat.id}
+                    key={seat ? (seat.defaultId || seat.id) : Math.random()}
                     seat={seat}
-                    isSelected={seat.isSelected}
+                    isSelected={Boolean(seat?.isSelected)}
                     isOccupied={false}
                     isLight={isLight}
                     onToggle={() => {
