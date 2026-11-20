@@ -44,11 +44,13 @@ const DEFAULT_PAYMENT_QRS = [
 
 const getInitialSettings = (initialSettings) => {
   const baseDefaults = {
-    restaurantName: "",
-    tagline: "",
+    restaurantName: "The Rustic Spin",
+    tagline: "Restaurant Management and Fine Dining",
     phone: "",
     address: "",
     gstin: "",
+    logo: "/restaurant-logo.png",
+    restaurantLogo: "/restaurant-logo.png",
     logoBg: "",
     taxRate: 5,
     serviceChargeRate: 5,
@@ -61,7 +63,7 @@ const getInitialSettings = (initialSettings) => {
     showAddressOnReceipt: true,
     showGstBreakdown: true,
     lowStockAlertsEnabled: true,
-    showBarHeaderToggle: true,
+    showBarHeaderToggle: false,
   };
 
   try {
@@ -328,8 +330,8 @@ export function AdminSettings({
             initialSettings.tagline !== undefined && initialSettings.tagline !== ""
               ? initialSettings.tagline
               : (localSaved.tagline || prev.tagline || ""),
-          logo: initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "",
-          restaurantLogo: initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "",
+          logo: initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "/restaurant-logo.png",
+          restaurantLogo: initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "/restaurant-logo.png",
           logoBg: initialSettings.logoBg || localSaved.logoBg || prev.logoBg || "",
           selectedQrId: selectedId,
           paymentQrs: qrs,

@@ -1322,9 +1322,9 @@ export function AdminPortal({
           : (localSettings.restaurantName && !/bhanu|avsr/i.test(localSettings.restaurantName) ? localSettings.restaurantName : "The Rustic Spin"),
         tagline: cleanServer.tagline !== undefined && cleanServer.tagline !== ""
           ? cleanServer.tagline
-          : (localSettings.tagline !== undefined ? localSettings.tagline : "Restaurant Management & Fine Dining"),
-        logo: cleanServer.logo || cleanServer.restaurantLogo || localSettings.logo || localSettings.restaurantLogo || "",
-        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || localSettings.restaurantLogo || localSettings.logo || "",
+          : (localSettings.tagline !== undefined ? localSettings.tagline : "Restaurant Management and Fine Dining"),
+        logo: cleanServer.logo || cleanServer.restaurantLogo || localSettings.logo || localSettings.restaurantLogo || "/restaurant-logo.png",
+        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || localSettings.restaurantLogo || localSettings.logo || "/restaurant-logo.png",
         paymentQrs: cleanServer.paymentQrs || localSettings.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || localSettings.selectedQrId || "qr-1",
       };

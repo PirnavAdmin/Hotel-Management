@@ -114,7 +114,7 @@ export function KitchenKOTView({
     };
   }, []);
 
-  const effectiveLogo = restaurantLogo || liveSettings.logo || liveSettings.restaurantLogo || "";
+  const effectiveLogo = restaurantLogo || liveSettings.logo || liveSettings.restaurantLogo || "/restaurant-logo.png";
   const effectiveRestaurantName =
     (restaurantName && restaurantName !== "Restaurant" && !/bhanu|avsr/i.test(restaurantName))
       ? restaurantName

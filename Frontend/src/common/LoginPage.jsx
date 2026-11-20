@@ -79,7 +79,7 @@ const resolveRestaurantLogo = (propVal, altPropVal) => {
   if (settings && typeof settings.logo === "string" && settings.logo.trim()) {
     return settings.logo.trim();
   }
-  return "";
+  return "/restaurant-logo.png";
 };
 
 const HEADLINE_ITEMS = [

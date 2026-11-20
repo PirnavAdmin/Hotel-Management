@@ -57,7 +57,7 @@ export function Header({
       return {};
     }
   };
-  const getStoredLogo = () => getStoredSettings().logo || "";
+  const getStoredLogo = () => getStoredSettings().logo || "/restaurant-logo.png";
   const getStoredName = () => getStoredSettings().restaurantName || "";
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());

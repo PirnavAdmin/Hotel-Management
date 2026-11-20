@@ -61,7 +61,7 @@ export function AdminSidebar({
     }
   };
 
-  const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredSettings().logo || "");
+  const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredSettings().logo || "/restaurant-logo.png");
   const [liveLogoBg, setLiveLogoBg] = useState(() => getStoredSettings().logoBg || "");
   const [liveName, setLiveName] = useState(() => {
     const sName = getStoredSettings().restaurantName;
@@ -71,12 +71,12 @@ export function AdminSidebar({
   });
   const [liveTagline, setLiveTagline] = useState(() => {
     const tag = getStoredSettings().tagline || restaurantTagline;
-    return tag && !/bhanu/i.test(tag) ? tag : "Restaurant Management & Fine Dining";
+    return tag && !/bhanu/i.test(tag) ? tag : "Restaurant Management and Fine Dining";
   });
 
   useEffect(() => {
     if (restaurantLogo) setLiveLogo(restaurantLogo);
-    else setLiveLogo(getStoredSettings().logo || "");
+    else setLiveLogo(getStoredSettings().logo || "/restaurant-logo.png");
 
     if (restaurantName && restaurantName.trim().toLowerCase() !== "restaurant") {
       setLiveName(restaurantName.trim());
@@ -88,7 +88,7 @@ export function AdminSidebar({
     const handleUpdate = (e) => {
       const fresh = e?.detail || getStoredSettings();
       if (fresh?.logo) setLiveLogo(fresh.logo);
-      else setLiveLogo(getStoredSettings().logo || restaurantLogo);
+      else setLiveLogo(getStoredSettings().logo || restaurantLogo || "/restaurant-logo.png");
 
       if (fresh?.logoBg !== undefined) setLiveLogoBg(fresh.logoBg || "");
       else setLiveLogoBg(getStoredSettings().logoBg || "");

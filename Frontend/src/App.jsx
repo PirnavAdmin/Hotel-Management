@@ -279,6 +279,8 @@ const requestSharedNetworkState = () => {
 };
 
 
+export const DEFAULT_RESTAURANT_LOGO = "/restaurant-logo.png";
+
 const readRestaurantSettings = () => {
   try {
     const raw = localStorage.getItem(RESTAURANT_SETTINGS_KEY);
@@ -288,15 +290,24 @@ const readRestaurantSettings = () => {
         if (!parsed.restaurantName || /bhanu|avsr/i.test(parsed.restaurantName)) {
           parsed.restaurantName = "The Rustic Spin";
           if (!parsed.tagline || /bhanu/i.test(parsed.tagline)) {
-            parsed.tagline = "Restaurant Management & Fine Dining";
+            parsed.tagline = "Restaurant Management and Fine Dining";
           }
-          try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(parsed)); } catch {}
         }
+        if (!parsed.logo && !parsed.restaurantLogo) {
+          parsed.logo = DEFAULT_RESTAURANT_LOGO;
+          parsed.restaurantLogo = DEFAULT_RESTAURANT_LOGO;
+        }
+        try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(parsed)); } catch {}
         return parsed;
       }
     }
   } catch {}
-  return { restaurantName: "The Rustic Spin", tagline: "Restaurant Management & Fine Dining" };
+  return {
+    restaurantName: "The Rustic Spin",
+    tagline: "Restaurant Management and Fine Dining",
+    logo: DEFAULT_RESTAURANT_LOGO,
+    restaurantLogo: DEFAULT_RESTAURANT_LOGO,
+  };
 };
 
 const dedupeStaff = (staff) => {
@@ -674,17 +685,38 @@ export function App() {
       const serverTagline = cleanServer.tagline;
 
       // Server data is authoritative for restaurant branding and payment QRs
+      const resolvedLogo =
+        serverLogo ||
+        local.logo ||
+        local.restaurantLogo ||
+        DEFAULT_RESTAURANT_LOGO;
       const merged = {
         ...local,
         ...cleanServer,
-        restaurantName: serverName && !/bhanu|avsr/i.test(serverName) ? serverName : (local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName) ? local.restaurantName : "The Rustic Spin"),
-        tagline: serverTagline !== undefined && serverTagline !== "" ? serverTagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
-        logo: serverLogo || local.logo || local.restaurantLogo || "",
-        restaurantLogo: serverLogo || local.restaurantLogo || local.logo || "",
+        restaurantName:
+          serverName && !/bhanu|avsr/i.test(serverName)
+            ? serverName
+            : local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName)
+            ? local.restaurantName
+            : "The Rustic Spin",
+        tagline:
+          serverTagline !== undefined && serverTagline !== ""
+            ? serverTagline
+            : local.tagline && !/bhanu/i.test(local.tagline)
+            ? local.tagline
+            : "Restaurant Management and Fine Dining",
+        logo: resolvedLogo,
+        restaurantLogo: resolvedLogo,
         logoBg: cleanServer.logoBg || local.logoBg || "",
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
+
+      if (cleanServer.displayTheme || cleanServer.theme) {
+        const newTheme = normalizeTheme(cleanServer.displayTheme || cleanServer.theme);
+        setTheme(newTheme);
+        applyTheme(newTheme);
+      }
 
       try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {

@@ -205,7 +205,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     table.logo ||
     storedSettings.logo ||
     storedSettings.restaurantLogo ||
-    "/assets/login-restaurant.jpg";
+    "/restaurant-logo.png";
 
   // Items resolution
   const items = (Array.isArray(table.items) ? table.items : []).map((item) => ({

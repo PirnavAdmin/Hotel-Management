@@ -190,7 +190,7 @@ export function CustomerLandingPage({
       return {};
     }
   };
-  const getStoredLogo = () => getStoredSettings().logo || "";
+  const getStoredLogo = () => getStoredSettings().logo || "/restaurant-logo.png";
   const getStoredName = () => getStoredSettings().restaurantName || "The Rustic Spin";
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
