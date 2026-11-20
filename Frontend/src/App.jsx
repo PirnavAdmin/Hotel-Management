@@ -287,7 +287,9 @@ const readRestaurantSettings = () => {
       if (parsed && typeof parsed === "object") {
         if (!parsed.restaurantName || /bhanu|avsr/i.test(parsed.restaurantName)) {
           parsed.restaurantName = "The Rustic Spin";
-          parsed.tagline = "Restaurant Management & Fine Dining";
+          if (!parsed.tagline || /bhanu/i.test(parsed.tagline)) {
+            parsed.tagline = "Restaurant Management & Fine Dining";
+          }
           try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(parsed)); } catch {}
         }
         return parsed;
@@ -676,7 +678,7 @@ export function App() {
         ...local,
         ...cleanServer,
         restaurantName: serverName && !/bhanu|avsr/i.test(serverName) ? serverName : (local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName) ? local.restaurantName : "The Rustic Spin"),
-        tagline: serverTagline !== undefined ? serverTagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
+        tagline: serverTagline !== undefined && serverTagline !== "" ? serverTagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
         logo: serverLogo || local.logo || local.restaurantLogo || "",
         restaurantLogo: serverLogo || local.restaurantLogo || local.logo || "",
         logoBg: cleanServer.logoBg || local.logoBg || "",

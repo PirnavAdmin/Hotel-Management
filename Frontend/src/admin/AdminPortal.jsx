@@ -1317,8 +1317,12 @@ export function AdminPortal({
       const mergedSettings = {
         ...localSettings,
         ...cleanServer,
-        restaurantName: cleanServer.restaurantName || cleanServer.name || localSettings.restaurantName || "AVSR FOOD COURT",
-        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (localSettings.tagline || ""),
+        restaurantName: cleanServer.restaurantName && !/bhanu|avsr/i.test(cleanServer.restaurantName)
+          ? cleanServer.restaurantName
+          : (localSettings.restaurantName && !/bhanu|avsr/i.test(localSettings.restaurantName) ? localSettings.restaurantName : "The Rustic Spin"),
+        tagline: cleanServer.tagline !== undefined && cleanServer.tagline !== ""
+          ? cleanServer.tagline
+          : (localSettings.tagline !== undefined ? localSettings.tagline : "Restaurant Management & Fine Dining"),
         logo: cleanServer.logo || cleanServer.restaurantLogo || localSettings.logo || localSettings.restaurantLogo || "",
         restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || localSettings.restaurantLogo || localSettings.logo || "",
         paymentQrs: cleanServer.paymentQrs || localSettings.paymentQrs || [],
@@ -1380,15 +1384,24 @@ export function AdminPortal({
   const handleSaveRestaurantSettings = async (settings) => {
     const stampedSettings = {
       ...settings,
+      restaurantName: settings.restaurantName || "The Rustic Spin",
+      tagline: settings.tagline !== undefined ? settings.tagline : "Restaurant Management & Fine Dining",
+      phone: settings.phone || settings.contactNumber || "",
+      contactNumber: settings.contactNumber || settings.phone || "",
+      foodGstRate: Number(settings.taxRate ?? settings.foodGstRate ?? 5),
+      taxRate: Number(settings.taxRate ?? settings.foodGstRate ?? 5),
       logo: settings.logo || settings.restaurantLogo || "",
       restaurantLogo: settings.restaurantLogo || settings.logo || "",
-      updatedAt: Date.now(),
+      updatedAt: new Date().toISOString(),
       isUserConfigured: true,
     };
 
     // 1. Save directly to dedicated REST endpoint
     try {
-      await apiUpdateRestaurantSettings(stampedSettings);
+      const result = await apiUpdateRestaurantSettings(stampedSettings);
+      if (!result?.success) {
+        console.warn("Direct restaurant-settings API update warning:", result?.error);
+      }
     } catch (restErr) {
       console.warn("Direct restaurant-settings API update warning:", restErr);
     }

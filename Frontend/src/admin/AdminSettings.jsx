@@ -99,8 +99,8 @@ const getInitialSettings = (initialSettings) => {
 
     return {
       ...baseDefaults,
-      ...source,
       ...parsedSaved,
+      ...(initialSettings || {}),
       currency: cleanCurrency,
       selectedQrId: selectedId,
       paymentQrs: qrs,
@@ -261,7 +261,7 @@ export function AdminSettings({
           logo: dataUrl,
           restaurantLogo: dataUrl,
           logoBg: bgColor,
-          updatedAt: Date.now(),
+          updatedAt: new Date().toISOString(),
           isUserConfigured: true,
         };
         // Auto-save immediately to server so all desktops / devices get the change globally
@@ -324,6 +324,10 @@ export function AdminSettings({
           ...prev,
           ...localSaved,
           ...initialSettings, // Server data is authoritative for global sync across desktops
+          tagline:
+            initialSettings.tagline !== undefined && initialSettings.tagline !== ""
+              ? initialSettings.tagline
+              : (localSaved.tagline || prev.tagline || ""),
           logo: initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "",
           restaurantLogo: initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "",
           logoBg: initialSettings.logoBg || localSaved.logoBg || prev.logoBg || "",
@@ -542,7 +546,7 @@ export function AdminSettings({
       ...settings,
       logo: settings.logo || settings.restaurantLogo || "",
       restaurantLogo: settings.restaurantLogo || settings.logo || "",
-      updatedAt: Date.now(),
+      updatedAt: new Date().toISOString(),
       isUserConfigured: true,
     };
 
@@ -796,7 +800,7 @@ export function AdminSettings({
                 </label>
                 <input
                   type="text"
-                  value={settings.tagline}
+                  value={settings.tagline || ""}
                   onChange={(e) =>
                     setSettings({ ...settings, tagline: e.target.value })
                   }
@@ -980,7 +984,7 @@ export function AdminSettings({
                             logo: "",
                             restaurantLogo: "",
                             logoBg: "",
-                            updatedAt: Date.now(),
+                            updatedAt: new Date().toISOString(),
                           };
                           if (onSaveSettings) {
                             onSaveSettings(next).catch((err) => {
