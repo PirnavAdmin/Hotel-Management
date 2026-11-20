@@ -22,14 +22,14 @@ import { formatCurrency } from "../utils/formatCurrency";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
-  dedupeOrders,
   formatInvoiceNumber,
+  getInvoiceCreationTimestamp,
   normalizePaymentMethod,
   parseOrderToYMD,
   sortInvoicesByCreationTime,
 } from "../utils/orderDedupe";
 import {
-  requestLiveInvoiceRecords,
+  requestInvoiceManagementRecords,
 } from "../utils/liveInvoiceData";
 
 const localDateInputValue = (date = new Date()) => {
@@ -37,6 +37,12 @@ const localDateInputValue = (date = new Date()) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+const localYesterdayInputValue = () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return localDateInputValue(yesterday);
 };
 
 const localWeekStartValue = (date = new Date()) => {
@@ -54,6 +60,12 @@ const localWeekEndValue = (date = new Date()) => {
 };
 
 const invoiceDateKey = (order) => parseOrderToYMD(order);
+const invoiceNumberLabel = (order) => {
+  const actualNumber = order?.invoiceNumber ?? order?.InvoiceNumber ?? order?.invoiceNo ?? order?.InvoiceNo;
+  return actualNumber != null && String(actualNumber).trim()
+    ? String(actualNumber).trim()
+    : formatInvoiceNumber(order);
+};
 const getInvoicePaymentMethod = (order) => {
   const latestPayment = Array.isArray(order?.payments)
     ? order.payments[order.payments.length - 1]
@@ -75,6 +87,16 @@ const getInvoicePaymentMode = (order) => {
   const method = getInvoicePaymentMethod(order);
   return method ? normalizePaymentMethod(method) : "unknown";
 };
+const getInvoicePaymentModes = (order) => {
+  const paymentModes = Array.isArray(order?.payments)
+    ? [...new Set(order.payments
+        .filter((payment) => Number(payment?.amount ?? payment?.Amount ?? 0) > 0)
+        .map((payment) => normalizePaymentMethod(payment)))]
+    : [];
+  if (paymentModes.length) return paymentModes;
+  const mode = getInvoicePaymentMode(order);
+  return mode === "unknown" ? [] : [mode];
+};
 
 const isTakeawayOrder = (order) => {
   if (!order || typeof order !== "object") return false;
@@ -88,10 +110,23 @@ const isTakeawayOrder = (order) => {
 };
 
 const invoiceDisplayDate = (order) => {
+  const rawDate = order?.date || order?.settledDate || order?.settledAt || order?.createdAt || order?.orderTimestamp;
+  if (rawDate) {
+    let s = String(rawDate).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(s)) {
+      if (!s.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+        s += "Z";
+      }
+      const d = new Date(s);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+      }
+    }
+  }
   const dateKey = invoiceDateKey(order);
   if (!dateKey) return "—";
   const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN");
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 const parseDisplayDateInput = (displayDate) => {
@@ -106,23 +141,40 @@ const parseDisplayDateInput = (displayDate) => {
 };
 
 const formatInvoiceTime = (value) => {
-  const text = String(value || "").trim();
-  const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
-  if (match) {
-    let hour = Number(match[1]);
-    const minute = match[2];
-    let suffix = match[3]?.toUpperCase();
-    if (!suffix) {
-      suffix = hour >= 12 ? "PM" : "AM";
-      hour %= 12;
-      if (hour === 0) hour = 12;
+  if (!value) return "—";
+  const text = String(value).trim();
+  if (!text) return "—";
+  if (["in queue", "started", "done", "ready", "pending", "waiting", "active", "cooked"].includes(text.toLowerCase())) {
+    return text;
+  }
+  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)$/i.test(text)) {
+    return text.toUpperCase();
+  }
+  if (/^\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)$/i.test(text)) {
+    const parts = text.split(" ");
+    const timeParts = parts[0].split(":");
+    return `${timeParts[0]}:${timeParts[1]} ${parts[1] || ""}`.trim().toUpperCase();
+  }
+  let isoStr = text;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(isoStr)) {
+    if (!isoStr.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(isoStr)) {
+      isoStr += "Z";
     }
+  }
+  const parsed = new Date(isoStr);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  }
+  const match24 = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (match24) {
+    let hour = Number(match24[1]);
+    const minute = match24[2];
+    const suffix = hour >= 12 ? "PM" : "AM";
+    hour %= 12;
+    if (hour === 0) hour = 12;
     return `${String(hour).padStart(2, "0")}:${minute} ${suffix}`;
   }
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime())
-    ? text || "—"
-    : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return text || "—";
 };
 
 
@@ -161,13 +213,15 @@ export function AdminInvoices({
   const [discountDraft, setDiscountDraft] = useState("0");
   const [editError, setEditError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [sortField, setSortField] = useState("date");
+  const [sortDirection, setSortDirection] = useState("desc");
 
   const refreshInvoices = async () => {
     setIsLoadingInvoices(true);
     setIsRefreshingInvoices(true);
     setInvoiceLoadError("");
     try {
-      const { records, error } = await requestLiveInvoiceRecords();
+      const { records, error } = await requestInvoiceManagementRecords();
       setInvoiceRecords(records);
       setInvoiceLoadError(error);
     } catch (error) {
@@ -181,8 +235,9 @@ export function AdminInvoices({
 
   useEffect(() => {
     let active = true;
+    let updateTimer = null;
     const fetchInvoices = () => {
-      requestLiveInvoiceRecords()
+      requestInvoiceManagementRecords()
         .then(({ records, error }) => {
           if (!active) return;
           setInvoiceRecords(records);
@@ -200,22 +255,20 @@ export function AdminInvoices({
 
     fetchInvoices();
     const handleUpdate = () => {
-      if (active) fetchInvoices();
-    };
-    const handleStorage = (event) => {
-      if (event.key === "gourmet_pos_past_orders_v2_inr" && active) fetchInvoices();
+      if (!active) return;
+      if (updateTimer) window.clearTimeout(updateTimer);
+      updateTimer = window.setTimeout(fetchInvoices, 120);
     };
 
     window.addEventListener("avsr-invoices-updated", handleUpdate);
-    window.addEventListener("storage", handleStorage);
     return () => {
       active = false;
+      if (updateTimer) window.clearTimeout(updateTimer);
       window.removeEventListener("avsr-invoices-updated", handleUpdate);
-      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 
-  const allOrders = dedupeOrders(invoiceRecords).filter(
+  const allOrders = invoiceRecords.filter(
     (order) => typeof invoiceFilter !== "function" || invoiceFilter(order),
   );
 
@@ -253,11 +306,13 @@ export function AdminInvoices({
     (customToDateText && !customToDate) ||
     (customFromDate && customToDate && customFromDate > customToDate)
   );
+  const yesterdayDate = localYesterdayInputValue();
 
   const baseFilteredOrders = allOrders.filter((order) => {
     const orderDate = invoiceDateKey(order);
     const matchesDate = dateFilter === "all" ||
       (dateFilter === "daily" && orderDate === selectedDate) ||
+      (dateFilter === "yesterday" && orderDate === yesterdayDate) ||
       (dateFilter === "weekly" && orderDate >= selectedWeek.from && orderDate <= selectedWeek.to) ||
       (dateFilter === "monthly" && orderDate.startsWith(selectedMonth)) ||
       (dateFilter === "quarterly" && (() => {
@@ -270,9 +325,8 @@ export function AdminInvoices({
 
     const query = searchTerm.toLowerCase();
     const matchesSearch =
-      formatInvoiceNumber(order).toLowerCase().includes(query) ||
-      String(order.invoiceNo || "").toLowerCase().includes(query) ||
-      String(order.id ?? "").toLowerCase().includes(query) ||
+      invoiceNumberLabel(order).toLowerCase().includes(query) ||
+      String(order.orderId ?? order.OrderId ?? order.id ?? "").toLowerCase().includes(query) ||
       String(order.tableName || "").toLowerCase().includes(query) ||
       String(order.server || "").toLowerCase().includes(query);
 
@@ -287,24 +341,76 @@ export function AdminInvoices({
 
     const matchesPayment =
       paymentFilter === "all" ||
-      getInvoicePaymentMode(order) === paymentFilter;
+      getInvoicePaymentModes(order).includes(paymentFilter);
 
     return matchesOrderType && matchesPayment;
   }));
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredOrders.length / itemsPerPage),
-  );
-  const visiblePage = Math.min(currentPage, pageCount);
-  const pageStart = (visiblePage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(
-    pageStart,
-    pageStart + itemsPerPage,
-  );
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+    setCurrentPage(1);
+  };
+
+  const parseInvSerial = (order) => {
+    const invStr = invoiceNumberLabel(order);
+    const m = String(invStr).match(/[-_](\d{1,6})$/);
+    if (m && m[1]) return parseInt(m[1], 10);
+    const num = parseInt(String(invStr).replace(/\D/g, ""), 10);
+    return isNaN(num) ? 0 : num;
+  };
 
   const getOrderRevenue = (o) =>
     Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0;
+  const getInvoiceCollectedForMode = (order, mode) => {
+    const payments = Array.isArray(order?.payments) ? order.payments : [];
+    if (payments.length) {
+      return payments.reduce((sum, payment) => {
+        const amount = Number(payment?.amount ?? payment?.Amount ?? 0) || 0;
+        return normalizePaymentMethod(payment) === mode ? sum + amount : sum;
+      }, 0);
+    }
+    return getInvoicePaymentModes(order).includes(mode)
+      ? Number(order.paidAmount ?? order.PaidAmount ?? getOrderRevenue(order)) || 0
+      : 0;
+  };
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    if (sortField === "invoiceNo") {
+      const numA = parseInvSerial(a);
+      const numB = parseInvSerial(b);
+      return sortDirection === "asc" ? numA - numB : numB - numA;
+    }
+    if (sortField === "date") {
+      const timeA = getInvoiceCreationTimestamp(a);
+      const timeB = getInvoiceCreationTimestamp(b);
+      if (timeA !== timeB) return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+      return sortDirection === "asc" ? parseInvSerial(a) - parseInvSerial(b) : parseInvSerial(b) - parseInvSerial(a);
+    }
+    if (sortField === "amount") {
+      const totA = getOrderRevenue(a);
+      const totB = getOrderRevenue(b);
+      return sortDirection === "asc" ? totA - totB : totB - totA;
+    }
+    const numA = parseInvSerial(a);
+    const numB = parseInvSerial(b);
+    return numB - numA;
+  });
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(sortedOrders.length / itemsPerPage),
+  );
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const paginatedOrders = sortedOrders.slice(
+    pageStart,
+    pageStart + itemsPerPage,
+  );
 
   const totalCollected = filteredOrders.reduce(
     (sum, o) => sum + getOrderRevenue(o),
@@ -312,12 +418,10 @@ export function AdminInvoices({
   );
 
   const upiTotal = filteredOrders
-    .filter((o) => getInvoicePaymentMode(o) === "upi")
-    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
+    .reduce((sum, o) => sum + getInvoiceCollectedForMode(o, "upi"), 0);
 
   const cashTotal = filteredOrders
-    .filter((o) => getInvoicePaymentMode(o) === "cash")
-    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
+    .reduce((sum, o) => sum + getInvoiceCollectedForMode(o, "cash"), 0);
 
   const takeawayTotal = filteredOrders
     .filter(isTakeawayOrder)
@@ -326,11 +430,11 @@ export function AdminInvoices({
   const totalOrdersCount = baseFilteredOrders.length;
 
   const cashOrdersCount = filteredOrders.filter(
-    (o) => getInvoicePaymentMode(o) === "cash",
+    (o) => getInvoicePaymentModes(o).includes("cash"),
   ).length;
 
   const upiOrdersCount = filteredOrders.filter(
-    (o) => getInvoicePaymentMode(o) === "upi",
+    (o) => getInvoicePaymentModes(o).includes("upi"),
   ).length;
 
   const takeawayOrdersCount = filteredOrders.filter(isTakeawayOrder).length;
@@ -955,8 +1059,9 @@ export function AdminInvoices({
             >
               <option value="all">All Dates</option>
               <option value="daily">Today</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="weekly">This Week</option>
+              <option value="monthly">This Month</option>
               <option value="quarterly">Quarterly</option>
               <option value="custom">Custom Date Range</option>
             </SearchableSelect>
@@ -1164,12 +1269,48 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Order / Invoice No</th>
+                <th
+                  onClick={() => handleSort("invoiceNo")}
+                  style={{
+                    padding: "0.55rem 0.65rem",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    color: sortField === "invoiceNo" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                  }}
+                  title="Click to sort by sequential Invoice Number"
+                >
+                  Order / Invoice No {sortField === "invoiceNo" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Table &amp; Waiter</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Date &amp; Time</th>
+                <th
+                  onClick={() => handleSort("date")}
+                  style={{
+                    padding: "0.55rem 0.65rem",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    color: sortField === "date" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                  }}
+                  title="Click to sort by Date &amp; Time"
+                >
+                  Date &amp; Time {sortField === "date" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Items Summary</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Mode</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Grand Total</th>
+                <th
+                  onClick={() => handleSort("amount")}
+                  style={{
+                    padding: "0.55rem 0.65rem",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    color: sortField === "amount" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                  }}
+                  title="Click to sort by Grand Total"
+                >
+                  Grand Total {sortField === "amount" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
                 <th style={{ padding: "0.55rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
                   Action
                 </th>
@@ -1179,8 +1320,12 @@ export function AdminInvoices({
               {paginatedOrders.map((order, idx) => {
                 const orderIndex = pageStart + idx;
                 const paymentMethod = getInvoicePaymentMethod(order);
-                const paymentLabel = paymentMethod ? String(paymentMethod).trim() : "—";
-                const pMode = paymentMethod ? normalizePaymentMethod(paymentMethod) : "unknown";
+                const paymentModes = getInvoicePaymentModes(order);
+                const paymentLabel = paymentModes.length
+                  ? paymentModes.map((mode) => mode.toUpperCase()).join(" + ")
+                  : paymentMethod ? String(paymentMethod).trim() : "—";
+                const pMode = paymentModes[0] || (paymentMethod ? normalizePaymentMethod(paymentMethod) : "unknown");
+                const orderId = order.orderId ?? order.OrderId ?? order.id ?? order.Id;
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
@@ -1188,7 +1333,7 @@ export function AdminInvoices({
 
                 return (
                   <tr
-                    key={order.id ?? order.orderId ?? order.invoiceId ?? order.invoiceNo ?? orderIndex}
+                    key={order.invoiceId ?? order.InvoiceId ?? order.id ?? order.orderId ?? order.invoiceNo ?? orderIndex}
                     style={{
                       borderBottom: "1px solid var(--border-subtle)",
                       transition: "background 0.15s ease",
@@ -1211,8 +1356,11 @@ export function AdminInvoices({
                           fontSize: "0.76rem",
                         }}
                       >
-                        {formatInvoiceNumber(order)}
+                        {invoiceNumberLabel(order)}
                       </span>
+                      <div style={{ marginTop: "2px", color: "var(--text-muted)", fontSize: "0.66rem" }}>
+                        Order #{orderId ?? "—"}
+                      </div>
                     </td>
 
                     {/* Table & Server */}

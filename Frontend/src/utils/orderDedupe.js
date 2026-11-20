@@ -28,6 +28,17 @@ export const isSettledInvoiceRecord = (invoice) => {
   return total > 0 && paid >= total;
 };
 
+export const ensureUtcIsoString = (val) => {
+  if (!val || typeof val !== "string") return val;
+  const s = val.trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(s)) {
+    if (!s.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+      return s + "Z";
+    }
+  }
+  return s;
+};
+
 export function parseOrderToYMD(order) {
   if (!order) return "";
   const months = {
@@ -64,7 +75,7 @@ export function parseOrderToYMD(order) {
       return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[1].padStart(2, "0")}`;
     }
     // 4. ISO with time or date-time strings with pipe/spaces
-    const cleanStr = s.replace(/\|/g, " ");
+    const cleanStr = ensureUtcIsoString(s.replace(/\|/g, " "));
     const d = new Date(cleanStr);
     if (!isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -159,6 +170,9 @@ export function formatInvoiceNumber(orderOrId) {
     return `INV-${String(parseInt(cleanMatch[1], 10)).padStart(3, "0")}`;
   }
 
+  // Backend invoices include their issue date and serial in the official number.
+  if (/^INV-\d{8}-\d{1,6}$/i.test(val)) return val.toUpperCase();
+
   // If rawId is a clean sequential number (e.g. 118, 117, 116, 87, 34)
   const cleanId = parseInt(String(rawId).replace(/\D/g, ""), 10);
   if (!isNaN(cleanId) && cleanId > 0 && cleanId < 100000) {
@@ -191,7 +205,7 @@ export const getOrderTimestamp = (order) => {
   ];
   for (const c of candidates) {
     if (typeof c === "string" && /^\d{4}-\d{2}-\d{2}/.test(c)) {
-      const ms = Date.parse(c);
+      const ms = Date.parse(ensureUtcIsoString(c));
       if (!Number.isNaN(ms) && ms > 0) return ms;
     }
   }
@@ -203,7 +217,7 @@ export const getOrderTimestamp = (order) => {
   }
   for (const c of candidates) {
     if (c) {
-      const ms = Date.parse(c);
+      const ms = typeof c === "string" ? Date.parse(ensureUtcIsoString(c)) : Date.parse(c);
       if (!Number.isNaN(ms) && ms > 0) return ms;
     }
   }
@@ -217,7 +231,7 @@ const getCalendarDateTimestamp = (order) => {
     const localized = text.match(/^(\d{1,2})\s+([a-z]{3,})\s+(\d{4})$/i);
     const parsed = localized
       ? new Date(`${localized[2]} ${localized[1]}, ${localized[3]}`)
-      : new Date(text);
+      : new Date(ensureUtcIsoString(text));
     if (!Number.isNaN(parsed.getTime())) {
       return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
     }
@@ -253,7 +267,7 @@ export const sortOrdersBySettlementTime = (orders = []) =>
     return idB - idA;
   });
 
-const invoiceCreationTimestamp = (invoice) => {
+export const getInvoiceCreationTimestamp = (invoice) => {
   const value = invoice?.invoiceCreatedAt ?? invoice?.InvoiceCreatedAt ??
     invoice?.createdAt ?? invoice?.CreatedAt ?? invoice?.invoiceDate ?? invoice?.InvoiceDate ??
     invoice?.issuedAt ?? invoice?.IssuedAt ?? invoice?.date ?? invoice?.Date ??
@@ -275,7 +289,7 @@ const numericInvoiceId = (invoice) => {
 
 export const sortInvoicesByCreationTime = (invoices = []) =>
   [...invoices].sort((a, b) => {
-    const timestampDifference = invoiceCreationTimestamp(b) - invoiceCreationTimestamp(a);
+    const timestampDifference = getInvoiceCreationTimestamp(b) - getInvoiceCreationTimestamp(a);
     return timestampDifference || numericInvoiceId(b) - numericInvoiceId(a);
   });
 

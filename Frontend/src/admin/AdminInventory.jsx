@@ -42,6 +42,277 @@ const STORAGE_KEY_CUSTOM_INV_SUPPLIERS = "pos_custom_inventory_suppliers";
 const STORAGE_KEY_CUSTOM_INV_SUBCATEGORIES = "pos_custom_inventory_subcategories";
 const STORAGE_KEY_DELETED_INVENTORY_IDS = "pos_deleted_inventory_ids_v1";
 
+export const isBarInventoryItem = (item) => {
+  if (!item) return false;
+  const name = String(item.name || item.ingredientName || "").toLowerCase();
+  const cat = String(item.category || "").toLowerCase();
+  const sub = String(item.subcategory || "").toLowerCase();
+
+  const barCategories = [
+    "whiskey", "whisky", "vodka", "rum", "gin", "beer", "wine",
+    "tequila", "brandy", "liqueur", "cocktail", "spirits", "liquor", "bar"
+  ];
+  if (barCategories.some((c) => cat.includes(c) || sub.includes(c))) {
+    return true;
+  }
+
+  const barKeywords = [
+    "johnnie walker", "black label", "red label", "absolut", "vodka",
+    "smirnoff", "whiskey", "whisky", "scotch", "corona extra", "budweiser",
+    "heineken", "kingfisher", "carlsberg", "shiraz", "cabernet", "sula",
+    "jacob's creek", "bacardi", "old monk", "tequila", "breezer", "chivas",
+    "jack daniel", "glenfiddich", "jagermeister", "gin"
+  ];
+  if (barKeywords.some((k) => name.includes(k))) {
+    return true;
+  }
+
+  return false;
+};
+
+export const INITIAL_KITCHEN_INVENTORY = [
+  {
+    id: "ing-1",
+    name: "Basmati Biryani Rice",
+    category: "Grains & Rice",
+    subcategory: "Basmati Biryani Rice",
+    unit: "KG",
+    stock: 250,
+    minThreshold: 30,
+    mrp: 95,
+    unitCost: 95,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-2",
+    name: "Fresh Chicken (Curry Cut)",
+    category: "Meats & Poultry",
+    subcategory: "Fresh Chicken (Curry Cut)",
+    unit: "KG",
+    stock: 45,
+    minThreshold: 10,
+    mrp: 220,
+    unitCost: 220,
+    supplier: "Fresh Farm Poultry & Chicken Supplies",
+  },
+  {
+    id: "ing-3",
+    name: "Boneless Chicken Breast",
+    category: "Meats & Poultry",
+    subcategory: "Boneless Chicken Breast",
+    unit: "KG",
+    stock: 30,
+    minThreshold: 8,
+    mrp: 280,
+    unitCost: 280,
+    supplier: "Fresh Farm Poultry & Chicken Supplies",
+  },
+  {
+    id: "ing-4",
+    name: "Fresh Mutton (Curry Cut)",
+    category: "Meats & Poultry",
+    subcategory: "Fresh Mutton (Curry Cut)",
+    unit: "KG",
+    stock: 20,
+    minThreshold: 5,
+    mrp: 750,
+    unitCost: 750,
+    supplier: "Royal Halal Mutton Center",
+  },
+  {
+    id: "ing-5",
+    name: "Fresh Malai Paneer",
+    category: "Dairy & Cheeses",
+    subcategory: "Fresh Malai Paneer",
+    unit: "KG",
+    stock: 25,
+    minThreshold: 6,
+    mrp: 320,
+    unitCost: 320,
+    supplier: "Heritage & Amul Dairy Distributors",
+  },
+  {
+    id: "ing-6",
+    name: "Pure Desi Cooking Ghee",
+    category: "Dairy & Cheeses",
+    subcategory: "Pure Desi Cooking Ghee",
+    unit: "KG",
+    stock: 15,
+    minThreshold: 4,
+    mrp: 580,
+    unitCost: 580,
+    supplier: "Heritage & Amul Dairy Distributors",
+  },
+  {
+    id: "ing-7",
+    name: "Fresh Curd (Dahi)",
+    category: "Dairy & Cheeses",
+    subcategory: "Fresh Curd (Dahi)",
+    unit: "KG",
+    stock: 35,
+    minThreshold: 10,
+    mrp: 65,
+    unitCost: 65,
+    supplier: "Heritage & Amul Dairy Distributors",
+  },
+  {
+    id: "ing-8",
+    name: "Cooking Butter & Cream",
+    category: "Dairy & Cheeses",
+    subcategory: "Cooking Butter",
+    unit: "KG",
+    stock: 18,
+    minThreshold: 5,
+    mrp: 460,
+    unitCost: 460,
+    supplier: "Heritage & Amul Dairy Distributors",
+  },
+  {
+    id: "ing-9",
+    name: "Onions",
+    category: "Vegetables & Fresh Produce",
+    subcategory: "Onions",
+    unit: "KG",
+    stock: 120,
+    minThreshold: 25,
+    mrp: 35,
+    unitCost: 35,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-10",
+    name: "Tomatoes",
+    category: "Vegetables & Fresh Produce",
+    subcategory: "Tomatoes",
+    unit: "KG",
+    stock: 80,
+    minThreshold: 20,
+    mrp: 40,
+    unitCost: 40,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-11",
+    name: "Ginger-Garlic Paste",
+    category: "Sauces, Pastes & Condiments",
+    subcategory: "Ginger-Garlic Paste",
+    unit: "KG",
+    stock: 25,
+    minThreshold: 5,
+    mrp: 140,
+    unitCost: 140,
+    supplier: "National Spices & Oil Traders",
+  },
+  {
+    id: "ing-12",
+    name: "Fresh Mint Leaves (Pudina)",
+    category: "Vegetables & Fresh Produce",
+    subcategory: "Mint Leaves (Pudina)",
+    unit: "KG",
+    stock: 12,
+    minThreshold: 3,
+    mrp: 80,
+    unitCost: 80,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-13",
+    name: "Green Chillies",
+    category: "Vegetables & Fresh Produce",
+    subcategory: "Green Chillies",
+    unit: "KG",
+    stock: 15,
+    minThreshold: 4,
+    mrp: 60,
+    unitCost: 60,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-14",
+    name: "Refined Sunflower Oil",
+    category: "Cooking Oils & Fats",
+    subcategory: "Refined Sunflower Oil",
+    unit: "L",
+    stock: 90,
+    minThreshold: 20,
+    mrp: 130,
+    unitCost: 130,
+    supplier: "National Spices & Oil Traders",
+  },
+  {
+    id: "ing-15",
+    name: "Biryani & Garam Masala Spices",
+    category: "Spices & Seasonings",
+    subcategory: "Biryani Masala",
+    unit: "KG",
+    stock: 20,
+    minThreshold: 5,
+    mrp: 420,
+    unitCost: 420,
+    supplier: "National Spices & Oil Traders",
+  },
+  {
+    id: "ing-16",
+    name: "Kashmiri Red Chilli Powder",
+    category: "Spices & Seasonings",
+    subcategory: "Kashmiri Chilli Powder",
+    unit: "KG",
+    stock: 18,
+    minThreshold: 4,
+    mrp: 320,
+    unitCost: 320,
+    supplier: "National Spices & Oil Traders",
+  },
+  {
+    id: "ing-17",
+    name: "Turmeric Powder (Haldi)",
+    category: "Spices & Seasonings",
+    subcategory: "Turmeric Powder (Haldi)",
+    unit: "KG",
+    stock: 15,
+    minThreshold: 3,
+    mrp: 190,
+    unitCost: 190,
+    supplier: "National Spices & Oil Traders",
+  },
+  {
+    id: "ing-18",
+    name: "Table Salt & Rock Salt",
+    category: "Spices & Seasonings",
+    subcategory: "Table Salt & Rock Salt",
+    unit: "KG",
+    stock: 50,
+    minThreshold: 10,
+    mrp: 22,
+    unitCost: 22,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-19",
+    name: "Wheat Flour (Atta) & Maida",
+    category: "Grains & Rice",
+    subcategory: "Wheat Flour (Atta)",
+    unit: "KG",
+    stock: 75,
+    minThreshold: 15,
+    mrp: 45,
+    unitCost: 45,
+    supplier: "Metro Cash & Carry Wholesale",
+  },
+  {
+    id: "ing-20",
+    name: "Foil Meal Trays & Containers",
+    category: "Packaging & Disposables",
+    subcategory: "Foil Meal Trays & Containers",
+    unit: "Pcs",
+    stock: 450,
+    minThreshold: 100,
+    mrp: 4.5,
+    unitCost: 4.5,
+    supplier: "City Packaging & Disposable Supplies",
+  },
+];
+
 export const PRIMARY_CATEGORY_KEYS = [
   "Grains & Rice",
   "Meats & Poultry",
@@ -358,6 +629,7 @@ export const deduplicateAndNormalizeInventory = (items) => {
 
   items.forEach((rawItem) => {
     if (!rawItem || !rawItem.name) return;
+    if (isBarInventoryItem(rawItem)) return;
     const rawName = String(rawItem.name).trim();
     if (!rawName) return;
 
@@ -482,6 +754,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         const parsed = JSON.parse(saved);
         const nonDeleted = (Array.isArray(parsed) ? parsed : []).filter(
           (item) => {
+            if (isBarInventoryItem(item)) return false;
             const info = getCanonicalIngredientInfo(item.name);
             return (
               !deletedIds.has(String(item.id)) &&
@@ -490,13 +763,17 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
             );
           },
         );
-        const cleaned = deduplicateAndNormalizeInventory(nonDeleted);
+        const combined =
+          nonDeleted.length < 5
+            ? [...nonDeleted, ...INITIAL_KITCHEN_INVENTORY]
+            : nonDeleted;
+        const cleaned = deduplicateAndNormalizeInventory(combined);
         localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(cleaned));
         return cleaned;
       }
-      return [];
+      return deduplicateAndNormalizeInventory(INITIAL_KITCHEN_INVENTORY);
     } catch {
-      return [];
+      return deduplicateAndNormalizeInventory(INITIAL_KITCHEN_INVENTORY);
     }
   });
 
@@ -854,53 +1131,73 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
   };
 
   useEffect(() => {
-      const rows = Array.isArray(sharedInventory) ? sharedInventory : [];
-      let saved = [];
-      try {
-        saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
-      } catch {}
+    const rawRows = Array.isArray(sharedInventory) ? sharedInventory : [];
+    const rows = rawRows.filter((r) => !isBarInventoryItem(r));
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || "[]");
+      if (!Array.isArray(saved)) saved = [];
+      saved = saved.filter((s) => !isBarInventoryItem(s));
+    } catch {}
 
-      let deletedIds = new Set();
-      try {
-        const d = JSON.parse(
-          localStorage.getItem(STORAGE_KEY_DELETED_INVENTORY_IDS) || "[]",
+    let deletedIds = new Set();
+    try {
+      const d = JSON.parse(
+        localStorage.getItem(STORAGE_KEY_DELETED_INVENTORY_IDS) || "[]",
+      );
+      deletedIds = new Set(d.map(String));
+    } catch {}
+
+    const savedById = new Map(saved.map((item) => [String(item.id), item]));
+    const remote = rows
+      .filter((row) => {
+        const id = String(row.id ?? row.ingredientId ?? row.IngredientId ?? row.ingredient_id);
+        const info = getCanonicalIngredientInfo(row.name);
+        return (
+          !deletedIds.has(id) &&
+          !deletedIds.has(info.dedupeKey) &&
+          !deletedIds.has(String(row.name || "").toLowerCase().trim())
         );
-        deletedIds = new Set(d.map(String));
-      } catch {}
+      })
+      .map((row) => {
+        const id = row.id ?? row.ingredientId ?? row.ingredient_id;
+        const previous = savedById.get(String(id)) || {};
+        const info = getCanonicalIngredientInfo(row.name || previous.name || "");
+        const resolvedCategory =
+          row.category && row.category !== "General"
+            ? row.category
+            : (info.suggestedCategory || previous.category || "Grains & Rice");
+        const resolvedSub =
+          row.subcategory ||
+          info.suggestedSubcategory ||
+          previous.subcategory ||
+          (DEFAULT_INVENTORY_CATEGORIES_WITH_SUBS[resolvedCategory] || ["General Supplies"])[0];
+        return {
+          ...previous,
+          id: String(id),
+          name: row.name?.trim() || previous.name || `Unnamed ingredient #${id}`,
+          category: resolvedCategory,
+          subcategory: resolvedSub,
+          supplier: row.supplier || previous.supplier || "Metro Cash & Carry Wholesale",
+          unit: normalizeUnit(row.unit || previous.unit || info.suggestedUnit || "KG"),
+          stock: Number(row.currentStock ?? row.stock ?? previous.stock ?? 0),
+          minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 5),
+          mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
+        };
+      });
 
-      const savedById = new Map((Array.isArray(saved) ? saved : []).map((item) => [String(item.id), item]));
-      const remote = rows
-        .filter((row) => {
-          const id = String(row.id ?? row.ingredientId ?? row.IngredientId ?? row.ingredient_id);
-          const info = getCanonicalIngredientInfo(row.name);
-          return (
-            !deletedIds.has(id) &&
-            !deletedIds.has(info.dedupeKey) &&
-            !deletedIds.has(String(row.name || "").toLowerCase().trim())
-          );
-        })
-        .map((row) => {
-          const id = row.id ?? row.ingredientId ?? row.ingredient_id;
-          const previous = savedById.get(String(id)) || {};
-          return {
-            ...previous,
-            id: String(id),
-            name: row.name?.trim() || previous.name || `Unnamed ingredient #${id}`,
-            unit: normalizeUnit(row.unit || previous.unit || "Pcs"),
-            stock: Number(row.currentStock ?? row.stock ?? previous.stock ?? 0),
-            minThreshold: Number(row.minimumThreshold ?? row.minThreshold ?? previous.minThreshold ?? 0),
-            mrp: Number(row.unitCost ?? row.mrp ?? previous.mrp ?? 0),
-          };
-        });
-      const merged = deduplicateAndNormalizeInventory(remote);
-      setInventory(merged);
-      try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
+    // Merge remote with saved and INITIAL_KITCHEN_INVENTORY to guarantee complete kitchen ingredients list
+    const pool = [...remote, ...saved, ...INITIAL_KITCHEN_INVENTORY].filter((item) => !isBarInventoryItem(item));
+    const merged = deduplicateAndNormalizeInventory(pool);
+    setInventory(merged);
+    try { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(merged)); } catch {}
   }, [sharedInventory]);
 
   useEffect(() => {
     const handleInventoryUpdate = (event) => {
       if (Array.isArray(event.detail)) {
-        setInventory(deduplicateAndNormalizeInventory(event.detail));
+        const clean = event.detail.filter((item) => !isBarInventoryItem(item));
+        setInventory(deduplicateAndNormalizeInventory(clean));
       }
     };
     const handleStorageUpdate = (event) => {
@@ -908,7 +1205,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
       try {
         const updated = JSON.parse(event.newValue);
         if (Array.isArray(updated)) {
-          setInventory(deduplicateAndNormalizeInventory(updated));
+          const clean = updated.filter((item) => !isBarInventoryItem(item));
+          setInventory(deduplicateAndNormalizeInventory(clean));
         }
       } catch {}
     };

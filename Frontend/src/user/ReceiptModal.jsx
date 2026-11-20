@@ -62,7 +62,12 @@ export function formatThermalDateTime(value, fallbackTime) {
     return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
   }
 
-  const str = String(value).trim();
+  let str = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(str)) {
+    if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+      str += 'Z';
+    }
+  }
   const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {
     const y = dateObj.getFullYear();
@@ -92,7 +97,13 @@ export function formatA4DateTime(value, fallbackTime) {
     return `${dateStr}, ${timeStr}`;
   }
 
-  const dateObj = new Date(raw);
+  let str = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(str)) {
+    if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+      str += 'Z';
+    }
+  }
+  const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {
     const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -110,9 +121,14 @@ export function formatA4DateTime(value, fallbackTime) {
  */
 export function formatOrderTimeOnly(value) {
   if (!value) return '';
-  const str = String(value).trim();
+  let str = String(value).trim();
   if (/^\d{1,2}:\d{2}\s*(am|pm)?$/i.test(str)) {
     return str;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(str)) {
+    if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+      str += 'Z';
+    }
   }
   const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {

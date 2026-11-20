@@ -375,32 +375,41 @@ const isSyntheticOverflowTable = (table) => {
     (!label || /^(?:t|table)[\s-]*999999$/i.test(label));
 };
 
-const clearCachedTableOrder = (table) => ({
-  ...table,
-  status: ["reserved", "cleaning", "inactive"].includes(
-    String(table.status || "").toLowerCase(),
-  )
-    ? table.status
-    : "vacant",
-  guests: 0,
-  occupiedChairs: 0,
-  selectedSeats: [],
-  items: [],
-  orderTime: null,
-  orderTimestamp: null,
-  occupiedSince: null,
-  activeOrderId: null,
-  backendOrderId: null,
-  cookingStartedAt: null,
-  completedAt: null,
-  completedDuration: null,
-  discountPercent: 0,
-  discountAmount: 0,
-  subtotal: 0,
-  taxAmount: 0,
-  serviceChargeAmount: 0,
-  grandTotal: 0,
-});
+const clearCachedTableOrder = (table) => {
+  const preservedSeats = Array.isArray(table?.selectedSeats) ? table.selectedSeats : [];
+  const preservedCount = Number(
+    (preservedSeats.length > 0 ? preservedSeats.length : null) ??
+    (table?.occupiedChairs !== undefined && table?.occupiedChairs !== null && Number(table.occupiedChairs) >= 0 ? Number(table.occupiedChairs) : null) ??
+    (table?.guests !== undefined && table?.guests !== null && Number(table.guests) >= 0 ? Number(table.guests) : null) ??
+    0
+  );
+  return {
+    ...table,
+    status: ["reserved", "cleaning", "inactive"].includes(
+      String(table?.status || "").toLowerCase(),
+    )
+      ? table.status
+      : (preservedCount > 0 ? "occupied" : "vacant"),
+    guests: preservedCount,
+    occupiedChairs: preservedCount,
+    selectedSeats: preservedSeats,
+    items: [],
+    orderTime: null,
+    orderTimestamp: null,
+    occupiedSince: null,
+    activeOrderId: null,
+    backendOrderId: null,
+    cookingStartedAt: null,
+    completedAt: null,
+    completedDuration: null,
+    discountPercent: 0,
+    discountAmount: 0,
+    subtotal: 0,
+    taxAmount: 0,
+    serviceChargeAmount: 0,
+    grandTotal: 0,
+  };
+};
 
 const mergeIncomingTables = (
   incomingTables,
@@ -498,22 +507,32 @@ const mergeIncomingTables = (
           ? incomingActiveItems
           : cachedActiveItems);
 
+      const preservedSelectedSeats = Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
+        ? table.selectedSeats
+        : (Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0 ? existing.selectedSeats : []);
+
+      const incomingGuests =
+        (preservedSelectedSeats.length > 0 ? preservedSelectedSeats.length : null) ??
+        (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
+        (Number(table.guests) > 0 ? Number(table.guests) : null) ??
+        (Number(existing.occupiedChairs) > 0 ? Number(existing.occupiedChairs) : null) ??
+        (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
+        0;
+
+      const hasOccupiedSeats = incomingGuests > 0 || preservedSelectedSeats.length > 0;
+
       let finalStatus = "vacant";
       if (!hasActiveItems) {
-        finalStatus = ["reserved", "cleaning", "inactive"].includes(rawStatus) ? rawStatus : "vacant";
+        if (hasOccupiedSeats) {
+          finalStatus = "occupied";
+        } else {
+          finalStatus = ["reserved", "cleaning", "inactive"].includes(rawStatus) ? rawStatus : "vacant";
+        }
       } else {
         finalStatus = serverSaysOccupied ? rawStatus : "occupied";
       }
 
-      const isFinalVacant = finalStatus === "vacant";
-
-      const incomingGuests = isFinalVacant
-        ? 0
-        : (Number(table.guests) > 0 ? Number(table.guests) : null) ??
-          (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats.length : null) ??
-          (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-          (preserveCachedOrders && Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
-          0;
+      const isFinalVacant = finalStatus === "vacant" && !hasOccupiedSeats;
 
       const resolvedItems = incomingItemsAreAuthoritative
         ? table.items
@@ -555,11 +574,7 @@ const mergeIncomingTables = (
           table.assignedServerId !== undefined ? table.assignedServerId : (existing.assignedServerId ?? null),
         guests: isFinalVacant ? 0 : incomingGuests,
         occupiedChairs: isFinalVacant ? 0 : incomingGuests,
-        selectedSeats: isFinalVacant
-          ? []
-          : (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
-              ? table.selectedSeats
-              : (preserveCachedOrders && Array.isArray(existing.selectedSeats) ? existing.selectedSeats : [])),
+        selectedSeats: isFinalVacant ? [] : preservedSelectedSeats,
         items: isFinalVacant ? [] : resolvedItems,
         orderTime: isFinalVacant ? null : (table.orderTime ?? (preserveCachedOrders ? existing.orderTime : null) ?? null),
         orderTimestamp: isFinalVacant ? null : (table.orderTimestamp ?? (preserveCachedOrders ? existing.orderTimestamp : null) ?? null),
@@ -4338,6 +4353,10 @@ export function App() {
     });
     const targetServerId = matchedStaff?.id ?? matchedStaff?.staffId ?? (targetServerName ? updatedTable.assignedServerId : null) ?? null;
 
+    const targetStatus = occupiedSeatsCount > 0
+      ? "occupied"
+      : (updatedTable.status || previousTable?.status || "vacant");
+
     const normalized = {
       ...updatedTable,
       capacity: cap,
@@ -4347,6 +4366,7 @@ export function App() {
       guests: finalGuests,
       occupiedChairs: occupiedSeatsCount,
       selectedSeats: selectedSeats,
+      status: targetStatus,
       server: targetServerName || "",
       assignedServerName: targetServerName || "",
       assignedServerId: targetServerId,

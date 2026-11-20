@@ -64,7 +64,7 @@ import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminTakeaway } from "./AdminTakeaway";
-import { AdminInventory } from "./AdminInventory";
+import { AdminInventory, isBarInventoryItem, INITIAL_KITCHEN_INVENTORY } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
 import { AdminSettings } from "./AdminSettings";
@@ -779,21 +779,28 @@ export function AdminPortal({
   }, [activeTab]);
 
   const [inventory, setInventory] = useState(() => {
-    if (Array.isArray(propInventory) && propInventory.length > 0) return propInventory;
+    if (Array.isArray(propInventory) && propInventory.length > 0) {
+      const filtered = propInventory.filter((item) => !isBarInventoryItem(item));
+      return filtered.length > 0 ? filtered : INITIAL_KITCHEN_INVENTORY;
+    }
     try {
       const saved = localStorage.getItem("gourmet_pos_inventory_v1");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((item) => !isBarInventoryItem(item));
+          return filtered.length >= 5 ? filtered : [...filtered, ...INITIAL_KITCHEN_INVENTORY];
+        }
       }
     } catch {}
-    return [];
+    return INITIAL_KITCHEN_INVENTORY;
   });
   const [inventoryApiError, setInventoryApiError] = useState("");
 
   useEffect(() => {
     if (Array.isArray(propInventory) && propInventory.length > 0) {
-      setInventory(propInventory);
+      const filtered = propInventory.filter((item) => !isBarInventoryItem(item));
+      setInventory(filtered.length > 0 ? filtered : INITIAL_KITCHEN_INVENTORY);
     }
   }, [propInventory]);
 
@@ -814,11 +821,24 @@ export function AdminPortal({
           throw new Error(response?.error || "Inventory API returned an invalid response.");
         }
         if (cancelled) return;
-        setInventory(rows);
+        const kitchenRows = rows.filter((r) => !isBarInventoryItem(r));
+        setInventory((prev) => {
+          const prevList = Array.isArray(prev) ? prev.filter((i) => !isBarInventoryItem(i)) : [];
+          const combined = [...kitchenRows, ...prevList, ...INITIAL_KITCHEN_INVENTORY];
+          const seen = new Set();
+          const clean = [];
+          for (const item of combined) {
+            const k = (item.name || item.ingredientName || "").toLowerCase().trim();
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            clean.push(item);
+          }
+          try {
+            localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(clean));
+          } catch {}
+          return clean;
+        });
         setInventoryApiError("");
-        try {
-          localStorage.setItem("gourmet_pos_inventory_v1", JSON.stringify(rows));
-        } catch {}
       } catch (error) {
         if (cancelled) return;
         console.error("[Admin Inventory] Failed to load inventory from the API:", error);
@@ -828,7 +848,7 @@ export function AdminPortal({
     loadInventory();
     const handleInvUpdated = (e) => {
       if (Array.isArray(e.detail)) {
-        setInventory(e.detail);
+        setInventory(e.detail.filter((item) => !isBarInventoryItem(item)));
       }
     };
     const handleStorage = (e) => {
@@ -836,7 +856,7 @@ export function AdminPortal({
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
-            setInventory(parsed);
+            setInventory(parsed.filter((item) => !isBarInventoryItem(item)));
           }
         } catch {}
       }
@@ -1054,11 +1074,15 @@ export function AdminPortal({
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
-    if (rawStatus === "vacant" || rawStatus === "available" || rawStatus === "free") {
-      return false;
-    }
-    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
+    const hasOccupiedSeats =
+      (Array.isArray(tbl?.selectedSeats) && tbl.selectedSeats.length > 0) ||
+      Number(tbl?.occupiedChairs) > 0 ||
+      Number(tbl?.guests) > 0;
+    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed" || hasOccupiedSeats) {
       return true;
+    }
+    if (rawStatus === "vacant" || rawStatus === "available" || rawStatus === "free") {
+      return hasOccupiedSeats;
     }
     const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
@@ -2336,9 +2360,15 @@ export function AdminPortal({
     (sum, t) => sum + (Number(t.capacity) || 0),
     0,
   );
-  const occupiedChairs = tables
-    .filter((t) => t.status !== "vacant")
-    .reduce((sum, t) => sum + (Number(t.guests) || 0), 0);
+  const occupiedChairs = tables.reduce((sum, t) => {
+    const occ = Number(
+      (Array.isArray(t.selectedSeats) && t.selectedSeats.length > 0 ? t.selectedSeats.length : null) ??
+      (t.occupiedChairs !== undefined && t.occupiedChairs !== null && Number(t.occupiedChairs) >= 0 ? Number(t.occupiedChairs) : null) ??
+      (t.guests !== undefined && t.guests !== null ? Number(t.guests) : null) ??
+      0
+    );
+    return sum + occ;
+  }, 0);
   const tablesWithOrders = tables.filter((t) => t.items && t.items.length > 0);
   const activeTakeawayKOTCount = allTakeawayKOTList.filter(
     (t) => !t.items.every((i) => i.kotStatus === "served" || i.kotStatus === "ready"),

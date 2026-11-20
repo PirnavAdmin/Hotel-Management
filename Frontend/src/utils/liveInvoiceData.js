@@ -5,6 +5,7 @@ import {
   formatInvoiceNumber,
   isSettledInvoiceRecord,
   isSettledSaleRecord,
+  sortInvoicesByCreationTime,
   sortOrdersBySettlementTime,
 } from "./orderDedupe";
 import { sanitizeDishName } from "./sanitizeDishName";
@@ -142,13 +143,15 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     valueFrom(invoice, "invoiceNumber", "InvoiceNumber", "invoiceNo", "InvoiceNo") ??
     valueFrom(order, "invoiceNo", "InvoiceNo");
 
-  const invoiceNumber = formatInvoiceNumber({
-    ...order,
-    ...invoice,
-    id: orderId ?? invoiceId,
-    invoiceNo: rawInvoiceNumber,
-    invoiceNumber: rawInvoiceNumber,
-  });
+  const invoiceNumber = rawInvoiceNumber
+    ? String(rawInvoiceNumber).trim()
+    : formatInvoiceNumber({
+        ...order,
+        ...invoice,
+        id: orderId ?? invoiceId,
+        invoiceNo: rawInvoiceNumber,
+        invoiceNumber: rawInvoiceNumber,
+      });
 
   return {
     ...order,
@@ -219,6 +222,17 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
   const records = settledInvoices.map((invoice) => {
     const orderId = valueFrom(invoice, "orderId", "OrderId");
     if (orderId !== undefined) includedOrderIds.add(String(orderId));
+
+    // Track orders referenced inside payments (e.g. TXN-ORD-36-...) so they aren't duplicated as orphan orders
+    const paymentTxns = Array.isArray(invoice?.payments) ? invoice.payments : [];
+    paymentTxns.forEach((p) => {
+      const ref = String(p?.transactionReference || p?.txnReference || "");
+      const match = ref.match(/ORD-(\d+)/i);
+      if (match && match[1]) {
+        includedOrderIds.add(String(match[1]));
+      }
+    });
+
     const matchingOrder = ordersById.get(String(orderId ?? ""));
     if (matchingOrder) {
       includedOrderIds.add(String(valueFrom(matchingOrder, "id", "Id", "orderId", "OrderId")));
@@ -236,10 +250,49 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
   return records;
 }
 
+let inFlightInvoiceApiRequest = null;
+const requestInvoiceApiRecords = () => {
+  if (!inFlightInvoiceApiRequest) {
+    inFlightInvoiceApiRequest = apiGetInvoices()
+      .catch((error) => ({ success: false, error: error?.message }))
+      .finally(() => {
+        inFlightInvoiceApiRequest = null;
+      });
+  }
+  return inFlightInvoiceApiRequest;
+};
+
+async function loadInvoiceManagementRecords() {
+  const response = await requestInvoiceApiRecords();
+  const invoices = extractInvoiceRecords(response);
+  if (!invoices) {
+    return {
+      records: [],
+      error: `Invoice records could not be loaded (${response?.error || "server unavailable"}).`,
+    };
+  }
+
+  const records = sortInvoicesByCreationTime(
+    invoices.map((invoice) => normalizeInvoiceRecord(invoice)),
+  );
+  return { records, error: "" };
+}
+
+let inFlightInvoiceManagementRequest = null;
+
+/** Fetch complete invoice API records for the management list and its client-side filters. */
+export function requestInvoiceManagementRecords() {
+  if (!inFlightInvoiceManagementRequest) {
+    inFlightInvoiceManagementRequest = loadInvoiceManagementRecords().finally(() => {
+      inFlightInvoiceManagementRequest = null;
+    });
+  }
+  return inFlightInvoiceManagementRequest;
+}
 
 async function loadLiveInvoiceRecords() {
   const [invoiceResponse, orderResponse] = await Promise.all([
-    apiGetInvoices().catch((err) => ({ success: false, error: err?.message })),
+    requestInvoiceApiRecords(),
     apiGetOrderHistory().catch((err) => ({ success: false, error: err?.message })),
   ]);
   const invoices = extractInvoiceRecords(invoiceResponse);
@@ -259,6 +312,27 @@ async function loadLiveInvoiceRecords() {
   const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(liveRecords)).filter(
     (record) => !["void", "cancelled"].includes(String(record.status || record.Status || "").toLowerCase()),
   );
+
+  // Keep global invoice counter monotonically increasing beyond all historical invoices
+  try {
+    let maxNum = 0;
+    cleanRecords.forEach((r) => {
+      const invStr = r.invoiceNo || r.invoiceNumber || "";
+      const m = String(invStr).match(/INV-(\d+)/i);
+      if (m && m[1]) {
+        const n = parseInt(m[1], 10);
+        if (!isNaN(n) && n > maxNum && n < 100000) maxNum = n;
+      }
+      const oid = parseInt(String(r.id ?? r.orderId ?? "").replace(/\D/g, ""), 10);
+      if (!isNaN(oid) && oid > maxNum && oid < 100000) maxNum = oid;
+    });
+    if (maxNum > 0 && typeof localStorage !== "undefined") {
+      const current = parseInt(localStorage.getItem("avsr_highest_invoice_serial") || "0", 10);
+      if (maxNum > current) {
+        localStorage.setItem("avsr_highest_invoice_serial", String(maxNum));
+      }
+    }
+  } catch {}
   const error = invoices === null && orders === null && cleanRecords.length === 0
     ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
     : "";

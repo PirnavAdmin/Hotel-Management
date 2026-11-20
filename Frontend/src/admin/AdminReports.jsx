@@ -1452,7 +1452,13 @@ export function AdminReports({
         const dateRaw = ord.settledAt || ord.timestamp || ord.date || todayYMD;
         let formattedDate = "";
         try {
-          const d = new Date(dateRaw);
+          let str = String(dateRaw || "").trim();
+          if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(str)) {
+            if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+              str += 'Z';
+            }
+          }
+          const d = new Date(str);
           if (!isNaN(d.getTime())) {
             const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             formattedDate = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${timeStr}`;
