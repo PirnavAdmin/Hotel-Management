@@ -43,6 +43,7 @@ import { apiGetBarDrinks } from "./api/barApi";
 import { isDrinkItem } from "./kot/orderRouting";
 import { getRelevantLocalFallback } from "./utils/menuImageHelper";
 import { isDrinkCategory, getDrinkDietaryType } from "./utils/drinkCategoryHelper";
+import { saveOrUpdateCustomer } from "./utils/customerStorage";
 import { MENU_ITEMS } from "./data/menuData";
 import { isSameMenuItem, consolidateOrderItems } from "./utils/orderItemMatcher";
 import {
@@ -187,14 +188,19 @@ const mergeActiveDiningOrders = (tables, orders) => {
     if (items.length === 0 || !["active", "billed"].includes(orderStatus)) {
       return clearCachedTableOrder({ ...table, status: "vacant" });
     }
-    const guests = Number(order.guests ?? order.Guests) || 0;
+    const tableSeats = Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats : [];
+    const guests = Number(order.guests ?? order.Guests) || (tableSeats.length > 0 ? tableSeats.length : (Number(table.guests) || 0));
+    const occupiedChairs = guests > 0 ? guests : tableSeats.length;
+    const selectedSeats = tableSeats.length > 0
+      ? tableSeats
+      : (guests > 0 ? Array.from({ length: guests }, (_, i) => `S${i + 1}`) : []);
     const createdAt = order.createdAt ?? order.CreatedAt;
     return {
       ...table,
       status: orderStatus === "billed" ? "billed" : "occupied",
       guests,
-      occupiedChairs: guests,
-      selectedSeats: [],
+      occupiedChairs,
+      selectedSeats,
       items,
       activeOrderId: order.id ?? order.Id,
       backendOrderId: order.id ?? order.Id,
@@ -525,9 +531,21 @@ const mergeIncomingTables = (
           table.tableId ?? table.TableId ?? table.backendTableId ?? existing.backendTableId ?? targetId,
         section:
           table.sectionArea || table.section || existing.section || "Main Hall",
-        capacity: Number(
-          table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4,
-        ),
+        capacity: (() => {
+          const rawCap = Number(table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4);
+          if (rawCap <= 1) return targetId === 3 || cleanName.includes("3") ? 6 : 4;
+          return rawCap;
+        })(),
+        capacityChairs: (() => {
+          const rawCap = Number(table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4);
+          if (rawCap <= 1) return targetId === 3 || cleanName.includes("3") ? 6 : 4;
+          return rawCap;
+        })(),
+        chairs: (() => {
+          const rawCap = Number(table.chairs ?? table.capacityChairs ?? table.capacity ?? existing.capacity ?? 4);
+          if (rawCap <= 1) return targetId === 3 || cleanName.includes("3") ? 6 : 4;
+          return rawCap;
+        })(),
         status: finalStatus,
         server:
           table.server || table.assignedServerName || existing.server || "Staff",
@@ -646,6 +664,7 @@ export function App() {
         tagline: serverTagline !== undefined ? serverTagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
         logo: serverLogo || local.logo || local.restaurantLogo || "",
         restaurantLogo: serverLogo || local.restaurantLogo || local.logo || "",
+        logoBg: cleanServer.logoBg || local.logoBg || "",
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
@@ -862,8 +881,7 @@ export function App() {
         } catch {}
       } catch (error) {
         if (cancelled) return;
-        console.error("[Inventory] Could not sync recipe ingredients:", error);
-        showToast(`Could not sync recipe ingredients to inventory: ${error?.message || "API request failed."}`);
+        console.warn("[Inventory] Could not sync recipe ingredients:", error);
       }
     };
 
@@ -921,6 +939,7 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
+  const isStaffLoginRoute = ["/login", "/pos", "/staff"].includes(location.pathname);
 
   // ── Live Backend Integration Hook ──────────────────────────────
   useEffect(() => {
@@ -1042,9 +1061,25 @@ export function App() {
         } catch {}
         setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
       } else {
-        setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: response?.error || response?.data?.message || "Menu items could not be loaded." }));
+        console.warn("[Menu] Live menu items could not be loaded from API:", response?.error || response?.data?.message);
+        let fallbackMenu = [];
+        try {
+          fallbackMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+        } catch {}
+        const itemsToUse = (Array.isArray(fallbackMenu) && fallbackMenu.length > 0) ? fallbackMenu : MENU_ITEMS;
+        setMenuItems(itemsToUse.map(normalizeMenuItem));
+        setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
       }
-    }).catch((error) => setSharedRecordLoad((state) => ({ ...state, menu: "error", menuError: error?.message || "Menu items could not be loaded." })));
+    }).catch((error) => {
+      console.warn("[Menu] Live menu API failed, using cached/standard menu:", error?.message);
+      let fallbackMenu = [];
+      try {
+        fallbackMenu = JSON.parse(localStorage.getItem(STORAGE_KEY_MENU) || "[]");
+      } catch {}
+      const itemsToUse = (Array.isArray(fallbackMenu) && fallbackMenu.length > 0) ? fallbackMenu : MENU_ITEMS;
+      setMenuItems(itemsToUse.map(normalizeMenuItem));
+      setSharedRecordLoad((state) => ({ ...state, menu: "ready", menuError: "" }));
+    });
 
     apiGetBarDrinks().then((response) => {
       const backendDrinks = [
@@ -1154,11 +1189,10 @@ export function App() {
         setInventoryPurchases(rows.map(normalizeInventoryPurchase));
       } catch (error) {
         if (cancelled) return;
-        console.error("[Inventory] Failed to load purchase records from the API:", error);
+        console.warn("[Inventory] Failed to load purchase records from the API:", error);
         inventoryPurchasesApiLoadedRef.current = true;
         setInventoryPurchasesApiLoaded(true);
         setInventoryPurchases([]);
-        showToast(`Inventory purchase history is unavailable: ${error?.message || "API request failed."}`);
       }
     };
     loadInventoryPurchases();
@@ -1188,8 +1222,10 @@ export function App() {
   const [adminSession, setAdminSession] = useState(null);
   const customerRoutes = ["/", "/profile", "/my-orders", "/my-reservations", "/menu", "/reserve", "/takeaway"];
   const isLandingRoute =
-    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) && !posSession;
-  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
+    !isStaffLoginRoute &&
+    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) &&
+    !posSession;
+  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute && !isStaffLoginRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
@@ -1368,11 +1404,10 @@ export function App() {
         setSalaryPayments(rows.map(normalizeSalaryPayment));
       } catch (error) {
         if (cancelled) return;
-        console.error("[Payroll] Failed to load salary payments from the API:", error);
+        console.warn("[Payroll] Failed to load salary payments from the API:", error);
         salaryPaymentsApiLoadedRef.current = true;
         setSalaryPaymentsApiLoaded(true);
         setSalaryPayments([]);
-        showToast(`Salary history is unavailable: ${error?.message || "API request failed."}`);
       }
     };
     loadSalaryPayments();
@@ -2798,6 +2833,29 @@ export function App() {
     }
   };
 
+  // Update Customer Info for Table
+  const handleUpdateCustomer = (tableId, customerData) => {
+    setTables((prevTables) => {
+      const nextTables = prevTables.map((t) => {
+        if (String(t.id) !== String(tableId)) return t;
+        return {
+          ...t,
+          customerName: customerData.customerName || "",
+          customerPhone: customerData.customerPhone || "",
+          customerTier: customerData.customerTier || "",
+          customerVisits: customerData.customerVisits || 0,
+        };
+      });
+      try {
+        const nextJson = JSON.stringify(nextTables);
+        localStorage.setItem(STORAGE_KEY_TABLES, nextJson);
+        lastPushedTablesJsonRef.current = nextJson;
+        broadcastSync("SYNC_TABLES", nextTables);
+      } catch {}
+      return nextTables;
+    });
+  };
+
   // Update Discount (supports both manual INR amount and legacy percent)
   const handleUpdateDiscount = (tableId, discount, isAmount = false) => {
     setTables((prevTables) =>
@@ -2905,6 +2963,15 @@ export function App() {
       ].filter(Boolean);
       showToast(`📥 ${routes.join(" and ")} for ${tableName}.`);
 
+      // Auto-save customer if entered on order slip
+      if (tbl?.customerName || tbl?.customerPhone) {
+        saveOrUpdateCustomer({
+          fullName: tbl.customerName,
+          phone: tbl.customerPhone,
+          amountSpent: 0,
+        }).catch((err) => console.warn("[Customer] auto-save on KOT:", err));
+      }
+
       // Sync with server API in background
       try {
         const backendTableId = tbl?.backendTableId ?? tbl?.tableId ?? tableId;
@@ -2923,6 +2990,8 @@ export function App() {
             tableNumber: String(tbl?.tableNumberNumeric ?? tbl?.tableNumber ?? tbl?.id ?? tableId),
             serverName: tbl?.assignedServerName || tbl?.serverName || tbl?.server || "Server",
             guests: Number(tbl?.guests ?? tbl?.occupiedChairs ?? 1) || 1,
+            customerName: tbl?.customerName || undefined,
+            customerPhone: tbl?.customerPhone || undefined,
             status: "Active",
             items: consolidatedNewItems.map((item) => ({
               menuItemId: Number(item.menuItemId ?? item.backendId ?? item.id) || undefined,
@@ -3503,6 +3572,9 @@ export function App() {
         (Number(tableObj?.capacity) > 0 ? Number(tableObj.capacity) : null) ??
         2,
       capacity: tableObj?.capacity || settlementData.capacity || 0,
+      customerName: settlementData.customerName || tableObj?.customerName || takeawayCheckoutTable?.customerName || "",
+      customerPhone: settlementData.customerPhone || tableObj?.customerPhone || takeawayCheckoutTable?.customerPhone || "",
+      customerTier: settlementData.customerTier || tableObj?.customerTier || takeawayCheckoutTable?.customerTier || "",
       orderTime: tableObj?.orderTime || settlementData.settledAt,
       orderTimestamp: tableObj?.orderTimestamp || Date.now(),
       tableId: settlementData.tableId,
@@ -3513,6 +3585,15 @@ export function App() {
         `local:${settlementData.tableId}:${tableObj?.orderTimestamp || Date.now()}`,
       ),
     };
+
+    // Auto-save or update customer spend and visit count
+    if (enrichedSettlement.customerName || enrichedSettlement.customerPhone) {
+      saveOrUpdateCustomer({
+        fullName: enrichedSettlement.customerName,
+        phone: enrichedSettlement.customerPhone,
+        amountSpent: Number(enrichedSettlement.grandTotal || enrichedSettlement.totalAmount || 0) || 0,
+      }).catch((err) => console.warn("[Customer] auto-save on settlement error:", err));
+    }
 
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
     let dineInBackendTableVacated = false;
@@ -3530,6 +3611,8 @@ export function App() {
           tableName: "Takeaway",
           serverName: settlementData.server || posSession?.name || "Server",
           guests: 1,
+          customerName: enrichedSettlement.customerName || undefined,
+          customerPhone: enrichedSettlement.customerPhone || undefined,
           status: "Settled",
           paymentMethod: enrichedSettlement.paymentMethod,
           invoiceNumber: settlementData.invoiceNo,
@@ -3657,6 +3740,8 @@ export function App() {
               tableNumber: String(settlementData.tableId || settlementData.tableName || ""),
               serverName: settlementData.server || "Server",
               guests: enrichedSettlement.guests,
+              customerName: enrichedSettlement.customerName || undefined,
+              customerPhone: enrichedSettlement.customerPhone || undefined,
               discountPercent: Number(settlementData.discountPercent ?? 0) || 0,
               serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
               tipAmount: Number(settlementData.tipAmount ?? 0) || 0,
@@ -4232,7 +4317,16 @@ export function App() {
   const handleUpdateTable = (updatedTable) => {
     const previousTable = tables.find((table) => String(table.id) === String(updatedTable.id));
     const cap = Number(updatedTable.capacity || updatedTable.capacityChairs || updatedTable.chairs || (previousTable?.capacity || 4));
-    const persons = Number(updatedTable.persons || updatedTable.guests || cap);
+    const selectedSeats = Array.isArray(updatedTable.selectedSeats)
+      ? updatedTable.selectedSeats
+      : (Array.isArray(previousTable?.selectedSeats) ? previousTable.selectedSeats : []);
+    const occupiedSeatsCount = Number(
+      (selectedSeats.length > 0 ? selectedSeats.length : null) ??
+      (updatedTable.occupiedChairs !== undefined && updatedTable.occupiedChairs !== null && Number(updatedTable.occupiedChairs) >= 0 ? Number(updatedTable.occupiedChairs) : null) ??
+      (updatedTable.guests !== undefined && updatedTable.guests !== null ? Number(updatedTable.guests) : null) ??
+      0
+    );
+    const finalGuests = occupiedSeatsCount > 0 ? occupiedSeatsCount : (Number(updatedTable.guests) || 0);
 
     const targetServerName = updatedTable.server !== undefined
       ? updatedTable.server
@@ -4249,8 +4343,10 @@ export function App() {
       capacity: cap,
       chairs: cap,
       capacityChairs: cap,
-      persons: persons,
-      guests: persons,
+      persons: cap,
+      guests: finalGuests,
+      occupiedChairs: occupiedSeatsCount,
+      selectedSeats: selectedSeats,
       server: targetServerName || "",
       assignedServerName: targetServerName || "",
       assignedServerId: targetServerId,
@@ -4821,6 +4917,18 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+        {isStaffLoginRoute && !posSession && (
+          <LoginPage
+            currentTheme={theme}
+            onChangeTheme={setTheme}
+            role="pos"
+            onLoginSuccess={handleGlobalLogin}
+            restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
+            restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
+            onBackToLanding={() => navigate("/")}
+          />
+        )}
+
         {isLandingRoute && (
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
@@ -4977,9 +5085,23 @@ export function App() {
                     });
                     setIsReceiptOpen(true);
                   }}
-                  onCheckout={(items) => {
+                  onCheckout={(items, customerInfo) => {
                     const orderTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    setTakeawayCheckoutTable({ id: "TAKEAWAY", name: "Takeaway", section: "Takeaway", server: posSession?.name || "Server", guests: 1, capacity: 1, items, orderTime, discountPercent: 0, serviceCharge: 0 });
+                    setTakeawayCheckoutTable({
+                      id: "TAKEAWAY",
+                      name: "Takeaway",
+                      section: "Takeaway",
+                      server: posSession?.name || "Server",
+                      guests: 1,
+                      capacity: 1,
+                      items,
+                      orderTime,
+                      discountPercent: 0,
+                      serviceCharge: 0,
+                      customerName: customerInfo?.customerName || "",
+                      customerPhone: customerInfo?.customerPhone || "",
+                      customerTier: customerInfo?.customerTier || "",
+                    });
                     setIsSettlementOpen(true);
                   }}
                 />
@@ -5001,6 +5123,7 @@ export function App() {
                   onRemoveItemFromTable={handleRemoveItemFromTable}
                   onUpdateItemNotes={handleUpdateItemNotes}
                   onUpdateGuests={handleUpdateGuests}
+                  onUpdateCustomer={handleUpdateCustomer}
                   onUpdateDiscount={handleUpdateDiscount}
                   onToggleServiceCharge={handleToggleServiceCharge}
                   onSendKOT={handleSendKOT}

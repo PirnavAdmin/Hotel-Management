@@ -20,6 +20,8 @@ services:
       SmtpSettings__Password: ${SMTP_PASS}
       SmtpSettings__FromEmail: ${SMTP_FROM_EMAIL}
       SmtpSettings__FromName: ${SMTP_FROM_NAME}
+    volumes:
+      - backend_uploads:/app/wwwroot/uploads
     ports:
       - "5000:5000"
 
@@ -32,3 +34,6 @@ services:
       - backend
     ports:
       - "3000:3000"
+
+volumes:
+  backend_uploads:

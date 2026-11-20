@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Armchair, Check, Edit3, X, CheckCircle2 } from "lucide-react";
 
 export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
+  if (!seat) return null;
   const gradId = `topChairGrad_${seat.id}`;
   const gradSelId = `topChairGradSel_${seat.id}`;
   return (
@@ -179,6 +180,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
 }
 
 export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
+  if (!seat) return null;
   const gradId = `bottomChairGrad_${seat.id}`;
   const gradSelId = `bottomChairGradSel_${seat.id}`;
   return (
@@ -345,6 +347,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
 }
 
 export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight }) {
+  if (!seat) return null;
   const isLeft = side === "left";
   const gradId = `sideChairGrad_${seat.id}`;
   const gradSelId = `sideChairGradSel_${seat.id}`;
@@ -919,7 +922,7 @@ export function SelectSeatsModal({
     return { id: seatId, defaultId: defaultSeatId, isOccupied: false, isSelected };
   });
 
-  const selectedSeats = seats.filter((seat) => seat.isSelected);
+  const selectedSeats = seats.filter((seat) => Boolean(seat?.isSelected));
   const selectedCount = selectedSeats.length;
   const availableCount = Math.max(0, capacity - selectedCount);
 
@@ -929,15 +932,30 @@ export function SelectSeatsModal({
   let leftSeats = [];
   let rightSeats = [];
 
-  if (capacity === 2) {
+  if (capacity <= 1) {
+    topSeats = seats.slice(0, 1);
+    bottomSeats = [];
+    leftSeats = [];
+    rightSeats = [];
+  } else if (capacity === 2) {
     topSeats = [seats[0]];
     bottomSeats = [seats[1]];
+  } else if (capacity === 3) {
+    topSeats = [seats[0], seats[1]];
+    bottomSeats = [seats[2]];
   } else if (capacity === 4) {
     topSeats = [seats[0], seats[1]];
     bottomSeats = [seats[2], seats[3]];
+  } else if (capacity === 5) {
+    topSeats = [seats[0], seats[1], seats[2]];
+    bottomSeats = [seats[3], seats[4]];
   } else if (capacity === 6) {
     topSeats = [seats[0], seats[1], seats[2]];
     bottomSeats = [seats[3], seats[4], seats[5]];
+  } else if (capacity === 7) {
+    topSeats = [seats[0], seats[1], seats[2]];
+    leftSeats = [seats[3]];
+    bottomSeats = [seats[4], seats[5], seats[6]];
   } else if (capacity === 8) {
     topSeats = [seats[0], seats[1], seats[2]];
     leftSeats = [seats[3]];
@@ -951,6 +969,11 @@ export function SelectSeatsModal({
     topSeats = remaining.slice(0, half);
     bottomSeats = remaining.slice(half);
   }
+
+  topSeats = topSeats.filter(Boolean);
+  bottomSeats = bottomSeats.filter(Boolean);
+  leftSeats = leftSeats.filter(Boolean);
+  rightSeats = rightSeats.filter(Boolean);
 
   const maxChairsPerRow = Math.max(2, topSeats.length, bottomSeats.length);
   const dynamicTableWidth = Math.max(260, 60 + maxChairsPerRow * 80);
@@ -1021,23 +1044,17 @@ export function SelectSeatsModal({
 
   const handleConfirmSeats = () => {
     const selectedCount = selectedSeats.length;
-    const currentCap = Number(currentTable.capacity) || 4;
-
-    // In admin mode, if the user explicitly clicked individual seats (e.g. 4 of 6),
-    // they configured the table to have that number of seats/members.
-    // If they adjusted capacity in Edit Seats panel or didn't select individual chairs,
-    // currentCap is the new seat capacity.
-    const newCapacity = (selectedCount > 0 && !isEditingSeats)
-      ? selectedCount
-      : currentCap;
+    // Physical chair capacity must remain unchanged during seat selection.
+    // Table capacity can only be modified via the "Edit Seats" panel (handleSaveSeatConfig).
+    const currentCap = Number(currentTable.capacity) || Number(currentTable.chairs) || Number(currentTable.capacityChairs) || 4;
 
     const count = selectedCount > 0
       ? selectedCount
-      : (role === "admin" ? newCapacity : (Number(currentTable.guests) || newCapacity));
+      : (role === "admin" ? currentCap : (Number(currentTable.guests) || currentCap));
 
     const finalSeats = selectedCount > 0
       ? selectedSeats.map((seat) => seat.id)
-      : Array.from({ length: newCapacity }, (_, i) => `S${i + 1}`);
+      : (role === "admin" ? (currentTable.selectedSeats || []) : Array.from({ length: currentCap }, (_, i) => `S${i + 1}`));
 
     const hasActiveItems = Array.isArray(currentTable.items) && currentTable.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
@@ -1049,12 +1066,12 @@ export function SelectSeatsModal({
 
     const finalTable = {
       ...currentTable,
-      capacity: newCapacity,
-      chairs: newCapacity,
-      capacityChairs: newCapacity,
-      persons: role === "admin" ? newCapacity : count,
-      guests: role === "admin" ? newCapacity : count,
-      occupiedChairs: role === "admin" ? 0 : (selectedCount > 0 ? selectedCount : 0),
+      capacity: currentCap,
+      chairs: currentCap,
+      capacityChairs: currentCap,
+      persons: role === "admin" ? currentCap : count,
+      guests: role === "admin" ? (currentTable.guests || 0) : count,
+      occupiedChairs: role === "admin" ? (currentTable.occupiedChairs || 0) : (selectedCount > 0 ? selectedCount : 0),
       seatLabels: currentTable.seatLabels || customSeatLabels,
       selectedSeats: finalSeats,
       status: finalStatus,
@@ -1069,12 +1086,12 @@ export function SelectSeatsModal({
             String(t.id) === String(currentTable.id)
               ? {
                   ...t,
-                  capacity: newCapacity,
-                  chairs: newCapacity,
-                  capacityChairs: newCapacity,
-                  persons: role === "admin" ? newCapacity : count,
-                  guests: role === "admin" ? newCapacity : count,
-                  occupiedChairs: role === "admin" ? 0 : (selectedCount > 0 ? selectedCount : 0),
+                  capacity: currentCap,
+                  chairs: currentCap,
+                  capacityChairs: currentCap,
+                  persons: role === "admin" ? currentCap : count,
+                  guests: role === "admin" ? (t.guests || 0) : count,
+                  occupiedChairs: role === "admin" ? (t.occupiedChairs || 0) : (selectedCount > 0 ? selectedCount : 0),
                   seatLabels: currentTable.seatLabels || customSeatLabels,
                   selectedSeats: finalSeats,
                   status: finalStatus,
@@ -1472,9 +1489,9 @@ export function SelectSeatsModal({
               >
                 {topSeats.map((seat) => (
                   <TopDiningChair
-                    key={seat.defaultId || seat.id}
+                    key={seat ? (seat.defaultId || seat.id) : Math.random()}
                     seat={seat}
-                    isSelected={seat.isSelected}
+                    isSelected={Boolean(seat?.isSelected)}
                     isOccupied={false}
                     isLight={isLight}
                     onToggle={() => {
@@ -1507,10 +1524,10 @@ export function SelectSeatsModal({
                   >
                     {leftSeats.map((seat) => (
                       <SideDiningChair
-                        key={seat.defaultId || seat.id}
+                        key={seat ? (seat.defaultId || seat.id) : Math.random()}
                         seat={seat}
                         side="left"
-                        isSelected={seat.isSelected}
+                        isSelected={Boolean(seat?.isSelected)}
                         isOccupied={false}
                         isLight={isLight}
                         onToggle={() => {
@@ -1543,10 +1560,10 @@ export function SelectSeatsModal({
                   >
                     {rightSeats.map((seat) => (
                       <SideDiningChair
-                        key={seat.defaultId || seat.id}
+                        key={seat ? (seat.defaultId || seat.id) : Math.random()}
                         seat={seat}
                         side="right"
-                        isSelected={seat.isSelected}
+                        isSelected={Boolean(seat?.isSelected)}
                         isOccupied={false}
                         isLight={isLight}
                         onToggle={() => {
@@ -1573,9 +1590,9 @@ export function SelectSeatsModal({
               >
                 {bottomSeats.map((seat) => (
                   <BottomDiningChair
-                    key={seat.defaultId || seat.id}
+                    key={seat ? (seat.defaultId || seat.id) : Math.random()}
                     seat={seat}
-                    isSelected={seat.isSelected}
+                    isSelected={Boolean(seat?.isSelected)}
                     isOccupied={false}
                     isLight={isLight}
                     onToggle={() => {

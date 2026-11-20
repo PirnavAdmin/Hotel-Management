@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
 import { getUsers } from "../utils/auth";
+import { processLogoImage, detectImageBgColor } from "../utils/logoHelper";
 
 const DEFAULT_PAYMENT_QRS = [
   {
@@ -48,6 +49,7 @@ const getInitialSettings = (initialSettings) => {
     phone: "",
     address: "",
     gstin: "",
+    logoBg: "",
     taxRate: 5,
     serviceChargeRate: 5,
     currency: "₹",
@@ -252,12 +254,13 @@ export function AdminSettings({
       setLogoError("Choose an image file for the restaurant logo.");
       return;
     }
-    processImageFile(file, (dataUrl) => {
+    processLogoImage(file, ({ dataUrl, bgColor }) => {
       setSettings((current) => {
         const next = {
           ...current,
           logo: dataUrl,
           restaurantLogo: dataUrl,
+          logoBg: bgColor,
           updatedAt: Date.now(),
           isUserConfigured: true,
         };
@@ -323,6 +326,7 @@ export function AdminSettings({
           ...initialSettings, // Server data is authoritative for global sync across desktops
           logo: initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "",
           restaurantLogo: initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "",
+          logoBg: initialSettings.logoBg || localSaved.logoBg || prev.logoBg || "",
           selectedQrId: selectedId,
           paymentQrs: qrs,
         };
@@ -895,18 +899,28 @@ export function AdminSettings({
                         height: "64px",
                         borderRadius: "10px",
                         overflow: "hidden",
-                        border: "1px solid var(--border-card)",
+                        border: "1.5px solid var(--border-card)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        background: "var(--bg-secondary)",
+                        background: settings.logoBg || "var(--bg-secondary)",
                         flexShrink: 0,
-                        padding: "2px",
+                        padding: "0",
+                        transition: "background-color 0.2s ease",
                       }}
                     >
                       <img
                         src={settings.logo}
                         alt="Restaurant logo preview"
+                        onLoad={(e) => {
+                          const detected = detectImageBgColor(e.target);
+                          if (detected && detected !== "transparent") {
+                            e.target.parentElement.style.backgroundColor = detected;
+                            if (!settings.logoBg) {
+                              setSettings((s) => ({ ...s, logoBg: detected }));
+                            }
+                          }
+                        }}
                         style={{
                           width: "100%",
                           height: "100%",
@@ -965,6 +979,7 @@ export function AdminSettings({
                             ...current,
                             logo: "",
                             restaurantLogo: "",
+                            logoBg: "",
                             updatedAt: Date.now(),
                           };
                           if (onSaveSettings) {

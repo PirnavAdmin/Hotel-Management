@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { detectImageBgColor } from "../utils/logoHelper";
 import {
   ChefHat,
   LayoutDashboard,
@@ -61,6 +62,7 @@ export function AdminSidebar({
   };
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredSettings().logo || "");
+  const [liveLogoBg, setLiveLogoBg] = useState(() => getStoredSettings().logoBg || "");
   const [liveName, setLiveName] = useState(() => {
     const sName = getStoredSettings().restaurantName;
     if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(sName)) return sName.trim();
@@ -87,6 +89,9 @@ export function AdminSidebar({
       const fresh = e?.detail || getStoredSettings();
       if (fresh?.logo) setLiveLogo(fresh.logo);
       else setLiveLogo(getStoredSettings().logo || restaurantLogo);
+
+      if (fresh?.logoBg !== undefined) setLiveLogoBg(fresh.logoBg || "");
+      else setLiveLogoBg(getStoredSettings().logoBg || "");
 
       if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
         setLiveName(fresh.restaurantName.trim());
@@ -251,20 +256,30 @@ export function AdminSidebar({
             width: "40px",
             height: "40px",
             borderRadius: "10px",
-            background: liveLogo ? "var(--bg-secondary)" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+            background: liveLogoBg || (liveLogo ? "#ffffff" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"),
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.25)" : "0 4px 14px rgba(234, 88, 12, 0.45)",
             flexShrink: 0,
             overflow: "hidden",
-            padding: liveLogo ? "2px" : "0",
+            padding: "0",
+            transition: "background-color 0.2s ease",
           }}
         >
           {liveLogo ? (
             <img
               src={liveLogo}
               alt={liveName || "Restaurant logo"}
+              onLoad={(e) => {
+                if (!liveLogoBg) {
+                  const detected = detectImageBgColor(e.target);
+                  if (detected && detected !== "transparent") {
+                    e.target.parentElement.style.backgroundColor = detected;
+                    setLiveLogoBg(detected);
+                  }
+                }
+              }}
               style={{
                 width: "100%",
                 height: "100%",

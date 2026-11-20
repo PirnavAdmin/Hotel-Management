@@ -1777,7 +1777,12 @@ export function AdminPortal({
   useEffect(() => {
     if (seatingStructureTable) {
       const match = (tables || []).find((t) => String(t.id) === String(seatingStructureTable.id));
-      if (match && (match.capacity !== seatingStructureTable.capacity || match.guests !== seatingStructureTable.guests || match.persons !== seatingStructureTable.persons)) {
+      if (match && (
+        match.capacity !== seatingStructureTable.capacity ||
+        match.guests !== seatingStructureTable.guests ||
+        match.occupiedChairs !== seatingStructureTable.occupiedChairs ||
+        JSON.stringify(match.selectedSeats || []) !== JSON.stringify(seatingStructureTable.selectedSeats || [])
+      )) {
         setSeatingStructureTable(match);
       }
     }
@@ -3883,7 +3888,7 @@ export function AdminPortal({
                               onClick={() => handleTableSort("capacity")}
                               style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
                             >
-                              <span>Chairs / Capacity</span>
+                              <span>Chairs / Persons (ex: 6/2)</span>
                               {tableSortField === "capacity" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
                             </div>
                             <div
@@ -4024,9 +4029,23 @@ export function AdminPortal({
                                     title="Click to view & configure seating structure"
                                   >
                                     <Armchair size={13} color="var(--accent-amber)" />
-                                    <span>
-                                      {tbl.capacity || tbl.capacityChairs || tbl.chairs || 4} Chairs / {tbl.persons || tbl.guests || tbl.capacity || tbl.chairs || 4} Persons
-                                    </span>
+                                    {(() => {
+                                      const cap = Number(tbl.capacity || tbl.capacityChairs || tbl.chairs || 4);
+                                      const occupied = Number(
+                                        (Array.isArray(tbl.selectedSeats) && tbl.selectedSeats.length > 0 ? tbl.selectedSeats.length : null) ??
+                                        (tbl.occupiedChairs !== undefined && tbl.occupiedChairs !== null && Number(tbl.occupiedChairs) >= 0 ? Number(tbl.occupiedChairs) : null) ??
+                                        (tbl.guests !== undefined && tbl.guests !== null ? Number(tbl.guests) : null) ??
+                                        0
+                                      );
+                                      return (
+                                        <span>
+                                          <strong style={{ color: occupied > 0 ? "#f59e0b" : "var(--text-main)" }}>
+                                            {cap}/{occupied}
+                                          </strong>{" "}
+                                          ({cap} Chairs / {occupied > 0 ? `${occupied} Seated` : "0 Seated"})
+                                        </span>
+                                      );
+                                    })()}
                                   </button>
                                 </div>
 
@@ -7084,11 +7103,11 @@ export function AdminPortal({
                 type="file"
                 accept="image/*"
                 disabled={isImageUploading}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
 
-                  // 1. Immediately read as Base64 Data URL so it is preserved locally in data across all devices
+                  // 1. Immediately read as Base64 Data URL so local preview is instant
                   const reader = new FileReader();
                   reader.onload = (uploadEvent) => {
                     const base64Data = uploadEvent.target?.result;
@@ -7101,19 +7120,24 @@ export function AdminPortal({
                   };
                   reader.readAsDataURL(file);
 
-                  // 2. Also attempt upload to backend API if available
+                  // 2. Upload to backend API
                   setIsImageUploading(true);
-                  apiUploadMenuImage(file)
-                    .then((result) => {
-                      if (result && result.success && result.imageUrl) {
-                        setItemForm((current) => ({
-                          ...current,
-                          image: result.imageUrl,
-                        }));
-                      }
-                    })
-                    .catch(() => {})
-                    .finally(() => setIsImageUploading(false));
+                  try {
+                    const result = await apiUploadMenuImage(file);
+                    if (result && result.success && result.imageUrl) {
+                      setItemForm((current) => ({
+                        ...current,
+                        image: result.imageUrl,
+                      }));
+                      showToast("Image uploaded successfully!");
+                    } else {
+                      showToast(`Upload notice: ${result?.error || "Saved as local image"}`);
+                    }
+                  } catch (err) {
+                    showToast(`Upload error: ${err?.message || "Saved as local image"}`);
+                  } finally {
+                    setIsImageUploading(false);
+                  }
                 }}
                 style={{
                   width: "100%",
@@ -7152,6 +7176,10 @@ export function AdminPortal({
                     <img
                       src={itemForm.image}
                       alt="Dish preview"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/assets/dishes/default.svg";
+                      }}
                       style={{
                         width: "56px",
                         height: "44px",
