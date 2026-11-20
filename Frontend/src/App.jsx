@@ -3481,6 +3481,9 @@ export function App() {
 
     const isTakeawayOrder = String(settlementData.tableId) === "TAKEAWAY";
     let dineInBackendTableVacated = false;
+    let settledInvoice = null;
+    let invoiceRetrievalError = "";
+    const settlementSyncUpdates = {};
     if (isTakeawayOrder) {
       if (takeawayCheckoutInFlightRef.current) return false;
       takeawayCheckoutInFlightRef.current = true;
@@ -3591,6 +3594,7 @@ export function App() {
           } else if (invoiceResult?.status !== 404) {
             throw new Error(invoiceResult?.error || "The existing invoice payment status could not be confirmed. Payment was not submitted.");
           }
+          // A 404 before settlement means this active order does not have an invoice yet.
         }
         const itemsToPersist = billableItems.map((item) => ({
           menuItemId: Number(item.menuItemId ?? item.menu_item_id ?? item.id ?? item.backendId) || undefined,
@@ -3674,8 +3678,33 @@ export function App() {
         tableRefreshGenerationRef.current += 1;
         enrichedSettlement.backendOrderId = confirmedOrderId;
         enrichedSettlement.billingSessionId = String(confirmedOrderId);
-        apiUnlockTable(backendTableId).catch(() => {});
+        const settleResponse = settlementResult?.data || {};
+        enrichedSettlement.invoiceId = settleResponse.invoiceId ?? settleResponse.InvoiceId ?? settledOrder?.invoiceId ?? settledOrder?.InvoiceId ?? null;
+        enrichedSettlement.invoiceNo = settleResponse.invoiceNumber ?? settleResponse.InvoiceNumber ?? settledOrder?.invoiceNo ?? settledOrder?.InvoiceNo ?? settlementData.invoiceNo ?? null;
+        try {
+          const unlockResult = await apiUnlockTable(backendTableId);
+          if (!unlockResult?.success) {
+            console.warn("Order settlement succeeded, but the table lock could not be confirmed as released:", unlockResult?.error);
+          }
+        } catch (unlockError) {
+          console.warn("Order settlement succeeded, but table unlock returned an error:", unlockError);
+        }
         dineInBackendTableVacated = true;
+
+        try {
+          const invoiceResult = await apiGetInvoiceByOrder(confirmedOrderId);
+          const invoice = invoiceResult?.data?.data ?? invoiceResult?.data?.invoice ?? invoiceResult?.data;
+          const invoiceOrderId = Number(invoice?.orderId ?? invoice?.OrderId);
+          if (!invoiceResult?.success || invoiceResult?.data?.success === false || !invoice || invoiceOrderId !== confirmedOrderId) {
+            throw new Error(invoiceResult?.error || invoiceResult?.data?.message || "The settled order's invoice could not be confirmed.");
+          }
+          settledInvoice = invoice;
+          enrichedSettlement.invoiceId = invoice.invoiceId ?? invoice.InvoiceId ?? enrichedSettlement.invoiceId;
+          enrichedSettlement.invoiceNo = invoice.invoiceNumber ?? invoice.InvoiceNumber ?? enrichedSettlement.invoiceNo;
+        } catch (error) {
+          invoiceRetrievalError = error?.message || "Payment completed, but the invoice could not be retrieved.";
+          console.warn(`Payment was confirmed for order ${confirmedOrderId}, but invoice retrieval failed:`, error);
+        }
       } catch (error) {
         console.warn("Backend dine-in order settlement sync warning:", error);
         showToast(error?.message || "Payment was not confirmed by the backend. The table remains active.");
@@ -3693,20 +3722,17 @@ export function App() {
     // repeated settlement/re-render events from deducting the same invoice twice.
     try {
       const invoiceKey = String(
-        settlementData.invoiceNo || enrichedSettlement.id || enrichedSettlement.orderId || settlementData.id,
+        enrichedSettlement.invoiceNo || settlementData.invoiceNo || enrichedSettlement.backendOrderId || enrichedSettlement.orderId || enrichedSettlement.id || settlementData.id,
       ).trim();
       let deductionLedger = [];
       try {
         deductionLedger = JSON.parse(localStorage.getItem(STOCK_DEDUCTION_LEDGER_KEY) || "[]");
       } catch {}
       if (!Array.isArray(deductionLedger)) deductionLedger = [];
-      if (invoiceKey && deductionLedger.includes(invoiceKey)) {
-        throw new Error(`Inventory already deducted for ${invoiceKey}`);
-      }
 
       const rawInv = localStorage.getItem(STORAGE_KEY_INVENTORY);
       const inventory = rawInv ? JSON.parse(rawInv) : [];
-      if (Array.isArray(inventory) && inventory.length) {
+      if (invoiceKey && !deductionLedger.includes(invoiceKey) && Array.isArray(inventory) && inventory.length) {
         // Map to aggregate required deduction per inventory item id
         const usageByIngredientId = new Map();
 
@@ -3803,7 +3829,7 @@ export function App() {
           });
 
           localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(updatedInventory));
-          pushGlobalSync({ [STORAGE_KEY_INVENTORY]: updatedInventory });
+          settlementSyncUpdates[STORAGE_KEY_INVENTORY] = updatedInventory;
           window.dispatchEvent(new CustomEvent("avsr-inventory-updated", { detail: updatedInventory }));
           if (invoiceKey) {
             const nextLedger = [...new Set([...deductionLedger, invoiceKey])].slice(-1000);
@@ -3826,7 +3852,7 @@ export function App() {
         STORAGE_KEY_ORDERS,
         JSON.stringify(updatedPastOrders),
       );
-      pushGlobalSync({ [STORAGE_KEY_ORDERS]: updatedPastOrders });
+      settlementSyncUpdates[STORAGE_KEY_ORDERS] = updatedPastOrders;
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new CustomEvent("avsr-orders-updated", { detail: updatedPastOrders }));
     } catch {}
@@ -3850,7 +3876,7 @@ export function App() {
         .map((t) => ({ ...t, items: Array.isArray(t.items) ? t.items : [] }))
         .filter((t) => !isDeleted(t.id));
       localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(cleanTables));
-      pushGlobalSync({ [STORAGE_KEY_TABLES]: cleanTables });
+      settlementSyncUpdates[STORAGE_KEY_TABLES] = cleanTables;
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: cleanTables }));
     } catch {}
@@ -3874,12 +3900,16 @@ export function App() {
           const freshTables = mergeActiveDiningOrders(definitions, activeOrders);
           setTables(freshTables);
           localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(freshTables));
-          pushGlobalSync({ [STORAGE_KEY_TABLES]: freshTables });
+          settlementSyncUpdates[STORAGE_KEY_TABLES] = freshTables;
           window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: freshTables }));
         }
       } catch (refreshError) {
         console.warn("Could not refresh floor tables after confirmed settlement:", refreshError);
       }
+    }
+
+    if (Object.keys(settlementSyncUpdates).length > 0) {
+      pushGlobalSync(settlementSyncUpdates);
     }
 
 
@@ -3891,25 +3921,37 @@ export function App() {
       `✅ Bill settled for ${settlementData.tableName} via ${String(settlementData.paymentMethod || "UPI").toUpperCase()}. Table is now vacant.`,
     );
 
+    const invoiceItems = settledInvoice?.items ?? settledInvoice?.Items;
+    const receiptItems = Array.isArray(invoiceItems) && invoiceItems.length > 0
+      ? invoiceItems.map((item) => ({
+          ...item,
+          name: item.name ?? item.Name ?? item.dishName ?? item.DishName,
+          quantity: item.quantity ?? item.Quantity,
+          price: item.price ?? item.Price,
+        }))
+      : settlementData.items;
     setReprintReceiptData({
       id: settlementData.tableId,
+      orderId: enrichedSettlement.backendOrderId || enrichedSettlement.orderId,
+      invoiceId: enrichedSettlement.invoiceId,
       name: settlementData.tableName,
       section: settlementData.section,
       server: settlementData.server || "",
       guests: enrichedSettlement.guests,
       orderTime: enrichedSettlement.orderTime,
       settledAt: enrichedSettlement.settledAt,
-      items: settlementData.items,
+      items: receiptItems,
       discountPercent: Number(settlementData.discountPercent) || 0,
-      discountAmount: Number(settlementData.discountAmount) || 0,
+      discountAmount: Number(settledInvoice?.discountAmount ?? settledInvoice?.DiscountAmount ?? settlementData.discountAmount) || 0,
       serviceCharge: Number(settlementData.serviceCharge) || 0,
-      subtotal: settlementData.subtotal,
-      taxAmount: settlementData.taxAmount,
+      subtotal: settledInvoice?.subtotal ?? settledInvoice?.Subtotal ?? settlementData.subtotal,
+      taxAmount: settledInvoice?.taxAmount ?? settledInvoice?.TaxAmount ?? settlementData.taxAmount,
       serviceChargeAmount: settlementData.serviceChargeAmount,
-      grandTotal: settlementData.grandTotal,
-      paymentMethod: settlementData.paymentMethod,
-      invoiceNo: settlementData.invoiceNo,
-      date: enrichedSettlement.date,
+      grandTotal: settledInvoice?.totalAmount ?? settledInvoice?.TotalAmount ?? settlementData.grandTotal,
+      paymentMethod: settledInvoice?.paymentMethod ?? settledInvoice?.PaymentMethod ?? settlementData.paymentMethod,
+      invoiceNo: enrichedSettlement.invoiceNo,
+      invoiceError: invoiceRetrievalError,
+      date: settledInvoice?.createdAt ?? settledInvoice?.CreatedAt ?? enrichedSettlement.date,
     });
     setIsReceiptOpen(true);
     return true;

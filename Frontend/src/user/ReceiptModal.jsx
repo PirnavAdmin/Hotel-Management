@@ -13,7 +13,7 @@ import {
   Users 
 } from 'lucide-react';
 import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
-import { getTodayDateString, getNextInvoiceNumber } from '../utils/invoiceCounter';
+import { getTodayDateString } from '../utils/invoiceCounter';
 import { formatInvoiceNumber } from '../utils/orderDedupe';
 import { printSurface } from '../utils/printSurface';
 
@@ -33,6 +33,17 @@ export function formatOrderNumber(rawId) {
     return `ORD-${digitsMatch.join('')}`;
   }
   return `ORD-${str.replace(/^[^a-zA-Z0-9]+/, '').toUpperCase()}`;
+}
+
+function normalizeRestaurantName(value, seen = new Set()) {
+  if (typeof value === "string" || typeof value === "number") return String(value).trim();
+  if (!value || typeof value !== "object" || seen.has(value)) return "";
+  seen.add(value);
+  for (const key of ["restaurantName", "RestaurantName", "name", "Name", "value", "Value", "restaurant", "Restaurant", "data", "Data"]) {
+    const normalized = normalizeRestaurantName(value[key], seen);
+    if (normalized) return normalized;
+  }
+  return "";
 }
 
 /**
@@ -137,10 +148,14 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     storedSettings = JSON.parse(localStorage.getItem('gourmet_pos_settings_v1') || '{}');
   } catch {}
 
-  const restaurantName =
-    (restaurantSettings.restaurantName?.trim() && !/bhanu|avsr/i.test(restaurantSettings.restaurantName)) ||
-    (storedSettings.restaurantName?.trim() && !/bhanu|avsr/i.test(storedSettings.restaurantName)) ||
-    "The Rustic Spin";
+  const restaurantName = [
+    restaurantSettings.restaurantName,
+    restaurantSettings.name,
+    restaurantSettings.restaurant,
+    storedSettings.restaurantName,
+    storedSettings.name,
+    storedSettings.restaurant,
+  ].map((value) => normalizeRestaurantName(value)).find(Boolean) || "The Rustic Spin";
   const restaurantTagline =
     (restaurantSettings.tagline?.trim() && !/bhanu/i.test(restaurantSettings.tagline)) ||
     (storedSettings.tagline?.trim() && !/bhanu/i.test(storedSettings.tagline)) ||
@@ -206,10 +221,14 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     : roundCurrency(taxableAmount + taxAmount + serviceChargeAmount + tipAmount);
 
   // Raw and unified Invoice and Order Number
-  const rawInvoiceNo = formatInvoiceNumber(
-    (table.invoiceNo || table.id || table.orderId) ? table : getNextInvoiceNumber()
-  );
-  const orderNumber = formatOrderNumber(rawInvoiceNo);
+  const invoiceIdentifier = table.invoiceNo || table.invoiceNumber || table.InvoiceNo || table.InvoiceNumber;
+  const rawInvoiceNo = invoiceIdentifier ? formatInvoiceNumber(invoiceIdentifier) : "Invoice unavailable";
+  const orderIdentifier = table.orderNumber || table.orderId || table.OrderId;
+  const orderNumber = orderIdentifier
+    ? formatOrderNumber(orderIdentifier)
+    : invoiceIdentifier
+      ? formatOrderNumber(rawInvoiceNo)
+      : "Order unavailable";
 
   // Clean date & time formats
   const thermalDateTime = formatThermalDateTime(table.date || table.createdAt || table.settledAt, table.orderTime);
@@ -392,6 +411,16 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             <X size={16} />
           </button>
         </div>
+
+        {table.invoiceError && (
+          <div
+            className="no-print"
+            role="alert"
+            style={{ padding: "0.55rem 1rem", color: "#9a3412", background: "#fff7ed", fontSize: "0.78rem", fontWeight: 700 }}
+          >
+            {table.invoiceError}
+          </div>
+        )}
 
         {/* PRINTABLE RECEIPT CONTENT */}
         {printFormat === 'thermal' ? (
