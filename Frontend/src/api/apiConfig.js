@@ -1,4 +1,11 @@
 function getResolvedApiBase() {
+  if (typeof window !== "undefined") {
+    // When accessing via deployment server (port 3000), use same-origin relative paths.
+    // Nginx on port 3000 proxies /api/ directly to backend:5000, eliminating CORS and mobile ISP port 5000 blocks.
+    if (window.location.port === "3000" || (window.location.hostname === "65.0.8.48" && window.location.port !== "5000")) {
+      return "";
+    }
+  }
   const envVal = (import.meta.env.VITE_API_BASE_URL || "")
     .trim()
     .replace(/^["']|["']$/g, "")
