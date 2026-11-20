@@ -1054,11 +1054,15 @@ export function AdminPortal({
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
     const rawStatus = String(tbl?.status || "").trim().toLowerCase();
-    if (rawStatus === "vacant" || rawStatus === "available" || rawStatus === "free") {
-      return false;
-    }
-    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed") {
+    const hasOccupiedSeats =
+      (Array.isArray(tbl?.selectedSeats) && tbl.selectedSeats.length > 0) ||
+      Number(tbl?.occupiedChairs) > 0 ||
+      Number(tbl?.guests) > 0;
+    if (rawStatus === "occupied" || rawStatus === "dining" || rawStatus === "billed" || hasOccupiedSeats) {
       return true;
+    }
+    if (rawStatus === "vacant" || rawStatus === "available" || rawStatus === "free") {
+      return hasOccupiedSeats;
     }
     const hasActiveItems = Array.isArray(tbl?.items) && tbl.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled",
@@ -2336,9 +2340,15 @@ export function AdminPortal({
     (sum, t) => sum + (Number(t.capacity) || 0),
     0,
   );
-  const occupiedChairs = tables
-    .filter((t) => t.status !== "vacant")
-    .reduce((sum, t) => sum + (Number(t.guests) || 0), 0);
+  const occupiedChairs = tables.reduce((sum, t) => {
+    const occ = Number(
+      (Array.isArray(t.selectedSeats) && t.selectedSeats.length > 0 ? t.selectedSeats.length : null) ??
+      (t.occupiedChairs !== undefined && t.occupiedChairs !== null && Number(t.occupiedChairs) >= 0 ? Number(t.occupiedChairs) : null) ??
+      (t.guests !== undefined && t.guests !== null ? Number(t.guests) : null) ??
+      0
+    );
+    return sum + occ;
+  }, 0);
   const tablesWithOrders = tables.filter((t) => t.items && t.items.length > 0);
   const activeTakeawayKOTCount = allTakeawayKOTList.filter(
     (t) => !t.items.every((i) => i.kotStatus === "served" || i.kotStatus === "ready"),

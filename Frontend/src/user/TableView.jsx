@@ -1058,25 +1058,27 @@ export function TableView({
     const count =
       selectedSeatIds.length > 0
         ? selectedSeatIds.length
+        : Number(selectedSeatTable.occupiedChairs) > 0
+        ? Number(selectedSeatTable.occupiedChairs)
         : Number(selectedSeatTable.guests) > 0
         ? Number(selectedSeatTable.guests)
-        : Number(selectedSeatTable.capacity) || 2;
+        : 0;
 
     const hasActiveItems = Array.isArray(selectedSeatTable.items) && selectedSeatTable.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
     );
-    const finalStatus = hasActiveItems ? "occupied" : "vacant";
+    const finalStatus = hasActiveItems || count > 0 ? "occupied" : "vacant";
     const finalSeats =
       selectedSeatIds.length > 0
         ? [...selectedSeatIds]
-        : Array.from({ length: count }, (_, i) => `S${i + 1}`);
+        : (Array.isArray(selectedSeatTable.selectedSeats) ? selectedSeatTable.selectedSeats : []);
 
     const finalTable = {
       ...selectedSeatTable,
       capacity: selectedSeatTable.capacity,
       chairs: selectedSeatTable.capacity,
       capacityChairs: selectedSeatTable.capacity,
-      persons: count,
+      persons: selectedSeatTable.capacity,
       seatLabels: selectedSeatTable.seatLabels || customSeatLabels,
       guests: count,
       occupiedChairs: count,

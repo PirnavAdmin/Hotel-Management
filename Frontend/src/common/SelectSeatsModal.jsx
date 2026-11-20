@@ -1050,28 +1050,28 @@ export function SelectSeatsModal({
 
     const count = selectedCount > 0
       ? selectedCount
-      : (role === "admin" ? currentCap : (Number(currentTable.guests) || currentCap));
+      : (Number(currentTable.occupiedChairs) > 0 ? Number(currentTable.occupiedChairs) : (Number(currentTable.guests) || 0));
 
     const finalSeats = selectedCount > 0
       ? selectedSeats.map((seat) => seat.id)
-      : (role === "admin" ? (currentTable.selectedSeats || []) : Array.from({ length: currentCap }, (_, i) => `S${i + 1}`));
+      : (Array.isArray(currentTable.selectedSeats) ? currentTable.selectedSeats : []);
 
     const hasActiveItems = Array.isArray(currentTable.items) && currentTable.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
     );
 
-    const finalStatus = hasActiveItems
+    const finalStatus = hasActiveItems || count > 0
       ? "occupied"
-      : (role === "admin" ? (currentTable.status || "vacant") : (selectedCount > 0 ? "occupied" : (currentTable.status || "vacant")));
+      : (currentTable.status || "vacant");
 
     const finalTable = {
       ...currentTable,
       capacity: currentCap,
       chairs: currentCap,
       capacityChairs: currentCap,
-      persons: role === "admin" ? currentCap : count,
-      guests: role === "admin" ? (currentTable.guests || 0) : count,
-      occupiedChairs: role === "admin" ? (currentTable.occupiedChairs || 0) : (selectedCount > 0 ? selectedCount : 0),
+      persons: currentCap,
+      guests: count,
+      occupiedChairs: count,
       seatLabels: currentTable.seatLabels || customSeatLabels,
       selectedSeats: finalSeats,
       status: finalStatus,
@@ -1089,9 +1089,9 @@ export function SelectSeatsModal({
                   capacity: currentCap,
                   chairs: currentCap,
                   capacityChairs: currentCap,
-                  persons: role === "admin" ? currentCap : count,
-                  guests: role === "admin" ? (t.guests || 0) : count,
-                  occupiedChairs: role === "admin" ? (t.occupiedChairs || 0) : (selectedCount > 0 ? selectedCount : 0),
+                  persons: currentCap,
+                  guests: count,
+                  occupiedChairs: count,
                   seatLabels: currentTable.seatLabels || customSeatLabels,
                   selectedSeats: finalSeats,
                   status: finalStatus,
