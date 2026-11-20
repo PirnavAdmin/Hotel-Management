@@ -1382,16 +1382,17 @@ export function AdminPortal({
   }, [parentRestaurantSettings]);
 
   const handleSaveRestaurantSettings = async (settings) => {
+    const resolvedLogo = settings.logo || settings.restaurantLogo || "/restaurant-logo.png";
     const stampedSettings = {
       ...settings,
       restaurantName: settings.restaurantName || "The Rustic Spin",
-      tagline: settings.tagline !== undefined ? settings.tagline : "Restaurant Management & Fine Dining",
+      tagline: settings.tagline !== undefined ? settings.tagline : "Restaurant Management and Fine Dining",
       phone: settings.phone || settings.contactNumber || "",
       contactNumber: settings.contactNumber || settings.phone || "",
       foodGstRate: Number(settings.taxRate ?? settings.foodGstRate ?? 5),
       taxRate: Number(settings.taxRate ?? settings.foodGstRate ?? 5),
-      logo: settings.logo || settings.restaurantLogo || "",
-      restaurantLogo: settings.restaurantLogo || settings.logo || "",
+      logo: resolvedLogo,
+      restaurantLogo: resolvedLogo,
       updatedAt: new Date().toISOString(),
       isUserConfigured: true,
     };
@@ -1421,7 +1422,13 @@ export function AdminPortal({
 
     try {
       localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(stampedSettings));
-    } catch {}
+    } catch {
+      try {
+        localStorage.removeItem("gourmet_pos_inventory_deductions_v1");
+        const lean = { ...stampedSettings, restaurantLogo: undefined };
+        localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(lean));
+      } catch {}
+    }
     window.dispatchEvent(new Event("restaurant-settings-updated"));
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: stampedSettings }));

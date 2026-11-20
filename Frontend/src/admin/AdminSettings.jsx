@@ -274,6 +274,14 @@ export function AdminSettings({
         }
         try {
           localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(next));
+        } catch {
+          try {
+            localStorage.removeItem("gourmet_pos_inventory_deductions_v1");
+            const lean = { ...next, restaurantLogo: undefined };
+            localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(lean));
+          } catch {}
+        }
+        try {
           window.dispatchEvent(new Event("storage"));
           window.dispatchEvent(new Event("restaurant-settings-updated"));
           window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: next }));
@@ -544,46 +552,50 @@ export function AdminSettings({
     setIsSaving(true);
     setSaveError("");
 
+    const resolvedLogo = settings.logo || settings.restaurantLogo || "/restaurant-logo.png";
     const settingsToSave = {
       ...settings,
-      logo: settings.logo || settings.restaurantLogo || "",
-      restaurantLogo: settings.restaurantLogo || settings.logo || "",
+      logo: resolvedLogo,
+      restaurantLogo: resolvedLogo,
       updatedAt: new Date().toISOString(),
       isUserConfigured: true,
     };
 
+    // 1. LocalStorage with quota protection (never block save)
     try {
       localStorage.setItem(
         "gourmet_pos_settings_v1",
         JSON.stringify(settingsToSave),
       );
+    } catch (storageErr) {
+      console.warn("Storage quota warning, clearing non-critical keys:", storageErr);
+      try {
+        localStorage.removeItem("gourmet_pos_inventory_deductions_v1");
+        const lean = { ...settingsToSave, restaurantLogo: undefined };
+        localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(lean));
+      } catch {}
+    }
+
+    try {
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new Event("restaurant-settings-updated"));
       window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settingsToSave }));
+    } catch {}
 
-      if (onSaveSettings) {
-        try {
-          await onSaveSettings(settingsToSave);
-        } catch (syncErr) {
-          console.warn("Server sync error (local settings saved successfully):", syncErr);
-        }
+    // 2. Server save (authoritative global sync)
+    if (onSaveSettings) {
+      try {
+        await onSaveSettings(settingsToSave);
+      } catch (syncErr) {
+        console.warn("Server sync error:", syncErr);
       }
-
-      setLastSavedSettings(settingsToSave);
-      setSettings(settingsToSave);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 2500);
-    } catch (error) {
-      setSavedSuccess(false);
-      setSaveError(
-        error?.name === "QuotaExceededError"
-          ? "Browser storage is full. Try a smaller logo image."
-          : error?.message ||
-              "Could not save settings.",
-      );
-    } finally {
-      setIsSaving(false);
     }
+
+    setLastSavedSettings(settingsToSave);
+    setSettings(settingsToSave);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+    setIsSaving(false);
   };
 
   return (
