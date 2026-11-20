@@ -503,7 +503,7 @@ export function TableReservationFlow({
                 lineHeight: "1.1",
               }}
             >
-              Bhanu Bistro
+              The Rustic Spin
             </div>
             <div
               style={{
@@ -1026,8 +1026,8 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             maxWidth: "440px",
           }}
         >
-          Book a table in advance and enjoy a great dining experience at Bhanu
-          Bistro.
+          Book a table in advance and enjoy a great dining experience at The Rustic
+          Spin.
         </p>
 
         {/* Dining Table Ambiance Preview */}
@@ -1045,7 +1045,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
         >
           <img
             src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80"
-            alt="Fine Dining Ambiance at Bhanu Bistro"
+            alt="Fine Dining Ambiance at The Rustic Spin"
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
           <div
@@ -2491,7 +2491,7 @@ function Step5ReservationConfirmed({
         Reservation Confirmed!
       </h2>
       <p style={{ fontSize: "13px", color: "#6b5d52", margin: "0 0 20px" }}>
-        Your table has been successfully reserved at Bhanu Bistro.
+        Your table has been successfully reserved at The Rustic Spin.
       </p>
 
       {/* Confirmation details grid */}
@@ -2725,7 +2725,7 @@ function Step6MyReservations({
             </h2>
           </div>
           <p style={{ fontSize: "12px", color: "#6b5d52", margin: "4px 0 0" }}>
-            View, manage and track your table reservations at Bhanu Bistro.
+            View, manage and track your table reservations at The Rustic Spin.
           </p>
         </div>
 
@@ -3768,7 +3768,7 @@ function ReservationFlowPoster({
               Reserve Your Table
             </div>
             <div style={{ color: "#786c62", marginBottom: "8px" }}>
-              Enjoy fine dining at Bhanu Bistro
+              Enjoy fine dining at The Rustic Spin
             </div>
             <div
               style={{
@@ -4177,7 +4177,7 @@ function PosterScreenCard({ step, title, children, onClick }) {
               color: "#fff",
             }}
           >
-            Bhanu Bistro
+            The Rustic Spin
           </span>
           <div
             style={{

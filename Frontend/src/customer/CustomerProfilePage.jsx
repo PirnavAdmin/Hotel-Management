@@ -48,7 +48,7 @@ export function CustomerProfilePage({
   onUpdateUser,
   onNavigate,
   onLogout,
-  restaurantName = "Bhanu Bistro",
+  restaurantName = "The Rustic Spin",
   restaurantLogo = "",
 }) {
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "bookings" | "visits"

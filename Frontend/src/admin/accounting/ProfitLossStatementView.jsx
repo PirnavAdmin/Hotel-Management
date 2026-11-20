@@ -393,7 +393,7 @@ export function ProfitLossStatementView({
             <input
               type="text"
               readOnly
-              value="Bhanu Fine Dining & POS"
+              value="The Rustic Spin"
               style={{
                 width: "100%",
                 background: "var(--bg-secondary)",

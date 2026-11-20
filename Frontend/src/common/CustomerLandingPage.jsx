@@ -163,7 +163,7 @@ const getItemRating = (item) => {
 };
 
 export function CustomerLandingPage({
-  restaurantName = "Bhanu Bistro",
+  restaurantName = "The Rustic Spin",
   restaurantLogo = "",
   menuItems = [],
   menuLoading = false,
@@ -175,20 +175,28 @@ export function CustomerLandingPage({
 }) {
   const getStoredSettings = () => {
     try {
-      return JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+      const parsed = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
+      if (parsed && typeof parsed === "object") {
+        if (!parsed.restaurantName || /bhanu|avsr/i.test(parsed.restaurantName)) {
+          parsed.restaurantName = "The Rustic Spin";
+          parsed.tagline = "Restaurant Management & Fine Dining";
+          try { localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(parsed)); } catch {}
+        }
+        return parsed;
+      }
     } catch {
       return {};
     }
   };
   const getStoredLogo = () => getStoredSettings().logo || "";
-  const getStoredName = () => getStoredSettings().restaurantName || "";
+  const getStoredName = () => getStoredSettings().restaurantName || "The Rustic Spin";
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
   const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
     const sName = getStoredName();
-    if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant") return sName.trim();
-    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
-    return sName || restaurantName || "Bhanu Bistro";
+    if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(sName)) return sName.trim();
+    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(restaurantName)) return restaurantName.trim();
+    return "The Rustic Spin";
   });
 
   useEffect(() => {
@@ -3201,8 +3209,8 @@ export function CustomerLandingPage({
                 Order ID: {placedOrder.orderNumber}
               </span>
               <p className="customer-ready-sub">
-                Please collect your order from the takeaway counter at Bhanu
-                Bistro.
+                Please collect your order from the takeaway counter at The Rustic
+                Spin.
               </p>
 
               <div className="customer-ready-info-strip">
@@ -3214,7 +3222,7 @@ export function CustomerLandingPage({
                 </div>
                 <div className="customer-ready-info-item">
                   <MapPin size={17} color="#ea580c" />
-                  <span>Bhanu Bistro, Main Road, Hyderabad</span>
+                  <span>The Rustic Spin, Main Road, Hyderabad</span>
                 </div>
               </div>
 
@@ -3634,7 +3642,7 @@ export function CustomerLandingPage({
           restaurantSettings={{
             restaurantName,
             logo: restaurantLogo,
-            tagline: "Fine Dining & POS Management",
+            tagline: "Restaurant Management & Fine Dining",
             address: "Main Road, Near Tech Park, Hyderabad, India",
             phone: "+91 98450 12345",
             gstin: "36AABCA1234F1Z5",

@@ -62,12 +62,13 @@ export function AdminSidebar({
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredSettings().logo || "");
   const [liveName, setLiveName] = useState(() => {
     const sName = getStoredSettings().restaurantName;
-    if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant") return sName.trim();
-    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
-    return sName || restaurantName || "AVSR FOOD COURT";
+    if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(sName)) return sName.trim();
+    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(restaurantName)) return restaurantName.trim();
+    return "The Rustic Spin";
   });
   const [liveTagline, setLiveTagline] = useState(() => {
-    return getStoredSettings().tagline || restaurantTagline || "BAR & CAFE";
+    const tag = getStoredSettings().tagline || restaurantTagline;
+    return tag && !/bhanu/i.test(tag) ? tag : "Restaurant Management & Fine Dining";
   });
 
   useEffect(() => {

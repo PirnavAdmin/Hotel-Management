@@ -1235,7 +1235,9 @@ export function AdminPortal({
   });
   const restaurantLogo = restaurantSettings?.logo || "";
   const restaurantName =
-    restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+    restaurantSettings?.restaurantName?.trim() && !/bhanu|avsr/i.test(restaurantSettings.restaurantName)
+      ? restaurantSettings.restaurantName.trim()
+      : "The Rustic Spin";
   const restaurantTagline = restaurantSettings?.tagline?.trim() || "Restaurant Management & Fine Dining";
 
   useEffect(() => {

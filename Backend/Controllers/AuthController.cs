@@ -233,7 +233,7 @@ public class AuthController : ControllerBase
     }
 
     // ============================================================
-    // CUSTOMER PORTAL AUTHENTICATION & REGISTRATION (BHANU BISTRO)
+    // CUSTOMER PORTAL AUTHENTICATION & REGISTRATION (THE RUSTIC SPIN)
     // ============================================================
 
     [AllowAnonymous]

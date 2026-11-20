@@ -116,7 +116,10 @@ export function KitchenKOTView({
   }, []);
 
   const effectiveLogo = restaurantLogo || liveSettings.logo || "";
-  const effectiveRestaurantName = restaurantName !== "Restaurant" ? restaurantName : (liveSettings.restaurantName || "Restaurant");
+  const effectiveRestaurantName =
+    (restaurantName && restaurantName !== "Restaurant" && !/bhanu|avsr/i.test(restaurantName))
+      ? restaurantName
+      : (liveSettings.restaurantName && !/bhanu|avsr/i.test(liveSettings.restaurantName) ? liveSettings.restaurantName : "The Rustic Spin");
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);

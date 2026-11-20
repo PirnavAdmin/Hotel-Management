@@ -275,10 +275,20 @@ const requestSharedNetworkState = () => {
 
 const readRestaurantSettings = () => {
   try {
-    return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
-  } catch {
-    return {};
-  }
+    const raw = localStorage.getItem(RESTAURANT_SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        if (!parsed.restaurantName || /bhanu|avsr/i.test(parsed.restaurantName)) {
+          parsed.restaurantName = "The Rustic Spin";
+          parsed.tagline = "Restaurant Management & Fine Dining";
+          try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(parsed)); } catch {}
+        }
+        return parsed;
+      }
+    }
+  } catch {}
+  return { restaurantName: "The Rustic Spin", tagline: "Restaurant Management & Fine Dining" };
 };
 
 const dedupeStaff = (staff) => {
@@ -628,8 +638,8 @@ export function App() {
       const merged = {
         ...local,
         ...cleanServer,
-        restaurantName: cleanServer.restaurantName || cleanServer.name || local.restaurantName || "AVSR FOOD COURT",
-        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline || ""),
+        restaurantName: cleanServer.restaurantName || cleanServer.name || (local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName) ? local.restaurantName : "The Rustic Spin"),
+        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
         logo: cleanServer.logo || cleanServer.restaurantLogo || local.logo || local.restaurantLogo || "",
         restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || local.restaurantLogo || local.logo || "",
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
@@ -4546,7 +4556,7 @@ export function App() {
   };
 
   if (authRestorePending) {
-    const hotelName = restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+    const hotelName = restaurantSettings?.restaurantName?.trim() && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName.trim() : "The Rustic Spin";
     const hotelLogo = restaurantSettings?.logo || "";
     const hotelTagline = restaurantSettings?.tagline?.trim() || "";
 
@@ -4736,7 +4746,7 @@ export function App() {
       <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
         {isLandingRoute && (
           <CustomerLandingPage
-            restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
+            restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
             restaurantLogo={restaurantSettings.logo || ""}
             menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
             menuLoading={sharedRecordLoad.menu === "loading"}
@@ -4781,7 +4791,7 @@ export function App() {
               onChangeTheme={setTheme}
               role="kot"
               onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo}
               onBackToLanding={() => navigate("/")}
             />
@@ -4834,7 +4844,7 @@ export function App() {
               onChangeTheme={setTheme}
               role="admin"
               onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo}
               onBackToLanding={() => navigate("/")}
             />
@@ -4966,7 +4976,7 @@ export function App() {
               onChangeTheme={setTheme}
               role="pos"
               onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo}
               onBackToLanding={() => navigate("/")}
             />

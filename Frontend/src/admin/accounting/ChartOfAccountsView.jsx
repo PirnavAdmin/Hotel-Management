@@ -108,7 +108,7 @@ export function ChartOfAccountsView() {
         </tbody>
       </table>
     `;
-    printFinancialReport("Chart of Accounts (COA)", "Bhanu Fine Dining & POS Management", html);
+    printFinancialReport("Chart of Accounts (COA)", "The Rustic Spin", html);
   };
 
   return (

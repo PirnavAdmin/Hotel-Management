@@ -28,32 +28,45 @@ const getStoredRestaurantSettings = () => {
     const raw = localStorage.getItem(RESTAURANT_SETTINGS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") return parsed;
+      if (parsed && typeof parsed === "object") {
+        if (!parsed.restaurantName || /bhanu|avsr/i.test(parsed.restaurantName)) {
+          parsed.restaurantName = "The Rustic Spin";
+          parsed.tagline = "Restaurant Management & Fine Dining";
+          try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(parsed)); } catch {}
+        }
+        return parsed;
+      }
     }
   } catch {}
-  return {};
+  return { restaurantName: "The Rustic Spin", tagline: "Restaurant Management & Fine Dining" };
 };
 
 const resolveRestaurantName = (propVal) => {
-  if (propVal && typeof propVal === "string" && propVal.trim() && propVal.trim().toLowerCase() !== "restaurant") {
+  const isInvalid = (val) => {
+    if (!val || typeof val !== "string") return true;
+    const clean = val.trim().toLowerCase();
+    return !clean || clean === "restaurant" || clean.includes("bhanu") || clean.includes("avsr");
+  };
+
+  if (!isInvalid(propVal)) {
     return propVal.trim();
   }
   const settings = getStoredRestaurantSettings();
-  if (settings && typeof settings.restaurantName === "string" && settings.restaurantName.trim()) {
+  if (!isInvalid(settings?.restaurantName)) {
     return settings.restaurantName.trim();
   }
-  if (propVal && typeof propVal === "string" && propVal.trim()) {
-    return propVal.trim();
-  }
-  return "AVSR FOOD COURT";
+  return "The Rustic Spin";
 };
 
 const resolveTagline = () => {
   const settings = getStoredRestaurantSettings();
   if (settings && typeof settings.tagline === "string" && settings.tagline.trim()) {
-    return settings.tagline.trim();
+    const clean = settings.tagline.trim();
+    if (!/bhanu/i.test(clean)) {
+      return clean;
+    }
   }
-  return "";
+  return "Restaurant Management & Fine Dining";
 };
 
 const resolveRestaurantLogo = (propVal, altPropVal) => {
@@ -77,7 +90,7 @@ const HEADLINE_ITEMS = [
 export function LoginPage({
   role = 'pos',
   onLoginSuccess,
-  restaurantName = 'Restaurant',
+  restaurantName = 'The Rustic Spin',
   restaurantLogo = '',
   logo = '',
   currentTheme = 'royal-saffron',

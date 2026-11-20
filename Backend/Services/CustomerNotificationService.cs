@@ -53,10 +53,10 @@ public class CustomerNotificationService : ICustomerNotificationService
         bool isLoginVerify = string.Equals(purpose, CustomerAuthService.PurposeLoginVerify, StringComparison.OrdinalIgnoreCase);
 
         string subject = isPasswordReset
-            ? "Bhanu Bistro - Password Reset Verification Code"
+            ? "The Rustic Spin - Password Reset Verification Code"
             : isLoginVerify
-                ? "Bhanu Bistro - Login Verification OTP"
-                : "Bhanu Bistro - Verify Your Account";
+                ? "The Rustic Spin - Login Verification OTP"
+                : "The Rustic Spin - Verify Your Account";
 
         string headline = isPasswordReset
             ? "Reset Your Password"
@@ -65,16 +65,16 @@ public class CustomerNotificationService : ICustomerNotificationService
                 : "Verify Your Account";
 
         string intro = isPasswordReset
-            ? "We received a request to reset the password for your Bhanu Bistro account. Enter the 6-digit verification code below to proceed:"
+            ? "We received a request to reset the password for your The Rustic Spin account. Enter the 6-digit verification code below to proceed:"
             : isLoginVerify
-                ? "A sign-in attempt was made for your Bhanu Bistro account. Enter the 6-digit verification code below to complete your login:"
-                : "Welcome to Bhanu Bistro! Enter the 6-digit verification code below to activate and verify your customer account:";
+                ? "A sign-in attempt was made for your The Rustic Spin account. Enter the 6-digit verification code below to complete your login:"
+                : "Welcome to The Rustic Spin! Enter the 6-digit verification code below to activate and verify your customer account:";
 
         string securityNote = isPasswordReset
             ? "If you did not request a password reset, please ignore this email and keep your account secure."
             : isLoginVerify
                 ? "If you did not attempt to sign in, we recommend changing your password immediately."
-                : "If you did not create a Bhanu Bistro account, you can safely disregard this email.";
+                : "If you did not create a The Rustic Spin account, you can safely disregard this email.";
 
         string minuteLabel = validMinutes == 1 ? "1 minute" : $"{validMinutes} minutes";
 
@@ -83,11 +83,11 @@ public class CustomerNotificationService : ICustomerNotificationService
             $"{intro}\n\n" +
             $"Your 6-digit OTP code: {otpCode}\n" +
             $"Expires in: {minuteLabel}\n\n" +
-            "Do not share this code with anyone. Bhanu Bistro staff will never ask for your OTP.\n" +
+            "Do not share this code with anyone. The Rustic Spin staff will never ask for your OTP.\n" +
             $"{securityNote}\n\n" +
-            "— Bhanu Bistro";
+            "— The Rustic Spin";
 
-        string htmlBody = BuildBhanuBistroOtpHtml(
+        string htmlBody = BuildTheRusticSpinOtpHtml(
             WebUtility.HtmlEncode(safeName),
             WebUtility.HtmlEncode(headline),
             WebUtility.HtmlEncode(intro),
@@ -131,18 +131,18 @@ public class CustomerNotificationService : ICustomerNotificationService
             return;
         }
 
-        const string subject = "Bhanu Bistro - Password Changed";
+        const string subject = "The Rustic Spin - Password Changed";
         string plainTextBody =
             $"Hello {safeName},\n\n" +
-            "Your Bhanu Bistro customer account password was recently changed and all active sessions were signed out.\n" +
-            "If you did not perform this change, please contact Bhanu Bistro support immediately.\n\n" +
-            "— Bhanu Bistro";
+            "Your The Rustic Spin customer account password was recently changed and all active sessions were signed out.\n" +
+            "If you did not perform this change, please contact The Rustic Spin support immediately.\n\n" +
+            "— The Rustic Spin";
 
-        string htmlBody = BuildBhanuBistroNoticeHtml(
+        string htmlBody = BuildTheRusticSpinNoticeHtml(
             WebUtility.HtmlEncode(safeName),
             "Password Updated",
-            "Your Bhanu Bistro customer account password was recently changed and all active sessions have been signed out.",
-            "If you did not make this change, please reset your password or contact Bhanu Bistro support immediately.");
+            "Your The Rustic Spin customer account password was recently changed and all active sessions have been signed out.",
+            "If you did not make this change, please reset your password or contact The Rustic Spin support immediately.");
 
         try
         {
@@ -159,7 +159,7 @@ public class CustomerNotificationService : ICustomerNotificationService
         }
     }
 
-    private static string BuildBhanuBistroOtpHtml(
+    private static string BuildTheRusticSpinOtpHtml(
         string encodedName,
         string encodedHeadline,
         string encodedIntro,
@@ -173,7 +173,7 @@ public class CustomerNotificationService : ICustomerNotificationService
 <head>
   <meta charset=""utf-8"" />
   <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
-  <title>{encodedHeadline} - Bhanu Bistro</title>
+  <title>{encodedHeadline} - The Rustic Spin</title>
 </head>
 <body style=""margin:0;padding:0;background-color:#f6f3ee;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1f2937;"">
   <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f6f3ee;padding:32px 16px;"">
@@ -182,7 +182,7 @@ public class CustomerNotificationService : ICustomerNotificationService
         <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:540px;background-color:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #eadfd0;box-shadow:0 8px 24px rgba(31,23,18,0.08);"">
           <tr>
             <td style=""background:linear-gradient(135deg,#241711 0%,#3c2415 100%);padding:28px 32px;text-align:center;border-bottom:3px solid #d97706;"">
-              <div style=""font-size:26px;font-weight:800;letter-spacing:1.2px;color:#fbbf24;text-transform:uppercase;"">Bhanu Bistro</div>
+              <div style=""font-size:26px;font-weight:800;letter-spacing:1.2px;color:#fbbf24;text-transform:uppercase;"">The Rustic Spin</div>
               <div style=""font-size:12px;letter-spacing:2px;color:#e5d5c3;margin-top:4px;text-transform:uppercase;"">Fine Dining &amp; Online Ordering</div>
             </td>
           </tr>
@@ -205,7 +205,7 @@ public class CustomerNotificationService : ICustomerNotificationService
           </tr>
           <tr>
             <td style=""background-color:#faf7f2;padding:18px 32px;text-align:center;border-top:1px solid #eadfd0;font-size:12px;color:#6b7280;"">
-              &copy; {year} Bhanu Bistro. All rights reserved.
+              &copy; {year} The Rustic Spin. All rights reserved.
             </td>
           </tr>
         </table>
@@ -216,7 +216,7 @@ public class CustomerNotificationService : ICustomerNotificationService
 </html>";
     }
 
-    private static string BuildBhanuBistroNoticeHtml(
+    private static string BuildTheRusticSpinNoticeHtml(
         string encodedName,
         string encodedHeadline,
         string encodedBody,
@@ -228,7 +228,7 @@ public class CustomerNotificationService : ICustomerNotificationService
 <head>
   <meta charset=""utf-8"" />
   <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
-  <title>{encodedHeadline} - Bhanu Bistro</title>
+  <title>{encodedHeadline} - The Rustic Spin</title>
 </head>
 <body style=""margin:0;padding:0;background-color:#f6f3ee;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1f2937;"">
   <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#f6f3ee;padding:32px 16px;"">
@@ -237,7 +237,7 @@ public class CustomerNotificationService : ICustomerNotificationService
         <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:540px;background-color:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #eadfd0;box-shadow:0 8px 24px rgba(31,23,18,0.08);"">
           <tr>
             <td style=""background:linear-gradient(135deg,#241711 0%,#3c2415 100%);padding:28px 32px;text-align:center;border-bottom:3px solid #d97706;"">
-              <div style=""font-size:26px;font-weight:800;letter-spacing:1.2px;color:#fbbf24;text-transform:uppercase;"">Bhanu Bistro</div>
+              <div style=""font-size:26px;font-weight:800;letter-spacing:1.2px;color:#fbbf24;text-transform:uppercase;"">The Rustic Spin</div>
               <div style=""font-size:12px;letter-spacing:2px;color:#e5d5c3;margin-top:4px;text-transform:uppercase;"">Fine Dining &amp; Online Ordering</div>
             </td>
           </tr>
@@ -251,7 +251,7 @@ public class CustomerNotificationService : ICustomerNotificationService
           </tr>
           <tr>
             <td style=""background-color:#faf7f2;padding:18px 32px;text-align:center;border-top:1px solid #eadfd0;font-size:12px;color:#6b7280;"">
-              &copy; {year} Bhanu Bistro. All rights reserved.
+              &copy; {year} The Rustic Spin. All rights reserved.
             </td>
           </tr>
         </table>

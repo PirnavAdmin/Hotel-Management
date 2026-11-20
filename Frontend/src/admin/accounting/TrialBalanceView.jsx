@@ -241,7 +241,7 @@ export function TrialBalanceView({
                 cursor: "pointer",
               }}
             >
-              <option>Bhanu Fine Dining &amp; POS Management</option>
+              <option>The Rustic Spin</option>
             </select>
           </div>
 

@@ -85,7 +85,7 @@ public class SmtpEmailService : IEmailService
 
         string fromName = !string.IsNullOrWhiteSpace(settings.FromName)
             ? settings.FromName.Trim()
-            : (_configuration["Smtp:FromName"] ?? "Bhanu Bistro").Trim();
+            : (_configuration["Smtp:FromName"] ?? "The Rustic Spin").Trim();
 
         bool enableSsl = settings.EnableSsl;
         int timeoutMs = Math.Clamp(settings.TimeoutMs > 0 ? settings.TimeoutMs : 15000, 3000, 60000);

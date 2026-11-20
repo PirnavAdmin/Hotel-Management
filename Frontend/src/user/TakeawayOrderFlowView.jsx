@@ -190,7 +190,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 lineHeight: "1.1",
               }}
             >
-              Bhanu Bistro
+              The Rustic Spin
             </div>
             <div
               style={{
@@ -218,7 +218,7 @@ export function TakeawayOrderFlowView({ onBack }) {
               margin: 0,
             }}
           >
-            Bhanu Bistro – Takeaway Order Flow{" "}
+            The Rustic Spin – Takeaway Order Flow{" "}
             <span style={{ fontSize: "18px", color: "#f59e0b", fontWeight: 600 }}>
               (Self Pickup & Pre-Order)
             </span>
@@ -930,7 +930,7 @@ function ScreenItem({ screen, onClick }) {
                 color: "#fff",
               }}
             >
-              Bhanu Bistro
+              The Rustic Spin
             </span>
           </div>
 
@@ -1646,7 +1646,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             <div>✓ Payment Verified (UPI - ₹815)</div>
             <div>✓ Order Logged in POS</div>
             <div style={{ color: "#c2410c", fontWeight: 700 }}>
-              ⏳ Confirming with Bhanu Bistro Kitchen...
+              ⏳ Confirming with The Rustic Spin Kitchen...
             </div>
           </div>
         </div>

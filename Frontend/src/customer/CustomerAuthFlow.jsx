@@ -36,7 +36,7 @@ export function CustomerAuthFlow({
   onLoginSuccess,
   onBackToHome,
   intendedDestination = "home",
-  restaurantName = "Bhanu Bistro",
+  restaurantName = "The Rustic Spin",
   restaurantLogo = "",
 }) {
   // Current screen: "login" | "register" | "otp" | "forgot" | "reset" | "success"
