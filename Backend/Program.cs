@@ -457,8 +457,9 @@ app.UseSwaggerUI(c =>
 });
 
 
-// Ensure wwwroot/uploads directory exists
-var uploadsDir = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "uploads");
+// Ensure wwwroot and wwwroot/uploads directory exist
+var webRoot = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var uploadsDir = Path.Combine(webRoot, "uploads");
 if (!Directory.Exists(uploadsDir))
 {
     Directory.CreateDirectory(uploadsDir);
@@ -469,6 +470,20 @@ if (!Directory.Exists(uploadsDir))
 // ============================================================
 
 app.UseCors("FrontendPolicy");
+
+// Explicitly serve static assets and uploads with CORS headers before routing
+app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsDir),
+    RequestPath = "/uploads",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+        ctx.Context.Response.Headers.Append("Cache-Control", "public,max-age=86400");
+    }
+});
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -519,8 +534,6 @@ app.Use(async (context, next) =>
 // to their canonical /api/v1/{module}/{resource} routes before endpoint routing
 app.UseMiddleware<HMS.Middleware.LegacyApiRewriteMiddleware>();
 app.UseRouting();
-
-app.UseStaticFiles();
 
 app.UseAuthentication();
 

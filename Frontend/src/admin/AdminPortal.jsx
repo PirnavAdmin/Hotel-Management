@@ -7075,11 +7075,11 @@ export function AdminPortal({
                 type="file"
                 accept="image/*"
                 disabled={isImageUploading}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
 
-                  // 1. Immediately read as Base64 Data URL so it is preserved locally in data across all devices
+                  // 1. Immediately read as Base64 Data URL so local preview is instant
                   const reader = new FileReader();
                   reader.onload = (uploadEvent) => {
                     const base64Data = uploadEvent.target?.result;
@@ -7092,19 +7092,24 @@ export function AdminPortal({
                   };
                   reader.readAsDataURL(file);
 
-                  // 2. Also attempt upload to backend API if available
+                  // 2. Upload to backend API
                   setIsImageUploading(true);
-                  apiUploadMenuImage(file)
-                    .then((result) => {
-                      if (result && result.success && result.imageUrl) {
-                        setItemForm((current) => ({
-                          ...current,
-                          image: result.imageUrl,
-                        }));
-                      }
-                    })
-                    .catch(() => {})
-                    .finally(() => setIsImageUploading(false));
+                  try {
+                    const result = await apiUploadMenuImage(file);
+                    if (result && result.success && result.imageUrl) {
+                      setItemForm((current) => ({
+                        ...current,
+                        image: result.imageUrl,
+                      }));
+                      showToast("Image uploaded successfully!");
+                    } else {
+                      showToast(`Upload notice: ${result?.error || "Saved as local image"}`);
+                    }
+                  } catch (err) {
+                    showToast(`Upload error: ${err?.message || "Saved as local image"}`);
+                  } finally {
+                    setIsImageUploading(false);
+                  }
                 }}
                 style={{
                   width: "100%",
@@ -7143,6 +7148,10 @@ export function AdminPortal({
                     <img
                       src={itemForm.image}
                       alt="Dish preview"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "/assets/dishes/default.svg";
+                      }}
                       style={{
                         width: "56px",
                         height: "44px",
