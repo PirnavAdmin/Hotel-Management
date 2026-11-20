@@ -300,7 +300,7 @@ export function AdminTakeaway({
       isPaid: !isCancelled,
       settled: !isCancelled,
       settledAt: printReceiptOrder.date || new Date().toISOString(),
-      paymentMethod: (printReceiptOrder.paymentMethod || "CASH").toUpperCase(),
+      paymentMethod: String(printReceiptOrder.paymentMethod || "CASH").toUpperCase(),
       customer: printReceiptOrder.customer || "Walk-in Guest",
       customerPhone: printReceiptOrder.phone || "",
       items,

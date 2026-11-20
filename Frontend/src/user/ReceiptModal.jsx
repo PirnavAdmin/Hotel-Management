@@ -161,11 +161,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     storedSettings.name,
     storedSettings.restaurant,
   ].map((value) => normalizeRestaurantName(value)).find((v) => v && !/bhanu|avsr/i.test(v)) || "The Rustic Spin";
-  const restaurantName = typeof rawRestaurantName === "string" ? rawRestaurantName.trim() : "The Rustic Spin";
-  const restaurantTagline =
+  const restaurantName = String(rawRestaurantName || "The Rustic Spin").trim();
+  const restaurantTagline = String(
     getCleanTagline(restaurantSettings.tagline) ||
     getCleanTagline(storedSettings.tagline) ||
-    "Restaurant Management & Fine Dining";
+    "Restaurant Management & Fine Dining"
+  ).trim();
   const restaurantPhone =
     restaurantSettings.phone?.trim() ||
     storedSettings.phone?.trim() ||
@@ -288,7 +289,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   );
 
   const paymentMethod = isSettled
-    ? (table.paymentMethod ? table.paymentMethod.toUpperCase() : (table.paymentMode ? table.paymentMode.toUpperCase() : 'UPI'))
+    ? String(table.paymentMethod || table.paymentMode || 'UPI').toUpperCase()
     : null;
 
   const handlePrint = async () => {
@@ -712,7 +713,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             {/* Thermal Footer */}
             <div style={{ textAlign: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px dashed #64748b' }}>
               <p style={{ fontSize: '0.72rem', fontWeight: 800, color: '#000000', margin: '2px 0 0' }}>
-                THANK YOU FOR VISITING {String(restaurantName || "The Rustic Spin").toUpperCase()}!
+                THANK YOU FOR VISITING {String(restaurantName || "THE RUSTIC SPIN").toUpperCase()}!
               </p>
               <p style={{ fontSize: '0.64rem', color: '#475569', margin: '1px 0 0' }}>
                 Please visit again{restaurantPhone ? ` • Orders: ${restaurantPhone}` : ""}

@@ -127,7 +127,7 @@ const formatInvoiceTime = (value) => {
 
 export function AdminInvoices({
   invoiceFilter = null,
-  restaurantName = "Restaurant",
+  restaurantName = "The Rustic Spin",
   restaurantSettings = {},
   onUpdateInvoiceDiscount = null,
 }) {
