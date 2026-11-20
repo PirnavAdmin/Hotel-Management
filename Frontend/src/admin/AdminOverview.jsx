@@ -1004,7 +1004,20 @@ export function AdminOverview({
                           background: isOccupied ? "#f59e0b" : "#10b981",
                         }}
                       />
-                      <span>{isOccupied ? `${tbl.guests || tbl.persons || 1} Seated` : "Vacant"}</span>
+                      {(() => {
+                        const cap = Number(tbl.capacity || tbl.capacityChairs || tbl.chairs || 4);
+                        const occupied = Number(
+                          (Array.isArray(tbl.selectedSeats) && tbl.selectedSeats.length > 0 ? tbl.selectedSeats.length : null) ??
+                          (tbl.occupiedChairs !== undefined && tbl.occupiedChairs !== null && Number(tbl.occupiedChairs) >= 0 ? Number(tbl.occupiedChairs) : null) ??
+                          (tbl.guests !== undefined && tbl.guests !== null ? Number(tbl.guests) : null) ??
+                          0
+                        );
+                        return (
+                          <span>
+                            {isOccupied ? `${cap}/${occupied} (${occupied} Seated)` : `${cap}/0 (Vacant)`}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div
                       style={{

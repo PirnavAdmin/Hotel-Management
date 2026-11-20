@@ -187,14 +187,19 @@ const mergeActiveDiningOrders = (tables, orders) => {
     if (items.length === 0 || !["active", "billed"].includes(orderStatus)) {
       return clearCachedTableOrder({ ...table, status: "vacant" });
     }
-    const guests = Number(order.guests ?? order.Guests) || 0;
+    const tableSeats = Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats : [];
+    const guests = Number(order.guests ?? order.Guests) || (tableSeats.length > 0 ? tableSeats.length : (Number(table.guests) || 0));
+    const occupiedChairs = guests > 0 ? guests : tableSeats.length;
+    const selectedSeats = tableSeats.length > 0
+      ? tableSeats
+      : (guests > 0 ? Array.from({ length: guests }, (_, i) => `S${i + 1}`) : []);
     const createdAt = order.createdAt ?? order.CreatedAt;
     return {
       ...table,
       status: orderStatus === "billed" ? "billed" : "occupied",
       guests,
-      occupiedChairs: guests,
-      selectedSeats: [],
+      occupiedChairs,
+      selectedSeats,
       items,
       activeOrderId: order.id ?? order.Id,
       backendOrderId: order.id ?? order.Id,
@@ -4257,7 +4262,16 @@ export function App() {
   const handleUpdateTable = (updatedTable) => {
     const previousTable = tables.find((table) => String(table.id) === String(updatedTable.id));
     const cap = Number(updatedTable.capacity || updatedTable.capacityChairs || updatedTable.chairs || (previousTable?.capacity || 4));
-    const persons = Number(updatedTable.persons || updatedTable.guests || cap);
+    const selectedSeats = Array.isArray(updatedTable.selectedSeats)
+      ? updatedTable.selectedSeats
+      : (Array.isArray(previousTable?.selectedSeats) ? previousTable.selectedSeats : []);
+    const occupiedSeatsCount = Number(
+      (selectedSeats.length > 0 ? selectedSeats.length : null) ??
+      (updatedTable.occupiedChairs !== undefined && updatedTable.occupiedChairs !== null && Number(updatedTable.occupiedChairs) >= 0 ? Number(updatedTable.occupiedChairs) : null) ??
+      (updatedTable.guests !== undefined && updatedTable.guests !== null ? Number(updatedTable.guests) : null) ??
+      0
+    );
+    const finalGuests = occupiedSeatsCount > 0 ? occupiedSeatsCount : (Number(updatedTable.guests) || 0);
 
     const targetServerName = updatedTable.server !== undefined
       ? updatedTable.server
@@ -4274,8 +4288,10 @@ export function App() {
       capacity: cap,
       chairs: cap,
       capacityChairs: cap,
-      persons: persons,
-      guests: persons,
+      persons: cap,
+      guests: finalGuests,
+      occupiedChairs: occupiedSeatsCount,
+      selectedSeats: selectedSeats,
       server: targetServerName || "",
       assignedServerName: targetServerName || "",
       assignedServerId: targetServerId,

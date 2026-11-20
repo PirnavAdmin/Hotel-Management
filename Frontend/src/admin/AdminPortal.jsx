@@ -1767,7 +1767,12 @@ export function AdminPortal({
   useEffect(() => {
     if (seatingStructureTable) {
       const match = (tables || []).find((t) => String(t.id) === String(seatingStructureTable.id));
-      if (match && (match.capacity !== seatingStructureTable.capacity || match.guests !== seatingStructureTable.guests || match.persons !== seatingStructureTable.persons)) {
+      if (match && (
+        match.capacity !== seatingStructureTable.capacity ||
+        match.guests !== seatingStructureTable.guests ||
+        match.occupiedChairs !== seatingStructureTable.occupiedChairs ||
+        JSON.stringify(match.selectedSeats || []) !== JSON.stringify(seatingStructureTable.selectedSeats || [])
+      )) {
         setSeatingStructureTable(match);
       }
     }
@@ -3861,7 +3866,7 @@ export function AdminPortal({
                               onClick={() => handleTableSort("capacity")}
                               style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
                             >
-                              <span>Chairs / Capacity</span>
+                              <span>Chairs / Persons (ex: 6/2)</span>
                               {tableSortField === "capacity" && (tableSortDirection === "asc" ? " ▲" : " ▼")}
                             </div>
                             <div
@@ -4002,9 +4007,23 @@ export function AdminPortal({
                                     title="Click to view & configure seating structure"
                                   >
                                     <Armchair size={13} color="var(--accent-amber)" />
-                                    <span>
-                                      {tbl.capacity || tbl.capacityChairs || tbl.chairs || 4} Chairs / {tbl.persons || tbl.guests || tbl.capacity || tbl.chairs || 4} Persons
-                                    </span>
+                                    {(() => {
+                                      const cap = Number(tbl.capacity || tbl.capacityChairs || tbl.chairs || 4);
+                                      const occupied = Number(
+                                        (Array.isArray(tbl.selectedSeats) && tbl.selectedSeats.length > 0 ? tbl.selectedSeats.length : null) ??
+                                        (tbl.occupiedChairs !== undefined && tbl.occupiedChairs !== null && Number(tbl.occupiedChairs) >= 0 ? Number(tbl.occupiedChairs) : null) ??
+                                        (tbl.guests !== undefined && tbl.guests !== null ? Number(tbl.guests) : null) ??
+                                        0
+                                      );
+                                      return (
+                                        <span>
+                                          <strong style={{ color: occupied > 0 ? "#f59e0b" : "var(--text-main)" }}>
+                                            {cap}/{occupied}
+                                          </strong>{" "}
+                                          ({cap} Chairs / {occupied > 0 ? `${occupied} Seated` : "0 Seated"})
+                                        </span>
+                                      );
+                                    })()}
                                   </button>
                                 </div>
 
