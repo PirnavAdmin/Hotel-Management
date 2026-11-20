@@ -68,7 +68,7 @@ export function RolesManagement({ isLight = false, showToast = alert }) {
           No system roles configured.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+        <div className="responsive-card-grid" style={{ '--responsive-card-min': '320px', '--responsive-card-gap': '1.25rem' }}>
           {roles.map((r) => {
             const roleName = r.roleName || r.name;
             const isSuperAdmin = roleName?.toLowerCase().includes('admin');

@@ -2119,14 +2119,7 @@ export function AdminReports({
           {/* ========================================================================= */}
           {/* 5 EXECUTIVE KEY NUMBERS - COMPACT 1-ROW DASHBOARD (ZERO SCROLLING)       */}
           {/* ========================================================================= */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(185px, 1fr))',
-              gap: '0.65rem',
-              marginBottom: '1rem',
-            }}
-          >
+          <div className="responsive-card-grid" style={{ '--responsive-card-min': '185px', '--responsive-card-gap': '0.65rem', marginBottom: '1rem' }}>
             {/* 1. Total Income */}
             <div
               style={{
@@ -2360,13 +2353,7 @@ export function AdminReports({
           {activeTab === 'sales' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Two Column Grid */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-                  gap: '1rem',
-                }}
-              >
+              <div className="responsive-card-grid" style={{ '--responsive-card-min': '340px' }}>
                 {/* Left Column: Payment Channel Distribution */}
                 <div
                   style={{
@@ -2557,10 +2544,10 @@ export function AdminReports({
 
               {/* Settlement Revenue Composition Strip */}
               <div
+                className="responsive-card-grid"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '0.65rem',
+                  '--responsive-card-min': '200px',
+                  '--responsive-card-gap': '0.65rem',
                   background: 'var(--bg-tertiary)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: '12px',
@@ -3022,14 +3009,7 @@ export function AdminReports({
               </div>
 
               {/* Side by Side Two Column Template (Matching Image 1 with Active Internal Scroll on Both Cards) */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-                  gap: '1rem',
-                  alignItems: 'stretch',
-                }}
-              >
+              <div className="responsive-card-grid" style={{ '--responsive-card-min': '420px' }}>
                 {/* 1. OPERATING REVENUE (INCOME) CARD */}
                 <div
                   style={{

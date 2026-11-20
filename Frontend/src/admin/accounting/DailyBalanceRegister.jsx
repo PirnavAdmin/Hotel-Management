@@ -373,13 +373,7 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
       )}
 
       {/* 4 Primary Flow Cards (Opening -> Inflow -> Outflow -> Closing) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-          gap: "1rem",
-        }}
-      >
+      <div className="responsive-card-grid" style={{ "--responsive-card-min": "230px" }}>
         {/* 1. Opening Balance */}
         <div
           style={{
@@ -510,13 +504,7 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
       </div>
 
       {/* Reconciliation Drawer & Input Panel */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: "1.25rem",
-        }}
-      >
+      <div className="responsive-card-grid" style={{ "--responsive-card-min": "320px", "--responsive-card-gap": "1.25rem" }}>
         {/* Left: Opening Balance Adjustment */}
         <div
           style={{

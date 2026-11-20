@@ -744,7 +744,17 @@ export function AdminPortal({
   showToast: propShowToast = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const isLight = currentTheme === "light-bistro";
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setIsMobileSidebarOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isMobileSidebarOpen]);
 
   const [internalToast, setInternalToast] = useState(null);
   const showToast = useCallback((msg) => {
@@ -2338,7 +2348,7 @@ export function AdminPortal({
 
   return (
     <div
-      className="admin-portal-root"
+      className={`admin-portal-root${isMobileSidebarOpen ? " mobile-sidebar-open" : ""}`}
       style={
         isFullPage
           ? {
@@ -2404,7 +2414,17 @@ export function AdminPortal({
           portalMode={portalMode}
           activeBarTab={activeBarTab}
           setActiveBarTab={handleBarTabChange}
+          onNavigate={() => setIsMobileSidebarOpen(false)}
         />
+
+        {isMobileSidebarOpen && (
+          <button
+            type="button"
+            className="admin-mobile-sidebar-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
 
         {/* Right Main Content Pane */}
         <div
@@ -2429,6 +2449,8 @@ export function AdminPortal({
             activeMode={portalMode}
             onModeChange={handlePortalModeChange}
             showModeToggle={showBarHeaderToggle}
+            onToggleSidebar={() => setIsMobileSidebarOpen((open) => !open)}
+            isSidebarOpen={isMobileSidebarOpen}
           />
 
           {/* Scrollable Work Area */}
@@ -6865,14 +6887,7 @@ export function AdminPortal({
               />
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "0.85rem",
-                alignItems: "start",
-              }}
-            >
+            <div className="responsive-form-grid" style={{ gap: "0.85rem", alignItems: "start" }}>
               <div>
                 <label
                   style={{
@@ -6939,13 +6954,7 @@ export function AdminPortal({
               </div>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "0.85rem",
-              }}
-            >
+            <div className="responsive-form-grid" style={{ gap: "0.85rem" }}>
               <div>
                 <label
                   style={{
@@ -7353,9 +7362,8 @@ export function AdminPortal({
                   {itemForm.recipe.map((ing, idx) => (
                     <div
                       key={idx}
+                      className="responsive-recipe-grid"
                       style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.7fr 0.8fr 0.8fr auto",
                         gap: "0.4rem",
                         alignItems: "center",
                         background: "var(--bg-tertiary)",
@@ -7662,14 +7670,7 @@ export function AdminPortal({
                 Chairs / Seating Capacity (Persons){" "}
                 <span style={{ color: "#ea580c" }}>*</span>
               </label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(5, 1fr)",
-                  gap: "0.5rem",
-                  marginBottom: "0.6rem",
-                }}
-              >
+              <div className="responsive-choice-grid" style={{ gap: "0.5rem", marginBottom: "0.6rem" }}>
                 {[2, 4, 6, 8, 10].map((chairCount) => {
                   const isSelected = tableForm.capacity === chairCount;
                   return (
@@ -8160,7 +8161,7 @@ export function AdminPortal({
                 style={{ height: "38px", boxSizing: "border-box", padding: "0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", fontSize: "0.82rem" }}
               />
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+            <div className="responsive-form-grid" style={{ gap: "0.65rem" }}>
               <label style={{ display: "grid", gap: "0.3rem", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 700 }}>
                 PAYMENT DATE
                 <input
@@ -8280,7 +8281,7 @@ export function AdminPortal({
                   {customQrHost ? "🌐 Cloud (4G / 5G Scannable)" : "📶 Local Wi-Fi / Hotspot"}
                 </span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.45rem", marginBottom: customQrHost ? "0.55rem" : "0" }}>
+              <div className="responsive-form-grid" style={{ gap: "0.45rem", marginBottom: customQrHost ? "0.55rem" : "0" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -8463,7 +8464,7 @@ export function AdminPortal({
             </div>
 
             {/* Actions: Print Slip & Download PNG */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div className="responsive-form-grid" style={{ gap: "0.75rem" }}>
               <button
                 type="button"
                 onClick={() => {

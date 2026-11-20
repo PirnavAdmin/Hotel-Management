@@ -376,10 +376,10 @@ export function ProfitLossStatementView({
 
         {/* Filter Inputs Grid */}
         <div
+          className="responsive-card-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "0.75rem",
+            "--responsive-card-min": "180px",
+            "--responsive-card-gap": "0.75rem",
             background: "var(--bg-tertiary)",
             padding: "0.85rem",
             borderRadius: "10px",
@@ -529,9 +529,8 @@ export function ProfitLossStatementView({
 
       {/* 3 Top Summary Metrics (Matches Screenshot 1) */}
       <div
+        className="profit-loss-summary-grid"
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr auto 1fr",
           alignItems: "center",
           gap: "1rem",
           background: "var(--bg-secondary)",

@@ -8617,14 +8617,7 @@ export function BarWorkspace({
         </div>
 
         {/* 3. Middle 2-Column Grid: Live Bar Stools & Drinks Queue */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-            gap: "0.75rem",
-            marginTop: "0.75rem",
-          }}
-        >
+        <div className="responsive-card-grid" style={{ "--responsive-card-min": "340px", "--responsive-card-gap": "0.75rem", marginTop: "0.75rem" }}>
           {/* Left Column: Live Bar Counter & Stools Grid */}
           <div
             style={{

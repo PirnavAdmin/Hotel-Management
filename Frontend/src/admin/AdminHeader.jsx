@@ -1,7 +1,7 @@
 import { ThemeToggle } from '../common/ThemeToggle';
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Clock, Utensils, Wine, Bell, ChefHat, CheckCircle2, Trash2 } from "lucide-react";
+import { Calendar, Clock, Utensils, Wine, Bell, ChefHat, CheckCircle2, Trash2, Menu, X } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 
 export function AdminHeader({
@@ -13,6 +13,8 @@ export function AdminHeader({
   activeMode = "dine",
   onModeChange,
   showModeToggle = true,
+  onToggleSidebar,
+  isSidebarOpen = false,
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notifications, setNotifications] = useState(() => {
@@ -376,6 +378,15 @@ export function AdminHeader({
           zIndex: 2,
         }}
       >
+        <button
+          type="button"
+          className="admin-mobile-menu-toggle"
+          onClick={onToggleSidebar}
+          aria-label={isSidebarOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={isSidebarOpen}
+        >
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
         <div style={{ minWidth: 0 }}>
           <h1
             style={{

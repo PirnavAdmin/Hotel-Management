@@ -13,7 +13,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
   };
 
   return (
-    <div style={{
+    <div className="transfer-table-modal-overlay" role="presentation" style={{
       position: 'fixed',
       inset: 0,
       background: 'var(--modal-overlay)',
@@ -24,7 +24,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
       zIndex: 100,
       padding: '1rem'
     }}>
-      <div style={{
+      <div className="transfer-table-modal" role="dialog" aria-modal="true" aria-label={`Transfer order from ${sourceTable.name}`} style={{
         background: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)',
         width: '100%',
@@ -66,7 +66,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
             Select an empty table to move <strong>{sourceTable.name}'s</strong> active bill ({sourceTable.items.length} items):
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem', maxHeight: '240px', overflowY: 'auto' }}>
+          <div className="transfer-table-choice-grid" style={{ display: 'grid', gap: '0.65rem', maxHeight: '240px', overflowY: 'auto' }}>
             {availableTables.map(t => {
               const isSelected = targetTableId === t.id.toString();
 

@@ -50,6 +50,7 @@ export function AdminSidebar({
   portalMode = "dine",
   activeBarTab = "",
   setActiveBarTab,
+  onNavigate,
 }) {
   const getStoredSettings = () => {
     try {
@@ -215,6 +216,7 @@ export function AdminSidebar({
   return (
     <aside
       className="admin-sidebar no-print"
+      aria-label="Application navigation"
       style={{
         width: "250px",
         minWidth: "250px",
@@ -307,7 +309,8 @@ export function AdminSidebar({
       </div>
 
       {/* Navigation Sections */}
-      <div
+      <nav
+        aria-label={portalMode === "bar" ? "Bar sections" : "Restaurant sections"}
         className="no-scrollbar"
         style={{
           flex: 1,
@@ -355,9 +358,12 @@ export function AdminSidebar({
                     <button
                       key={item.id}
                       onClick={() =>
-                        portalMode === "bar"
-                          ? setActiveBarTab?.(item.id)
-                          : setActiveTab(item.id)
+                        {
+                          portalMode === "bar"
+                            ? setActiveBarTab?.(item.id)
+                            : setActiveTab(item.id);
+                          onNavigate?.();
+                        }
                       }
                       aria-current={isActive ? "page" : undefined}
                       style={{
@@ -437,7 +443,7 @@ export function AdminSidebar({
             </div>
           ),
         )}
-      </div>
+      </nav>
     </aside>
   );
 }

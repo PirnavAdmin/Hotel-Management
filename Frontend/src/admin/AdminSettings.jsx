@@ -748,13 +748,7 @@ export function AdminSettings({
               </h3>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "1rem",
-              }}
-            >
+            <div className="responsive-card-grid" style={{ "--responsive-card-min": "280px" }}>
               <div>
                 <label
                   style={{
@@ -1091,13 +1085,7 @@ export function AdminSettings({
               </h3>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: "1rem",
-              }}
-            >
+            <div className="responsive-card-grid" style={{ "--responsive-card-min": "240px" }}>
               <div>
                 <label
                   style={{
@@ -1334,13 +1322,7 @@ export function AdminSettings({
             </div>
 
             {/* 3 Upload Cards Grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
-                gap: "1.1rem",
-              }}
-            >
+            <div className="responsive-card-grid" style={{ "--responsive-card-min": "270px", "--responsive-card-gap": "1.1rem" }}>
               {(settings.paymentQrs || DEFAULT_PAYMENT_QRS).map((qr, index) => {
                 const hasImage = Boolean(qr.image);
                 const isSelected = Boolean(
@@ -1709,13 +1691,7 @@ export function AdminSettings({
               </h3>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "1rem",
-              }}
-            >
+            <div className="responsive-card-grid" style={{ "--responsive-card-min": "280px" }}>
               <div>
                 <label
                   style={{

@@ -146,7 +146,7 @@ export function DeliveryManagement({ isLight = false, showToast = alert }) {
           No delivery orders active. Click <strong>New Delivery</strong> to dispatch an order.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-card-grid" style={{ '--responsive-card-min': '340px' }}>
           {orders.map((d) => {
             const isDelivered = d.deliveryStatus?.toLowerCase() === 'delivered';
             const isDispatched = d.deliveryStatus?.toLowerCase() === 'dispatched' || d.deliveryStatus?.toLowerCase() === 'out_for_delivery';

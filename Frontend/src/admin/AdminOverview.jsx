@@ -863,13 +863,7 @@ export function AdminOverview({
       </section>
 
       {/* 3. Two Column Grid: Floor Tables Monitor & Signature Dishes */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
+      <div className="responsive-card-grid" style={{ "--responsive-card-min": "340px", "--responsive-card-gap": "0.75rem" }}>
         {/* Floor Tables Status Card */}
         <div
           style={{

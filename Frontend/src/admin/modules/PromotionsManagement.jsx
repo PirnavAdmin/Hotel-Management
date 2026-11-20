@@ -147,7 +147,7 @@ export function PromotionsManagement({ isLight = false, showToast = alert }) {
           No active discount coupons found. Click <strong>Create Promo Code</strong> to launch a campaign.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-card-grid" style={{ '--responsive-card-min': '280px' }}>
           {promotions.map((p) => {
             const isExpired = new Date(p.validUntil) < new Date();
             return (

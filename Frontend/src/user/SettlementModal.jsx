@@ -368,7 +368,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
       setCashTendered(`${parseInt(intPart, 10) || 0}.00`);
     }
   };  return (
-    <div style={{
+    <div className="settlement-modal-overlay" role="presentation" style={{
       position: 'fixed',
       inset: 0,
       background: isLight ? 'rgba(15, 23, 42, 0.45)' : 'rgba(5, 9, 18, 0.82)',
@@ -408,7 +408,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
         }
       `}</style>
-      <div style={{
+      <div className="settlement-modal" role="dialog" aria-modal="true" aria-label={`Settle order for ${table.name}`} style={{
         background: isLight ? 'var(--bg-secondary, #ffffff)' : 'linear-gradient(180deg, #0f172a 0%, #0b1120 100%)',
         border: isLight ? '1.5px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.1)',
         width: '100%',

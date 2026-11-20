@@ -210,7 +210,7 @@ export function CustomerOrdersPage({
         {error && <div role="alert" style={{ color: "#fee2e2", background: "rgba(127, 29, 29, .72)", border: "1px solid rgba(252,165,165,.4)", borderRadius: "10px", padding: "12px 14px", marginBottom: "14px" }}><span>{error}</span> <button type="button" onClick={() => setRetryCount((count) => count + 1)} style={{ marginLeft: "10px", color: "#fff", background: "transparent", border: "1px solid #fecaca", borderRadius: "6px", padding: "4px 9px", cursor: "pointer" }}>Retry</button></div>}
 
         {loadingOrders ? (
-          <div role="status" aria-label="Loading orders" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+          <div role="status" aria-label="Loading orders" className="responsive-card-grid" style={{ "--responsive-card-min": "280px", "--responsive-card-gap": "14px" }}>
             {[0, 1, 2].map((key) => <div key={key} style={{ height: "190px", borderRadius: "12px", background: "linear-gradient(100deg, rgba(255,255,255,.08) 20%, rgba(255,255,255,.16) 40%, rgba(255,255,255,.08) 60%)", backgroundSize: "200% 100%", animation: "customer-orders-pulse 1.4s ease-in-out infinite" }} />)}
             <style>{"@keyframes customer-orders-pulse { 0% { opacity: .55; } 50% { opacity: 1; } 100% { opacity: .55; } }"}</style>
           </div>
@@ -218,7 +218,7 @@ export function CustomerOrdersPage({
           <div style={{ textAlign: "center", padding: "48px 20px", background: "rgba(22,12,8,.78)", border: "1px solid rgba(245,158,11,.3)", borderRadius: "16px" }}><ShoppingBag size={32} color="#f59e0b" /><h2 style={{ color: "#fff", margin: "12px 0 6px" }}>{orders.length > 0 ? "No matching orders found" : "No orders found"}</h2><p style={{ color: "#fef3c7", margin: "0 0 18px" }}>{orders.length > 0 ? "Try adjusting your search or status filter." : "Your takeaway orders will appear here."}</p>{orders.length > 0 ? <button type="button" onClick={() => { setSearchQuery(""); setStatus(""); setPage(1); }} style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: 0, borderRadius: "20px", padding: "9px 16px", fontWeight: 700, cursor: "pointer" }}>Clear Search &amp; Filters</button> : <button type="button" onClick={() => onNavigate("/menu")} style={{ background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: 0, borderRadius: "20px", padding: "9px 16px", fontWeight: 700, cursor: "pointer" }}>Order Takeaway</button>}</div>
         ) : !error && (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px", alignItems: "stretch" }}>
+            <div className="responsive-card-grid" style={{ "--responsive-card-min": "280px", "--responsive-card-gap": "14px" }}>
               {filteredOrders.map((order) => {
                 const orderStatus = order.fulfillmentStatus || order.orderStatus;
                 const isComplete = ["completed", "pickedup"].includes(String(orderStatus || "").replace(/\s/g, "").toLowerCase());

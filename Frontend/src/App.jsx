@@ -4773,6 +4773,7 @@ export function App() {
 
   return (
     <div
+      className="app-shell"
       style={{
         height: "100vh",
         maxHeight: "100vh",

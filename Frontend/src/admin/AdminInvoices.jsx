@@ -485,14 +485,7 @@ export function AdminInvoices({
         )}
 
         {/* Invoices Overview Summary Bar (Total Revenue & Total Invoices List) */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "0.75rem",
-            marginBottom: "1.1rem",
-          }}
-        >
+        <div className="responsive-card-grid" style={{ "--responsive-card-min": "220px", "--responsive-card-gap": "0.75rem", marginBottom: "1.1rem" }}>
           {/* Card 1: Total Invoices List */}
           <div
             onClick={() => {

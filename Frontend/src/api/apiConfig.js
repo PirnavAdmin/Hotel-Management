@@ -3,9 +3,8 @@ function getResolvedApiBase() {
     .trim()
     .replace(/^["']|["']$/g, "")
     .replace(/\/$/, "");
-  // Fall back to shared production backend if env is missing or pointing to ephemeral tunnels
-  if (!envVal || envVal.includes("bubble-browsers") || envVal.includes("trycloudflare.com")) {
-    return "http://65.0.8.48:5000";
+  if (!envVal) {
+    throw new Error("VITE_API_BASE_URL must be configured before starting the frontend.");
   }
   return envVal;
 }

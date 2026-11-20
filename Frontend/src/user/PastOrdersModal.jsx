@@ -470,7 +470,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
 
 
   return (
-    <div style={{
+    <div className="past-orders-modal-overlay" role="presentation" style={{
       position: 'fixed',
       inset: 0,
       background: 'var(--modal-overlay)',
@@ -481,7 +481,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
       zIndex: 100,
       padding: '1rem'
     }}>
-      <div style={{
+      <div className="past-orders-modal" role="dialog" aria-modal="true" aria-label="Sales invoices and settled orders" style={{
         background: 'var(--bg-secondary)',
         border: '1px solid var(--border-subtle)',
         width: '100%',

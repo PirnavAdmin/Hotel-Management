@@ -356,13 +356,7 @@ export function GeneralLedgerView({
       </div>
 
       {/* 3 Summary Badges for Selected Account */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "1rem",
-        }}
-      >
+      <div className="responsive-card-grid" style={{ "--responsive-card-min": "220px" }}>
         <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-card)", borderRadius: "12px", padding: "1rem 1.25rem" }}>
           <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
             Total Period Debits

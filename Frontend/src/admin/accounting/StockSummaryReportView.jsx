@@ -407,13 +407,7 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
       </div>
 
       {/* 5 KPI Stat Cards with Sparklines (Matches Screenshot 3) */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "1rem",
-        }}
-      >
+      <div className="responsive-card-grid" style={{ "--responsive-card-min": "200px" }}>
         {/* 1. Current Stock */}
         <div
           style={{

@@ -93,13 +93,11 @@ let sessionLifecycle = Promise.resolve();
 let pendingStop = null;
 
 const getEventUrl = () => {
-  if (API_BASE_URL) return `${API_BASE_URL}/api/events`;
-  return "/api/events";
+  return `${API_BASE_URL}/api/events`;
 };
 
 const getHubUrl = () => {
-  if (API_BASE_URL) return `${API_BASE_URL}/hubs/pos`;
-  return "/hubs/pos";
+  return `${API_BASE_URL}/hubs/pos`;
 };
 
 function notifyStatus() {
