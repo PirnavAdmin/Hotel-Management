@@ -48,6 +48,35 @@ export function getBusinessDayKey(dateInput = new Date()) {
   }
 }
 
+function getGlobalHighestInvoiceSerial() {
+  let highest = 0;
+  if (typeof localStorage === 'undefined') return 0;
+  try {
+    const recorded = parseInt(localStorage.getItem('avsr_highest_invoice_serial') || '0', 10);
+    if (!isNaN(recorded) && recorded > highest) highest = recorded;
+
+    const raw = localStorage.getItem(LEGACY_STORAGE_ORDERS);
+    if (raw) {
+      const orders = JSON.parse(raw);
+      if (Array.isArray(orders)) {
+        orders.forEach((o) => {
+          const inv = o.invoiceNo || o.invoiceNumber || o.InvoiceNo || o.InvoiceNumber;
+          if (inv) {
+            const m = String(inv).match(/INV-(\d+)/i);
+            if (m && m[1]) {
+              const n = parseInt(m[1], 10);
+              if (!isNaN(n) && n > highest && n < 100000) highest = n;
+            }
+          }
+          const oid = parseInt(String(o.id ?? o.orderId ?? "").replace(/\D/g, ""), 10);
+          if (!isNaN(oid) && oid > highest && oid < 100000) highest = oid;
+        });
+      }
+    }
+  } catch {}
+  return highest;
+}
+
 /**
  * Scans past orders from localStorage to find the highest serial invoice number for a given date.
  */
@@ -117,8 +146,10 @@ export function getNextInvoiceNumber(targetDateStr) {
 
       // 2. Cross-check against actual past orders for this day (in case of sync or reset)
       const existingHighest = getHighestSerialFromExistingOrders(today);
-      if (existingHighest > currentCounter) {
-        currentCounter = existingHighest;
+      const globalHighest = getGlobalHighestInvoiceSerial();
+      const highestKnown = Math.max(existingHighest, globalHighest);
+      if (highestKnown > currentCounter) {
+        currentCounter = highestKnown;
       }
     }
 
@@ -128,6 +159,7 @@ export function getNextInvoiceNumber(targetDateStr) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(LAST_DATE_KEY, today);
       localStorage.setItem(storageCounterKey, nextCounter.toString());
+      localStorage.setItem('avsr_highest_invoice_serial', nextCounter.toString());
     }
 
     // Broadcast update across LAN / other terminals
@@ -174,8 +206,10 @@ export function peekNextInvoiceNumber(targetDateStr) {
         currentCounter = parseInt(savedCount, 10);
       }
       const existingHighest = getHighestSerialFromExistingOrders(today);
-      if (existingHighest > currentCounter) {
-        currentCounter = existingHighest;
+      const globalHighest = getGlobalHighestInvoiceSerial();
+      const highestKnown = Math.max(existingHighest, globalHighest);
+      if (highestKnown > currentCounter) {
+        currentCounter = highestKnown;
       }
     }
     const nextCounter = currentCounter + 1;

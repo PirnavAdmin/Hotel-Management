@@ -24,6 +24,7 @@ import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
   dedupeOrders,
   formatInvoiceNumber,
+  getOrderTimestamp,
   normalizePaymentMethod,
   parseOrderToYMD,
 } from "../utils/orderDedupe";
@@ -87,10 +88,23 @@ const isTakeawayOrder = (order) => {
 };
 
 const invoiceDisplayDate = (order) => {
+  const rawDate = order?.date || order?.settledDate || order?.settledAt || order?.createdAt || order?.orderTimestamp;
+  if (rawDate) {
+    let s = String(rawDate).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(s)) {
+      if (!s.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+        s += "Z";
+      }
+      const d = new Date(s);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+      }
+    }
+  }
   const dateKey = invoiceDateKey(order);
   if (!dateKey) return "—";
   const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN");
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 const parseDisplayDateInput = (displayDate) => {
@@ -105,23 +119,40 @@ const parseDisplayDateInput = (displayDate) => {
 };
 
 const formatInvoiceTime = (value) => {
-  const text = String(value || "").trim();
-  const match = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
-  if (match) {
-    let hour = Number(match[1]);
-    const minute = match[2];
-    let suffix = match[3]?.toUpperCase();
-    if (!suffix) {
-      suffix = hour >= 12 ? "PM" : "AM";
-      hour %= 12;
-      if (hour === 0) hour = 12;
+  if (!value) return "—";
+  const text = String(value).trim();
+  if (!text) return "—";
+  if (["in queue", "started", "done", "ready", "pending", "waiting", "active", "cooked"].includes(text.toLowerCase())) {
+    return text;
+  }
+  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)$/i.test(text)) {
+    return text.toUpperCase();
+  }
+  if (/^\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)$/i.test(text)) {
+    const parts = text.split(" ");
+    const timeParts = parts[0].split(":");
+    return `${timeParts[0]}:${timeParts[1]} ${parts[1] || ""}`.trim().toUpperCase();
+  }
+  let isoStr = text;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(isoStr)) {
+    if (!isoStr.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(isoStr)) {
+      isoStr += "Z";
     }
+  }
+  const parsed = new Date(isoStr);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  }
+  const match24 = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (match24) {
+    let hour = Number(match24[1]);
+    const minute = match24[2];
+    const suffix = hour >= 12 ? "PM" : "AM";
+    hour %= 12;
+    if (hour === 0) hour = 12;
     return `${String(hour).padStart(2, "0")}:${minute} ${suffix}`;
   }
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime())
-    ? text || "—"
-    : parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return text || "—";
 };
 
 
@@ -160,6 +191,8 @@ export function AdminInvoices({
   const [discountDraft, setDiscountDraft] = useState("0");
   const [editError, setEditError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [sortField, setSortField] = useState("invoiceNo");
+  const [sortDirection, setSortDirection] = useState("desc");
 
   const refreshInvoices = async () => {
     setIsLoadingInvoices(true);
@@ -291,19 +324,59 @@ export function AdminInvoices({
     return matchesOrderType && matchesPayment;
   });
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredOrders.length / itemsPerPage),
-  );
-  const visiblePage = Math.min(currentPage, pageCount);
-  const pageStart = (visiblePage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(
-    pageStart,
-    pageStart + itemsPerPage,
-  );
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+    setCurrentPage(1);
+  };
+
+  const parseInvSerial = (order) => {
+    const invStr = formatInvoiceNumber(order);
+    const m = String(invStr).match(/INV-(\d+)/i);
+    if (m && m[1]) return parseInt(m[1], 10);
+    const num = parseInt(String(invStr).replace(/\D/g, ""), 10);
+    return isNaN(num) ? 0 : num;
+  };
 
   const getOrderRevenue = (o) =>
     Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0;
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    if (sortField === "invoiceNo") {
+      const numA = parseInvSerial(a);
+      const numB = parseInvSerial(b);
+      return sortDirection === "asc" ? numA - numB : numB - numA;
+    }
+    if (sortField === "date") {
+      const timeA = getOrderTimestamp(a);
+      const timeB = getOrderTimestamp(b);
+      if (timeA !== timeB) return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+      return sortDirection === "asc" ? parseInvSerial(a) - parseInvSerial(b) : parseInvSerial(b) - parseInvSerial(a);
+    }
+    if (sortField === "amount") {
+      const totA = getOrderRevenue(a);
+      const totB = getOrderRevenue(b);
+      return sortDirection === "asc" ? totA - totB : totB - totA;
+    }
+    const numA = parseInvSerial(a);
+    const numB = parseInvSerial(b);
+    return numB - numA;
+  });
+
+  const pageCount = Math.max(
+    1,
+    Math.ceil(sortedOrders.length / itemsPerPage),
+  );
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const paginatedOrders = sortedOrders.slice(
+    pageStart,
+    pageStart + itemsPerPage,
+  );
 
   const totalCollected = baseFilteredOrders.reduce(
     (sum, o) => sum + getOrderRevenue(o),
@@ -1166,12 +1239,48 @@ export function AdminInvoices({
                   fontWeight: 700,
                 }}
               >
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Order / Invoice No</th>
+                <th
+                  onClick={() => handleSort("invoiceNo")}
+                  style={{
+                    padding: "0.55rem 0.65rem",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    color: sortField === "invoiceNo" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                  }}
+                  title="Click to sort by sequential Invoice Number"
+                >
+                  Order / Invoice No {sortField === "invoiceNo" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Table &amp; Waiter</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Date &amp; Time</th>
+                <th
+                  onClick={() => handleSort("date")}
+                  style={{
+                    padding: "0.55rem 0.65rem",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    color: sortField === "date" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                  }}
+                  title="Click to sort by Date &amp; Time"
+                >
+                  Date &amp; Time {sortField === "date" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Items Summary</th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Mode</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Grand Total</th>
+                <th
+                  onClick={() => handleSort("amount")}
+                  style={{
+                    padding: "0.55rem 0.65rem",
+                    whiteSpace: "nowrap",
+                    cursor: "pointer",
+                    userSelect: "none",
+                    color: sortField === "amount" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                  }}
+                  title="Click to sort by Grand Total"
+                >
+                  Grand Total {sortField === "amount" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
                 <th style={{ padding: "0.55rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
                   Action
                 </th>

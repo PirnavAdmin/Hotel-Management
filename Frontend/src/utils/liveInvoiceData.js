@@ -211,6 +211,17 @@ export function mergeLiveInvoiceRecords(invoices = [], orders = []) {
   const records = settledInvoices.map((invoice) => {
     const orderId = valueFrom(invoice, "orderId", "OrderId");
     if (orderId !== undefined) includedOrderIds.add(String(orderId));
+
+    // Track orders referenced inside payments (e.g. TXN-ORD-36-...) so they aren't duplicated as orphan orders
+    const paymentTxns = Array.isArray(invoice?.payments) ? invoice.payments : [];
+    paymentTxns.forEach((p) => {
+      const ref = String(p?.transactionReference || p?.txnReference || "");
+      const match = ref.match(/ORD-(\d+)/i);
+      if (match && match[1]) {
+        includedOrderIds.add(String(match[1]));
+      }
+    });
+
     const matchingOrder = ordersById.get(String(orderId ?? ""));
     if (matchingOrder) {
       includedOrderIds.add(String(valueFrom(matchingOrder, "id", "Id", "orderId", "OrderId")));
@@ -251,6 +262,27 @@ async function loadLiveInvoiceRecords() {
   const cleanRecords = sortOrdersBySettlementTime(dedupeOrders(liveRecords)).filter(
     (record) => !["void", "cancelled"].includes(String(record.status || record.Status || "").toLowerCase()),
   );
+
+  // Keep global invoice counter monotonically increasing beyond all historical invoices
+  try {
+    let maxNum = 0;
+    cleanRecords.forEach((r) => {
+      const invStr = r.invoiceNo || r.invoiceNumber || "";
+      const m = String(invStr).match(/INV-(\d+)/i);
+      if (m && m[1]) {
+        const n = parseInt(m[1], 10);
+        if (!isNaN(n) && n > maxNum && n < 100000) maxNum = n;
+      }
+      const oid = parseInt(String(r.id ?? r.orderId ?? "").replace(/\D/g, ""), 10);
+      if (!isNaN(oid) && oid > maxNum && oid < 100000) maxNum = oid;
+    });
+    if (maxNum > 0 && typeof localStorage !== "undefined") {
+      const current = parseInt(localStorage.getItem("avsr_highest_invoice_serial") || "0", 10);
+      if (maxNum > current) {
+        localStorage.setItem("avsr_highest_invoice_serial", String(maxNum));
+      }
+    }
+  } catch {}
   const error = invoices === null && orders === null && cleanRecords.length === 0
     ? `Invoice records could not be loaded (${invoiceResponse?.error || orderResponse?.error || "server unavailable"}).`
     : "";
