@@ -116,8 +116,8 @@ export async function getUsers() {
   if (!cachedUsers.length) {
     cachedUsers = [
       { id: 'pirnav', username: 'pirnav', name: 'pirnav', role: 'admin', email: 'pasupuleti.bhanu7@gmail.com', mobile: '9999999999', createdAt: null },
-      { id: 'pos-1', username: 'pos', name: 'Billing Counter Operator', role: 'pos', email: 'pos@bhanupos.com', mobile: '9999999999', createdAt: null },
-      { id: 'kot-1', username: 'kot', name: 'Kitchen Master Chef', role: 'kot', email: 'kitchen@bhanupos.com', mobile: '9999999999', createdAt: null }
+      { id: 'pos-1', username: 'pos', name: 'Billing Counter Operator', role: 'pos', email: 'pos@therusticspin.com', mobile: '9999999999', createdAt: null },
+      { id: 'kot-1', username: 'kot', name: 'Kitchen Master Chef', role: 'kot', email: 'kitchen@therusticspin.com', mobile: '9999999999', createdAt: null }
     ];
   }
   return {

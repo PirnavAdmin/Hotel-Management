@@ -71,10 +71,10 @@ export function RealTimeProvider({ children }) {
   return (
     <RealTimeContext.Provider value={value}>
       {children}
-      {token && (
+      {token && status.state !== "connected" && (
         <div className={`realtime-connection-indicator is-${status.state}`} role="status" aria-live="polite">
           <span className="realtime-connection-dot" aria-hidden="true" />
-          <span>{status.state === "connected" ? "Connected" : status.state === "reconnecting" ? "Reconnecting" : "Disconnected"}</span>
+          <span>{status.state === "reconnecting" ? "Reconnecting..." : "Offline"}</span>
         </div>
       )}
     </RealTimeContext.Provider>

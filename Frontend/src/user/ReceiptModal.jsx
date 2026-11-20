@@ -138,13 +138,13 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   } catch {}
 
   const restaurantName =
-    restaurantSettings.restaurantName?.trim() ||
-    storedSettings.restaurantName?.trim() ||
-    "AVSR FOOD COURT";
+    (restaurantSettings.restaurantName?.trim() && !/bhanu|avsr/i.test(restaurantSettings.restaurantName)) ||
+    (storedSettings.restaurantName?.trim() && !/bhanu|avsr/i.test(storedSettings.restaurantName)) ||
+    "The Rustic Spin";
   const restaurantTagline =
-    restaurantSettings.tagline?.trim() ||
-    storedSettings.tagline?.trim() ||
-    "Restaurant & Cafe";
+    (restaurantSettings.tagline?.trim() && !/bhanu/i.test(restaurantSettings.tagline)) ||
+    (storedSettings.tagline?.trim() && !/bhanu/i.test(storedSettings.tagline)) ||
+    "Restaurant Management & Fine Dining";
   const restaurantPhone =
     restaurantSettings.phone?.trim() ||
     storedSettings.phone?.trim() ||
@@ -160,7 +160,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const restaurantEmail =
     restaurantSettings.email?.trim() ||
     storedSettings.email?.trim() ||
-    "info@bhanubistro.com";
+    "info@therusticspin.com";
   const restaurantLogo =
     restaurantSettings.logo ||
     table.logo ||

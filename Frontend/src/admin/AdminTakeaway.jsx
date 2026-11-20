@@ -75,22 +75,22 @@ const TAKEAWAY_CUSTOMER_POOL = [
 
 export function AdminTakeaway({
   menuItems = [],
-  restaurantName = "Bhanu Fine Dining & POS Management",
+  restaurantName = "The Rustic Spin",
   restaurantSettings = {},
   restaurantLogo = "",
   currentSession = null,
 }) {
-  // Effective settings for invoices and receipts (matching Bhanu POS standard)
+  // Effective settings for invoices and receipts
   const effectiveSettings = useMemo(() => {
     const base = restaurantSettings || {};
-    let name = base.restaurantName?.trim() || restaurantName || "BHANU";
-    if (!name || name.toLowerCase() === "restaurant") {
-      name = "BHANU";
+    let name = base.restaurantName?.trim() || restaurantName || "The Rustic Spin";
+    if (!name || name.toLowerCase() === "restaurant" || /bhanu|avsr/i.test(name)) {
+      name = "The Rustic Spin";
     }
     return {
       ...base,
       restaurantName: name,
-      tagline: base.tagline?.trim() || "Fine Dining & POS Management",
+      tagline: base.tagline?.trim() && !/bhanu/i.test(base.tagline) ? base.tagline.trim() : "Restaurant Management & Fine Dining",
       address: base.address?.trim() || "Main Road, Near Tech Park, Hyderabad, India",
       phone: base.phone?.trim() || "+91 98450 12345",
       gstin: base.gstin?.trim() || "36AABCA1234F1Z5",

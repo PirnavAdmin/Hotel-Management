@@ -116,7 +116,10 @@ export function KitchenKOTView({
   }, []);
 
   const effectiveLogo = restaurantLogo || liveSettings.logo || "";
-  const effectiveRestaurantName = restaurantName !== "Restaurant" ? restaurantName : (liveSettings.restaurantName || "Restaurant");
+  const effectiveRestaurantName =
+    (restaurantName && restaurantName !== "Restaurant" && !/bhanu|avsr/i.test(restaurantName))
+      ? restaurantName
+      : (liveSettings.restaurantName && !/bhanu|avsr/i.test(liveSettings.restaurantName) ? liveSettings.restaurantName : "The Rustic Spin");
   const [selectedTableFilter, setSelectedTableFilter] =
     useState(initialTableId); // 'all' or table.id
   const [isTableFilterOpen, setIsTableFilterOpen] = useState(false);
@@ -761,9 +764,47 @@ export function KitchenKOTView({
       if (String(t.orderType).toLowerCase() !== "takeaway") {
         const key = String(t.uniqueKey);
         const tableKey = `table-${t.id}`;
-        const localTicket = mergedActiveMap.get(tableKey);
-        if (localTicket) mergedActiveMap.delete(tableKey);
-        mergedActiveMap.set(key, { ...(localTicket || {}), ...t });
+        let localTicket = mergedActiveMap.get(tableKey);
+        if (!localTicket) {
+          for (const [ek, ev] of mergedActiveMap.entries()) {
+            if (String(ev.id) === String(t.id) || (ev.name && t.name && ev.name.trim().toLowerCase() === t.name.trim().toLowerCase())) {
+              localTicket = ev;
+              mergedActiveMap.delete(ek);
+              break;
+            }
+          }
+        } else {
+          mergedActiveMap.delete(tableKey);
+        }
+
+        const resolvedName = (localTicket?.name && !/^Table\s*\d+$/i.test(localTicket.name))
+          ? localTicket.name
+          : (t.name || localTicket?.name || `Table ${t.id}`);
+
+        const mergedItems = (t.items || []).map((apiItem) => {
+          const localItem = localTicket?.items?.find((li) =>
+            String(li.menuItemId ?? li.id) === String(apiItem.menuItemId ?? apiItem.id) ||
+            (li.name && apiItem.name && li.name.trim().toLowerCase() === apiItem.name.trim().toLowerCase())
+          );
+          if (localItem) {
+            const localStatus = String(localItem.kotStatus || "").toLowerCase();
+            const apiStatus = String(apiItem.kotStatus || "").toLowerCase();
+            if (localStatus === "ready" && apiStatus !== "ready") {
+              return { ...apiItem, kotStatus: "ready" };
+            }
+            if (localStatus === "cooking" && (apiStatus === "queued" || apiStatus === "received")) {
+              return { ...apiItem, kotStatus: "cooking" };
+            }
+          }
+          return apiItem;
+        });
+
+        mergedActiveMap.set(key, {
+          ...(localTicket || {}),
+          ...t,
+          name: resolvedName,
+          items: mergedItems,
+        });
       }
     });
   }
@@ -822,11 +863,12 @@ export function KitchenKOTView({
     if (selectedTableFilter === "takeaway") {
       if (String(t.orderType).toLowerCase() !== "takeaway") return false;
     } else if (selectedTableFilter !== "all") {
-      const matchId = String(t.id) === String(selectedTableFilter);
+      const matchId = String(t.id) === String(selectedTableFilter) || String(t.backendTableId) === String(selectedTableFilter);
       const matchName =
         t.name &&
         (t.name === selectedTableFilter ||
-          t.name.toLowerCase() === String(selectedTableFilter).toLowerCase());
+          t.name.toLowerCase() === String(selectedTableFilter).toLowerCase() ||
+          (singleSelectedTable?.name && t.name.toLowerCase() === singleSelectedTable.name.toLowerCase()));
       if (!matchId && !matchName) {
         return false;
       }
@@ -867,16 +909,44 @@ export function KitchenKOTView({
     prevPendingRef.current = pendingOrdersCount;
   }, [pendingOrdersCount]);
 
-  // Real-time synced ticket for popup details modal (strictly matching the clicked ticket's uniqueKey)
+  // Real-time synced ticket for popup details modal (matching uniqueKey, table ID, or name)
   const activeModalTicket = selectedDetailTicket
-    ? allKitchenTickets.find(
-        (t) => t.uniqueKey && t.uniqueKey === selectedDetailTicket.uniqueKey,
-      ) || selectedDetailTicket
+    ? allKitchenTickets.find((t) => {
+        if (!t) return false;
+        if (t.uniqueKey && t.uniqueKey === selectedDetailTicket.uniqueKey) return true;
+        if (t.id != null && (String(t.id) === String(selectedDetailTicket.id) || `table-${t.id}` === String(selectedDetailTicket.uniqueKey))) return true;
+        if (t.backendOrderId != null && String(t.backendOrderId) === String(selectedDetailTicket.backendOrderId)) return true;
+        if (t.name && selectedDetailTicket.name && t.name.trim().toLowerCase() === selectedDetailTicket.name.trim().toLowerCase()) return true;
+        return false;
+      }) || selectedDetailTicket
     : null;
 
-  const findKitchenTicket = (ticketKey) => allKitchenTickets.find(
-    (ticket) => ticket.uniqueKey === ticketKey || String(ticket.id) === String(ticketKey),
-  );
+  const findKitchenTicket = (ticketKey, fallbackTicket = null) => {
+    if (!ticketKey && !fallbackTicket) return null;
+    const cleanKey = String(ticketKey || "").replace(/^table-/, "");
+    const found = allKitchenTickets.find((ticket) => {
+      if (!ticket) return false;
+      if (ticketKey && (ticket.uniqueKey === ticketKey || String(ticket.id) === String(ticketKey) || String(ticket.backendOrderId) === String(ticketKey))) {
+        return true;
+      }
+      if (cleanKey && (String(ticket.id) === cleanKey || String(ticket.backendOrderId) === cleanKey || `table-${ticket.id}` === String(ticketKey))) {
+        return true;
+      }
+      if (fallbackTicket) {
+        if (fallbackTicket.uniqueKey && ticket.uniqueKey === fallbackTicket.uniqueKey) return true;
+        if (fallbackTicket.id != null && String(ticket.id) === String(fallbackTicket.id)) return true;
+        if (fallbackTicket.backendOrderId != null && String(ticket.backendOrderId) === String(fallbackTicket.backendOrderId)) return true;
+        if (ticket.name && fallbackTicket.name && ticket.name.trim().toLowerCase() === fallbackTicket.name.trim().toLowerCase()) return true;
+      }
+      if (selectedDetailTicket) {
+        if (selectedDetailTicket.uniqueKey && (ticket.uniqueKey === selectedDetailTicket.uniqueKey || ticketKey === selectedDetailTicket.uniqueKey)) return true;
+        if (selectedDetailTicket.id != null && (String(ticket.id) === String(selectedDetailTicket.id) || cleanKey === String(selectedDetailTicket.id))) return true;
+        if (selectedDetailTicket.name && ticket.name && selectedDetailTicket.name.trim().toLowerCase() === ticket.name.trim().toLowerCase()) return true;
+      }
+      return false;
+    });
+    return found || fallbackTicket || selectedDetailTicket || null;
+  };
 
   const reportKitchenActionError = (result, action) => {
     const message = result?.error || `${action} failed. Please retry.`;
@@ -884,9 +954,9 @@ export function KitchenKOTView({
     if (import.meta.env.DEV) console.error(`[Kitchen] ${action} failed`, { status: result?.status, error: message });
   };
 
-  const handleStartCooking = async (ticketKey, itemId = null) => {
+  const handleStartCooking = async (ticketKey, itemId = null, fallbackTicket = null) => {
     sounds.playAddItem();
-    const ticket = findKitchenTicket(ticketKey);
+    const ticket = findKitchenTicket(ticketKey, fallbackTicket) || fallbackTicket || activeModalTicket || selectedDetailTicket;
     if (!ticket) return;
 
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway" || String(ticketKey).startsWith("takeaway-");
@@ -901,13 +971,6 @@ export function KitchenKOTView({
     // 1. Immediately update selectedDetailTicket in modal state for real-time responsiveness
     setSelectedDetailTicket((prev) => {
       if (!prev) return prev;
-      const matchesModal =
-        prev.uniqueKey === ticketKey ||
-        String(prev.id) === String(ticket.id) ||
-        `table-${prev.id}` === String(ticketKey) ||
-        (prev.name && ticket.name && prev.name.trim().toLowerCase() === ticket.name.trim().toLowerCase());
-      if (!matchesModal) return prev;
-
       return {
         ...prev,
         cookingStartedAt: prev.cookingStartedAt || nowTimeStr,
@@ -918,6 +981,29 @@ export function KitchenKOTView({
           return it;
         }),
       };
+    });
+
+    // Optimistically update persisted tickets cache so UI never reverts before server roundtrip
+    setPersistedKitchenTickets((prev) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((t) => {
+        const matches =
+          String(t.orderId ?? t.OrderId) === String(ticket.backendOrderId) ||
+          String(t.tableId ?? t.TableId) === String(ticket.backendTableId) ||
+          String(t.tableId ?? t.TableId) === String(ticket.id) ||
+          (t.tableName && ticket.name && t.tableName.trim().toLowerCase() === ticket.name.trim().toLowerCase());
+        if (!matches) return t;
+        return {
+          ...t,
+          ticketStatus: "cooking",
+          items: (t.items || []).map((it) => {
+            if (!itemId || String(it.id ?? it.orderItemId) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+              return { ...it, kotStatus: "cooking", itemStatus: "cooking" };
+            }
+            return it;
+          }),
+        };
+      });
     });
 
     // 2. Immediately update local orders/tables state
@@ -952,9 +1038,9 @@ export function KitchenKOTView({
     refreshKitchenTicketsRef.current?.();
   };
 
-  const handleCompletePreparation = async (ticketKey, itemId = null) => {
+  const handleCompletePreparation = async (ticketKey, itemId = null, fallbackTicket = null) => {
     sounds.playBell();
-    const currentTable = findKitchenTicket(ticketKey);
+    const currentTable = findKitchenTicket(ticketKey, fallbackTicket) || fallbackTicket || activeModalTicket || selectedDetailTicket;
     if (!currentTable) return;
     const nowTimeStr = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -991,13 +1077,6 @@ export function KitchenKOTView({
     // 1. Immediately update modal ticket state
     setSelectedDetailTicket((prev) => {
       if (!prev) return prev;
-      const matchesModal =
-        prev.uniqueKey === ticketKey ||
-        String(prev.id) === String(currentTable.id) ||
-        `table-${prev.id}` === String(ticketKey) ||
-        (prev.name && currentTable.name && prev.name.trim().toLowerCase() === currentTable.name.trim().toLowerCase());
-      if (!matchesModal) return prev;
-
       return {
         ...prev,
         completedAt: willAllBeReady ? (prev.completedAt || nowTimeStr) : prev.completedAt,
@@ -1009,6 +1088,29 @@ export function KitchenKOTView({
           return it;
         }),
       };
+    });
+
+    // Optimistically update persisted tickets cache so UI never reverts
+    setPersistedKitchenTickets((prev) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((t) => {
+        const matches =
+          String(t.orderId ?? t.OrderId) === String(currentTable.backendOrderId) ||
+          String(t.tableId ?? t.TableId) === String(currentTable.backendTableId) ||
+          String(t.tableId ?? t.TableId) === String(currentTable.id) ||
+          (t.tableName && currentTable.name && t.tableName.trim().toLowerCase() === currentTable.name.trim().toLowerCase());
+        if (!matches) return t;
+        return {
+          ...t,
+          ticketStatus: willAllBeReady ? "ready" : t.ticketStatus,
+          items: (t.items || []).map((it) => {
+            if (!itemId || String(it.id ?? it.orderItemId) === String(itemId) || String(it.menuItemId) === String(itemId)) {
+              return { ...it, kotStatus: "ready", itemStatus: "ready" };
+            }
+            return it;
+          }),
+        };
+      });
     });
 
     // 2. Immediately update local tables / takeaway orders
@@ -1119,13 +1221,13 @@ export function KitchenKOTView({
   };
 
   // Toggle single dish status: Received -> Cooking -> Prepared
-  const handleToggleItemStatus = (tableId, item) => {
+  const handleToggleItemStatus = (tableId, item, fallbackTicket = null) => {
     if (isItemReceived(item)) {
-      handleStartCooking(tableId, item.id);
+      handleStartCooking(tableId, item.id, fallbackTicket);
     } else if (isItemCooking(item)) {
-      handleCompletePreparation(tableId, item.id);
+      handleCompletePreparation(tableId, item.id, fallbackTicket);
     } else {
-      handleResetToReceived(tableId, item.id);
+      handleResetToReceived(tableId, item.id, fallbackTicket);
     }
   };
 
@@ -1137,12 +1239,16 @@ export function KitchenKOTView({
         ? tables.find(
             (t) =>
               String(t.id) === String(selectedTableFilter) ||
-              t.name === selectedTableFilter,
+              String(t.backendTableId) === String(selectedTableFilter) ||
+              t.name === selectedTableFilter ||
+              (t.name && String(t.name).trim().toLowerCase() === String(selectedTableFilter).trim().toLowerCase()),
           ) ||
           allKitchenTickets.find(
             (t) =>
               String(t.id) === String(selectedTableFilter) ||
-              t.name === selectedTableFilter,
+              String(t.backendTableId) === String(selectedTableFilter) ||
+              t.name === selectedTableFilter ||
+              (t.name && String(t.name).trim().toLowerCase() === String(selectedTableFilter).trim().toLowerCase()),
           )
         : null;
 
@@ -3015,6 +3121,7 @@ export function KitchenKOTView({
                                       handleToggleItemStatus(
                                         modalTicket.uniqueKey,
                                         item,
+                                        modalTicket,
                                       )
                                     }
                                     style={{
@@ -3168,7 +3275,7 @@ export function KitchenKOTView({
                     >
                       {isReceived && (
                         <button
-                          onClick={() => handleStartCooking(modalTicket.uniqueKey)}
+                          onClick={() => handleStartCooking(modalTicket.uniqueKey, null, modalTicket)}
                           style={{
                             padding: "0.55rem 1.1rem",
                             borderRadius: "var(--radius-sm)",
@@ -3196,7 +3303,7 @@ export function KitchenKOTView({
                       {isCooking && (
                         <button
                           onClick={() =>
-                            handleCompletePreparation(modalTicket.uniqueKey)
+                            handleCompletePreparation(modalTicket.uniqueKey, null, modalTicket)
                           }
                           style={{
                             padding: "0.55rem 1.1rem",

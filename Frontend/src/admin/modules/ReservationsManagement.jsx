@@ -100,7 +100,7 @@ export function ReservationsManagement({
   isLight = false,
   showToast = alert,
   tables: _tables = [],
-  restaurantName = "Bhanu Bistro",
+  restaurantName = "The Rustic Spin",
   restaurantSettings = {},
 }) {
   // ── 1. Reservations & Tables State with Local Storage fallback ────────
@@ -2162,8 +2162,8 @@ export function ReservationsManagement({
         <ReceiptModal
           table={receiptTableData}
           restaurantSettings={{
-            restaurantName: restaurantName || "Bhanu Bistro",
-            tagline: "Fine Dining & POS Management",
+            restaurantName: restaurantName && !/bhanu|avsr/i.test(restaurantName) ? restaurantName : "The Rustic Spin",
+            tagline: "Restaurant Management & Fine Dining",
             address: "Main Road, Near Tech Park, Hyderabad, India",
             phone: "+91 98450 12345",
             gstin: "36AABCA1234F1Z5",

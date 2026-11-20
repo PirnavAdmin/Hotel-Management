@@ -676,7 +676,7 @@ export function printFinancialReport(title, subtitle, tableHtml) {
       </head>
       <body>
         <div class="header">
-          <h1>Bhanu Fine Dining &amp; POS Management</h1>
+          <h1>The Rustic Spin</h1>
           <h2>${title}</h2>
           <p>${subtitle} &bull; Generated on ${new Date().toLocaleString("en-IN")}</p>
         </div>

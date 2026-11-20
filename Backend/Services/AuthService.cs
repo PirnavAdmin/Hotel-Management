@@ -431,10 +431,10 @@ public class AuthService
         string? emailError = null;
         try
         {
-            string subject = "Bhanu Bistro - High-Security Action Verification OTP";
-            string plainText = $"Hello,\n\nYour 6-digit verification code for UPI / Admin security action is: {otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this code, please secure your account immediately.\n\n— Bhanu Bistro Admin Security";
+            string subject = "The Rustic Spin - High-Security Action Verification OTP";
+            string plainText = $"Hello,\n\nYour 6-digit verification code for UPI / Admin security action is: {otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this code, please secure your account immediately.\n\n— The Rustic Spin Admin Security";
             string html = $@"<div style=""font-family:sans-serif;padding:24px;background:#fff8f3;border-radius:12px;border:1px solid #fed7aa;max-width:480px;margin:auto;"">
-                <h2 style=""color:#ea580c;margin:0 0 10px;"">Bhanu Bistro Security</h2>
+                <h2 style=""color:#ea580c;margin:0 0 10px;"">The Rustic Spin Security</h2>
                 <p style=""font-size:14px;color:#374151;"">A high-security action (UPI Stream Change) was requested on the Admin Portal.</p>
                 <div style=""background:#ffffff;border:2px dashed #f97316;border-radius:10px;padding:16px;text-align:center;margin:16px 0;"">
                     <span style=""font-size:11px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;"">Your Verification Code</span>
@@ -498,10 +498,10 @@ public class AuthService
 
         try
         {
-            string subject = "Bhanu Bistro - Password Reset Verification Code";
-            string plainText = $"Hello,\n\nYour 6-digit password reset verification code is: {otp}\n\nThis code will expire in 10 minutes.\n\n— Bhanu Bistro Security";
+            string subject = "The Rustic Spin - Password Reset Verification Code";
+            string plainText = $"Hello,\n\nYour 6-digit password reset verification code is: {otp}\n\nThis code will expire in 10 minutes.\n\n— The Rustic Spin Security";
             string html = $@"<div style=""font-family:sans-serif;padding:24px;background:#fff8f3;border-radius:12px;border:1px solid #fed7aa;max-width:480px;margin:auto;"">
-                <h2 style=""color:#ea580c;margin:0 0 10px;"">Bhanu Bistro Security</h2>
+                <h2 style=""color:#ea580c;margin:0 0 10px;"">The Rustic Spin Security</h2>
                 <p style=""font-size:14px;color:#374151;"">A password reset request was initiated for your account.</p>
                 <div style=""background:#ffffff;border:2px dashed #f97316;border-radius:10px;padding:16px;text-align:center;margin:16px 0;"">
                     <span style=""font-size:11px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;"">Your Verification Code</span>

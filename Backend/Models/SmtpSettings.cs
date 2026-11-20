@@ -9,7 +9,7 @@ public class SmtpSettings
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public string FromEmail { get; set; } = string.Empty;
-    public string FromName { get; set; } = "Bhanu Bistro";
+    public string FromName { get; set; } = "The Rustic Spin";
     public bool EnableSsl { get; set; } = true;
     public int TimeoutMs { get; set; } = 15000;
 }

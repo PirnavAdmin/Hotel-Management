@@ -62,9 +62,9 @@ export function Header({
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
   const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
     const stored = getStoredName();
-    if (stored && stored.trim() && stored.trim().toLowerCase() !== "restaurant") return stored.trim();
-    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant") return restaurantName.trim();
-    return stored || restaurantName || "AVSR FOOD COURT";
+    if (stored && stored.trim() && stored.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(stored)) return stored.trim();
+    if (restaurantName && restaurantName.trim() && restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(restaurantName)) return restaurantName.trim();
+    return "The Rustic Spin";
   });
 
   useEffect(() => {

@@ -440,7 +440,7 @@ export function BalanceSheetView({
           Balance Sheet
         </h3>
         <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text-muted)", marginTop: "2px" }}>
-          Bhanu Fine Dining &amp; POS Management
+          The Rustic Spin
         </div>
         <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginTop: "2px" }}>
           As at {formattedDate}

@@ -19,7 +19,7 @@ export function CustomerOrdersPage({
   onSessionExpired,
   onNavigate,
   onLogout,
-  restaurantName = "Bhanu Bistro",
+  restaurantName = "The Rustic Spin",
   restaurantLogo = "",
 }) {
   const [profile, setProfile] = useState(null);
@@ -162,7 +162,7 @@ export function CustomerOrdersPage({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "14px", background: "rgba(22, 12, 8, 0.78)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "16px", padding: "14px 20px", backdropFilter: "blur(14px)", boxShadow: "0 10px 30px rgba(0, 0, 0, 0.55)" }}>
           <div>
             <h1 style={{ fontFamily: "'Cinzel', Georgia, serif", fontSize: "24px", fontWeight: 800, color: "#ffffff", margin: "0 0 4px 0", display: "flex", alignItems: "center", gap: "8px", textShadow: "0 2px 10px rgba(0, 0, 0, 0.6)", letterSpacing: "0.5px" }}><span style={{ color: "#f59e0b" }}>📋</span> My Orders</h1>
-            <p style={{ fontSize: "13px", color: "#fef3c7", fontWeight: 600, margin: 0, textShadow: "0 1px 4px rgba(0, 0, 0, 0.8)", lineHeight: 1.4 }}>{loadingProfile ? "Loading customer profile…" : profile?.fullName ? `Orders for ${profile.fullName}` : "View and track your takeaway orders from Bhanu Bistro."}</p>
+            <p style={{ fontSize: "13px", color: "#fef3c7", fontWeight: 600, margin: 0, textShadow: "0 1px 4px rgba(0, 0, 0, 0.8)", lineHeight: 1.4 }}>{loadingProfile ? "Loading customer profile…" : profile?.fullName ? `Orders for ${profile.fullName}` : "View and track your takeaway orders from The Rustic Spin."}</p>
             {profileError && <p role="status" style={{ fontSize: "11px", color: "#fecaca", margin: "4px 0 0" }}>{profileError}</p>}
           </div>
           <button type="button" onClick={() => onNavigate("/menu")} style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", color: "#ffffff", padding: "8px 16px", borderRadius: "20px", fontSize: "12.5px", fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 4px 14px rgba(234, 88, 12, 0.35)" }}><ShoppingBag size={15} /> Order Takeaway</button>

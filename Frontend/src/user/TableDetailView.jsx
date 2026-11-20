@@ -1718,6 +1718,8 @@ import {
   LogOut,
   LayoutGrid,
   List,
+  RotateCcw,
+  ArrowUpDown,
 } from "lucide-react";
 import { sounds } from "../utils/audio";
 import { formatCurrency, roundCurrency } from "../utils/formatCurrency";
@@ -1813,6 +1815,7 @@ export function TableDetailView({
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [orderMode, setOrderMode] = useState("kitchen");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // all | veg | non-veg | special
+  const [menuSortOrder, setMenuSortOrder] = useState("default"); // default | price-asc | price-desc | name-asc
   const [searchQuery, setSearchQuery] = useState("");
   const [editingNoteItemId, setEditingNoteItemId] = useState(null);
   const [tempNote, setTempNote] = useState("");
@@ -1895,7 +1898,18 @@ export function TableDetailView({
 
       return matchCat && matchSearch && matchDietary;
     });
-  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems]);
+
+    if (menuSortOrder === "price-asc") {
+      return [...items].sort((a, b) => Number(a?.price ?? a?.finalPrice ?? 0) - Number(b?.price ?? b?.finalPrice ?? 0));
+    }
+    if (menuSortOrder === "price-desc") {
+      return [...items].sort((a, b) => Number(b?.price ?? b?.finalPrice ?? 0) - Number(a?.price ?? a?.finalPrice ?? 0));
+    }
+    if (menuSortOrder === "name-asc") {
+      return [...items].sort((a, b) => String(a?.name ?? a?.dishName ?? "").localeCompare(String(b?.name ?? b?.dishName ?? "")));
+    }
+    return items;
+  }, [selectedCategory, dietaryFilter, searchQuery, activeMenuItems, menuSortOrder]);
 
   const emptyStateContent = activeMenuLoadError
     ? {
@@ -2136,32 +2150,30 @@ export function TableDetailView({
         }
 
         .pos-table-menu-toolbar {
-          flex-wrap: nowrap !important;
-          gap: 0.45rem !important;
-          overflow-x: auto;
-          padding: 0.55rem 0.75rem !important;
-          scrollbar-width: thin;
+          flex-wrap: wrap !important;
+          gap: 0.35rem !important;
+          overflow: visible !important;
+          padding: 0.35rem 0.65rem !important;
         }
 
-        .pos-table-menu-toolbar > * { flex: 0 0 auto; }
-        .pos-table-menu-toolbar button { min-height: 32px !important; padding: 0.35rem 0.55rem !important; }
+        .pos-table-menu-toolbar button { min-height: 30px !important; padding: 0.25rem 0.45rem !important; font-size: 0.74rem !important; }
         .pos-table-menu-toolbar input,
-        .pos-table-menu-toolbar select { height: 36px !important; font-size: 0.78rem !important; }
+        .pos-table-menu-toolbar select { height: 30px !important; font-size: 0.76rem !important; }
         .pos-menu-search-control {
-          flex: 1 1 180px !important;
-          min-width: 150px !important;
-          max-width: 320px !important;
+          flex: 1 1 120px !important;
+          min-width: 90px !important;
+          max-width: 220px !important;
         }
-        .pos-menu-category-filter { max-width: 180px; }
-        .pos-menu-category-filter select { max-width: 180px; }
-        .pos-menu-dietary-filters { flex-wrap: nowrap !important; gap: 0.25rem !important; }
+        .pos-menu-category-filter { max-width: 130px; }
+        .pos-menu-category-filter select { max-width: 130px; padding: 0.2rem 1.4rem 0.2rem 0.5rem !important; }
+        .pos-menu-dietary-filters { flex-wrap: nowrap !important; gap: 0.2rem !important; }
 
-        .pos-table-info-strip { padding: 0.45rem 0.9rem !important; gap: 0.55rem !important; }
-        .pos-table-info-strip > div { gap: 0.55rem !important; }
-        .pos-categories-sidebar { width: 168px !important; }
-        .pos-categories-header { padding: 0.7rem !important; }
-        .pos-categories-list { padding: 0.35rem !important; gap: 0.15rem; }
-        .pos-category-btn { min-height: 36px; padding: 0.45rem 0.55rem !important; }
+        .pos-table-info-strip { padding: 0.4rem 0.9rem !important; gap: 0.5rem !important; }
+        .pos-table-info-strip > div { gap: 0.5rem !important; }
+        .pos-categories-sidebar { width: 155px !important; }
+        .pos-categories-header { padding: 0.6rem !important; }
+        .pos-categories-list { padding: 0.3rem !important; gap: 0.15rem; }
+        .pos-category-btn { min-height: 34px; padding: 0.4rem 0.5rem !important; }
 
         @media (max-width: 1100px) {
           .pos-categories-sidebar { width: 145px !important; }
@@ -2754,7 +2766,6 @@ export function TableDetailView({
         style={{
           display: "flex",
           flex: 1,
-          height: "100%",
           minHeight: 0,
           overflow: "hidden",
           position: "relative",
@@ -2764,12 +2775,11 @@ export function TableDetailView({
         <div
           className="pos-categories-sidebar"
           style={{
-            width: "160px",
+            width: "155px",
             background: "var(--bg-primary)",
             borderRight: "1px solid var(--border-subtle)",
             display: "flex",
             flexDirection: "column",
-            height: "100%",
             minHeight: 0,
             flexShrink: 0,
             overflowY: "auto",
@@ -2913,8 +2923,8 @@ export function TableDetailView({
               }}
             >
               {[
-                { id: "kitchen", label: "Kitchen / Food", icon: ChefHat },
-                { id: "bar", label: "Bar / Beverages", icon: Coffee },
+                { id: "kitchen", label: "Food", icon: ChefHat },
+                { id: "bar", label: "Bar", icon: Coffee },
               ].map(({ id, label, icon: Icon }) => {
                 const isActive = orderMode === id;
                 return (
@@ -2932,20 +2942,20 @@ export function TableDetailView({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: "0.4rem",
-                      minHeight: "34px",
-                      padding: "0.35rem 0.65rem",
+                      gap: "0.35rem",
+                      minHeight: "30px",
+                      padding: "0.25rem 0.55rem",
                       borderRadius: "var(--radius-md)",
                       border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
                       background: isActive ? "rgba(245, 158, 11, 0.16)" : "var(--bg-primary)",
                       color: isActive ? "var(--accent-amber-light)" : "var(--text-muted)",
-                      fontSize: "0.78rem",
+                      fontSize: "0.76rem",
                       fontWeight: isActive ? 800 : 650,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                     }}
                   >
-                    <Icon size={14} />
+                    <Icon size={13} />
                     {label}
                   </button>
                 );
@@ -2957,31 +2967,31 @@ export function TableDetailView({
               className="pos-menu-search-control"
               style={{
                 position: "relative",
-                flex: "1 1 180px",
-                minWidth: "120px",
-                maxWidth: "280px",
+                flex: "1 1 140px",
+                minWidth: "100px",
+                maxWidth: "240px",
               }}
             >
               <Search
-                size={15}
+                size={14}
                 color="var(--text-dim)"
-                style={{ position: "absolute", left: "10px", top: "10px" }}
+                style={{ position: "absolute", left: "9px", top: "8px" }}
               />
               <input
                 type="text"
-                placeholder={orderMode === "bar" ? "Search drinks..." : "Search menu..."}
+                placeholder={orderMode === "bar" ? "Search..." : "Search menu..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: "100%",
-                  height: "34px",
+                  height: "30px",
                   boxSizing: "border-box",
                   background: "var(--bg-primary)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-md)",
                   color: "var(--text-main)",
-                  padding: "0.3rem 0.8rem 0.3rem 2rem",
-                  fontSize: "0.82rem",
+                  padding: "0.25rem 0.6rem 0.25rem 1.8rem",
+                  fontSize: "0.78rem",
                 }}
               />
               {searchQuery && (
@@ -2989,15 +2999,15 @@ export function TableDetailView({
                   onClick={() => setSearchQuery("")}
                   style={{
                     position: "absolute",
-                    right: "8px",
-                    top: "9px",
+                    right: "7px",
+                    top: "7px",
                     background: "transparent",
                     color: "var(--text-muted)",
                     border: "none",
                     cursor: "pointer",
                   }}
                 >
-                  <X size={14} />
+                  <X size={13} />
                 </button>
               )}
             </div>
@@ -3009,13 +3019,14 @@ export function TableDetailView({
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 aria-label="Filter by category"
                 style={{
-                  height: "34px",
+                  height: "30px",
+                  maxWidth: "130px",
                   background: "var(--bg-primary)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-sm)",
                   color: "var(--text-main)",
-                  padding: "0.3rem 1.6rem 0.3rem 0.65rem",
-                  fontSize: "0.78rem",
+                  padding: "0.2rem 1.4rem 0.2rem 0.55rem",
+                  fontSize: "0.76rem",
                   fontWeight: 600,
                   cursor: "pointer",
                   outline: "none",
@@ -3036,7 +3047,7 @@ export function TableDetailView({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "0.3rem",
+                gap: "0.25rem",
                 flexShrink: 0,
               }}
             >
@@ -3066,24 +3077,24 @@ export function TableDetailView({
                       setDietaryFilter(isActive ? "all" : filter.id)
                     }
                     style={{
-                      padding: "0.38rem 0.6rem",
+                      padding: "0.28rem 0.5rem",
                       borderRadius: "var(--radius-sm)",
                       background: isActive
                         ? "var(--accent-amber)"
                         : "var(--bg-primary)",
                       color: isActive ? "#000000" : "var(--text-muted)",
                       border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
-                      fontSize: "0.76rem",
+                      fontSize: "0.74rem",
                       fontWeight: isActive ? 700 : 500,
                       whiteSpace: "nowrap",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
-                      gap: "0.3rem",
+                      gap: "0.25rem",
                     }}
                   >
                     <FilterIcon
-                      size={13}
+                      size={12}
                       color={filter.color}
                       fill={filter.color}
                       aria-hidden="true"
@@ -3093,6 +3104,104 @@ export function TableDetailView({
                 );
               })}
             </div>
+
+            {/* Quick Sort Order */}
+            <div
+              style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              <select
+                value={menuSortOrder}
+                onChange={(e) => setMenuSortOrder(e.target.value)}
+                aria-label="Sort dishes"
+                title="Sort menu dishes"
+                style={{
+                  height: "30px",
+                  background: "var(--bg-primary)",
+                  border: `1px solid ${menuSortOrder !== "default" ? "var(--accent-amber)" : "var(--border-subtle)"}`,
+                  borderRadius: "var(--radius-sm)",
+                  color: menuSortOrder !== "default" ? "var(--accent-amber-light)" : "var(--text-muted)",
+                  padding: "0.2rem 1.3rem 0.2rem 0.55rem",
+                  fontSize: "0.74rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              >
+                <option value="default">Default Sort</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+                <option value="name-asc">Name: A to Z</option>
+              </select>
+            </div>
+
+            {/* Dish Count Badge */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                padding: "0 0.55rem",
+                height: "30px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--bg-primary)",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "0.74rem",
+                fontWeight: 600,
+                color: "var(--text-muted)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+              title="Number of dishes available"
+            >
+              <span
+                style={{
+                  color: "var(--accent-amber-light)",
+                  fontWeight: 700,
+                }}
+              >
+                {filteredMenuItems.length}
+              </span>
+              <span>{filteredMenuItems.length === 1 ? "dish" : "dishes"}</span>
+            </div>
+
+            {/* Clear / Reset Filters Button */}
+            {(Boolean(searchQuery) || selectedCategory !== "all" || dietaryFilter !== "all" || menuSortOrder !== "default") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setDietaryFilter("all");
+                  setMenuSortOrder("default");
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  height: "30px",
+                  padding: "0 0.55rem",
+                  borderRadius: "var(--radius-sm)",
+                  background: "rgba(239, 68, 68, 0.12)",
+                  border: "1px solid rgba(239, 68, 68, 0.35)",
+                  color: "#f87171",
+                  fontSize: "0.73rem",
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "all 0.15s ease",
+                }}
+                title="Reset search and filters to show all dishes"
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
+              </button>
+            )}
 
             {/* View Mode Switcher: Rows (default) vs Cards */}
             <div
@@ -3711,13 +3820,13 @@ export function TableDetailView({
             <div
               style={{
                 flex: "1 1 0",
-                minHeight: "120px",
+                minHeight: "70px",
                 maxHeight: "none",
                 overflowY: "auto",
-                padding: "0.45rem 0.65rem",
+                padding: "0.35rem 0.55rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.35rem",
+                gap: "0.3rem",
               }}
             >
               {/* Live Kitchen Status Banner */}
@@ -4316,11 +4425,11 @@ export function TableDetailView({
             <div
               style={{
                 background: "var(--bg-primary)",
-                padding: "0.45rem 0.75rem",
+                padding: "0.35rem 0.65rem",
                 borderTop: "1px solid var(--border-subtle)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.25rem",
+                gap: "0.2rem",
                 flexShrink: 0,
               }}
             >
@@ -4535,15 +4644,15 @@ export function TableDetailView({
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "0.35rem",
-                  marginTop: "0.35rem",
+                  gap: "0.25rem",
+                  marginTop: "0.2rem",
                 }}
               >
                 <div
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
-                    gap: "0.35rem",
+                    gap: "0.3rem",
                   }}
                 >
                   <button
@@ -4554,7 +4663,7 @@ export function TableDetailView({
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "0.3rem",
-                      padding: "0.42rem 0.45rem",
+                      padding: "0.38rem 0.4rem",
                       borderRadius: "6px",
                       background: isSendingKot
                         ? "var(--bg-tertiary)"
@@ -4588,7 +4697,7 @@ export function TableDetailView({
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "0.3rem",
-                      padding: "0.42rem 0.45rem",
+                      padding: "0.38rem 0.4rem",
                       borderRadius: "6px",
                       background: "var(--bg-tertiary)",
                       color:
@@ -4624,9 +4733,9 @@ export function TableDetailView({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "0.4rem",
-                    padding: "0.5rem",
-                    borderRadius: "8px",
+                    gap: "0.35rem",
+                    padding: "0.45rem 0.6rem",
+                    borderRadius: "7px",
                     background:
                       !canSettleAndCheckout
                         ? "rgba(100, 116, 139, 0.15)"
@@ -4636,7 +4745,7 @@ export function TableDetailView({
                     border: !canSettleAndCheckout
                       ? "1px solid rgba(148, 163, 184, 0.2)"
                       : "1px solid #10b981",
-                    fontSize: "0.78rem",
+                    fontSize: "0.76rem",
                     fontWeight: 800,
                     boxShadow:
                       !canSettleAndCheckout

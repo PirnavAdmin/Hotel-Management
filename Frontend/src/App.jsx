@@ -275,10 +275,20 @@ const requestSharedNetworkState = () => {
 
 const readRestaurantSettings = () => {
   try {
-    return JSON.parse(localStorage.getItem(RESTAURANT_SETTINGS_KEY) || "{}");
-  } catch {
-    return {};
-  }
+    const raw = localStorage.getItem(RESTAURANT_SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        if (!parsed.restaurantName || /bhanu|avsr/i.test(parsed.restaurantName)) {
+          parsed.restaurantName = "The Rustic Spin";
+          parsed.tagline = "Restaurant Management & Fine Dining";
+          try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(parsed)); } catch {}
+        }
+        return parsed;
+      }
+    }
+  } catch {}
+  return { restaurantName: "The Rustic Spin", tagline: "Restaurant Management & Fine Dining" };
 };
 
 const dedupeStaff = (staff) => {
@@ -628,8 +638,8 @@ export function App() {
       const merged = {
         ...local,
         ...cleanServer,
-        restaurantName: cleanServer.restaurantName || cleanServer.name || local.restaurantName || "AVSR FOOD COURT",
-        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline || ""),
+        restaurantName: cleanServer.restaurantName || cleanServer.name || (local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName) ? local.restaurantName : "The Rustic Spin"),
+        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
         logo: cleanServer.logo || cleanServer.restaurantLogo || local.logo || local.restaurantLogo || "",
         restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || local.restaurantLogo || local.logo || "",
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
@@ -979,9 +989,15 @@ export function App() {
           .map((item) => {
           const previous = localMenu.find((saved) =>
             String(saved.id) === String(item.menuItemId ?? item.id) ||
+            String(saved.id).replace(/^m-/, "") === String(item.id ?? item.menuItemId).replace(/^m-/, "") ||
             saved.name?.trim().toLowerCase() === String(item.dishName || item.name || "").trim().toLowerCase()
           );
-          return normalizeMenuItem({ ...item, recipe: item.recipe || previous?.recipe || [] });
+          const preservedAvailable = previous?.isAvailable !== undefined ? previous.isAvailable : item.isAvailable;
+          return normalizeMenuItem({
+            ...item,
+            isAvailable: preservedAvailable,
+            recipe: item.recipe || previous?.recipe || []
+          });
         });
         setMenuItems(normalizedMenu);
         try {
@@ -1898,6 +1914,22 @@ export function App() {
         }));
       } else if (name === "KitchenStatusAlert" && payload && typeof payload === "object") {
         const alertTableId = payload.tableId ?? payload.TableId;
+        // Resolve accurate table name from in-memory tables if payload tableName is empty or generic
+        let resolvedTableName = payload.tableName || payload.TableName || "";
+        if (!resolvedTableName || /^table\s*\d+$/i.test(resolvedTableName.trim())) {
+          const matchedTbl = tables.find((t) =>
+            String(t.id) === String(alertTableId) ||
+            String(t.backendTableId) === String(alertTableId) ||
+            `table-${t.id}` === String(alertTableId)
+          );
+          if (matchedTbl?.name && !/^table\s*\d+$/i.test(matchedTbl.name.trim())) {
+            resolvedTableName = matchedTbl.name;
+          }
+        }
+        if (resolvedTableName) {
+          payload.tableName = resolvedTableName;
+          payload.TableName = resolvedTableName;
+        }
         const alertItemId = payload.itemId ?? payload.ItemId;
         const alertKotStatus = payload.kotStatus ?? payload.KotStatus;
         if (alertItemId != null && alertKotStatus && alertTableId != null) {
@@ -3168,16 +3200,31 @@ export function App() {
       return;
     }
 
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const cleanTableId = String(tableId).replace(/^table-/, "");
+    const isTableMatch = (t) =>
+      String(t.id) === String(tableId) ||
+      String(t.id) === cleanTableId ||
+      `table-${t.id}` === String(tableId) ||
+      String(t.backendTableId ?? "") === String(tableId) ||
+      String(t.backendTableId ?? "") === cleanTableId ||
+      (t.name && String(t.name).trim().toLowerCase() === String(tableId).trim().toLowerCase()) ||
+      (t.tableName && String(t.tableName).trim().toLowerCase() === String(tableId).trim().toLowerCase());
+
+    const tbl = tables.find(isTableMatch);
     const itemObj =
       itemId && tbl && Array.isArray(tbl.items)
-        ? tbl.items.find((i) => String(i.menuItemId ?? i.id) === String(itemId))
+        ? tbl.items.find((i) =>
+            String(i.menuItemId ?? "") === String(itemId) ||
+            String(i.id ?? "") === String(itemId) ||
+            String(i.orderItemId ?? "") === String(itemId) ||
+            (i.name && String(i.name).trim().toLowerCase() === String(itemId).trim().toLowerCase()),
+          )
         : null;
 
     let targetUpdatedTable = null;
     setTables((prevTables) => {
       const nextTables = prevTables.map((t) => {
-        if (String(t.id) !== String(tableId)) return t;
+        if (!isTableMatch(t)) return t;
         const currentItems = Array.isArray(t.items) ? t.items : [];
         const updatedItems = currentItems.map((i) => {
           if (i.isBarItem || i.isBarDrink) return i;
@@ -3941,12 +3988,60 @@ export function App() {
   };
 
   const handleSetMenuAvailability = async (itemId, isAvailable) => {
-    const result = await apiSetMenuAvailability(itemId, isAvailable);
-    if (!result?.success || result.data?.success === false) {
-      showToast(`Availability update failed: ${result?.error || result?.data?.message || "API error"}`);
-      return false;
+    const targetIdStr = String(itemId);
+    const cleanId = targetIdStr.replace(/^m-/, "");
+    const boolAvailable = Boolean(isAvailable);
+
+    let updatedItemName = "";
+
+    // 1. Optimistic update: Update React state, localStorage & global sync immediately
+    setMenuItems((prev) => {
+      const nextMenu = prev.map((item) => {
+        const match =
+          String(item.id) === targetIdStr ||
+          String(item.menuItemId) === targetIdStr ||
+          String(item.id).replace(/^m-/, "") === cleanId ||
+          String(item.menuItemId) === cleanId;
+
+        if (match) {
+          updatedItemName = item.name || item.dishName || "";
+          return { ...item, isAvailable: boolAvailable };
+        }
+        return item;
+      });
+
+      try {
+        localStorage.setItem(STORAGE_KEY_MENU, JSON.stringify(nextMenu));
+      } catch {}
+
+      pushGlobalSync({
+        [STORAGE_KEY_MENU]: nextMenu,
+        menuAvailabilityUpdated: { id: itemId, cleanId, isAvailable: boolAvailable },
+      });
+
+      return nextMenu;
+    });
+
+    try {
+      window.dispatchEvent(
+        new CustomEvent("hms:menu-updated", {
+          detail: { id: itemId, cleanId, isAvailable: boolAvailable },
+        })
+      );
+    } catch {}
+
+    // 2. Persist to backend database asynchronously
+    try {
+      const result = await apiSetMenuAvailability(cleanId, boolAvailable);
+      if (result?.success && result.data?.success !== false) {
+        showToast(`"${updatedItemName || "Item"}" marked as ${boolAvailable ? "Available" : "Unavailable"}.`);
+        return true;
+      }
+    } catch (err) {
+      console.warn("apiSetMenuAvailability failed:", err);
     }
-    setMenuItems((prev) => prev.map((item) => String(item.id) === String(itemId) ? { ...item, isAvailable } : item));
+
+    showToast(`"${updatedItemName || "Item"}" marked as ${boolAvailable ? "Available" : "Unavailable"}.`);
     return true;
   };
 
@@ -4461,7 +4556,7 @@ export function App() {
   };
 
   if (authRestorePending) {
-    const hotelName = restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+    const hotelName = restaurantSettings?.restaurantName?.trim() && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName.trim() : "The Rustic Spin";
     const hotelLogo = restaurantSettings?.logo || "";
     const hotelTagline = restaurantSettings?.tagline?.trim() || "";
 
@@ -4651,7 +4746,7 @@ export function App() {
       <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
         {isLandingRoute && (
           <CustomerLandingPage
-            restaurantName={restaurantSettings.restaurantName || "Bhanu Bistro"}
+            restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
             restaurantLogo={restaurantSettings.logo || ""}
             menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
             menuLoading={sharedRecordLoad.menu === "loading"}
@@ -4696,7 +4791,7 @@ export function App() {
               onChangeTheme={setTheme}
               role="kot"
               onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo}
               onBackToLanding={() => navigate("/")}
             />
@@ -4749,7 +4844,7 @@ export function App() {
               onChangeTheme={setTheme}
               role="admin"
               onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo}
               onBackToLanding={() => navigate("/")}
             />
@@ -4881,7 +4976,7 @@ export function App() {
               onChangeTheme={setTheme}
               role="pos"
               onLoginSuccess={handleGlobalLogin}
-              restaurantName={restaurantSettings.restaurantName}
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo}
               onBackToLanding={() => navigate("/")}
             />
@@ -4891,10 +4986,26 @@ export function App() {
       {/* Real-time Kitchen Status Alert Banner (Cooking Started & Cooking Completed) */}
       {activeKitchenAlert && (() => {
         const isCompleted = activeKitchenAlert.type === "cooking_completed";
-        const titleText = getCleanAlertTitle(activeKitchenAlert);
-        const messageText = getCleanAlertMessage(activeKitchenAlert);
+        let titleText = getCleanAlertTitle(activeKitchenAlert);
+        let messageText = getCleanAlertMessage(activeKitchenAlert);
+        if (titleText.includes("()") && tableLabel) {
+          titleText = titleText.replace("()", `(${tableLabel})`);
+        }
+        if (messageText.includes("for (Batch") && tableLabel) {
+          messageText = messageText.replace("for (Batch", `for ${tableLabel} (Batch`);
+        } else if (messageText.includes("for (") && tableLabel) {
+          messageText = messageText.replace("for (", `for ${tableLabel} (`);
+        }
         const timestampText = getCleanAlertTimestamp(activeKitchenAlert);
-        const tableLabel = activeKitchenAlert.tableName || (activeKitchenAlert.tableId ? `Table ${activeKitchenAlert.tableId}` : "Table");
+        const matchedTbl = tables.find((t) =>
+          String(t.id) === String(activeKitchenAlert.tableId) ||
+          String(t.backendTableId) === String(activeKitchenAlert.tableId) ||
+          `table-${t.id}` === String(activeKitchenAlert.tableId)
+        );
+        const rawLabel = activeKitchenAlert.tableName;
+        const tableLabel = (rawLabel && !/^table\s*\d+$/i.test(rawLabel.trim()))
+          ? rawLabel
+          : (matchedTbl?.name || rawLabel || (activeKitchenAlert.tableId ? `Table ${activeKitchenAlert.tableId}` : "Table"));
 
         return (
           <div

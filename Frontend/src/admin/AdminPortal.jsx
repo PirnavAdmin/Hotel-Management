@@ -1235,7 +1235,9 @@ export function AdminPortal({
   });
   const restaurantLogo = restaurantSettings?.logo || "";
   const restaurantName =
-    restaurantSettings?.restaurantName?.trim() || "AVSR FOOD COURT";
+    restaurantSettings?.restaurantName?.trim() && !/bhanu|avsr/i.test(restaurantSettings.restaurantName)
+      ? restaurantSettings.restaurantName.trim()
+      : "The Rustic Spin";
   const restaurantTagline = restaurantSettings?.tagline?.trim() || "Restaurant Management & Fine Dining";
 
   useEffect(() => {
@@ -2825,7 +2827,7 @@ export function AdminPortal({
                             </tr>
                           ) : (
                             paginatedItems.map((item) => {
-                              const isAvail = item.isAvailable !== false;
+                              const isAvail = item.isAvailable !== false && item.isAvailable !== 0 && item.isAvailable !== "false";
                               return (
                                 <tr
                                   key={item.id}
@@ -3075,26 +3077,26 @@ export function AdminPortal({
                                       <button
                                         onClick={() =>
                                           onSetMenuAvailability?.(
-                                            item.id,
-                                            item.isAvailable === false,
+                                            item.id ?? item.menuItemId,
+                                            !isAvail,
                                           )
                                         }
                                         title={
-                                          item.isAvailable === false
-                                            ? "Make available"
-                                            : "Mark unavailable"
+                                          isAvail
+                                            ? "Mark unavailable"
+                                            : "Make available"
                                         }
                                         style={{
                                           border:
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "1px solid rgba(239, 68, 68, 0.45)"
                                               : "1px solid rgba(16, 185, 129, 0.45)",
                                           background:
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "rgba(239, 68, 68, 0.12)"
                                               : "rgba(16, 185, 129, 0.12)",
                                           color:
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "#ef4444"
                                               : "#10b981",
                                           borderRadius: "6px",
@@ -3106,26 +3108,26 @@ export function AdminPortal({
                                         }}
                                         onMouseEnter={(e) => {
                                           e.currentTarget.style.background =
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "rgba(239, 68, 68, 0.22)"
                                               : "rgba(16, 185, 129, 0.22)";
                                           e.currentTarget.style.borderColor =
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "rgba(239, 68, 68, 0.7)"
                                               : "rgba(16, 185, 129, 0.7)";
                                         }}
                                         onMouseLeave={(e) => {
                                           e.currentTarget.style.background =
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "rgba(239, 68, 68, 0.12)"
                                               : "rgba(16, 185, 129, 0.12)";
                                           e.currentTarget.style.borderColor =
-                                            item.isAvailable === false
+                                            !isAvail
                                               ? "rgba(239, 68, 68, 0.45)"
                                               : "rgba(16, 185, 129, 0.45)";
                                         }}
                                       >
-                                        {item.isAvailable === false
+                                        {!isAvail
                                           ? "Unavailable"
                                           : "Available"}
                                       </button>
