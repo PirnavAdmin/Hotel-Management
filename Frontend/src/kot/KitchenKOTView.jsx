@@ -48,19 +48,18 @@ import { consolidateOrderItems, isSameMenuItem } from "../utils/orderItemMatcher
 
 const formatCleanTableNum = (name, id) => {
   if (!name) return String(id ?? "");
-  const num = String(name).replace(/^Table\s*[-–—]?\s*/i, "").replace(/^Table\s*/i, "").trim();
+  const num = String(name).replace(/^(Table|Spin)\s*[-–—]?\s*/i, "").trim();
   return num || String(id ?? "");
 };
 
 const formatCleanTableName = (name, id) => {
   const num = formatCleanTableNum(name, id);
-  return `Table ${num}`;
+  return `Spin - ${num}`;
 };
 
 const normalizeTableLabel = (value) => {
   const label = String(value ?? "").trim().toLowerCase()
-    .replace(/^table\s*[-–—]?\s*/i, "")
-    .replace(/^t\s*[-–—]?\s*/i, "")
+    .replace(/^(table|t|spin)\s*[-–—]?\s*/i, "")
     .replace(/\s+/g, "");
   return /^\d+$/.test(label) ? String(Number(label)) : label;
 };
@@ -547,19 +546,24 @@ export function KitchenKOTView({
     .filter((table) => {
       if (!table || !Array.isArray(table.items) || table.items.length === 0) return false;
       return table.items.some((item) => {
-        if (!item || ["cancelled", "canceled"].includes(getItemKotStatus(item))) return false;
-        const status = String(item.kotStatus || item.status || "").toLowerCase();
-        const isSent = Boolean(item.kotSent || table.kotSent || ["received", "new", "queued", "pending", "cooking", "ready", "served", "completed"].includes(status));
-        return isSent;
+        if (!item) return false;
+        const kotStatus = String(item.kotStatus || "").trim().toLowerCase();
+        if (["cancelled", "canceled", "void", "deleted"].includes(kotStatus)) return false;
+        // Strictly exclude cart drafts that have not been sent via Send KOT
+        if (item.kotSent === false) return false;
+        return Boolean(item.kotSent === true || ["received", "queued", "pending", "cooking", "ready", "served", "completed"].includes(kotStatus));
       });
     })
     .map((table) => {
       const rawActiveStationItems = (table.items || [])
         .filter((item) => {
-          if (!item || ["cancelled", "canceled"].includes(getItemKotStatus(item))) return false;
+          if (!item) return false;
+          const kotStatus = String(item.kotStatus || "").trim().toLowerCase();
+          if (["cancelled", "canceled", "void", "deleted"].includes(kotStatus)) return false;
+          // Strictly exclude cart drafts that have not been sent via Send KOT
+          if (item.kotSent === false) return false;
+          const isSent = Boolean(item.kotSent === true || ["received", "queued", "pending", "cooking", "ready", "served", "completed"].includes(kotStatus));
           const isDrink = isDrinkItem(item, menuLookup);
-          const status = String(item.kotStatus || item.status || "").toLowerCase();
-          const isSent = Boolean(item.kotSent || table.kotSent || ["received", "new", "queued", "pending", "cooking", "ready", "served", "completed"].includes(status));
           return (isBarStation ? isDrink : !isDrink) && isSent;
         })
         .map((item, idx) => ({
@@ -569,8 +573,8 @@ export function KitchenKOTView({
           name: item.name || item.dishName || "Order Item",
           kotStatus: String(
             item.kotStatus ||
-            (["received", "new", "queued", "pending", "cooking", "ready", "served", "completed"].includes(String(item.status || "").toLowerCase()) ? item.status : "") ||
-            (item.kotSent ? "received" : "queued"),
+            (["received", "queued", "pending", "cooking", "ready", "served", "completed"].includes(String(item.kotStatus || "").toLowerCase()) ? item.kotStatus : "") ||
+            "received",
           ).toLowerCase(),
           kotBatch: Number(item.kotBatch) || Number(table.kotBatch) || 1,
         }));
@@ -580,18 +584,19 @@ export function KitchenKOTView({
       if (activeStationItems.length === 0) return null;
 
       const orderTime = table.orderTime || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const tableNorm = normalizeTableLabel(table.name || table.tableName || table.id);
       return {
         id: table.id,
         backendTableId: table.backendTableId ?? table.tableId ?? table.id,
         backendOrderId: table.backendOrderId ?? table.activeOrderId ?? table.id,
         orderType: "DineIn",
         kotBatch: Number(table.kotBatch) || 1,
-        name: table.name || table.tableName || `Table ${table.id}`,
+        name: table.name || table.tableName || `Spin - ${tableNorm || table.id}`,
         section: table.section || "Main Hall",
         server: table.server || table.serverName || "Server",
         orderTime,
         priority: table.priority || "normal",
-        uniqueKey: `table-${table.id}`,
+        uniqueKey: `table-${tableNorm || table.id}`,
         isPaid: Boolean(table.isPaid),
         ticketType: "active",
         items: activeStationItems,
@@ -683,12 +688,12 @@ export function KitchenKOTView({
     const orderType = isTakeaway ? "Takeaway" : (rawOrderType || "DineIn");
 
     // CRITICAL: NEVER match a dining table if this is a Takeaway order!
+    const ticketLabel = normalizeTableLabel(ticketName || backendTableId);
     const localTable = !isTakeaway
       ? tables.find((table) => {
           const idMatches = [table.backendTableId, table.tableId, table.id]
             .filter((id) => id !== undefined && id !== null)
             .some((id) => String(id) === String(backendTableId));
-          const ticketLabel = normalizeTableLabel(ticketName);
           const tableLabels = [table.name, table.tableName, table.tableNumber]
             .map(normalizeTableLabel)
             .filter(Boolean);
@@ -696,11 +701,12 @@ export function KitchenKOTView({
         })
       : null;
 
+    const tableNorm = ticketLabel || normalizeTableLabel(localTable?.name || localTable?.id || backendTableId);
     const tableId = isTakeaway ? `takeaway-${orderId}` : (localTable?.id ?? backendTableId);
     const batch = Number(ticket.kotBatch) || 1;
     const displayName = isTakeaway
       ? `Takeaway #${ticket.orderNumber || ticket.OrderNumber || ticket.invoiceNo || orderId}`
-      : (localTable?.name || ticketName || `Table ${tableId}`);
+      : (localTable?.name || (ticketName ? formatCleanTableName(ticketName, tableNorm) : `Spin - ${tableNorm || tableId}`));
 
     return {
       id: tableId,
@@ -716,7 +722,7 @@ export function KitchenKOTView({
       priority: isTakeaway ? "urgent" : (ticket.priority || "normal"),
       uniqueKey: isTakeaway
         ? `takeaway-${orderId}`
-        : `active-${orderId}-${batch}`,
+        : `table-${tableNorm || tableId}`,
       isPaid: false,
       ticketType: "active",
       items: consolidateOrderItems((Array.isArray(ticket.items) ? ticket.items : []).filter((item) => {
@@ -739,11 +745,30 @@ export function KitchenKOTView({
   }).filter((ticket) => {
     if (!ticket || ticket.items.length === 0) return false;
     const isTakeaway = String(ticket.orderType).toLowerCase() === "takeaway";
-    return isTakeaway || tables.length === 0 ||
-      tables.some((table) => String(table.id) === String(ticket.id));
+    if (isTakeaway) return true;
+
+    // Reject stale tickets older than 18 hours
+    if (ticket.orderTimestamp && (Date.now() - ticket.orderTimestamp > 18 * 60 * 60 * 1000)) {
+      return false;
+    }
+
+    // Check against floor tables:
+    const norm = normalizeTableLabel(ticket.name || ticket.id);
+    const floorTable = tables.find((table) => {
+      const tNorm = normalizeTableLabel(table.name || table.tableName || table.tableNumber || table.id);
+      return tNorm === norm || String(table.id) === String(ticket.id) || String(table.backendTableId) === String(ticket.backendTableId);
+    });
+
+    // If floor table exists and is completely vacant with 0 items, do not show stale ghost orders
+    if (floorTable && floorTable.status === "vacant" && (!floorTable.items || floorTable.items.length === 0)) {
+      const ageMs = Date.now() - (ticket.orderTimestamp || 0);
+      if (ageMs > 5 * 60 * 1000) return false;
+    }
+
+    return tables.length === 0 || Boolean(floorTable) || tables.some((table) => String(table.id) === String(ticket.id));
   });
 
-  // Merge tickets: Table tickets + Takeaway tickets + API tickets (deduplicated based on station)
+  // Merge tickets: Table tickets + Takeaway tickets + API tickets (strictly deduplicated into single tickets)
   const mergedActiveMap = new Map();
   if (currentStation === "takeaway") {
     // Strictly Takeaway station:
@@ -759,27 +784,25 @@ export function KitchenKOTView({
     });
   } else {
     // Strictly Dine-in Table station:
-    tableTickets.forEach((t) => mergedActiveMap.set(String(t.uniqueKey), t));
+    // Helper to get normalized canonical table key (e.g. "table-1", "table-4")
+    const getCanonicalDineInKey = (t) => {
+      const norm = normalizeTableLabel(t.name || t.tableName || t.tableNumber || t.id);
+      return `table-${norm || t.id || "unknown"}`;
+    };
+
+    tableTickets.forEach((t) => {
+      const canonicalKey = getCanonicalDineInKey(t);
+      mergedActiveMap.set(canonicalKey, { ...t, uniqueKey: canonicalKey });
+    });
+
     apiTickets.forEach((t) => {
       if (String(t.orderType).toLowerCase() !== "takeaway") {
-        const key = String(t.uniqueKey);
-        const tableKey = `table-${t.id}`;
-        let localTicket = mergedActiveMap.get(tableKey);
-        if (!localTicket) {
-          for (const [ek, ev] of mergedActiveMap.entries()) {
-            if (String(ev.id) === String(t.id) || (ev.name && t.name && ev.name.trim().toLowerCase() === t.name.trim().toLowerCase())) {
-              localTicket = ev;
-              mergedActiveMap.delete(ek);
-              break;
-            }
-          }
-        } else {
-          mergedActiveMap.delete(tableKey);
-        }
+        const canonicalKey = getCanonicalDineInKey(t);
+        const localTicket = mergedActiveMap.get(canonicalKey);
 
         const resolvedName = (localTicket?.name && !/^Table\s*\d+$/i.test(localTicket.name))
           ? localTicket.name
-          : (t.name || localTicket?.name || `Table ${t.id}`);
+          : (t.name || localTicket?.name || `Spin - ${normalizeTableLabel(t.name || t.id)}`);
 
         const mergedItems = (t.items || []).map((apiItem) => {
           const localItem = localTicket?.items?.find((li) =>
@@ -799,11 +822,20 @@ export function KitchenKOTView({
           return apiItem;
         });
 
-        mergedActiveMap.set(key, {
+        // Retain any local items in flight that the API hasn't returned yet
+        const apiItemIds = new Set(
+          (t.items || []).map((i) => String(i.menuItemId ?? i.id ?? i.name).toLowerCase())
+        );
+        const unSyncedLocalItems = (localTicket?.items || []).filter(
+          (li) => !apiItemIds.has(String(li.menuItemId ?? li.id ?? li.name).toLowerCase())
+        );
+
+        mergedActiveMap.set(canonicalKey, {
           ...(localTicket || {}),
           ...t,
+          uniqueKey: canonicalKey,
           name: resolvedName,
-          items: mergedItems,
+          items: [...mergedItems, ...unSyncedLocalItems],
         });
       }
     });
@@ -1012,10 +1044,12 @@ export function KitchenKOTView({
       onUpdateItemKotStatus?.(ticketKey, "cooking", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     } else {
       const cleanKey = String(ticketKey).replace(/^table-/, "");
+      const normKey = normalizeTableLabel(cleanKey);
       const localTableId = tables.find((table) =>
         String(table.backendTableId ?? table.id) === String(ticket.backendTableId) ||
         String(table.id) === String(ticket.id) ||
         String(table.id) === cleanKey ||
+        normalizeTableLabel(table.name || table.tableName || table.id) === normKey ||
         `table-${table.id}` === String(ticketKey) ||
         (table.name && ticket.name && table.name.trim().toLowerCase() === ticket.name.trim().toLowerCase())
       )?.id ?? ticket.id;
@@ -1120,10 +1154,12 @@ export function KitchenKOTView({
       onCompleteTableKot?.(ticketKey, targetItem?.menuItemId ?? targetItem?.id ?? itemId, durationStr, nowTimeStr);
     } else {
       const cleanKey = String(ticketKey).replace(/^table-/, "");
+      const normKey = normalizeTableLabel(cleanKey);
       const localTableId = tables.find((table) =>
         String(table.backendTableId ?? table.id) === String(currentTable.backendTableId) ||
         String(table.id) === String(currentTable.id) ||
         String(table.id) === cleanKey ||
+        normalizeTableLabel(table.name || table.tableName || table.id) === normKey ||
         `table-${table.id}` === String(ticketKey) ||
         (table.name && currentTable.name && table.name.trim().toLowerCase() === currentTable.name.trim().toLowerCase())
       )?.id ?? currentTable.id;
@@ -1191,10 +1227,12 @@ export function KitchenKOTView({
       onUpdateItemKotStatus?.(ticketKey, "received", targetItem?.menuItemId ?? targetItem?.id ?? itemId);
     } else {
       const cleanKey = String(ticketKey).replace(/^table-/, "");
+      const normKey = normalizeTableLabel(cleanKey);
       const localTableId = tables.find((table) =>
         String(table.backendTableId ?? table.id) === String(ticket.backendTableId) ||
         String(table.id) === String(ticket.id) ||
         String(table.id) === cleanKey ||
+        normalizeTableLabel(table.name || table.tableName || table.id) === normKey ||
         `table-${table.id}` === String(ticketKey) ||
         (table.name && ticket.name && table.name.trim().toLowerCase() === ticket.name.trim().toLowerCase())
       )?.id ?? ticket.id;
