@@ -73,6 +73,7 @@ import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
 import { CustomerOrdersPage } from "../customer/CustomerOrdersPage";
 import { CustomerProfilePage } from "../customer/CustomerProfilePage";
+import { TruncatedTooltip } from "./TruncatedTooltip";
 import { saveOrUpdateCustomer } from "../utils/customerStorage";
 import {
   getMenuItemImage,
@@ -2059,7 +2060,7 @@ export function CustomerLandingPage({
                           }}
                         >
                           <IconComp size={16} className="pos-cat-icon" />
-                          <span className="pos-cat-label">{cat.label}</span>
+                          <TruncatedTooltip className="pos-cat-label" label={cat.label}>{cat.label}</TruncatedTooltip>
                         </button>
                       );
                     })}

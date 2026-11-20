@@ -1736,6 +1736,7 @@ import { isSameMenuItem, consolidateOrderItems } from "../utils/orderItemMatcher
 import { isDrinkItem } from "../kot/orderRouting";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
 import { SkeletonMenuCard, SkeletonText, SkeletonAvatar, SkeletonButton } from "../common/Skeletons";
+import { TruncatedTooltip } from "../common/TruncatedTooltip";
 import { isDrinkCategory } from "../utils/drinkCategoryHelper";
 import MenuItemVisual from "../common/MenuItemVisual";
 import { MenuItemCard } from "../common/MenuItemCard";
@@ -2916,8 +2917,11 @@ export function TableDetailView({
                           isSelected ? "var(--accent-amber)" : "var(--text-dim)"
                         }
                       />
-                      <span
+                      <TruncatedTooltip
+                        className="pos-category-label"
+                        label={category.name}
                         style={{
+                          display: "block",
                           fontSize: "0.85rem",
                           fontWeight: isSelected ? 700 : 500,
                           flex: 1,
@@ -2929,7 +2933,7 @@ export function TableDetailView({
                         }}
                       >
                         {category.name}
-                      </span>
+                      </TruncatedTooltip>
                     </div>
                   </button>
                 </div>
