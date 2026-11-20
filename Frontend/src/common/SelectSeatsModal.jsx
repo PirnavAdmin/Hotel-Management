@@ -1021,23 +1021,17 @@ export function SelectSeatsModal({
 
   const handleConfirmSeats = () => {
     const selectedCount = selectedSeats.length;
-    const currentCap = Number(currentTable.capacity) || 4;
-
-    // In admin mode, if the user explicitly clicked individual seats (e.g. 4 of 6),
-    // they configured the table to have that number of seats/members.
-    // If they adjusted capacity in Edit Seats panel or didn't select individual chairs,
-    // currentCap is the new seat capacity.
-    const newCapacity = (selectedCount > 0 && !isEditingSeats)
-      ? selectedCount
-      : currentCap;
+    // Physical chair capacity must remain unchanged during seat selection.
+    // Table capacity can only be modified via the "Edit Seats" panel (handleSaveSeatConfig).
+    const currentCap = Number(currentTable.capacity) || Number(currentTable.chairs) || Number(currentTable.capacityChairs) || 4;
 
     const count = selectedCount > 0
       ? selectedCount
-      : (role === "admin" ? newCapacity : (Number(currentTable.guests) || newCapacity));
+      : (role === "admin" ? currentCap : (Number(currentTable.guests) || currentCap));
 
     const finalSeats = selectedCount > 0
       ? selectedSeats.map((seat) => seat.id)
-      : Array.from({ length: newCapacity }, (_, i) => `S${i + 1}`);
+      : (role === "admin" ? (currentTable.selectedSeats || []) : Array.from({ length: currentCap }, (_, i) => `S${i + 1}`));
 
     const hasActiveItems = Array.isArray(currentTable.items) && currentTable.items.some(
       (i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled"
@@ -1049,12 +1043,12 @@ export function SelectSeatsModal({
 
     const finalTable = {
       ...currentTable,
-      capacity: newCapacity,
-      chairs: newCapacity,
-      capacityChairs: newCapacity,
-      persons: role === "admin" ? newCapacity : count,
-      guests: role === "admin" ? newCapacity : count,
-      occupiedChairs: role === "admin" ? 0 : (selectedCount > 0 ? selectedCount : 0),
+      capacity: currentCap,
+      chairs: currentCap,
+      capacityChairs: currentCap,
+      persons: role === "admin" ? currentCap : count,
+      guests: role === "admin" ? (currentTable.guests || 0) : count,
+      occupiedChairs: role === "admin" ? (currentTable.occupiedChairs || 0) : (selectedCount > 0 ? selectedCount : 0),
       seatLabels: currentTable.seatLabels || customSeatLabels,
       selectedSeats: finalSeats,
       status: finalStatus,
@@ -1069,12 +1063,12 @@ export function SelectSeatsModal({
             String(t.id) === String(currentTable.id)
               ? {
                   ...t,
-                  capacity: newCapacity,
-                  chairs: newCapacity,
-                  capacityChairs: newCapacity,
-                  persons: role === "admin" ? newCapacity : count,
-                  guests: role === "admin" ? newCapacity : count,
-                  occupiedChairs: role === "admin" ? 0 : (selectedCount > 0 ? selectedCount : 0),
+                  capacity: currentCap,
+                  chairs: currentCap,
+                  capacityChairs: currentCap,
+                  persons: role === "admin" ? currentCap : count,
+                  guests: role === "admin" ? (t.guests || 0) : count,
+                  occupiedChairs: role === "admin" ? (t.occupiedChairs || 0) : (selectedCount > 0 ? selectedCount : 0),
                   seatLabels: currentTable.seatLabels || customSeatLabels,
                   selectedSeats: finalSeats,
                   status: finalStatus,
