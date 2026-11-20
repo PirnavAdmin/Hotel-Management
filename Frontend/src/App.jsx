@@ -4898,6 +4898,7 @@ export function App() {
               salaryPayments={salaryPayments}
               inventoryPurchases={inventoryPurchases}
               parentRestaurantSettings={restaurantSettings}
+              onUpdateRestaurantSettings={(updated) => setRestaurantSettings((prev) => ({ ...(prev || {}), ...updated }))}
               onRecordSalaryPayment={handleRecordSalaryPayment}
               onRecordInventoryPurchase={handleRecordInventoryPurchase}
               onAddStaff={handleAddStaff}

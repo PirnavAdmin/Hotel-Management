@@ -740,6 +740,7 @@ export function AdminPortal({
   onUpdateInvoiceDiscount = null,
   inventory: propInventory = [],
   parentRestaurantSettings = null,
+  onUpdateRestaurantSettings = null,
   showToast: propShowToast = null,
 }) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -1378,6 +1379,9 @@ export function AdminPortal({
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: stampedSettings }));
     setRestaurantSettings(stampedSettings);
+    if (typeof onUpdateRestaurantSettings === "function") {
+      onUpdateRestaurantSettings(stampedSettings);
+    }
   };
 
   const themes = [

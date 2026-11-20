@@ -249,13 +249,14 @@ export function AdminSidebar({
             width: "40px",
             height: "40px",
             borderRadius: "10px",
-            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+            background: liveLogo ? "var(--bg-secondary)" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
+            boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.25)" : "0 4px 14px rgba(234, 88, 12, 0.45)",
             flexShrink: 0,
             overflow: "hidden",
+            padding: liveLogo ? "2px" : "0",
           }}
         >
           {liveLogo ? (
@@ -265,8 +266,8 @@ export function AdminSidebar({
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
-                borderRadius: "10px",
+                objectFit: "contain",
+                borderRadius: "8px",
                 display: "block",
               }}
             />

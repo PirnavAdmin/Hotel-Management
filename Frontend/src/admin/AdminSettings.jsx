@@ -211,76 +211,16 @@ export function AdminSettings({
   const processImageFile = (file, callback) => {
     const reader = new FileReader();
     reader.onload = (e) => {
+      const dataUrl = e.target?.result;
+      if (!dataUrl) return;
+      if (file.type === "image/svg+xml" || file.size < 250 * 1024) {
+        callback(dataUrl);
+        return;
+      }
       const img = new Image();
       img.onload = () => {
-        // Step 1: Draw to initial canvas to analyze and trim empty margins
-        const srcCanvas = document.createElement("canvas");
-        srcCanvas.width = img.width;
-        srcCanvas.height = img.height;
-        const srcCtx = srcCanvas.getContext("2d");
-        srcCtx.drawImage(img, 0, 0);
-
-        let trimmedCanvas = srcCanvas;
-        try {
-          const imgData = srcCtx.getImageData(0, 0, img.width, img.height);
-          const data = imgData.data;
-          const corners = [
-            0, // top-left
-            Math.max(0, (img.width - 1) * 4), // top-right
-            Math.max(0, (img.width * (img.height - 1)) * 4), // bottom-left
-            Math.max(0, (img.width * img.height - 1) * 4), // bottom-right
-          ];
-
-          const isBackground = (idx) => {
-            const a = data[idx + 3];
-            if (a < 20) return true; // Transparent
-            const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-            // Near-white or light background borders
-            if (r >= 232 && g >= 232 && b >= 232) return true;
-            // Match against any corner color with tolerance
-            for (const cIdx of corners) {
-              const ca = data[cIdx + 3];
-              if (ca < 20) continue;
-              const cr = data[cIdx], cg = data[cIdx + 1], cb = data[cIdx + 2];
-              const diff = Math.abs(r - cr) + Math.abs(g - cg) + Math.abs(b - cb);
-              if (diff < 50) return true;
-            }
-            return false;
-          };
-
-          let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
-          let hasContent = false;
-          for (let y = 0; y < img.height; y++) {
-            for (let x = 0; x < img.width; x++) {
-              const idx = (y * img.width + x) * 4;
-              if (!isBackground(idx)) {
-                hasContent = true;
-                if (x < minX) minX = x;
-                if (x > maxX) maxX = x;
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
-              }
-            }
-          }
-
-          if (hasContent && (minX > 0 || minY > 0 || maxX < img.width - 1 || maxY < img.height - 1)) {
-            // Trim surrounding borders
-            const cropW = Math.max(1, maxX - minX + 1);
-            const cropH = Math.max(1, maxY - minY + 1);
-            const cropCanvas = document.createElement("canvas");
-            cropCanvas.width = cropW;
-            cropCanvas.height = cropH;
-            cropCanvas.getContext("2d").drawImage(srcCanvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
-            trimmedCanvas = cropCanvas;
-          }
-        } catch {
-          // Fallback to original if pixel analysis blocked
-          trimmedCanvas = srcCanvas;
-        }
-
-        const maxDim = 500;
-        let width = trimmedCanvas.width;
-        let height = trimmedCanvas.height;
+        const maxDim = 400;
+        let { width, height } = img;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -291,14 +231,14 @@ export function AdminSettings({
           }
         }
         const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
         const ctx = canvas.getContext("2d");
-        ctx.drawImage(trimmedCanvas, 0, 0, width, height);
-        callback(canvas.toDataURL("image/png", 0.9));
+        ctx.drawImage(img, 0, 0, width, height);
+        callback(canvas.toDataURL("image/png", 0.92));
       };
-      img.onerror = () => callback(e.target.result);
-      img.src = e.target.result;
+      img.onerror = () => callback(dataUrl);
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
@@ -319,6 +259,7 @@ export function AdminSettings({
           logo: dataUrl,
           restaurantLogo: dataUrl,
           updatedAt: Date.now(),
+          isUserConfigured: true,
         };
         // Auto-save immediately to server so all desktops / devices get the change globally
         if (onSaveSettings) {
@@ -341,6 +282,12 @@ export function AdminSettings({
   useEffect(() => {
     if (initialSettings && Object.keys(initialSettings).length > 0) {
       setSettings((prev) => {
+        // Guard: If user has unsaved edits in progress, do not overwrite with stale initialSettings
+        const isCurrentlyDirty = JSON.stringify(prev) !== JSON.stringify(lastSavedSettings);
+        if (isCurrentlyDirty) {
+          return prev;
+        }
+
         let localSaved = {};
         try {
           localSaved = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
@@ -390,7 +337,7 @@ export function AdminSettings({
         return nextSettings;
       });
     }
-  }, [initialSettings]);
+  }, [initialSettings, lastSavedSettings]);
 
   const fileInputRef0 = useRef(null);
   const fileInputRef1 = useRef(null);
@@ -589,6 +536,8 @@ export function AdminSettings({
 
     const settingsToSave = {
       ...settings,
+      logo: settings.logo || settings.restaurantLogo || "",
+      restaurantLogo: settings.restaurantLogo || settings.logo || "",
       updatedAt: Date.now(),
       isUserConfigured: true,
     };
@@ -699,33 +648,69 @@ export function AdminSettings({
             </div>
           </div>
 
-          {savedSuccess && (
-            <div
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            {savedSuccess && (
+              <div
+                style={{
+                  background: "rgba(16, 185, 129, 0.15)",
+                  border: "1px solid rgba(16, 185, 129, 0.35)",
+                  color: "var(--success)",
+                  padding: "6px 14px",
+                  borderRadius: "20px",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <CheckCircle2 size={15} />
+                <span>Settings Saved Successfully</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!isDirty || isSaving}
               style={{
-                background: "rgba(16, 185, 129, 0.15)",
-                border: "1px solid rgba(16, 185, 129, 0.35)",
-                color: "var(--success)",
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "0.45rem",
+                padding: "0.58rem 1.35rem",
+                borderRadius: "9px",
+                background: savedSuccess
+                  ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+                  : isDirty && !isSaving
+                  ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                  : "rgba(var(--surface-rgb),0.06)",
+                color: savedSuccess || (isDirty && !isSaving) ? "#ffffff" : "#64748b",
+                border: isDirty && !isSaving ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
+                fontWeight: 800,
+                fontSize: "0.86rem",
+                cursor: !isDirty || isSaving ? "not-allowed" : "pointer",
+                boxShadow: isDirty && !isSaving ? "0 4px 16px rgba(245, 158, 11, 0.45)" : "none",
+                opacity: !isDirty && !savedSuccess && !isSaving ? 0.6 : 1,
+                transition: "all 0.2s ease",
               }}
             >
-              <CheckCircle2 size={15} />
-              <span>Settings Saved Successfully</span>
-            </div>
-          )}
-          {saveError && (
-            <div
-              role="alert"
-              style={{ color: "var(--danger)", fontSize: "0.8rem", fontWeight: 700 }}
-            >
-              {saveError}
-            </div>
-          )}
+              {isSaving ? (
+                <>
+                  <RotateCcw size={15} style={{ animation: "spin 1s linear infinite" }} />
+                  <span>Saving...</span>
+                </>
+              ) : savedSuccess ? (
+                <>
+                  <CheckCircle2 size={15} />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <>
+                  <Save size={15} />
+                  <span>Save Changes</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Configuration Form */}
@@ -1020,6 +1005,40 @@ export function AdminSettings({
                       <X size={15} /> Remove
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!isDirty || isSaving}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      padding: "0.58rem 1.15rem",
+                      borderRadius: "8px",
+                      border: isDirty && !isSaving ? "1px solid rgba(245, 158, 11, 0.6)" : "1px solid var(--border-card)",
+                      color: isDirty && !isSaving ? "#ffffff" : "var(--text-dim)",
+                      background: isDirty && !isSaving
+                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                        : "var(--bg-secondary)",
+                      fontSize: "0.8rem",
+                      fontWeight: 800,
+                      cursor: !isDirty || isSaving ? "not-allowed" : "pointer",
+                      boxShadow: isDirty && !isSaving ? "0 4px 14px rgba(245, 158, 11, 0.45)" : "none",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    {isSaving ? (
+                      <>
+                        <RotateCcw size={14} style={{ animation: "spin 1s linear infinite" }} />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save size={14} />
+                        <span>Save Logo</span>
+                      </>
+                    )}
+                  </button>
                   <span
                     style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}
                   >
