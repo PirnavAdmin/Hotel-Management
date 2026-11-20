@@ -1704,26 +1704,40 @@ export function CustomerLandingPage({
                   </button>
                 )}
 
-              {/* Hotel / Admin Login Button (Hidden in Digital Dining Menu) */}
-              {!isDineInMenu && (!customerUser ? (
-                <button
-                  className="customer-login-pill-btn"
-                  type="button"
-                  onClick={() => {
-                    if (typeof onHotelLogin === "function") {
-                      onHotelLogin();
-                    } else if (typeof onAdminLogin === "function") {
-                      onAdminLogin();
-                    } else {
-                      window.location.href = "/admin";
-                    }
-                  }}
-                  title="Login"
-                >
-                  <UserRound size={16} />
-                  <span>Login</span>
-                </button>
-              ) : (
+              {/* Hotel / Staff / Admin Login Button */}
+              <button
+                className="customer-login-pill-btn"
+                type="button"
+                onClick={() => {
+                  if (typeof onHotelLogin === "function") {
+                    onHotelLogin();
+                  } else if (typeof onAdminLogin === "function") {
+                    onAdminLogin();
+                  } else {
+                    window.location.href = "/admin";
+                  }
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.35)",
+                }}
+                title="Staff Portal (POS / Admin / KOT)"
+              >
+                <ShieldCheck size={14} />
+                <span>Staff Login</span>
+              </button>
+
+              {customerUser && (
                 <div
                   className="customer-profile-menu-container"
                   style={{ position: "relative" }}
@@ -1811,7 +1825,7 @@ export function CustomerLandingPage({
                     </div>
                   )}
                 </div>
-              ))}
+              )}
             </div>
           </header>
         )}

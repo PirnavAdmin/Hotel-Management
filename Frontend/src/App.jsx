@@ -939,6 +939,7 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
+  const isStaffLoginRoute = ["/login", "/pos", "/staff"].includes(location.pathname);
 
   // ── Live Backend Integration Hook ──────────────────────────────
   useEffect(() => {
@@ -1221,8 +1222,10 @@ export function App() {
   const [adminSession, setAdminSession] = useState(null);
   const customerRoutes = ["/", "/profile", "/my-orders", "/my-reservations", "/menu", "/reserve", "/takeaway"];
   const isLandingRoute =
-    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) && !posSession;
-  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute;
+    !isStaffLoginRoute &&
+    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) &&
+    !posSession;
+  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute && !isStaffLoginRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
@@ -4913,6 +4916,18 @@ export function App() {
 
       {/* Main Separate Routes Rendering */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+        {isStaffLoginRoute && !posSession && (
+          <LoginPage
+            currentTheme={theme}
+            onChangeTheme={setTheme}
+            role="pos"
+            onLoginSuccess={handleGlobalLogin}
+            restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
+            restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
+            onBackToLanding={() => navigate("/")}
+          />
+        )}
+
         {isLandingRoute && (
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
