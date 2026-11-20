@@ -1045,6 +1045,13 @@ textarea {
 .kds-main-header { box-sizing: border-box; }
 .kds-main-header-brand { flex: 1 1 560px; min-width: 0; }
 .kds-main-header-title-line { min-width: 0; }
+.kds-main-header { position: relative; }
+.kds-station-toggle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
 .kds-station-toggle {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1085,6 +1092,7 @@ textarea {
 .kds-main-header-utilities { min-width: 0; }
 @media (max-width: 1100px) {
   .kds-main-header-brand { flex-basis: 100%; }
+  .kds-station-toggle { position: static; transform: none; margin-inline: auto; }
   .kds-main-header-utilities { width: 100%; flex-wrap: wrap !important; justify-content: flex-end; margin-left: 0 !important; }
 }
 @media (max-width: 560px) {
