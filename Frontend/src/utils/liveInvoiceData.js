@@ -116,8 +116,15 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     ? grandTotal
     : rawPaidAmount;
 
-  const createdAt = valueFrom(order, "settledAt", "SettledAt", "createdAt", "CreatedAt") ??
-    valueFrom(invoice, "createdAt", "CreatedAt");
+  // Invoice creation time is the source of truth for invoice date filters and
+  // ordering. Settlement/order timestamps are only a fallback for older local
+  // records that do not have a persisted invoice timestamp.
+  const invoiceCreatedAt = valueFrom(
+    invoice,
+    "createdAt", "CreatedAt", "invoiceDate", "InvoiceDate", "issuedAt", "IssuedAt",
+  );
+  const createdAt = invoiceCreatedAt ??
+    valueFrom(order, "settledAt", "SettledAt", "createdAt", "CreatedAt", "date", "Date");
   const paymentsNormalized = payments.map((payment) => ({
     ...payment,
     amount: Number(valueFrom(payment, "amount", "Amount")) || 0,
@@ -149,6 +156,7 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     id: orderId ?? invoiceId,
     invoiceId,
     orderId,
+    invoiceCreatedAt: invoiceCreatedAt ?? createdAt,
     invoiceNo: invoiceNumber,
     invoiceNumber,
     tableName:

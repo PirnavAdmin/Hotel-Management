@@ -253,6 +253,32 @@ export const sortOrdersBySettlementTime = (orders = []) =>
     return idB - idA;
   });
 
+const invoiceCreationTimestamp = (invoice) => {
+  const value = invoice?.invoiceCreatedAt ?? invoice?.InvoiceCreatedAt ??
+    invoice?.createdAt ?? invoice?.CreatedAt ?? invoice?.invoiceDate ?? invoice?.InvoiceDate ??
+    invoice?.issuedAt ?? invoice?.IssuedAt ?? invoice?.date ?? invoice?.Date ??
+    invoice?.settledAt ?? invoice?.SettledAt ?? invoice?.settledDate ?? invoice?.SettledDate;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  const timestamp = value ? Date.parse(value) : NaN;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+const numericInvoiceId = (invoice) => {
+  const id = invoice?.invoiceId ?? invoice?.InvoiceId ?? invoice?.id ?? invoice?.Id ??
+    invoice?.orderId ?? invoice?.OrderId;
+  const value = id ?? invoice?.invoiceNumber ?? invoice?.InvoiceNumber ?? "";
+  const digits = String(value).match(/(\d+)$/)?.[1];
+  return digits ? Number(digits) || 0 : 0;
+};
+
+export const sortInvoicesByCreationTime = (invoices = []) =>
+  [...invoices].sort((a, b) => {
+    const timestampDifference = invoiceCreationTimestamp(b) - invoiceCreationTimestamp(a);
+    return timestampDifference || numericInvoiceId(b) - numericInvoiceId(a);
+  });
+
 export const mergeSettledOrders = (...sources) => {
   const settledOnly = sources.flatMap((orders) =>
     (Array.isArray(orders) ? orders : []).filter((order) => {
@@ -412,6 +438,7 @@ export function dedupeOrders(orders = []) {
     const fieldsToPreserve = [
       "paymentMethod", "paymentMode", "PaymentMethod", "payment_mode",
       "invoiceNo", "InvoiceNo",
+      "invoiceCreatedAt", "InvoiceCreatedAt",
       "billingSessionId", "backendOrderId", "orderId",
       "BillingSessionId", "BackendOrderId", "OrderId",
       "settledAt", "SettledAt",
@@ -427,6 +454,16 @@ export function dedupeOrders(orders = []) {
         }
       }
     });
+
+    // A sale copy may carry a later settlement timestamp than its invoice.
+    // Keep the persisted invoice creation date as the invoice date authority.
+    const invoiceCreatedAt = order.invoiceCreatedAt ?? order.InvoiceCreatedAt ??
+      existing.invoiceCreatedAt ?? existing.InvoiceCreatedAt;
+    if (invoiceCreatedAt !== undefined && invoiceCreatedAt !== null && invoiceCreatedAt !== "") {
+      base.invoiceCreatedAt = invoiceCreatedAt;
+      base.createdAt = invoiceCreatedAt;
+      base.date = invoiceCreatedAt;
+    }
 
     const finalInvNumber = formatInvoiceNumber(base);
     base.invoiceNo = finalInvNumber;

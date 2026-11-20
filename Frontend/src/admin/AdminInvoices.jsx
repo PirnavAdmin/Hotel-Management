@@ -26,6 +26,7 @@ import {
   formatInvoiceNumber,
   normalizePaymentMethod,
   parseOrderToYMD,
+  sortInvoicesByCreationTime,
 } from "../utils/orderDedupe";
 import {
   requestLiveInvoiceRecords,
@@ -278,7 +279,7 @@ export function AdminInvoices({
     return matchesDate && matchesSearch;
   });
 
-  const filteredOrders = baseFilteredOrders.filter((order) => {
+  const filteredOrders = sortInvoicesByCreationTime(baseFilteredOrders.filter((order) => {
     const matchesOrderType =
       orderTypeFilter === "all" ||
       (orderTypeFilter === "takeaway" && isTakeawayOrder(order)) ||
@@ -289,7 +290,7 @@ export function AdminInvoices({
       getInvoicePaymentMode(order) === paymentFilter;
 
     return matchesOrderType && matchesPayment;
-  });
+  }));
 
   const pageCount = Math.max(
     1,
@@ -305,40 +306,37 @@ export function AdminInvoices({
   const getOrderRevenue = (o) =>
     Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0;
 
-  const totalCollected = baseFilteredOrders.reduce(
+  const totalCollected = filteredOrders.reduce(
     (sum, o) => sum + getOrderRevenue(o),
     0,
   );
 
-  const upiTotal = baseFilteredOrders
+  const upiTotal = filteredOrders
     .filter((o) => getInvoicePaymentMode(o) === "upi")
     .reduce((sum, o) => sum + getOrderRevenue(o), 0);
 
-  const cashTotal = baseFilteredOrders
+  const cashTotal = filteredOrders
     .filter((o) => getInvoicePaymentMode(o) === "cash")
     .reduce((sum, o) => sum + getOrderRevenue(o), 0);
 
-  const takeawayTotal = baseFilteredOrders
+  const takeawayTotal = filteredOrders
     .filter(isTakeawayOrder)
-    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
-
-  const dineInTotal = baseFilteredOrders
-    .filter((o) => !isTakeawayOrder(o))
     .reduce((sum, o) => sum + getOrderRevenue(o), 0);
 
   const totalOrdersCount = baseFilteredOrders.length;
 
-  const cashOrdersCount = baseFilteredOrders.filter(
+  const cashOrdersCount = filteredOrders.filter(
     (o) => getInvoicePaymentMode(o) === "cash",
   ).length;
 
-  const upiOrdersCount = baseFilteredOrders.filter(
+  const upiOrdersCount = filteredOrders.filter(
     (o) => getInvoicePaymentMode(o) === "upi",
   ).length;
 
-  const takeawayOrdersCount = baseFilteredOrders.filter(isTakeawayOrder).length;
+  const takeawayOrdersCount = filteredOrders.filter(isTakeawayOrder).length;
 
-  const dineInOrdersCount = baseFilteredOrders.filter(
+  const availableTakeawayOrdersCount = baseFilteredOrders.filter(isTakeawayOrder).length;
+  const availableDineInOrdersCount = baseFilteredOrders.filter(
     (o) => !isTakeawayOrder(o),
   ).length;
 
@@ -989,8 +987,8 @@ export function AdminInvoices({
               }}
             >
               <option value="all">All Types (Dine-In & Takeaway)</option>
-              <option value="dine_in">🍽️ Dine-In ({dineInOrdersCount})</option>
-              <option value="takeaway">🛍️ Takeaway ({takeawayOrdersCount})</option>
+              <option value="dine_in">🍽️ Dine-In ({availableDineInOrdersCount})</option>
+              <option value="takeaway">🛍️ Takeaway ({availableTakeawayOrdersCount})</option>
             </SearchableSelect>
           </div>
           {dateFilter === "daily" && (
@@ -1245,7 +1243,7 @@ export function AdminInvoices({
                           marginTop: "1px",
                         }}
                       >
-                        {formatInvoiceTime(order.settledAt || order.orderTime)}
+                        {formatInvoiceTime(order.invoiceCreatedAt || order.createdAt || order.settledAt || order.orderTime)}
                       </div>
                     </td>
 
