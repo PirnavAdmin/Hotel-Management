@@ -258,7 +258,8 @@ export function CustomerLandingPage({
       }
       return user ? "reservation" : "auth";
     }
-    return "home";
+    // Default directly to the food & beverages menu
+    return "menu";
   });
 
   // --- Menu Filters & Category State (Matches POS Screen Template) ---
@@ -286,7 +287,7 @@ export function CustomerLandingPage({
     }
   });
 
-  const isDineInMenu = Boolean(tableParam) || (typeof window !== "undefined" && (window.location.pathname === "/menu" || window.location.pathname.startsWith("/menu")));
+  const isDineInMenu = Boolean(tableParam) || (typeof window !== "undefined" && (window.location.pathname === "/menu" || window.location.pathname.startsWith("/menu") || window.location.pathname === "/" || window.location.hash === "#menu"));
 
   // Sync customer details when customerUser changes
   useEffect(() => {
@@ -1453,11 +1454,11 @@ export function CustomerLandingPage({
           >
             <a
               className="customer-brand"
-              href="#home"
-              aria-label={`${restaurantName} home`}
+              href="#menu"
+              aria-label={`${restaurantName} menu`}
               onClick={(event) => {
                 event.preventDefault();
-                navigateScreen("home");
+                if (!isDineInMenu) navigateScreen("home");
               }}
             >
               {liveLogo ? (
@@ -1508,8 +1509,9 @@ export function CustomerLandingPage({
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
             >
-              {/* Kitchen Cooking Status Notification Bell (Matches POS Header) */}
-              {activeScreen !== "home" &&
+              {/* Kitchen Cooking Status Notification Bell (Takeaway Mode Only) */}
+              {!isDineInMenu &&
+                activeScreen !== "home" &&
                 activeScreen !== "reservation" &&
                 activeScreen !== "auth" && (
                   <div className="takeaway-header-notif-wrap" ref={notifRef}>
@@ -1638,8 +1640,9 @@ export function CustomerLandingPage({
                   </div>
                 )}
 
-              {/* Redesigned Modern Cart Pill Button */}
-              {activeScreen !== "home" &&
+              {/* Redesigned Modern Cart Pill Button (Takeaway Mode Only) */}
+              {!isDineInMenu &&
+                activeScreen !== "home" &&
                 activeScreen !== "reservation" &&
                 activeScreen !== "auth" && (
                   <button
@@ -1672,8 +1675,8 @@ export function CustomerLandingPage({
                   </button>
                 )}
 
-              {/* Hotel / Admin Login Button */}
-              {!customerUser ? (
+              {/* Hotel / Admin Login Button (Hidden in Digital Dining Menu) */}
+              {!isDineInMenu && (!customerUser ? (
                 <button
                   className="customer-login-pill-btn"
                   type="button"
@@ -1779,7 +1782,7 @@ export function CustomerLandingPage({
                     </div>
                   )}
                 </div>
-              )}
+              ))}
             </div>
           </header>
         )}
@@ -1947,18 +1950,20 @@ export function CustomerLandingPage({
             {/* Top Table Switcher / Counter Strip */}
             <div className="pos-takeaway-substrip">
               <div className="pos-takeaway-substrip-left">
-                <button
-                  type="button"
-                  className="pos-takeaway-back-btn"
-                  onClick={() => navigateScreen("home")}
-                >
-                  <ArrowLeft size={14} /> Back to Home
-                </button>
+                {!isDineInMenu && (
+                  <button
+                    type="button"
+                    className="pos-takeaway-back-btn"
+                    onClick={() => navigateScreen("home")}
+                  >
+                    <ArrowLeft size={14} /> Back to Home
+                  </button>
+                )}
                 <div className="pos-takeaway-status-tag">
                   <span className="pos-status-indicator" style={{ background: "#10b981" }} />
                   <strong>{tableParam ? `Table: ${tableParam}` : (liveRestaurantName || restaurantName || "The Rustic Spin")}</strong>
                   <span className="pos-tag-label" style={{ background: "#ea580c", color: "#ffffff", fontWeight: 800 }}>
-                    {tableParam ? "TABLE MENU" : "DIGITAL MENU"}
+                    {tableParam ? "TABLE MENU" : "DIGITAL DINING MENU"}
                   </span>
                 </div>
               </div>
@@ -2252,54 +2257,56 @@ export function CustomerLandingPage({
                           </div>
 
                           {/* Footer Actions */}
-                          <div className="pos-takeaway-card-footer">
-                            <span className="font-mono pos-takeaway-card-price">
+                          <div className="pos-takeaway-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: isDineInMenu ? "flex-start" : "space-between" }}>
+                            <span className="font-mono pos-takeaway-card-price" style={{ fontSize: isDineInMenu ? "1.08rem" : undefined, fontWeight: isDineInMenu ? 800 : undefined, color: isDineInMenu ? "#ea580c" : undefined }}>
                               {formatPrice(item.price)}
                             </span>
 
-                            {qty === 0 ? (
-                              <button
-                                type="button"
-                                className="pos-takeaway-add-btn"
-                                disabled={!isAvailable}
-                                onClick={() => changeQuantity(item, 1)}
-                                title={
-                                  isAvailable
-                                    ? "Add to Order"
-                                    : "Currently unavailable"
-                                }
-                              >
-                                {isAvailable ? (
-                                  <>
-                                    <Plus size={12} />
-                                    <span>Add</span>
-                                  </>
-                                ) : (
-                                  <span>Unavailable</span>
-                                )}
-                              </button>
-                            ) : (
-                              <div className="pos-takeaway-qty-stepper">
+                            {!isDineInMenu && (
+                              qty === 0 ? (
                                 <button
                                   type="button"
-                                  disabled={!isAvailable}
-                                  onClick={() => changeQuantity(item, -1)}
-                                  aria-label="Decrease quantity"
-                                >
-                                  <Minus size={11} />
-                                </button>
-                                <span className="font-mono pos-takeaway-qty-count">
-                                  {qty}
-                                </span>
-                                <button
-                                  type="button"
+                                  className="pos-takeaway-add-btn"
                                   disabled={!isAvailable}
                                   onClick={() => changeQuantity(item, 1)}
-                                  aria-label="Increase quantity"
+                                  title={
+                                    isAvailable
+                                      ? "Add to Order"
+                                      : "Currently unavailable"
+                                  }
                                 >
-                                  <Plus size={11} />
+                                  {isAvailable ? (
+                                    <>
+                                      <Plus size={12} />
+                                      <span>Add</span>
+                                    </>
+                                  ) : (
+                                    <span>Unavailable</span>
+                                  )}
                                 </button>
-                              </div>
+                              ) : (
+                                <div className="pos-takeaway-qty-stepper">
+                                  <button
+                                    type="button"
+                                    disabled={!isAvailable}
+                                    onClick={() => changeQuantity(item, -1)}
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus size={11} />
+                                  </button>
+                                  <span className="font-mono pos-takeaway-qty-count">
+                                    {qty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    disabled={!isAvailable}
+                                    onClick={() => changeQuantity(item, 1)}
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus size={11} />
+                                  </button>
+                                </div>
+                              )
                             )}
                           </div>
                         </article>
@@ -2471,55 +2478,6 @@ export function CustomerLandingPage({
                   </button>
                 </div>
               </aside>
-              )}
-
-              {/* ── Dine-In Digital Menu Floating Selection Bar ── */}
-              {isDineInMenu && cartCount > 0 && (
-                <div
-                  style={{
-                    position: "fixed",
-                    bottom: "24px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "rgba(15, 23, 42, 0.95)",
-                    backdropFilter: "blur(10px)",
-                    border: "1.5px solid #f59e0b",
-                    borderRadius: "32px",
-                    padding: "0.65rem 1.4rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "1rem",
-                    boxShadow: "0 12px 36px rgba(0,0,0,0.55)",
-                    zIndex: 9999,
-                    maxWidth: "90vw",
-                    color: "#ffffff",
-                    fontSize: "0.88rem",
-                  }}
-                >
-                  <Utensils size={16} color="#f59e0b" />
-                  <span>
-                    <strong>{cartCount}</strong> selected &bull;{" "}
-                    <strong className="font-mono" style={{ color: "#fbbf24" }}>
-                      {formatPrice(itemsSubtotal)}
-                    </strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCart({})}
-                    style={{
-                      background: "rgba(239, 68, 68, 0.2)",
-                      color: "#f87171",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      borderRadius: "14px",
-                      padding: "0.22rem 0.65rem",
-                      fontSize: "0.74rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Clear
-                  </button>
-                </div>
               )}
             </div>
           </div>

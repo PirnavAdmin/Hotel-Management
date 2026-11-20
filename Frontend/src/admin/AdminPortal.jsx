@@ -1774,20 +1774,33 @@ export function AdminPortal({
   const [selectedQrTableId, setSelectedQrTableId] = useState("GLOBAL");
   const [customQrHost, setCustomQrHost] = useState(() => {
     try {
-      return localStorage.getItem("rustic_spin_custom_qr_host") || "";
+      const saved = localStorage.getItem("rustic_spin_custom_qr_host") || "";
+      if (saved.includes(":5000")) {
+        const corrected = saved.replace(/:5000(\/.*)?$/, ":3000$1");
+        localStorage.setItem("rustic_spin_custom_qr_host", corrected);
+        return corrected;
+      }
+      return saved;
     } catch {
       return "";
     }
   });
 
   const getEffectiveOrigin = () => {
-    if (customQrHost && customQrHost.trim()) {
-      return customQrHost.trim().replace(/\/+$/, "");
+    let host = (customQrHost && customQrHost.trim()) ? customQrHost.trim() : "";
+    if (host) {
+      // Port 5000 is the ASP.NET Core backend API; the Frontend is served on port 3000
+      host = host.replace(/:5000(\/.*)?$/, ":3000$1");
+      return host.replace(/\/+$/, "");
     }
     if (typeof window !== "undefined") {
-      return window.location.origin;
+      const loc = window.location;
+      if (loc.hostname === "65.0.8.48") {
+        return "http://65.0.8.48:3000";
+      }
+      return loc.origin;
     }
-    return "http://localhost:5173";
+    return "http://65.0.8.48:3000";
   };
 
   // The modal's open state is shared by all menu QR entry points.
@@ -8288,11 +8301,9 @@ export function AdminPortal({
                 <button
                   type="button"
                   onClick={() => {
-                    const envTunnel = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api.*$/, "").trim();
-                    const defaultTunnel = envTunnel || "https://bubble-browsers-sheer-author.trycloudflare.com";
-                    const next = customQrHost || defaultTunnel;
-                    setCustomQrHost(next);
-                    try { localStorage.setItem("rustic_spin_custom_qr_host", next); } catch {}
+                    const publicCloudUrl = "http://65.0.8.48:3000";
+                    setCustomQrHost(publicCloudUrl);
+                    try { localStorage.setItem("rustic_spin_custom_qr_host", publicCloudUrl); } catch {}
                   }}
                   style={{
                     padding: "0.45rem 0.5rem",
@@ -8318,11 +8329,14 @@ export function AdminPortal({
                     type="text"
                     value={customQrHost}
                     onChange={(e) => {
-                      const val = e.target.value;
+                      let val = e.target.value;
+                      if (val.includes(":5000")) {
+                        val = val.replace(/:5000(\/.*)?$/, ":3000$1");
+                      }
                       setCustomQrHost(val);
                       try { localStorage.setItem("rustic_spin_custom_qr_host", val); } catch {}
                     }}
-                    placeholder="Enter public tunnel URL (e.g. https://xxx.trycloudflare.com)"
+                    placeholder="Enter public frontend URL (e.g. http://65.0.8.48:3000)"
                     style={{
                       width: "100%",
                       padding: "0.4rem 0.6rem",

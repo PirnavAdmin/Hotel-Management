@@ -313,7 +313,27 @@ export function AdminSettings({
       return;
     }
     processImageFile(file, (dataUrl) => {
-      setSettings((current) => ({ ...current, logo: dataUrl }));
+      setSettings((current) => {
+        const next = {
+          ...current,
+          logo: dataUrl,
+          restaurantLogo: dataUrl,
+          updatedAt: Date.now(),
+        };
+        // Auto-save immediately to server so all desktops / devices get the change globally
+        if (onSaveSettings) {
+          onSaveSettings(next).catch((err) => {
+            console.warn("Auto-save logo to server warning:", err);
+          });
+        }
+        try {
+          localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(next));
+          window.dispatchEvent(new Event("storage"));
+          window.dispatchEvent(new Event("restaurant-settings-updated"));
+          window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: next }));
+        } catch {}
+        return next;
+      });
       input.value = "";
     });
   };
@@ -352,8 +372,10 @@ export function AdminSettings({
 
         const nextSettings = {
           ...prev,
-          ...initialSettings,
           ...localSaved,
+          ...initialSettings, // Server data is authoritative for global sync across desktops
+          logo: initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "",
+          restaurantLogo: initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "",
           selectedQrId: selectedId,
           paymentQrs: qrs,
         };
@@ -959,7 +981,26 @@ export function AdminSettings({
                     <button
                       type="button"
                       onClick={() => {
-                        setSettings((current) => ({ ...current, logo: "" }));
+                        setSettings((current) => {
+                          const next = {
+                            ...current,
+                            logo: "",
+                            restaurantLogo: "",
+                            updatedAt: Date.now(),
+                          };
+                          if (onSaveSettings) {
+                            onSaveSettings(next).catch((err) => {
+                              console.warn("Auto-save remove logo warning:", err);
+                            });
+                          }
+                          try {
+                            localStorage.setItem("gourmet_pos_settings_v1", JSON.stringify(next));
+                            window.dispatchEvent(new Event("storage"));
+                            window.dispatchEvent(new Event("restaurant-settings-updated"));
+                            window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: next }));
+                          } catch {}
+                          return next;
+                        });
                         setLogoError("");
                       }}
                       style={{
