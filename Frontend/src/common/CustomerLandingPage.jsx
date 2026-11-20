@@ -68,6 +68,7 @@ import {
   setCustomerRefreshToken,
 } from "../api/customerAuthApi";
 import { ReceiptModal } from "../user/ReceiptModal";
+import { apiGetRestaurantSettings } from "../api/settingsApi";
 import { TableReservationFlow } from "../reservation/TableReservationFlow";
 import { CustomerAuthFlow } from "../customer/CustomerAuthFlow";
 import { CustomerOrdersPage } from "../customer/CustomerOrdersPage";
@@ -207,19 +208,40 @@ export function CustomerLandingPage({
   }, [restaurantLogo, restaurantName]);
 
   useEffect(() => {
+    let active = true;
+    const fetchLiveSettings = async () => {
+      try {
+        const res = await apiGetRestaurantSettings();
+        const fresh = res?.data || res?.settings;
+        if (fresh && active) {
+          const l = fresh.logo || fresh.restaurantLogo;
+          if (l) setLiveLogo(l);
+          if (fresh.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(fresh.restaurantName)) {
+            setLiveRestaurantName(fresh.restaurantName.trim());
+          }
+        }
+      } catch {}
+    };
+
+    fetchLiveSettings();
+
     const handleSettingsUpdate = (e) => {
       const fresh = e?.detail || getStoredSettings();
-      if (fresh?.logo) setLiveLogo(fresh.logo);
+      const l = fresh?.logo || fresh?.restaurantLogo;
+      if (l) setLiveLogo(l);
       else setLiveLogo(getStoredLogo() || restaurantLogo);
 
-      if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
+      if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(fresh.restaurantName)) {
         setLiveRestaurantName(fresh.restaurantName.trim());
       }
     };
+    window.addEventListener("focus", fetchLiveSettings);
     window.addEventListener("storage", handleSettingsUpdate);
     window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
     window.addEventListener("avsr-settings-updated", handleSettingsUpdate);
     return () => {
+      active = false;
+      window.removeEventListener("focus", fetchLiveSettings);
       window.removeEventListener("storage", handleSettingsUpdate);
       window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
       window.removeEventListener("avsr-settings-updated", handleSettingsUpdate);

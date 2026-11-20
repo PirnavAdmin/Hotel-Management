@@ -634,14 +634,18 @@ export function App() {
         }
       });
 
+      const serverLogo = cleanServer.logo || cleanServer.restaurantLogo || "";
+      const serverName = cleanServer.restaurantName || cleanServer.name || "";
+      const serverTagline = cleanServer.tagline;
+
       // Server data is authoritative for restaurant branding and payment QRs
       const merged = {
         ...local,
         ...cleanServer,
-        restaurantName: cleanServer.restaurantName || cleanServer.name || (local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName) ? local.restaurantName : "The Rustic Spin"),
-        tagline: cleanServer.tagline !== undefined ? cleanServer.tagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
-        logo: cleanServer.logo || cleanServer.restaurantLogo || local.logo || local.restaurantLogo || "",
-        restaurantLogo: cleanServer.restaurantLogo || cleanServer.logo || local.restaurantLogo || local.logo || "",
+        restaurantName: serverName && !/bhanu|avsr/i.test(serverName) ? serverName : (local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName) ? local.restaurantName : "The Rustic Spin"),
+        tagline: serverTagline !== undefined ? serverTagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
+        logo: serverLogo || local.logo || local.restaurantLogo || "",
+        restaurantLogo: serverLogo || local.restaurantLogo || local.logo || "",
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
@@ -652,11 +656,11 @@ export function App() {
         window.dispatchEvent(new Event("restaurant-settings-updated"));
       }
     };
-    const loadInitialSettings = async () => {
+    const fetchLatestServerSettings = async () => {
       try {
         const res = await apiGetRestaurantSettings();
         const serverData = res?.data || res?.settings;
-        if (serverData && active && (serverData.restaurantName || serverData.logo)) {
+        if (serverData && active && (serverData.restaurantName || serverData.logo || serverData.restaurantLogo)) {
           applySharedSettings(serverData);
           return;
         }
@@ -666,8 +670,21 @@ export function App() {
         applySharedSettings(data?.[RESTAURANT_SETTINGS_KEY] || data?.data?.[RESTAURANT_SETTINGS_KEY] || data?.restaurantSettings);
       }
     };
-    loadInitialSettings();
 
+    fetchLatestServerSettings();
+
+    // 1. Periodic background sync polling so changes on any desktop propagate everywhere
+    const pollInterval = setInterval(() => {
+      if (active) fetchLatestServerSettings();
+    }, 12000);
+
+    // 2. Immediate sync when user switches/focuses window or tab
+    const handleWindowFocus = () => {
+      if (active) fetchLatestServerSettings();
+    };
+    window.addEventListener("focus", handleWindowFocus);
+
+    // 3. Server Sent Events (SSE) listener
     const handleSettingsMsg = (event) => {
       try {
         const message = JSON.parse(event.data);
@@ -679,9 +696,24 @@ export function App() {
         if (settings) applySharedSettings(settings);
       } catch {}
     };
+    const unsubscribeSse = subscribeToSseMessages(handleSettingsMsg);
 
-    const unsubscribe = subscribeToSseMessages(handleSettingsMsg);
+    // 4. SignalR Realtime Hub listener
+    const unsubscribeRealtime = subscribeToRealtimeEvents(({ name, payload }) => {
+      if (
+        name === "restaurantSetting:updated" ||
+        name === "ReceiveRestaurantSettingUpdated" ||
+        name === "module:settings" ||
+        name === "settings:updated"
+      ) {
+        const settingsData = payload?.data ?? payload?.Data ?? payload;
+        if (settingsData && typeof settingsData === "object") {
+          applySharedSettings(settingsData);
+        }
+      }
+    });
 
+    // 5. In-browser custom event listener
     const handleWindowSettingsUpdate = (e) => {
       if (e?.detail && typeof e.detail === "object") {
         applySharedSettings(e.detail);
@@ -691,7 +723,10 @@ export function App() {
 
     return () => {
       active = false;
-      unsubscribe();
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleWindowFocus);
+      unsubscribeSse();
+      unsubscribeRealtime();
       window.removeEventListener("avsr-settings-updated", handleWindowSettingsUpdate);
     };
   }, []);
@@ -4833,7 +4868,7 @@ export function App() {
               role="kot"
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
-              restaurantLogo={restaurantSettings.logo}
+              restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
               onBackToLanding={() => navigate("/")}
             />
           ))}
@@ -4886,7 +4921,7 @@ export function App() {
               role="admin"
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
-              restaurantLogo={restaurantSettings.logo}
+              restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
               onBackToLanding={() => navigate("/")}
             />
           ))}
@@ -5020,7 +5055,7 @@ export function App() {
               role="pos"
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
-              restaurantLogo={restaurantSettings.logo}
+              restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
               onBackToLanding={() => navigate("/")}
             />
           ))}

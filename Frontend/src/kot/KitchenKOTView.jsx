@@ -114,7 +114,7 @@ export function KitchenKOTView({
     };
   }, []);
 
-  const effectiveLogo = restaurantLogo || liveSettings.logo || "";
+  const effectiveLogo = restaurantLogo || liveSettings.logo || liveSettings.restaurantLogo || "";
   const effectiveRestaurantName =
     (restaurantName && restaurantName !== "Restaurant" && !/bhanu|avsr/i.test(restaurantName))
       ? restaurantName
@@ -1659,7 +1659,7 @@ export function KitchenKOTView({
                       letterSpacing: "-0.02em",
                     }}
                   >
-                    {restaurantName?.trim() || "Restaurant"}
+                    {effectiveRestaurantName}
                   </h1>
                   <span
                     style={{

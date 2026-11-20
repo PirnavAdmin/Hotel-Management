@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { loginUser, registerUser } from '../utils/auth';
 import { apiForgotPassword, apiResetPassword } from '../api/authApi';
+import { apiGetRestaurantSettings } from '../api/settingsApi';
 
 /**
  * LoginPage — role-specific sign-in screen.
@@ -148,16 +149,45 @@ export function LoginPage({
 
   // Listen to live settings updates across windows/tabs and AdminSettings save events
   useEffect(() => {
+    let active = true;
+    const fetchLiveSettings = async () => {
+      try {
+        const res = await apiGetRestaurantSettings();
+        const data = res?.data || res?.settings;
+        if (data && active) {
+          const sName = data.restaurantName || data.name;
+          if (sName && !/bhanu|avsr/i.test(sName)) {
+            setCurrentRestaurantName(sName.trim());
+          }
+          if (data.tagline !== undefined && !/bhanu/i.test(data.tagline)) {
+            setCurrentTagline(data.tagline.trim());
+          }
+          const sLogo = data.logo || data.restaurantLogo;
+          if (sLogo) {
+            setCurrentRestaurantLogo(sLogo);
+          }
+        }
+      } catch {}
+    };
+
+    fetchLiveSettings();
+
     const handleSettingsUpdate = () => {
       setCurrentRestaurantName(resolveRestaurantName(restaurantName));
       setCurrentTagline(resolveTagline());
-    setCurrentRestaurantLogo(resolveRestaurantLogo(restaurantLogo, logo));
+      setCurrentRestaurantLogo(resolveRestaurantLogo(restaurantLogo, logo));
     };
+
+    window.addEventListener("focus", fetchLiveSettings);
     window.addEventListener("storage", handleSettingsUpdate);
     window.addEventListener("restaurant-settings-updated", handleSettingsUpdate);
+    window.addEventListener("avsr-settings-updated", handleSettingsUpdate);
     return () => {
+      active = false;
+      window.removeEventListener("focus", fetchLiveSettings);
       window.removeEventListener("storage", handleSettingsUpdate);
       window.removeEventListener("restaurant-settings-updated", handleSettingsUpdate);
+      window.removeEventListener("avsr-settings-updated", handleSettingsUpdate);
     };
   }, [restaurantName, restaurantLogo, logo]);
 

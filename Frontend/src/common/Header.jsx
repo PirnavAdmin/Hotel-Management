@@ -78,14 +78,14 @@ export function Header({
   useEffect(() => {
     const handleSettingsUpdate = (e) => {
       const fresh = e?.detail || getStoredSettings();
-      if (fresh?.logo) setLiveLogo(fresh.logo);
+      if (fresh?.logo || fresh?.restaurantLogo) setLiveLogo(fresh.logo || fresh.restaurantLogo);
       else setLiveLogo(getStoredLogo() || restaurantLogo);
 
       if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
         setLiveRestaurantName(fresh.restaurantName.trim());
       } else {
         const stored = getStoredName();
-        if (stored && stored.trim().toLowerCase() !== "restaurant") setLiveRestaurantName(stored.trim());
+        if (stored && stored.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(stored)) setLiveRestaurantName(stored.trim());
       }
     };
     window.addEventListener("storage", handleSettingsUpdate);
@@ -288,7 +288,7 @@ export function Header({
                   lineHeight: 1.1,
                 }}
               >
-                {liveRestaurantName || restaurantName || "AVSR FOOD COURT"}
+                {liveRestaurantName || restaurantName || "The Rustic Spin"}
               </h1>
               <span
                 style={{

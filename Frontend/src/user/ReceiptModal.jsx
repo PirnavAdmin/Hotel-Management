@@ -178,8 +178,10 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     "info@therusticspin.com";
   const restaurantLogo =
     restaurantSettings.logo ||
+    restaurantSettings.restaurantLogo ||
     table.logo ||
     storedSettings.logo ||
+    storedSettings.restaurantLogo ||
     "/assets/login-restaurant.jpg";
 
   // Items resolution

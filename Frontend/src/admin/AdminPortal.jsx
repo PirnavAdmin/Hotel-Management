@@ -1345,6 +1345,8 @@ export function AdminPortal({
   const handleSaveRestaurantSettings = async (settings) => {
     const stampedSettings = {
       ...settings,
+      logo: settings.logo || settings.restaurantLogo || "",
+      restaurantLogo: settings.restaurantLogo || settings.logo || "",
       updatedAt: Date.now(),
       isUserConfigured: true,
     };

@@ -1,8 +1,13 @@
 function getResolvedApiBase() {
-  return (import.meta.env.VITE_API_BASE_URL || "")
+  const envVal = (import.meta.env.VITE_API_BASE_URL || "")
     .trim()
     .replace(/^["']|["']$/g, "")
     .replace(/\/$/, "");
+  // Fall back to shared production backend if env is missing or pointing to ephemeral tunnels
+  if (!envVal || envVal.includes("bubble-browsers") || envVal.includes("trycloudflare.com")) {
+    return "http://65.0.8.48:5000";
+  }
+  return envVal;
 }
 
 // API requests use the configured backend directly in every environment.
