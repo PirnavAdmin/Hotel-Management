@@ -66,9 +66,9 @@
   overflow: hidden;
   border: 2px solid rgba(255, 181, 64, 0.85);
   border-radius: 50%;
-  background: #fff4e3;
+  background: #ffffff;
   color: #a94700;
-  object-fit: cover;
+  object-fit: contain;
 }
 .customer-brand strong {
   display: block;

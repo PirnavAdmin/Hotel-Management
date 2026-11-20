@@ -27,6 +27,7 @@ import {
 import { formatCurrency } from "../utils/formatCurrency";
 import { ProfileDropdown } from './ProfileDropdown';
 import { cleanNotificationText } from '../utils/notificationHelper';
+import { detectImageBgColor } from '../utils/logoHelper';
 export function Header({
   tables,
   activeView,
@@ -60,6 +61,7 @@ export function Header({
   const getStoredName = () => getStoredSettings().restaurantName || "";
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+  const [liveLogoBg, setLiveLogoBg] = useState(() => getStoredSettings().logoBg || "");
   const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
     const stored = getStoredName();
     if (stored && stored.trim() && stored.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(stored)) return stored.trim();
@@ -80,6 +82,9 @@ export function Header({
       const fresh = e?.detail || getStoredSettings();
       if (fresh?.logo || fresh?.restaurantLogo) setLiveLogo(fresh.logo || fresh.restaurantLogo);
       else setLiveLogo(getStoredLogo() || restaurantLogo);
+
+      if (fresh?.logoBg !== undefined) setLiveLogoBg(fresh.logoBg || "");
+      else setLiveLogoBg(getStoredSettings().logoBg || "");
 
       if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant") {
         setLiveRestaurantName(fresh.restaurantName.trim());
@@ -253,7 +258,7 @@ export function Header({
         >
           <div
             style={{
-              background: liveLogo ? "var(--bg-secondary)" : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              background: liveLogoBg || (liveLogo ? "#ffffff" : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"),
               width: "40px",
               height: "40px",
               borderRadius: "11px",
@@ -263,13 +268,24 @@ export function Header({
               boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.2)" : "0 4px 14px rgba(245, 158, 11, 0.4)",
               overflow: "hidden",
               border: liveLogo ? "1px solid var(--border-subtle)" : "none",
+              padding: "0",
+              transition: "background-color 0.2s ease",
             }}
           >
             {liveLogo ? (
               <img
                 src={liveLogo}
                 alt={restaurantName || "Logo"}
-                style={{ width: "100%", height: "100%", objectFit: "contain", padding: "2px" }}
+                onLoad={(e) => {
+                  if (!liveLogoBg) {
+                    const detected = detectImageBgColor(e.target);
+                    if (detected && detected !== "transparent") {
+                      e.target.parentElement.style.backgroundColor = detected;
+                      setLiveLogoBg(detected);
+                    }
+                  }
+                }}
+                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
               />
             ) : (
               <UtensilsCrossed size={20} color="#ffffff" />

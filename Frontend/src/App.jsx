@@ -664,6 +664,7 @@ export function App() {
         tagline: serverTagline !== undefined ? serverTagline : (local.tagline && !/bhanu/i.test(local.tagline) ? local.tagline : "Restaurant Management & Fine Dining"),
         logo: serverLogo || local.logo || local.restaurantLogo || "",
         restaurantLogo: serverLogo || local.restaurantLogo || local.logo || "",
+        logoBg: cleanServer.logoBg || local.logoBg || "",
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
