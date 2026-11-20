@@ -148,17 +148,23 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     storedSettings = JSON.parse(localStorage.getItem('gourmet_pos_settings_v1') || '{}');
   } catch {}
 
-  const restaurantName = [
+  const getCleanTagline = (tag) =>
+    typeof tag === "string" && tag.trim() && !/bhanu/i.test(tag)
+      ? tag.trim()
+      : null;
+
+  const rawRestaurantName = [
     restaurantSettings.restaurantName,
     restaurantSettings.name,
     restaurantSettings.restaurant,
     storedSettings.restaurantName,
     storedSettings.name,
     storedSettings.restaurant,
-  ].map((value) => normalizeRestaurantName(value)).find(Boolean) || "The Rustic Spin";
+  ].map((value) => normalizeRestaurantName(value)).find((v) => v && !/bhanu|avsr/i.test(v)) || "The Rustic Spin";
+  const restaurantName = typeof rawRestaurantName === "string" ? rawRestaurantName.trim() : "The Rustic Spin";
   const restaurantTagline =
-    (restaurantSettings.tagline?.trim() && !/bhanu/i.test(restaurantSettings.tagline)) ||
-    (storedSettings.tagline?.trim() && !/bhanu/i.test(storedSettings.tagline)) ||
+    getCleanTagline(restaurantSettings.tagline) ||
+    getCleanTagline(storedSettings.tagline) ||
     "Restaurant Management & Fine Dining";
   const restaurantPhone =
     restaurantSettings.phone?.trim() ||
@@ -706,7 +712,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             {/* Thermal Footer */}
             <div style={{ textAlign: 'center', marginTop: '0.5rem', paddingTop: '0.4rem', borderTop: '1px dashed #64748b' }}>
               <p style={{ fontSize: '0.72rem', fontWeight: 800, color: '#000000', margin: '2px 0 0' }}>
-                THANK YOU FOR VISITING {restaurantName.toUpperCase()}!
+                THANK YOU FOR VISITING {String(restaurantName || "The Rustic Spin").toUpperCase()}!
               </p>
               <p style={{ fontSize: '0.64rem', color: '#475569', margin: '1px 0 0' }}>
                 Please visit again{restaurantPhone ? ` • Orders: ${restaurantPhone}` : ""}
