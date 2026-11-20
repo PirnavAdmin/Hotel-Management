@@ -1995,18 +1995,10 @@ export function TableView({
 
             const cardBorderColor = !isOccupied
               ? "var(--border-subtle)"
-              : allReady
-                ? "#10b981"
-                : hasCooking
-                  ? "#ea580c"
-                  : "rgba(245, 158, 11, 0.7)";
+              : "rgba(245, 158, 11, 0.45)";
             const cardShadow = !isOccupied
               ? "var(--shadow-sm)"
-              : allReady
-                ? "0 4px 16px rgba(16, 185, 129, 0.25)"
-                : hasCooking
-                  ? "0 4px 16px rgba(234, 88, 12, 0.22)"
-                  : "0 4px 14px rgba(245, 158, 11, 0.16)";
+              : "0 4px 14px rgba(245, 158, 11, 0.16)";
 
             const currentLock = tableLocks && tableLocks[String(table.id)];
             const isLockedByOther =
@@ -2070,20 +2062,18 @@ export function TableView({
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: "flex-start",
                       justifyContent: "space-between",
-                      flexWrap: "nowrap",
-                      gap: "0.25rem",
-                      marginBottom: "0.2rem",
+                      gap: "0.35rem",
+                      marginBottom: "0.25rem",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: "0.35rem",
-                        flex: "0 1 auto",
+                        flexDirection: "column",
                         minWidth: 0,
+                        flex: "1 1 auto",
                       }}
                     >
                       <h3
@@ -2095,7 +2085,7 @@ export function TableView({
                               ? "var(--accent-amber-light)"
                               : "var(--text-main)",
                           margin: 0,
-                          lineHeight: 1.1,
+                          lineHeight: 1.15,
                           letterSpacing: "-0.01em",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
@@ -2104,6 +2094,18 @@ export function TableView({
                       >
                         {table.name || table.tableName || table.tableNumber || `Table ${table.id}`}
                       </h3>
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          color: "var(--text-dim)",
+                          marginTop: "2px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {table.section && !/^[\\|/\s]+$/.test(table.section.trim()) ? table.section : "Main Hall"}
+                      </span>
                     </div>
                     <span
                       title={statusText}
@@ -2115,6 +2117,7 @@ export function TableView({
                         boxShadow: `0 0 6px color-mix(in srgb, ${statusColor} 50.20%, transparent)`,
                         display: "inline-block",
                         flexShrink: 0,
+                        marginTop: "4px",
                       }}
                       className={
                         table.status !== "vacant" ? "pulse-indicator" : ""
@@ -2122,29 +2125,13 @@ export function TableView({
                     />
                   </div>
 
-                  {/* Section & Capacity */}
+                  {/* Capacity & Seated Seats Button */}
                   <div
                     style={{
-                      fontSize: "0.68rem",
-                      color: "var(--text-dim)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "0.5rem",
                       paddingBottom: "0.35rem",
                       borderBottom: "1px solid var(--neutral-border)",
                     }}
                   >
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        minWidth: 0,
-                      }}
-                    >
-                      {table.section && !/^[\\|/\s]+$/.test(table.section.trim()) ? table.section : "Main Hall"}
-                    </span>
                     <button
                       type="button"
                       onClick={(e) => {
@@ -2155,31 +2142,31 @@ export function TableView({
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "0.25rem",
+                        justifyContent: "center",
+                        width: "100%",
+                        gap: "0.3rem",
                         background: "rgba(245, 158, 11, 0.08)",
                         border: "1px solid rgba(245, 158, 11, 0.35)",
-                        borderRadius: "10px",
-                        padding: "0.12rem 0.45rem",
+                        borderRadius: "8px",
+                        padding: "0.18rem 0.45rem",
                         color: "#f59e0b",
-                        fontSize: "0.68rem",
+                        fontSize: "0.71rem",
                         fontWeight: 600,
                         cursor: "pointer",
                         whiteSpace: "nowrap",
-                        flexShrink: 0,
+                        boxSizing: "border-box",
                         transition: "all 0.15s ease",
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = "rgba(245, 158, 11, 0.22)";
                         e.currentTarget.style.borderColor = "#f59e0b";
-                        e.currentTarget.style.transform = "scale(1.03)";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
                         e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.35)";
-                        e.currentTarget.style.transform = "scale(1)";
                       }}
                     >
-                      <Armchair size={11} color="#f59e0b" />
+                      <Armchair size={12} color="#f59e0b" />
                       <span>
                         {table.capacity} Seats ·{" "}
                         {isOccupied && (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0))
