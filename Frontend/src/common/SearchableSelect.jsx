@@ -29,18 +29,38 @@ export default function SearchableSelect({
   const popoverRef = useRef(null);
   const searchRef = useRef(null);
   const optionRefs = useRef([]);
+  const optionsListRef = useRef(null);
   const childrenMode = suppliedOptions == null;
+  const extractText = (node) => {
+    if (node == null || typeof node === "boolean") return "";
+    if (typeof node === "string" || typeof node === "number") return String(node);
+    if (Array.isArray(node)) return node.map(extractText).join("");
+    if (isValidElement(node)) return extractText(node.props?.children);
+    return "";
+  };
   const options = useMemo(() => {
     if (!childrenMode) return suppliedOptions;
     const collected = [];
     Children.toArray(children).forEach((child) => {
       if (!isValidElement(child)) return;
       if (child.type === "option") {
-        collected.push({ value: child.props.value ?? child.props.children ?? "", label: child.props.children ?? "", disabled: child.props.disabled });
+        const textLabel = extractText(child.props.children).trim();
+        const optionVal = child.props.value !== undefined ? child.props.value : textLabel;
+        collected.push({
+          value: optionVal,
+          label: textLabel || String(optionVal),
+          disabled: child.props.disabled,
+        });
       } else if (child.type === "optgroup") {
         Children.toArray(child.props.children).forEach((sub) => {
           if (isValidElement(sub) && sub.type === "option") {
-            collected.push({ value: sub.props.value ?? sub.props.children ?? "", label: sub.props.children ?? "", disabled: sub.props.disabled });
+            const textLabel = extractText(sub.props.children).trim();
+            const optionVal = sub.props.value !== undefined ? sub.props.value : textLabel;
+            collected.push({
+              value: optionVal,
+              label: textLabel || String(optionVal),
+              disabled: sub.props.disabled,
+            });
           }
         });
       }
@@ -69,12 +89,15 @@ export default function SearchableSelect({
 
   useLayoutEffect(() => {
     if (!open) return undefined;
+    if (optionsListRef.current) {
+      optionsListRef.current.scrollTop = 0;
+    }
     const place = () => {
       const rect = rootRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const maxHeight = Math.min(300, window.innerHeight - 20);
+      const maxHeight = Math.min(460, window.innerHeight - 30);
       const below = window.innerHeight - rect.bottom - 8;
-      const top = below >= 190 || rect.top < maxHeight + 16 ? rect.bottom + 4 : Math.max(8, rect.top - maxHeight - 4);
+      const top = below >= 200 || rect.top < maxHeight + 16 ? rect.bottom + 4 : Math.max(8, rect.top - maxHeight - 4);
       const popoverWidth = Math.min(Math.max(rect.width, 220), window.innerWidth - 16);
       setPosition({ top, left: Math.max(8, Math.min(rect.left, window.innerWidth - popoverWidth - 8)), width: popoverWidth, maxHeight });
     };
@@ -86,7 +109,14 @@ export default function SearchableSelect({
     return () => { document.removeEventListener("pointerdown", outside); window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
   }, [close, open]);
 
-  useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
+  useEffect(() => {
+    if (open) {
+      searchRef.current?.focus();
+      if (optionsListRef.current) {
+        optionsListRef.current.scrollTop = 0;
+      }
+    }
+  }, [open]);
   useEffect(() => { if (active >= 0) optionRefs.current[active]?.focus(); }, [active]);
   const move = (delta) => setActive((current) => (current + delta + count) % count);
   const choose = (option) => { onChange?.(childrenMode ? { target: { value: String(option.value) } } : option.value); close(); };
@@ -108,7 +138,7 @@ export default function SearchableSelect({
         if (event.key === "Escape") { event.preventDefault(); close(true); }
         if (event.key === "Enter") { event.preventDefault(); if (active >= 0 && active < filtered.length) choose(filtered[active]); else if (active === filtered.length && allowCustom) chooseCustom(); else if (filtered.length === 1) choose(filtered[0]); }
       }} /></label>
-      <div className="searchable-select-options" role="listbox" aria-label={ariaLabel}>
+      <div className="searchable-select-options" ref={optionsListRef} role="listbox" aria-label={ariaLabel}>
         {filtered.map((option, index) => <button key={`${option.value}-${index}`} ref={(node) => { optionRefs.current[index] = node; }} type="button" role="option" aria-selected={String(option.value) === String(value)} disabled={option.disabled} className="searchable-select-option" onKeyDown={(event) => handleListKey(event, index)} onClick={() => choose(option)}>
           <span>{option.label}</span>{String(option.value) === String(value) && <Check size={14} aria-hidden="true" />}
         </button>)}

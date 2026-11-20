@@ -1482,7 +1482,16 @@ export function TableView({
   return (
     <div
       className="mobile-container"
-      style={{ padding: "1.25rem 1.5rem", maxWidth: "100%", margin: "0 auto" }}
+      style={{
+        padding: "1.25rem 1.5rem",
+        maxWidth: "100%",
+        width: "100%",
+        margin: "0 auto",
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        boxSizing: "border-box",
+      }}
     >
       {/* Floor Plan Title & Controls */}
       <div
@@ -1650,13 +1659,17 @@ export function TableView({
               }}
             >
               <option value="all" style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
-                All Tables ({tables.length})
+                {`All Tables (${tables.length})`}
               </option>
-              {uniqueTableNumbers.map((tbl) => (
-                <option key={tbl.id} value={tbl.id} style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
-                  {tbl.name || tbl.tableNumber || `Table ${tbl.id}`} {tbl.section ? `• ${tbl.section}` : ""}
-                </option>
-              ))}
+              {uniqueTableNumbers.map((tbl) => {
+                const displayName = tbl.name || tbl.tableName || tbl.tableNumber || `Table ${tbl.id}`;
+                const sectionPart = tbl.section ? ` • ${tbl.section}` : "";
+                return (
+                  <option key={tbl.id} value={tbl.id} style={{ background: "var(--bg-secondary)", color: "var(--text-main)" }}>
+                    {`${displayName}${sectionPart}`}
+                  </option>
+                );
+              })}
             </SearchableSelect>
           </div>
 
@@ -1936,8 +1949,9 @@ export function TableView({
           className="responsive-table-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-            gap: "0.75rem",
+            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+            gap: "0.65rem",
+            paddingBottom: "3rem",
           }}
         >
           {filteredTables.map((table) => {

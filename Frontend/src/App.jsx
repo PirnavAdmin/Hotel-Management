@@ -4856,15 +4856,17 @@ export function App() {
           (posSession.role === "pos" || posSession.role === "admin") ? (
             <>
               {activeView === "tables" && (
-                <TableView
-                  tables={tables}
-                  loading={sharedRecordLoad.tables === "loading"}
-                  loadError={sharedRecordLoad.tableError}
-                  onSelectTable={handleSelectTable}
-                  onUpdateTable={handleUpdateTable}
-                  tableLocks={tableLocks}
-                  currentSession={posSession}
-                />
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", width: "100%" }}>
+                  <TableView
+                    tables={tables}
+                    loading={sharedRecordLoad.tables === "loading"}
+                    loadError={sharedRecordLoad.tableError}
+                    onSelectTable={handleSelectTable}
+                    onUpdateTable={handleUpdateTable}
+                    tableLocks={tableLocks}
+                    currentSession={posSession}
+                  />
+                </div>
               )}
               {activeView === "takeaway" && (
                 <TakeawayView
