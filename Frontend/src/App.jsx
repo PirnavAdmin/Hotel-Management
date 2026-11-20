@@ -650,7 +650,6 @@ export function App() {
       if (active) {
         setRestaurantSettings(merged);
         window.dispatchEvent(new Event("restaurant-settings-updated"));
-        window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: merged }));
       }
     };
     const loadInitialSettings = async () => {
