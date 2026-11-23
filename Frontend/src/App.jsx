@@ -684,30 +684,38 @@ export function App() {
       const serverName = cleanServer.restaurantName || cleanServer.name || "";
       const serverTagline = cleanServer.tagline;
 
-      // Server data is authoritative for restaurant branding and payment QRs
+      const serverTime = cleanServer.updatedAt ? new Date(cleanServer.updatedAt).getTime() : 0;
+      const localTime = local.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+      const isLocalNewer = local.isUserConfigured && localTime > 0 && localTime >= serverTime;
+
+      // If local settings have more recent user changes, preserve them; otherwise accept server updates
       const resolvedLogo =
-        serverLogo ||
-        local.logo ||
-        local.restaurantLogo ||
-        DEFAULT_RESTAURANT_LOGO;
+        isLocalNewer && (local.logo !== undefined || local.restaurantLogo !== undefined)
+          ? (local.logo || local.restaurantLogo || "")
+          : (serverLogo || local.logo || local.restaurantLogo || DEFAULT_RESTAURANT_LOGO);
+
       const merged = {
         ...local,
         ...cleanServer,
         restaurantName:
-          serverName && !/bhanu|avsr/i.test(serverName)
-            ? serverName
-            : local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName)
+          isLocalNewer && local.restaurantName
             ? local.restaurantName
-            : "The Rustic Spin",
+            : (serverName && !/bhanu|avsr/i.test(serverName)
+                ? serverName
+                : local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName)
+                ? local.restaurantName
+                : "The Rustic Spin"),
         tagline:
-          serverTagline !== undefined && serverTagline !== ""
-            ? serverTagline
-            : local.tagline && !/bhanu/i.test(local.tagline)
+          isLocalNewer && local.tagline !== undefined
             ? local.tagline
-            : "Restaurant Management and Fine Dining",
+            : (serverTagline !== undefined && serverTagline !== ""
+                ? serverTagline
+                : local.tagline && !/bhanu/i.test(local.tagline)
+                ? local.tagline
+                : "Restaurant Management and Fine Dining"),
         logo: resolvedLogo,
         restaurantLogo: resolvedLogo,
-        logoBg: cleanServer.logoBg || local.logoBg || "",
+        logoBg: isLocalNewer && local.logoBg !== undefined ? local.logoBg : (cleanServer.logoBg || local.logoBg || ""),
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };

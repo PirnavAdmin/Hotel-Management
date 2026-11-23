@@ -1382,7 +1382,7 @@ export function AdminPortal({
   }, [parentRestaurantSettings]);
 
   const handleSaveRestaurantSettings = async (settings) => {
-    const resolvedLogo = settings.logo || settings.restaurantLogo || "/restaurant-logo.png";
+    const resolvedLogo = settings.logo !== undefined ? settings.logo : (settings.restaurantLogo || "");
     const stampedSettings = {
       ...settings,
       restaurantName: settings.restaurantName || "The Rustic Spin",
@@ -1397,14 +1397,21 @@ export function AdminPortal({
       isUserConfigured: true,
     };
 
+    let saveSuccess = true;
+    let saveError = null;
+
     // 1. Save directly to dedicated REST endpoint
     try {
       const result = await apiUpdateRestaurantSettings(stampedSettings);
       if (!result?.success) {
         console.warn("Direct restaurant-settings API update warning:", result?.error);
+        saveSuccess = false;
+        saveError = result?.error;
       }
     } catch (restErr) {
       console.warn("Direct restaurant-settings API update warning:", restErr);
+      saveSuccess = false;
+      saveError = restErr?.message || "Failed to reach server";
     }
 
     // 2. Broadcast via /api/sync
@@ -1436,6 +1443,7 @@ export function AdminPortal({
     if (typeof onUpdateRestaurantSettings === "function") {
       onUpdateRestaurantSettings(stampedSettings);
     }
+    return { success: saveSuccess, error: saveError, settings: stampedSettings };
   };
 
   const themes = [
