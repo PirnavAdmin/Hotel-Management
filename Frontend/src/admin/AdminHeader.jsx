@@ -29,6 +29,7 @@ export function AdminHeader({
   const [activeToast, setActiveToast] = useState(null);
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const notifRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   // Keep dropdown securely positioned in front of viewport and within visible screen bounds
   useEffect(() => {
@@ -119,7 +120,12 @@ export function AdminHeader({
 
     // Click outside to close notification panel
     const handleClickOutside = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
+      if (
+        notifRef.current &&
+        !notifRef.current.contains(e.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
         setIsNotifOpen(false);
       }
     };
@@ -637,6 +643,8 @@ export function AdminHeader({
           {/* Notifications Dropdown Panel - Portaled to document.body to guarantee 100% topmost layer */}
           {isNotifOpen && typeof document !== "undefined" && createPortal(
             <div
+              ref={dropdownRef}
+              onMouseDown={(e) => e.stopPropagation()}
               style={{
                 position: "fixed",
                 top: dropdownCoords ? `${dropdownCoords.top}px` : "76px",
