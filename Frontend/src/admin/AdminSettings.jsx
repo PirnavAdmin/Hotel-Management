@@ -669,8 +669,7 @@ export function AdminSettings({
     }
 
     // 3. Existing restaurant settings save (one call, same handler).
-    const restaurantSettingsChanged = JSON.stringify(settings) !== JSON.stringify(lastSavedSettings);
-    if (onSaveSettings && restaurantSettingsChanged) {
+    if (onSaveSettings) {
       try {
         const syncRes = await onSaveSettings(settingsToSave);
         if (syncRes && syncRes.success === false) {

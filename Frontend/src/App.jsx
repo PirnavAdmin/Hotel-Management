@@ -5078,7 +5078,7 @@ export function App() {
         {isLandingRoute && (
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
-            restaurantLogo={restaurantSettings.logo || ""}
+            restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
             menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
             menuLoading={sharedRecordLoad.menu === "loading"}
             menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
