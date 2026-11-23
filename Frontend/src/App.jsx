@@ -1567,9 +1567,36 @@ export function App() {
 
   const handleClearNotifications = () => {
     setKitchenNotifications([]);
+    setActiveKitchenAlert(null);
     try {
-      localStorage.removeItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS);
+      localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, "[]");
+      localStorage.removeItem(STORAGE_KEY_LATEST_ALERT);
     } catch {}
+    window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-cleared"));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    setKitchenNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-read-all"));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleMarkNotificationRead = (notifId) => {
+    setKitchenNotifications((prev) => {
+      const updated = prev.map((n) => String(n.id) === String(notifId) ? { ...n, read: true } : n);
+      try {
+        localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    window.dispatchEvent(new Event("storage"));
   };
 
   // BroadcastChannel helper for cross-tab instantaneous sync
@@ -2253,6 +2280,11 @@ export function App() {
         } catch {}
       } else if (e.key === STORAGE_KEY_THEME) {
         setTheme(normalizeTheme(e.newValue));
+      } else if (e.key === STORAGE_KEY_KITCHEN_NOTIFICATIONS) {
+        try {
+          const parsed = e.newValue ? JSON.parse(e.newValue) : [];
+          setKitchenNotifications(Array.isArray(parsed) ? parsed.map(sanitizeKitchenAlert) : []);
+        } catch {}
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
           const alert = sanitizeKitchenAlert(JSON.parse(e.newValue));
@@ -2372,10 +2404,31 @@ export function App() {
           }
         }
       } catch {}
+
+      try {
+        const rawNotifs = localStorage.getItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS);
+        if (rawNotifs) {
+          const parsed = JSON.parse(rawNotifs);
+          if (Array.isArray(parsed)) {
+            setKitchenNotifications(parsed.map(sanitizeKitchenAlert));
+          }
+        }
+      } catch {}
+    };
+
+    const handleNotifsCleared = () => {
+      setKitchenNotifications([]);
+      setActiveKitchenAlert(null);
+    };
+
+    const handleNotifsReadAll = () => {
+      setKitchenNotifications((prev) => (Array.isArray(prev) ? prev.map((n) => ({ ...n, read: true })) : []));
     };
 
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("focus", syncAllFromStorage);
+    window.addEventListener("avsr-kitchen-notifications-cleared", handleNotifsCleared);
+    window.addEventListener("avsr-kitchen-notifications-read-all", handleNotifsReadAll);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") syncAllFromStorage();
     };
@@ -2384,6 +2437,8 @@ export function App() {
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("focus", syncAllFromStorage);
+      window.removeEventListener("avsr-kitchen-notifications-cleared", handleNotifsCleared);
+      window.removeEventListener("avsr-kitchen-notifications-read-all", handleNotifsReadAll);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
       unsubscribeSse();
@@ -4972,6 +5027,8 @@ export function App() {
             onLogout={handlePosLogout}
             kitchenNotifications={kitchenNotifications}
             onClearNotifications={handleClearNotifications}
+            onMarkAllRead={handleMarkAllNotificationsRead}
+            onMarkNotificationRead={handleMarkNotificationRead}
             onSelectTable={(tblId) => {
               setSelectedTableId(tblId);
               setActiveView("order");
@@ -5006,6 +5063,8 @@ export function App() {
             onAdminLogin={handleHotelLogin}
             kitchenNotifications={kitchenNotifications}
             onClearNotifications={handleClearNotifications}
+            onMarkAllRead={handleMarkAllNotificationsRead}
+            onMarkNotificationRead={handleMarkNotificationRead}
           />
         )}
 

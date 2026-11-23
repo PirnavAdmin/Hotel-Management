@@ -1,7 +1,7 @@
 import { ThemeToggle } from '../common/ThemeToggle';
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Calendar, Clock, Utensils, Wine, Bell, ChefHat, CheckCircle2, Trash2, Menu, X } from "lucide-react";
+import { Calendar, Clock, Utensils, Wine, Bell, ChefHat, CheckCircle2, Trash2, CheckCheck, Menu, X } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
 
 export function AdminHeader({
@@ -65,12 +65,25 @@ export function AdminHeader({
 
   // Listen to kitchen notifications
   useEffect(() => {
+    const syncNotifsFromStorage = () => {
+      try {
+        const saved = localStorage.getItem("avsr_kitchen_notifications");
+        const parsed = saved ? JSON.parse(saved) : [];
+        if (Array.isArray(parsed)) setNotifications(parsed);
+      } catch {
+        setNotifications([]);
+      }
+    };
+
     const handleStorage = (e) => {
-      if (e.key === "avsr_kitchen_notifications" && e.newValue) {
+      if (e.key === "avsr_kitchen_notifications") {
         try {
-          const parsed = JSON.parse(e.newValue);
+          const parsed = e.newValue ? JSON.parse(e.newValue) : [];
           if (Array.isArray(parsed)) setNotifications(parsed);
-        } catch {}
+          else setNotifications([]);
+        } catch {
+          setNotifications([]);
+        }
       } else if (e.key === "avsr_latest_kitchen_alert" && e.newValue) {
         try {
           const alertObj = JSON.parse(e.newValue);
@@ -89,8 +102,20 @@ export function AdminHeader({
       }
     };
 
+    const handleCleared = () => {
+      setNotifications([]);
+      setActiveToast(null);
+    };
+
+    const handleReadAll = () => {
+      setNotifications((prev) => (Array.isArray(prev) ? prev.map((n) => ({ ...n, read: true })) : []));
+    };
+
     window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", syncNotifsFromStorage);
     window.addEventListener("avsr-kitchen-alert", handleCustomAlert);
+    window.addEventListener("avsr-kitchen-notifications-cleared", handleCleared);
+    window.addEventListener("avsr-kitchen-notifications-read-all", handleReadAll);
 
     // Click outside to close notification panel
     const handleClickOutside = (e) => {
@@ -102,16 +127,48 @@ export function AdminHeader({
 
     return () => {
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", syncNotifsFromStorage);
       window.removeEventListener("avsr-kitchen-alert", handleCustomAlert);
+      window.removeEventListener("avsr-kitchen-notifications-cleared", handleCleared);
+      window.removeEventListener("avsr-kitchen-notifications-read-all", handleReadAll);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
   const handleClearAll = () => {
     setNotifications([]);
+    setActiveToast(null);
     try {
-      localStorage.removeItem("avsr_kitchen_notifications");
+      localStorage.setItem("avsr_kitchen_notifications", "[]");
+      localStorage.removeItem("avsr_latest_kitchen_alert");
     } catch {}
+    window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-cleared"));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => {
+      const updated = (Array.isArray(prev) ? prev : []).map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem("avsr_kitchen_notifications", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-read-all"));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleMarkSingleRead = (notifId) => {
+    setNotifications((prev) => {
+      const updated = (Array.isArray(prev) ? prev : []).map((n) =>
+        String(n.id) === String(notifId) ? { ...n, read: true } : n
+      );
+      try {
+        localStorage.setItem("avsr_kitchen_notifications", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    window.dispatchEvent(new Event("storage"));
   };
 
   useEffect(() => {
@@ -135,6 +192,9 @@ export function AdminHeader({
   const hour = currentTime.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const userName = String(currentSession?.name || currentSession?.username || "Admin").trim();
+
+  const unreadNotifications = (Array.isArray(notifications) ? notifications : []).filter((n) => !n.read);
+  const unreadCount = unreadNotifications.length;
 
   return (
     <header
@@ -543,13 +603,13 @@ export function AdminHeader({
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: notifications.length > 0 ? "var(--accent-amber)" : "var(--text-muted)",
+              color: unreadCount > 0 ? "var(--accent-amber)" : "var(--text-muted)",
               transition: "all 0.15s ease",
             }}
             title="Kitchen KOT Notifications"
           >
             <Bell size={17} />
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span
                 style={{
                   position: "absolute",
@@ -569,7 +629,7 @@ export function AdminHeader({
                   boxShadow: "0 0 6px rgba(239, 68, 68, 0.6)",
                 }}
               >
-                {notifications.length}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
@@ -609,27 +669,67 @@ export function AdminHeader({
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <ChefHat size={15} color="#f59e0b" />
                   <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-main)" }}>
-                    Kitchen Live Alerts ({notifications.length})
+                    Kitchen Live Alerts
                   </span>
+                  {unreadCount > 0 && (
+                    <span
+                      style={{
+                        background: "rgba(245, 158, 11, 0.2)",
+                        color: "var(--accent-amber-light)",
+                        border: "1px solid rgba(245, 158, 11, 0.4)",
+                        padding: "1px 6px",
+                        borderRadius: "10px",
+                        fontSize: "0.66rem",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {unreadCount} new
+                    </span>
+                  )}
                 </div>
-                {notifications.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleClearAll}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "var(--text-dim)",
-                      fontSize: "0.72rem",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "3px",
-                    }}
-                  >
-                    <Trash2 size={12} /> Clear
-                  </button>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAllRead}
+                      style={{
+                        background: "rgba(16, 185, 129, 0.12)",
+                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                        color: "var(--success)",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        padding: "2px 7px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px",
+                      }}
+                      title="Mark all notifications as read"
+                    >
+                      <CheckCheck size={12} /> Mark Read
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--text-dim)",
+                        fontSize: "0.72rem",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px",
+                      }}
+                      title="Clear all alerts"
+                    >
+                      <Trash2 size={12} /> Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div style={{ overflowY: "auto", flex: 1, maxHeight: "340px", padding: "0.5rem" }}>
@@ -638,33 +738,54 @@ export function AdminHeader({
                     No kitchen alerts right now. When chef accepts or prepares dishes, live updates appear here.
                   </div>
                 ) : (
-                  notifications.map((n, idx) => (
-                    <div
-                      key={n.id || idx}
-                      style={{
-                        padding: "0.65rem 0.75rem",
-                        borderRadius: "8px",
-                        background: idx === 0 ? "rgba(245, 158, 11, 0.08)" : "var(--bg-tertiary)",
-                        border: "1px solid var(--border-subtle)",
-                        marginBottom: "0.45rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "2px",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-main)" }}>
-                          {n.title || n.tableName || "Kitchen Alert"}
-                        </span>
-                        <span style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>
-                          {n.timestamp || "Just now"}
-                        </span>
+                  notifications.map((n, idx) => {
+                    const isUnread = !n.read;
+                    return (
+                      <div
+                        key={n.id || idx}
+                        onClick={() => handleMarkSingleRead(n.id)}
+                        style={{
+                          padding: "0.65rem 0.75rem",
+                          borderRadius: "8px",
+                          background: isUnread ? "rgba(245, 158, 11, 0.08)" : "var(--bg-tertiary)",
+                          border: isUnread ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid var(--border-subtle)",
+                          marginBottom: "0.45rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                          cursor: "pointer",
+                          opacity: isUnread ? 1 : 0.65,
+                          transition: "all 0.15s ease",
+                        }}
+                        title={isUnread ? "Click to mark as read" : undefined}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                            {isUnread && (
+                              <span
+                                style={{
+                                  width: "6px",
+                                  height: "6px",
+                                  borderRadius: "50%",
+                                  background: "#f59e0b",
+                                  display: "inline-block",
+                                }}
+                              />
+                            )}
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-main)" }}>
+                              {n.title || n.tableName || "Kitchen Alert"}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>
+                            {n.timestamp || "Just now"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", lineHeight: 1.3 }}>
+                          {n.message}
+                        </div>
                       </div>
-                      <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", lineHeight: 1.3 }}>
-                        {n.message}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>,

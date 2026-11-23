@@ -21,6 +21,7 @@ import {
   Sun,
   Moon,
   Trash2,
+  CheckCheck,
   ChevronRight,
   Sparkles,
 } from "lucide-react";
@@ -43,6 +44,8 @@ export function Header({
   onLogout = null,
   kitchenNotifications = [],
   onClearNotifications = null,
+  onMarkAllRead = null,
+  onMarkNotificationRead = null,
   onSelectTable = null,
   restaurantName = "Restaurant",
   restaurantLogo = "",
@@ -540,36 +543,36 @@ export function Header({
             ) : (
               <Bell size={16} />
             )}
-            {Array.isArray(kitchenNotifications) && kitchenNotifications.length > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-4px",
-                  right: "-4px",
-                  background: (Array.isArray(kitchenNotifications)
-                    ? kitchenNotifications
-                    : []
-                  ).some((n) => n.type === "cooking_completed")
-                    ? "#10b981"
-                    : "#f59e0b",
-                  color: "#000000",
-                  fontSize: "0.62rem",
-                  fontWeight: 900,
-                  width: "17px",
-                  height: "17px",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 0 8px rgba(0,0,0,0.5)",
-                  border: "1.5px solid var(--bg-primary)",
-                }}
-              >
-                {kitchenNotifications.length > 9
-                  ? "9+"
-                  : kitchenNotifications.length}
-              </span>
-            )}
+            {(() => {
+              const safeList = Array.isArray(kitchenNotifications) ? kitchenNotifications : [];
+              const unreadList = safeList.filter((n) => !n.read);
+              const unreadCount = unreadList.length;
+              if (unreadCount === 0) return null;
+              const hasCompleted = unreadList.some((n) => n.type === "cooking_completed");
+              return (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-4px",
+                    right: "-4px",
+                    background: hasCompleted ? "#10b981" : "#f59e0b",
+                    color: "#000000",
+                    fontSize: "0.62rem",
+                    fontWeight: 900,
+                    width: "17px",
+                    height: "17px",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 0 8px rgba(0,0,0,0.5)",
+                    border: "1.5px solid var(--bg-primary)",
+                  }}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              );
+            })()}
           </button>
 
           {/* Notifications Dropdown Panel - Portaled to document.body to guarantee 100% topmost layer */}
@@ -622,45 +625,79 @@ export function Header({
                   >
                     Kitchen Status Updates
                   </span>
-                  {kitchenNotifications.length > 0 && (
-                    <span
-                      style={{
-                        background: "rgba(245, 158, 11, 0.2)",
-                        color: "var(--accent-amber-light)",
-                        border: "1px solid rgba(245, 158, 11, 0.4)",
-                        padding: "1px 6px",
-                        borderRadius: "10px",
-                        fontSize: "0.66rem",
-                        fontWeight: 800,
+                  {(() => {
+                    const safeList = Array.isArray(kitchenNotifications) ? kitchenNotifications : [];
+                    const unreadCount = safeList.filter((n) => !n.read).length;
+                    return unreadCount > 0 ? (
+                      <span
+                        style={{
+                          background: "rgba(245, 158, 11, 0.2)",
+                          color: "var(--accent-amber-light)",
+                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          padding: "1px 6px",
+                          borderRadius: "10px",
+                          fontSize: "0.66rem",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {unreadCount} new
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  {Array.isArray(kitchenNotifications) && kitchenNotifications.some((n) => !n.read) && onMarkAllRead && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkAllRead();
                       }}
+                      style={{
+                        background: "rgba(16, 185, 129, 0.12)",
+                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                        color: "var(--success)",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                      title="Mark all notifications as read"
                     >
-                      {kitchenNotifications.length}
-                    </span>
+                      <CheckCheck size={12} /> Mark All Read
+                    </button>
+                  )}
+                  {Array.isArray(kitchenNotifications) && kitchenNotifications.length > 0 && onClearNotifications && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearNotifications();
+                        setShowNotifMenu(false);
+                      }}
+                      style={{
+                        background: "rgba(239, 68, 68, 0.12)",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        color: "var(--danger)",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                      title="Clear all notifications"
+                    >
+                      <Trash2 size={12} /> Clear All
+                    </button>
                   )}
                 </div>
-                {kitchenNotifications.length > 0 && onClearNotifications && (
-                  <button
-                    onClick={() => {
-                      onClearNotifications();
-                      setShowNotifMenu(false);
-                    }}
-                    style={{
-                      background: "rgba(239, 68, 68, 0.12)",
-                      border: "1px solid rgba(239, 68, 68, 0.3)",
-                      color: "var(--danger)",
-                      fontSize: "0.72rem",
-                      fontWeight: 800,
-                      padding: "3px 8px",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    <Trash2 size={12} /> Clear All
-                  </button>
-                )}
               </div>
 
               {/* Notifications List */}
@@ -692,6 +729,9 @@ export function Header({
                       <div
                         key={n.id}
                         onClick={() => {
+                          if (typeof onMarkNotificationRead === "function") {
+                            onMarkNotificationRead(n.id);
+                          }
                           if (onSelectTable && n.tableId) {
                             onSelectTable(n.tableId);
                             setShowNotifMenu(false);
