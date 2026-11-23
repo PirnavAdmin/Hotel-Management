@@ -345,6 +345,10 @@ public class LegacyApiRewriteMiddleware
         {
             path = Regex.Replace(path, @"^/api/restaurant-settings", "/api/v1/restaurant-settings", RegexOptions.IgnoreCase);
         }
+        if (Regex.IsMatch(path, @"^/api/settings(/.*)?$", RegexOptions.IgnoreCase))
+        {
+            path = Regex.Replace(path, @"^/api/settings", "/api/v1/settings", RegexOptions.IgnoreCase);
+        }
         if (Regex.IsMatch(path, @"^/api/suppliers(/.*)?$", RegexOptions.IgnoreCase))
         {
             path = Regex.Replace(path, @"^/api/suppliers", "/api/v1/suppliers", RegexOptions.IgnoreCase);

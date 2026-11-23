@@ -6,6 +6,9 @@ namespace HMS.DTOs;
 
 public class RestaurantSettingsDto
 {
+    [JsonPropertyName("restaurantId")]
+    public string? RestaurantId { get; set; } = "restaurant_1";
+
     [JsonPropertyName("restaurantName")]
     public string RestaurantName { get; set; } = "AVSR FOOD COURT";
 
@@ -93,6 +96,15 @@ public class RestaurantSettingsDto
         get => DisplayTheme;
         set { if (!string.IsNullOrWhiteSpace(value)) DisplayTheme = value; }
     }
+
+    [JsonPropertyName("accentColor")]
+    public string? AccentColor { get; set; }
+
+    [JsonPropertyName("updatedBy")]
+    public string? UpdatedBy { get; set; }
+
+    [JsonPropertyName("createdAt")]
+    public DateTime? CreatedAt { get; set; }
 
     [JsonPropertyName("updatedAt")]
     public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -32,8 +32,15 @@ public class PosHub : Hub
         string? roleName = user?.FindFirstValue("roleName")
             ?? user?.FindFirstValue(ClaimTypes.Role);
 
+        string? restaurantClaim = user?.FindFirstValue("restaurantId") 
+                               ?? user?.FindFirstValue("restaurant_id");
+
         string? branchClaim = user?.FindFirstValue("branchId");
         long.TryParse(branchClaim, out long branchId);
+        if (branchId <= 0 && !string.IsNullOrWhiteSpace(restaurantClaim))
+        {
+            long.TryParse(restaurantClaim.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase), out branchId);
+        }
         if (branchId <= 0)
         {
             // Default to restaurant 1 if not specified
@@ -87,6 +94,14 @@ public class PosHub : Hub
 
         // Join restaurant-specific group
         await Groups.AddToGroupAsync(connectionId, $"restaurant_{branchId}");
+
+        if (!string.IsNullOrWhiteSpace(restaurantClaim))
+        {
+            var restGroup = restaurantClaim.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase)
+                ? restaurantClaim.ToLowerInvariant()
+                : $"restaurant_{restaurantClaim.ToLowerInvariant()}";
+            await Groups.AddToGroupAsync(connectionId, restGroup);
+        }
 
         // Auto-assign station based on authenticated role
         var normalizedRole = roleName?.Trim().ToLowerInvariant();
@@ -193,6 +208,35 @@ public class PosHub : Hub
             var groupName = $"restaurant_{branchId}";
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
             await Clients.Caller.SendAsync("RestaurantLeft", new { branchId, timestamp = DateTime.UtcNow });
+        }
+    }
+
+    public async Task<object> JoinRestaurantGroup(string restaurantId)
+    {
+        if (string.IsNullOrWhiteSpace(restaurantId))
+        {
+            return new { success = false, message = "Invalid restaurant ID." };
+        }
+
+        var groupName = restaurantId.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase)
+            ? restaurantId.ToLowerInvariant()
+            : $"restaurant_{restaurantId.ToLowerInvariant()}";
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        _logger.LogInformation("Client {ConnectionId} joined restaurant group: {GroupName}", Context.ConnectionId, groupName);
+        await Clients.Caller.SendAsync("RestaurantJoined", new { restaurantId, groupName, timestamp = DateTime.UtcNow });
+        return new { success = true, restaurantId, groupName, message = $"Successfully joined restaurant group {groupName}." };
+    }
+
+    public async Task LeaveRestaurantGroup(string restaurantId)
+    {
+        if (!string.IsNullOrWhiteSpace(restaurantId))
+        {
+            var groupName = restaurantId.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase)
+                ? restaurantId.ToLowerInvariant()
+                : $"restaurant_{restaurantId.ToLowerInvariant()}";
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+            await Clients.Caller.SendAsync("RestaurantLeft", new { restaurantId, groupName, timestamp = DateTime.UtcNow });
         }
     }
 
