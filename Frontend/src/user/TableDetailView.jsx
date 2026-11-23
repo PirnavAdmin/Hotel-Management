@@ -2148,7 +2148,7 @@ export function TableDetailView({
                   padding: "1px 5px",
                   borderRadius: "999px",
                   background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
-                  color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
+                  color: isBarMenuItem(item) ? "var(--info)" : "var(--accent-amber-light)",
                   border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
                   whiteSpace: "nowrap",
                 }}
@@ -2210,7 +2210,7 @@ export function TableDetailView({
                     padding: "1px 6px",
                     borderRadius: "4px",
                     background: "rgba(245, 158, 11, 0.15)",
-                    color: "#f59e0b",
+                    color: "var(--accent-amber-light)",
                     border: "1px solid rgba(245, 158, 11, 0.35)",
                   }}
                 >
@@ -4302,9 +4302,11 @@ export function TableDetailView({
             {/* Ordered Items List (Stage 1: Current Selection vs Stage 2: Kitchen Confirmed) */}
             <div
               style={{
-                flex: "1 1 auto",
-                minHeight: "120px",
+                flex: "1 1 0%",
+                minHeight: 0,
+                maxHeight: "none",
                 overflowY: "auto",
+                overflowX: "hidden",
                 padding: "0.45rem 0.65rem",
                 display: "flex",
                 flexDirection: "column",
@@ -4821,19 +4823,20 @@ export function TableDetailView({
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <Receipt size={18} color="#ffffff" />
             <div>
-              <div style={{ fontWeight: 800, fontSize: "0.88rem" }}>
+              <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#ffffff" }}>
                 {safeItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} Items
                 • {formatCurrency(grandTotal)}
               </div>
-              <div style={{ fontSize: "0.68rem", opacity: 0.9 }}>
+              <div style={{ fontSize: "0.68rem", opacity: 0.95, color: "#ffffff" }}>
                 {table.name} • Tap to view bill & actions
               </div>
             </div>
           </div>
           <div
+            className="pos-mobile-cart-action"
             style={{
-              background: "var(--bg-card)",
-              color: "#000000",
+              background: "#ffffff",
+              color: "#0f172a",
               padding: "0.4rem 0.8rem",
               borderRadius: "8px",
               fontSize: "0.78rem",
@@ -4841,10 +4844,11 @@ export function TableDetailView({
               display: "flex",
               alignItems: "center",
               gap: "0.3rem",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
             }}
           >
-            <span>View Bill</span>
-            <span>›</span>
+            <span style={{ color: "#0f172a", fontWeight: 800 }}>View Bill</span>
+            <span style={{ color: "#0f172a", fontWeight: 800 }}>›</span>
           </div>
         </div>
       )}

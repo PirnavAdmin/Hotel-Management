@@ -5257,7 +5257,8 @@ export function App() {
                 />
               )}
               {activeView === "order" && (
-                <TableDetailView
+                <div style={{ flex: 1, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", width: "100%" }}>
+                  <TableDetailView
                   table={currentTable}
                   allTables={tables}
                   menuItems={menuItems}
@@ -5323,7 +5324,8 @@ export function App() {
                   currentTheme={theme}
                   onChangeTheme={setTheme}
                 />
-              )}
+              </div>
+            )}
             </>
           ) : (
             <LoginPage
