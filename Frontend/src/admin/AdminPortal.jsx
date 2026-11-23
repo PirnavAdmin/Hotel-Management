@@ -711,7 +711,7 @@ export function AdminPortal({
   onDeleteMenuItem,
   onSetMenuAvailability,
   onSetMenuSpecial,
-  tables,
+  tables: propTables,
   takeawayOrders = [],
   onAddTable,
   onUpdateTable,
@@ -742,6 +742,23 @@ export function AdminPortal({
   onUpdateRestaurantSettings = null,
   showToast: propShowToast = null,
 }) {
+  const [tables, setTables] = useState(() => (Array.isArray(propTables) ? propTables : []));
+  useEffect(() => {
+    if (Array.isArray(propTables)) {
+      setTables(propTables);
+    }
+  }, [propTables]);
+
+  useEffect(() => {
+    const handleTablesUpdated = (e) => {
+      if (Array.isArray(e.detail) && e.detail.length > 0) {
+        setTables(e.detail);
+      }
+    };
+    window.addEventListener("avsr-tables-updated", handleTablesUpdated);
+    return () => window.removeEventListener("avsr-tables-updated", handleTablesUpdated);
+  }, []);
+
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const isLight = currentTheme === "light-bistro";
@@ -1819,7 +1836,19 @@ export function AdminPortal({
 
   useEffect(() => {
     if (seatingStructureTable) {
-      const match = (tables || []).find((t) => String(t.id) === String(seatingStructureTable.id));
+      const isSame = (a, b) => {
+        if (!a || !b) return false;
+        if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+        if (a.backendTableId != null && b.backendTableId != null && String(a.backendTableId) === String(b.backendTableId)) return true;
+        if (a.backendTableId != null && b.id != null && String(a.backendTableId) === String(b.id)) return true;
+        if (a.id != null && b.backendTableId != null && String(a.id) === String(b.backendTableId)) return true;
+        if (a.tableId != null && b.tableId != null && String(a.tableId) === String(b.tableId)) return true;
+        const nameA = String(a.name || a.tableName || a.tableNumber || '').trim().toLowerCase();
+        const nameB = String(b.name || b.tableName || b.tableNumber || '').trim().toLowerCase();
+        if (nameA && nameB && nameA === nameB) return true;
+        return false;
+      };
+      const match = (tables || []).find((t) => isSame(t, seatingStructureTable));
       if (match && (
         match.capacity !== seatingStructureTable.capacity ||
         match.guests !== seatingStructureTable.guests ||
@@ -8642,6 +8671,21 @@ export function AdminPortal({
         isOpen={Boolean(seatingStructureTable)}
         onClose={() => setSeatingStructureTable(null)}
         onUpdateTable={(updatedTable) => {
+          setTables((prev) => {
+            const isSame = (a, b) => {
+              if (!a || !b) return false;
+              if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+              if (a.backendTableId != null && b.backendTableId != null && String(a.backendTableId) === String(b.backendTableId)) return true;
+              if (a.backendTableId != null && b.id != null && String(a.backendTableId) === String(b.id)) return true;
+              if (a.id != null && b.backendTableId != null && String(a.id) === String(b.backendTableId)) return true;
+              if (a.tableId != null && b.tableId != null && String(a.tableId) === String(b.tableId)) return true;
+              const nameA = String(a.name || a.tableName || a.tableNumber || '').trim().toLowerCase();
+              const nameB = String(b.name || b.tableName || b.tableNumber || '').trim().toLowerCase();
+              if (nameA && nameB && nameA === nameB) return true;
+              return false;
+            };
+            return prev.map((t) => isSame(t, updatedTable) ? { ...t, ...updatedTable } : t);
+          });
           if (onUpdateTable) {
             onUpdateTable(updatedTable);
           }
