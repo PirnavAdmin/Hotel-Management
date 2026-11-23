@@ -1269,11 +1269,22 @@ export function App() {
   const [posSession, setPosSession] = useState(null);
   const [kotSession, setKotSession] = useState(null);
   const [adminSession, setAdminSession] = useState(null);
-  const customerRoutes = ["/", "/profile", "/my-orders", "/my-reservations", "/menu", "/reserve", "/takeaway"];
-  const isLandingRoute =
-    !isStaffLoginRoute &&
-    (customerRoutes.includes(location.pathname) || (!isKotRoute && !isAdminRoute)) &&
-    !posSession;
+  // Dedicated customer digital menu routes (QR Code scan routes).
+  // The root path ("/") is the official Staff / POS landing and login portal.
+  // The digital menu is strictly reserved for customers scanning table QR codes (/menu).
+  const customerMenuRoutes = [
+    "/menu",
+    "/digital-menu",
+    "/profile",
+    "/my-orders",
+    "/my-reservations",
+    "/reserve",
+    "/takeaway-menu",
+  ];
+  const isCustomerScan =
+    customerMenuRoutes.includes(location.pathname) ||
+    Boolean(location.search && (location.search.includes("table=") || location.search.includes("qr=")));
+  const isLandingRoute = isCustomerScan && !posSession;
   const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute && !isStaffLoginRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
@@ -4979,7 +4990,7 @@ export function App() {
             onLoginSuccess={handleGlobalLogin}
             restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
             restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
-            onBackToLanding={() => navigate("/")}
+            onBackToLanding={null}
           />
         )}
 
@@ -5032,7 +5043,7 @@ export function App() {
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
-              onBackToLanding={() => navigate("/")}
+              onBackToLanding={null}
             />
           ))}
 
@@ -5086,7 +5097,7 @@ export function App() {
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
-              onBackToLanding={() => navigate("/")}
+              onBackToLanding={null}
             />
           ))}
 
@@ -5235,7 +5246,7 @@ export function App() {
               onLoginSuccess={handleGlobalLogin}
               restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
               restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
-              onBackToLanding={() => navigate("/")}
+              onBackToLanding={null}
             />
           ))}
       </main>
