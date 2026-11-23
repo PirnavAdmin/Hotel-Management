@@ -114,10 +114,16 @@ export function Header({
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const notifRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
+      if (
+        notifRef.current &&
+        !notifRef.current.contains(e.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
         setShowNotifMenu(false);
       }
     };
@@ -126,6 +132,45 @@ export function Header({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNotifMenu]);
+
+  const handleMarkAllReadLocal = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (typeof onMarkAllRead === "function") {
+      onMarkAllRead();
+    }
+    try {
+      const raw = localStorage.getItem("avsr_kitchen_notifications");
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const updated = list.map((n) => ({ ...n, read: true }));
+          localStorage.setItem("avsr_kitchen_notifications", JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-read-all"));
+          window.dispatchEvent(new Event("storage"));
+        }
+      }
+    } catch {}
+  };
+
+  const handleClearNotificationsLocal = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (typeof onClearNotifications === "function") {
+      onClearNotifications();
+    }
+    try {
+      localStorage.setItem("avsr_kitchen_notifications", "[]");
+      localStorage.removeItem("avsr_latest_kitchen_alert");
+      window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-cleared"));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+    setShowNotifMenu(false);
+  };
 
   // Keep dropdown securely inside visible screen bounds at all times
   useEffect(() => {
@@ -571,6 +616,8 @@ export function Header({
           {/* Notifications Dropdown Panel - Portaled to document.body to guarantee 100% topmost layer */}
           {showNotifMenu && typeof document !== "undefined" && createPortal(
             <div
+              ref={dropdownRef}
+              onMouseDown={(e) => e.stopPropagation()}
               style={{
                 position: "fixed",
                 top: dropdownCoords ? `${dropdownCoords.top}px` : "70px",
@@ -639,13 +686,11 @@ export function Header({
                   })()}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  {Array.isArray(kitchenNotifications) && kitchenNotifications.some((n) => !n.read) && onMarkAllRead && (
+                  {Array.isArray(kitchenNotifications) && kitchenNotifications.some((n) => !n.read) && (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMarkAllRead();
-                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={handleMarkAllReadLocal}
                       style={{
                         background: "rgba(16, 185, 129, 0.12)",
                         border: "1px solid rgba(16, 185, 129, 0.35)",
@@ -664,14 +709,11 @@ export function Header({
                       <CheckCheck size={12} /> Mark All Read
                     </button>
                   )}
-                  {Array.isArray(kitchenNotifications) && kitchenNotifications.length > 0 && onClearNotifications && (
+                  {Array.isArray(kitchenNotifications) && kitchenNotifications.length > 0 && (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClearNotifications();
-                        setShowNotifMenu(false);
-                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={handleClearNotificationsLocal}
                       style={{
                         background: "rgba(239, 68, 68, 0.12)",
                         border: "1px solid rgba(239, 68, 68, 0.3)",
@@ -721,10 +763,22 @@ export function Header({
                     return (
                       <div
                         key={n.id}
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={() => {
                           if (typeof onMarkNotificationRead === "function") {
                             onMarkNotificationRead(n.id);
                           }
+                          try {
+                            const raw = localStorage.getItem("avsr_kitchen_notifications");
+                            if (raw) {
+                              const list = JSON.parse(raw);
+                              if (Array.isArray(list)) {
+                                const updated = list.map((item) => String(item.id) === String(n.id) ? { ...item, read: true } : item);
+                                localStorage.setItem("avsr_kitchen_notifications", JSON.stringify(updated));
+                                window.dispatchEvent(new Event("storage"));
+                              }
+                            }
+                          } catch {}
                           if (onSelectTable && n.tableId) {
                             onSelectTable(n.tableId);
                             setShowNotifMenu(false);

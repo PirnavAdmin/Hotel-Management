@@ -1896,20 +1896,6 @@ export function TableDetailView({
   const [tableStatusFilter, setTableStatusFilter] = useState("all"); // 'all' | 'vacant' | 'occupied' | 'billed'
   const [isMobileOrderSlipOpen, setIsMobileOrderSlipOpen] = useState(false);
   const [isSendingKot, setIsSendingKot] = useState(false);
-  // Order Presentation Mode: "sidebar" (Option 1: Spacious 2-stage sidebar) | "floating" (Option 2: Full menu + floating bottom bar)
-  const [orderSlipViewMode, setOrderSlipViewMode] = useState(() => {
-    try {
-      return localStorage.getItem("pos_order_slip_view_mode") || "sidebar";
-    } catch {
-      return "sidebar";
-    }
-  });
-  const handleToggleOrderSlipViewMode = (mode) => {
-    setOrderSlipViewMode(mode);
-    try {
-      localStorage.setItem("pos_order_slip_view_mode", mode);
-    } catch {}
-  };
   const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
 
   const handleTriggerSendKot = async () => {
@@ -2906,92 +2892,10 @@ export function TableDetailView({
         </div>
 
         {/* Right Table Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {/* Order Presentation Mode Switcher (Option 1: Spacious Sidebar vs Option 2: Full Menu + Floating Bar) */}
-          {safeItems.length > 0 && (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "8px",
-                padding: "2px",
-                gap: "2px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => handleToggleOrderSlipViewMode("sidebar")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  padding: "0.3rem 0.65rem",
-                  borderRadius: "6px",
-                  background: orderSlipViewMode === "sidebar" ? "var(--accent-amber)" : "transparent",
-                  color: orderSlipViewMode === "sidebar" ? "#000000" : "var(--text-muted)",
-                  border: "none",
-                  fontSize: "0.72rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                title="Option 1: Spacious 2-Stage Side Panel"
-              >
-                <span>📑</span>
-                <span>Side Panel</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleOrderSlipViewMode("floating")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  padding: "0.3rem 0.65rem",
-                  borderRadius: "6px",
-                  background: orderSlipViewMode === "floating" ? "var(--accent-amber)" : "transparent",
-                  color: orderSlipViewMode === "floating" ? "#000000" : "var(--text-muted)",
-                  border: "none",
-                  fontSize: "0.72rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                title="Option 2: Full-screen Menu with Floating Bottom Bar"
-              >
-                <span>🚀</span>
-                <span>Floating Bar</span>
-              </button>
-            </div>
-          )}
-
-          {/* Cart Icon in vacant place */}
-          {safeItems.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.35rem",
-                padding: "0.4rem 0.75rem",
-                borderRadius: "var(--radius-sm)",
-                background: "var(--accent-amber)",
-                color: "#000000",
-                fontSize: "0.78rem",
-                fontWeight: 800,
-              }}
-            >
-              <Receipt size={14} />
-              <span>{safeItems.reduce((s, i) => s + i.quantity, 0)} Items</span>
-            </div>
-          )}
-
-          {/* All Tables dropdown - kept on the far right.
-              Existing onSelectTable functionality is preserved. */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginLeft: "auto" }}>
+          {/* Quick Switch Table Dropdown */}
           <div
             style={{
-              marginLeft: "auto",
               position: "relative",
               flexShrink: 0,
             }}
@@ -3004,8 +2908,7 @@ export function TableDetailView({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "0.5rem",
-                minWidth: "132px",
-                padding: "0.5rem 0.8rem",
+                padding: "0.42rem 0.75rem",
                 borderRadius: "8px",
                 background: isTableDropdownOpen
                   ? "var(--accent-amber)"
@@ -3014,21 +2917,22 @@ export function TableDetailView({
                 border: isTableDropdownOpen
                   ? "1px solid var(--accent-amber)"
                   : "1px solid var(--border-subtle)",
-                fontSize: "0.8rem",
-                fontWeight: 800,
+                fontSize: "0.78rem",
+                fontWeight: 700,
                 cursor: "pointer",
                 boxShadow: isTableDropdownOpen
                   ? "0 4px 12px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
                   : "none",
               }}
+              title="Quickly switch to another table"
             >
-              <Filter
-                size={15}
+              <ArrowRightLeft
+                size={14}
                 color={isTableDropdownOpen ? "#000000" : "var(--accent-amber)"}
               />
-              <span>All Tables</span>
+              <span>Switch Table</span>
               <ChevronDown
-                size={15}
+                size={14}
                 style={{
                   transform: isTableDropdownOpen
                     ? "rotate(180deg)"
@@ -3524,34 +3428,6 @@ export function TableDetailView({
                   <X size={13} />
                 </button>
               )}
-            </div>
-
-            {/* Category Select Filter */}
-            <div className="pos-menu-category-filter" style={{ position: "relative", display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                aria-label="Filter by category"
-                style={{
-                  height: "30px",
-                  maxWidth: "130px",
-                  background: "var(--bg-primary)",
-                  border: "1px solid var(--border-subtle)",
-                  borderRadius: "var(--radius-sm)",
-                  color: "var(--text-main)",
-                  padding: "0.2rem 1.4rem 0.2rem 0.55rem",
-                  fontSize: "0.76rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  outline: "none",
-                }}
-              >
-                {[{ id: "all", name: orderMode === "bar" ? "All Drinks" : "All Categories" }, ...Array.from(new Map((activeMenuItems || []).filter((item) => item.category).map((item) => [item.category, { id: item.category, name: item.category }])).values())].map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
             <div
@@ -4237,8 +4113,8 @@ export function TableDetailView({
           )}
         </div>
 
-        {/* Right Side: Order Slip (Option 1: Spacious 2-stage sidebar, only shown when items exist and mode is sidebar) */}
-        {safeItems.length > 0 && orderSlipViewMode === "sidebar" && (
+        {/* Right Side: Order Slip (Spacious 2-stage sidebar, shown when items exist) */}
+        {safeItems.length > 0 && (
           <div
             className="pos-order-slip-desktop"
             style={{
@@ -4257,7 +4133,7 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
-            {/* Order Header — Compact with Mode Switcher */}
+            {/* Order Header */}
             <div
               style={{
                 padding: "0.55rem 0.85rem",
@@ -4280,10 +4156,10 @@ export function TableDetailView({
                   <Receipt size={14} color="var(--accent-amber)" />
                   <h3
                     style={{
-                      fontSize: "0.88rem",
-                      fontWeight: 800,
-                      color: "var(--text-main)",
-                    }}
+                    fontSize: "0.88rem",
+                    fontWeight: 800,
+                    color: "var(--text-main)",
+                  }}
                   >
                     {table.name} — Order Slip
                   </h3>
@@ -4322,41 +4198,18 @@ export function TableDetailView({
                   </span>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <div
-                  style={{
-                    background: "rgba(245, 158, 11, 0.18)",
-                    color: "var(--accent-amber-light)",
-                    padding: "0.18rem 0.5rem",
-                    borderRadius: "5px",
-                    fontSize: "0.68rem",
-                    fontWeight: 700,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  #{targetTableId}0{safeItems.length}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleToggleOrderSlipViewMode("floating")}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.05)",
-                    border: "1px solid var(--border-subtle)",
-                    color: "var(--text-muted)",
-                    padding: "0.2rem 0.45rem",
-                    borderRadius: "5px",
-                    fontSize: "0.66rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "3px",
-                  }}
-                  title="Switch to Option 2: Full Menu + Floating Bottom Bar"
-                >
-                  <span>🚀</span>
-                  <span>Float</span>
-                </button>
+              <div
+                style={{
+                  background: "rgba(245, 158, 11, 0.18)",
+                  color: "var(--accent-amber-light)",
+                  padding: "0.18rem 0.5rem",
+                  borderRadius: "5px",
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                #{targetTableId}0{safeItems.length}
               </div>
             </div>
 
@@ -4943,152 +4796,8 @@ export function TableDetailView({
         )}
       </div>
 
-      {/* Option 2: Desktop Floating Order Bar (When Floating Bar Mode is Active) */}
-      {safeItems.length > 0 && orderSlipViewMode === "floating" && !isMobileOrderSlipOpen && (
-        <div
-          className="pos-desktop-floating-bar"
-          style={{
-            position: "fixed",
-            bottom: "16px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "calc(100% - 32px)",
-            maxWidth: "960px",
-            background: "linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%)",
-            backdropFilter: "blur(14px)",
-            border: "1.5px solid rgba(245, 158, 11, 0.6)",
-            borderRadius: "14px",
-            padding: "0.65rem 1.15rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.65), 0 0 24px rgba(245, 158, 11, 0.18)",
-            zIndex: 100,
-          }}
-        >
-          {/* Left: Table & Items Overview */}
-          <div
-            onClick={() => setIsMobileOrderSlipOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: "0.85rem", cursor: "pointer", flex: 1, minWidth: 0 }}
-          >
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "linear-gradient(135deg, #f59e0b, #ea580c)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-                flexShrink: 0,
-              }}
-            >
-              <Receipt size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
-                <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#ffffff" }}>
-                  {table.name}
-                </span>
-                <span
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 800,
-                    background: "rgba(245, 158, 11, 0.2)",
-                    color: "var(--accent-amber-light)",
-                    border: "1px solid rgba(245, 158, 11, 0.4)",
-                    padding: "1px 7px",
-                    borderRadius: "999px",
-                  }}
-                >
-                  {safeItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} Items
-                  {unsentItems.length > 0 ? ` (${unsentItems.length} New)` : ""}
-                </span>
-              </div>
-              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                Subtotal: {formatCurrency(subtotal)} • Total Bill:{" "}
-                <strong style={{ color: "var(--accent-amber-light)", fontSize: "0.88rem" }}>
-                  {formatCurrency(grandTotal)}
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Actions */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-            {hasUnsentItems && (
-              <button
-                type="button"
-                onClick={handleTriggerSendKot}
-                disabled={isSendingKot}
-                style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "0.48rem 0.95rem",
-                  fontSize: "0.78rem",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  boxShadow: "0 4px 14px rgba(234, 88, 12, 0.35)",
-                }}
-              >
-                <span>🚀</span>
-                <span>{dispatchButtonLabel} ({unsentItems.length})</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsMobileOrderSlipOpen(true)}
-              style={{
-                background: "var(--bg-tertiary)",
-                color: "var(--text-main)",
-                border: "1px solid var(--border-subtle)",
-                borderRadius: "8px",
-                padding: "0.48rem 0.95rem",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.35rem",
-              }}
-            >
-              <span>📋</span>
-              <span>View Bill & Actions ›</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleToggleOrderSlipViewMode("sidebar")}
-              style={{
-                background: "transparent",
-                color: "var(--text-muted)",
-                border: "1px dashed var(--border-subtle)",
-                borderRadius: "8px",
-                padding: "0.48rem 0.7rem",
-                fontSize: "0.72rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.25rem",
-              }}
-              title="Switch back to Side Panel view (Option 1)"
-            >
-              <span>📑 Side Panel</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Floating Cart Trigger (Sticky at bottom on phones only when sidebar mode) */}
-      {safeItems.length > 0 && orderSlipViewMode !== "floating" && !isMobileOrderSlipOpen && (
+      {/* Mobile Floating Cart Trigger (Sticky at bottom on phones only) */}
+      {safeItems.length > 0 && !isMobileOrderSlipOpen && (
         <div
           className="pos-mobile-cart-bar"
           onClick={() => setIsMobileOrderSlipOpen(true)}

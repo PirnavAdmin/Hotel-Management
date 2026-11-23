@@ -529,6 +529,9 @@ public static class DbInitializer
                     `show_gst_breakdown` TINYINT(1) DEFAULT 1,
                     `low_stock_alerts_enabled` TINYINT(1) DEFAULT 1,
                     `display_theme` VARCHAR(50) DEFAULT 'royal-saffron',
+                    `restaurant_id` VARCHAR(100) NULL,
+                    `accent_color` VARCHAR(20) NULL,
+                    `updated_by` VARCHAR(100) NULL,
                     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");

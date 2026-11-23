@@ -164,7 +164,8 @@ builder.Services
                         new Claim(ClaimTypes.Role, "Admin"),
                         new Claim("userId", "1"),
                         new Claim("roleName", "Admin"),
-                        new Claim("branchId", "1")
+                        new Claim("branchId", "1"),
+                        new Claim("restaurantId", "restaurant_1")
                     };
                     var identity = new ClaimsIdentity(claims, "MockBearer");
                     context.Principal = new ClaimsPrincipal(identity);

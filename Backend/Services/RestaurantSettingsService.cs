@@ -27,11 +27,11 @@ public class RestaurantSettingsService
         _logger = logger;
     }
 
-    public async Task<RestaurantSettingsDto> GetSettingsAsync()
+    public async Task<RestaurantSettingsDto> GetSettingsAsync(string? restaurantId = null)
     {
         try
         {
-            _logger.LogInformation("Retrieving restaurant brand identity & settings from MySQL database.");
+            _logger.LogInformation("Retrieving restaurant brand identity & settings from MySQL database for restaurant {RestaurantId}.", restaurantId ?? "default");
 
             // 1. Try MySQL Stored Procedure
             try
@@ -48,6 +48,8 @@ public class RestaurantSettingsService
                             settings.RestaurantName = _fallbackSettings.RestaurantName;
                         if (!string.IsNullOrWhiteSpace(_fallbackSettings.Tagline) && string.IsNullOrWhiteSpace(settings.Tagline))
                             settings.Tagline = _fallbackSettings.Tagline;
+                        if (!string.IsNullOrWhiteSpace(_fallbackSettings.AccentColor) && string.IsNullOrWhiteSpace(settings.AccentColor))
+                            settings.AccentColor = _fallbackSettings.AccentColor;
                     }
                     _logger.LogInformation("Successfully loaded restaurant settings for '{RestaurantName}' via SP.", settings.RestaurantName);
                     _fallbackSettings = settings;
@@ -63,7 +65,22 @@ public class RestaurantSettingsService
             // 2. Try EF Core AppDbContext directly
             try
             {
-                var entity = await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1);
+                RestaurantSetting? entity = null;
+                if (!string.IsNullOrWhiteSpace(restaurantId))
+                {
+                    entity = await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.RestaurantId == restaurantId);
+                    if (entity == null && int.TryParse(restaurantId.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase), out int numericId))
+                    {
+                        entity = await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == numericId);
+                    }
+                }
+
+                if (entity == null)
+                {
+                    entity = await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1)
+                          ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync();
+                }
+
                 if (entity != null && !string.IsNullOrWhiteSpace(entity.RestaurantName))
                 {
                     var dto = MapFromEntity(entity);
@@ -128,13 +145,28 @@ public class RestaurantSettingsService
         // 1. Persist directly via EF Core AppDbContext
         try
         {
-            var entity = await _context.RestaurantSettings.FirstOrDefaultAsync(s => s.Id == 1);
+            var targetRestaurantId = !string.IsNullOrWhiteSpace(dto.RestaurantId) ? dto.RestaurantId.Trim() : "restaurant_1";
+            var entity = await _context.RestaurantSettings.FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantId);
+            if (entity == null && int.TryParse(targetRestaurantId.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase), out int numericId))
+            {
+                entity = await _context.RestaurantSettings.FirstOrDefaultAsync(s => s.Id == numericId);
+            }
+            if (entity == null && targetRestaurantId == "restaurant_1")
+            {
+                entity = await _context.RestaurantSettings.FirstOrDefaultAsync(s => s.Id == 1);
+            }
+
             if (entity == null)
             {
-                entity = new RestaurantSetting { Id = 1 };
+                entity = new RestaurantSetting
+                {
+                    RestaurantId = targetRestaurantId,
+                    CreatedAt = DateTime.UtcNow
+                };
                 _context.RestaurantSettings.Add(entity);
             }
 
+            entity.RestaurantId = targetRestaurantId;
             entity.RestaurantName = dto.RestaurantName.Trim();
             entity.Tagline = dto.Tagline?.Trim();
             entity.ContactNumber = (dto.ContactNumber ?? dto.Phone)?.Trim();
@@ -155,10 +187,20 @@ public class RestaurantSettingsService
             entity.ShowGstBreakdown = dto.ShowGstBreakdown;
             entity.LowStockAlertsEnabled = dto.LowStockAlertsEnabled;
             entity.DisplayTheme = dto.DisplayTheme ?? dto.Theme ?? "royal-saffron";
+            if (!string.IsNullOrWhiteSpace(dto.AccentColor))
+            {
+                entity.AccentColor = dto.AccentColor.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(dto.UpdatedBy))
+            {
+                entity.UpdatedBy = dto.UpdatedBy.Trim();
+            }
             entity.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             _logger.LogInformation("Saved restaurant settings directly to AppDbContext.RestaurantSettings.");
+            dto.CreatedAt = entity.CreatedAt;
+            dto.UpdatedAt = entity.UpdatedAt;
         }
         catch (Exception efEx)
         {
@@ -196,6 +238,14 @@ public class RestaurantSettingsService
             if (results.Count > 0)
             {
                 _logger.LogInformation("sp_save_restaurant_settings succeeded. Name: '{RestaurantName}'.", results[0].RestaurantName);
+                if (!string.IsNullOrWhiteSpace(dto.AccentColor) && string.IsNullOrWhiteSpace(results[0].AccentColor))
+                {
+                    results[0].AccentColor = dto.AccentColor;
+                }
+                if (!string.IsNullOrWhiteSpace(dto.RestaurantId) && string.IsNullOrWhiteSpace(results[0].RestaurantId))
+                {
+                    results[0].RestaurantId = dto.RestaurantId;
+                }
                 _fallbackSettings = results[0];
                 SaveToFile(results[0]);
                 return results[0];
@@ -244,6 +294,7 @@ public class RestaurantSettingsService
     {
         var dto = new RestaurantSettingsDto
         {
+            RestaurantId = entity.RestaurantId,
             RestaurantName = entity.RestaurantName,
             Tagline = entity.Tagline,
             ContactNumber = entity.ContactNumber,
@@ -263,6 +314,9 @@ public class RestaurantSettingsService
             ShowGstBreakdown = entity.ShowGstBreakdown,
             LowStockAlertsEnabled = entity.LowStockAlertsEnabled,
             DisplayTheme = entity.DisplayTheme,
+            AccentColor = entity.AccentColor,
+            UpdatedBy = entity.UpdatedBy,
+            CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
 
@@ -359,6 +413,19 @@ public class RestaurantSettingsService
 
         if (!reader.IsDBNull(reader.GetOrdinal("updated_at")))
             dto.UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"));
+
+        for (int i = 0; i < reader.FieldCount; i++)
+        {
+            var colName = reader.GetName(i);
+            if (string.Equals(colName, "restaurant_id", StringComparison.OrdinalIgnoreCase) && !reader.IsDBNull(i))
+                dto.RestaurantId = reader.GetString(i);
+            else if (string.Equals(colName, "accent_color", StringComparison.OrdinalIgnoreCase) && !reader.IsDBNull(i))
+                dto.AccentColor = reader.GetString(i);
+            else if (string.Equals(colName, "updated_by", StringComparison.OrdinalIgnoreCase) && !reader.IsDBNull(i))
+                dto.UpdatedBy = reader.GetString(i);
+            else if (string.Equals(colName, "created_at", StringComparison.OrdinalIgnoreCase) && !reader.IsDBNull(i))
+                dto.CreatedAt = reader.GetDateTime(i);
+        }
 
         return dto;
     }

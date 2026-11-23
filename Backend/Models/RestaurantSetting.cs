@@ -9,7 +9,11 @@ public class RestaurantSetting
 {
     [Key]
     [Column("id")]
-    public int Id { get; set; } = 1;
+    public int Id { get; set; }
+
+    [MaxLength(100)]
+    [Column("restaurant_id")]
+    public string RestaurantId { get; set; } = "restaurant_1";
 
     [Required]
     [MaxLength(200)]
@@ -82,6 +86,14 @@ public class RestaurantSetting
     [MaxLength(50)]
     [Column("display_theme")]
     public string DisplayTheme { get; set; } = "royal-saffron";
+
+    [MaxLength(20)]
+    [Column("accent_color")]
+    public string? AccentColor { get; set; }
+
+    [MaxLength(100)]
+    [Column("updated_by")]
+    public string? UpdatedBy { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
