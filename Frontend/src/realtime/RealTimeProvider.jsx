@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { apiClient } from "../api/apiConfig";
+import { applyAccent } from "../utils/accentColor";
 import {
   startRealtimeSession,
   stopRealtimeSession,
@@ -32,20 +34,20 @@ export function RealTimeProvider({ children }) {
   const location = useLocation();
   const [authVersion, setAuthVersion] = useState(0);
   const [status, setStatus] = useState({ state: "disconnected", connected: false, hub: "disconnected", sse: "disconnected" });
-  const wasConnectedRef = useRef(false);
   const token = typeof localStorage === "undefined" ? "" : localStorage.getItem("avsr_jwt_token") || "";
   const session = getCurrentSession(location.pathname);
   const role = getConnectionRole(location.pathname, session);
 
   useEffect(() => subscribeToRealtimeStatus((nextStatus) => {
     setStatus(nextStatus);
-    if (nextStatus.connected && !wasConnectedRef.current) {
-      window.dispatchEvent(new Event("avsr:realtime-reconnected"));
-    }
-    wasConnectedRef.current = nextStatus.connected;
   }), []);
   useEffect(() => {
-    const refreshAuth = () => setAuthVersion((version) => version + 1);
+    const refreshAuth = (event) => {
+      // The app emits synthetic storage events for its local caches. Only a
+      // real cross-tab storage update should restart authenticated realtime.
+      if (event?.type === "storage" && !event.isTrusted) return;
+      setAuthVersion((version) => version + 1);
+    };
     window.addEventListener("avsr-auth-changed", refreshAuth);
     window.addEventListener("storage", refreshAuth);
     return () => {
@@ -53,6 +55,66 @@ export function RealTimeProvider({ children }) {
       window.removeEventListener("storage", refreshAuth);
     };
   }, []);
+
+  // The restaurant theme is shared by every staff session. The backend GET is
+  // authoritative; localStorage is only the synchronous startup cache.
+  useEffect(() => {
+    if (!token) return undefined;
+
+    let active = true;
+    let inFlight = null;
+    const refreshRestaurantTheme = () => {
+      if (inFlight) return inFlight;
+      inFlight = apiClient("/api/v1/settings/theme")
+        .then((response) => {
+          if (!active || !response?.success) return;
+          const body = response.data?.data ?? response.data?.Data ?? response.data;
+          const accent = body?.accentColor ?? body?.AccentColor;
+          if (/^#[\da-f]{6}$/i.test(String(accent || ""))) {
+            const normalized = applyAccent(accent);
+            console.info("[ThemeSync] Restaurant accent restored from API", {
+              restaurantId: body?.restaurantId ?? body?.RestaurantId,
+              accentColor: normalized,
+            });
+            window.dispatchEvent(new CustomEvent("accent-synchronized", { detail: normalized }));
+          }
+        })
+        .catch(() => {})
+        .finally(() => { inFlight = null; });
+      return inFlight;
+    };
+
+    const handleThemeEvent = ({ name, payload }) => {
+      if (name !== "restaurantSetting:updated") return;
+      // RealtimeEvent.Data is the controller's { restaurantId, accentColor,
+      // updatedAt, updatedBy } object. Keep support for both serializer cases.
+      const data = payload?.data ?? payload?.Data ?? payload;
+      const tenantId = payload?.branchId ?? payload?.BranchId;
+      const dataTenantId = data?.restaurantId ?? data?.RestaurantId;
+      if (tenantId != null && dataTenantId != null && String(tenantId) !== String(dataTenantId)) return;
+      const accent = data?.accentColor ?? data?.AccentColor;
+      if (!/^#[\da-f]{6}$/i.test(String(accent || ""))) return;
+      console.info("[ThemeSync] restaurantSetting:updated received", {
+        restaurantId: dataTenantId ?? tenantId,
+        accentColor: String(accent).toLowerCase(),
+      });
+      const normalized = applyAccent(accent);
+      console.info("[ThemeSync] Global theme provider updated", {
+        restaurantId: dataTenantId ?? tenantId,
+        accentColor: normalized,
+      });
+      window.dispatchEvent(new CustomEvent("accent-synchronized", { detail: normalized }));
+    };
+
+    const unsubscribe = subscribeToRealtimeEvents(handleThemeEvent);
+    window.addEventListener("avsr:realtime-reconnected", refreshRestaurantTheme);
+    refreshRestaurantTheme();
+    return () => {
+      active = false;
+      unsubscribe();
+      window.removeEventListener("avsr:realtime-reconnected", refreshRestaurantTheme);
+    };
+  }, [token, authVersion]);
 
   useEffect(() => {
     if (token) {

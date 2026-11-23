@@ -34,6 +34,7 @@ public sealed class RestaurantThemeColorService
         }
 
         var normalizedColor = accentColor.Trim().ToLowerInvariant();
+        await using var transaction = await _db.Database.BeginTransactionAsync();
         await _db.Database.ExecuteSqlInterpolatedAsync($@"
             INSERT INTO `restaurant_theme_settings`
                 (`restaurant_id`, `accent_color`, `updated_by`)
@@ -44,8 +45,10 @@ public sealed class RestaurantThemeColorService
                 `updated_at` = CURRENT_TIMESTAMP(6),
                 `updated_by` = VALUES(`updated_by`);");
 
-        return await _db.RestaurantThemeSettings
+        var saved = await _db.RestaurantThemeSettings
             .AsNoTracking()
             .FirstAsync(theme => theme.RestaurantId == restaurantId);
+        await transaction.CommitAsync();
+        return saved;
     }
 }

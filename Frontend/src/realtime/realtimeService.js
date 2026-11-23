@@ -275,7 +275,18 @@ async function startHubAttempt(currentGeneration) {
 
   hubConnection = connection;
   for (const eventName of hubEventNames) {
-    connection.on(eventName, (payload) => publishRealtimeEvent(eventName, payload, "signalr"));
+    connection.on(eventName, (payload) => {
+      if (eventName === "Connected") {
+        console.info("[SignalR] POS hub authenticated connection established", {
+          connectionId: payload?.connectionId,
+          userId: payload?.userId,
+          restaurantId: payload?.branchId,
+          role: payload?.role,
+          authenticated: payload?.authenticated,
+        });
+      }
+      publishRealtimeEvent(eventName, payload, "signalr");
+    });
   }
 
   connection.onreconnecting(() => {
@@ -285,12 +296,12 @@ async function startHubAttempt(currentGeneration) {
   });
   connection.onreconnected(async () => {
     if (!sessionActive || hubConnection !== connection || currentGeneration !== generation) return;
-    const anotherTransportWasConnected = sseStatus === "connected" || hubStatus === "connected";
     retryAttempt = 0;
     hubStatus = "connected";
+    console.info("[SignalR] POS hub reconnected", { connectionId: connection.connectionId });
     notifyStatus();
     await joinStations(connection, activeRole);
-    if (anotherTransportWasConnected && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("avsr:realtime-reconnected"));
     }
   });

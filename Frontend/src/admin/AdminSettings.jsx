@@ -21,6 +21,7 @@ import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
 import { getUsers } from "../utils/auth";
 import { processLogoImage, detectImageBgColor } from "../utils/logoHelper";
 import { applyAccent, getSavedAccent, hexToHsl, hexToHsv, hsvToHex } from "../utils/accentColor";
+import { apiClient } from "../api/apiConfig";
 
 const DEFAULT_PAYMENT_QRS = [
   {
@@ -123,9 +124,10 @@ export function AdminSettings({
 }) {
   const isLight = currentTheme === "light-bistro";
   const [selectedAccent, setSelectedAccent] = useState(getSavedAccent);
+  const [savedAccent, setSavedAccent] = useState(getSavedAccent);
   const [hexInput, setHexInput] = useState(getSavedAccent);
   const [hue, setHue] = useState(() => hexToHsl(getSavedAccent()).h);
-  const [isAccentSaved, setIsAccentSaved] = useState(true);
+  const savedAccentRef = useRef(savedAccent);
   const colorAreaRef = useRef(null);
   const selectedRgb = selectedAccent.match(/[\da-f]{2}/gi).map((channel) => parseInt(channel, 16));
 
@@ -135,11 +137,25 @@ export function AdminSettings({
     setSelectedAccent(normalized);
     setHexInput(normalized);
     setHue(hexToHsl(normalized).h);
-    // The picker is the global source of truth: update CSS variables and
-    // persistence as soon as a complete colour is selected.
-    applyAccent(normalized);
-    setIsAccentSaved(true);
+    // Preview globally at once; the restaurant-wide value is committed by the
+    // existing Save Changes action so other devices update after persistence.
+    applyAccent(normalized, { persist: false });
   };
+
+  useEffect(() => {
+    const handleSynchronizedAccent = (event) => {
+      const accent = event.detail;
+      if (!/^#[\da-f]{6}$/i.test(String(accent || ""))) return;
+      const normalized = accent.toLowerCase();
+      savedAccentRef.current = normalized;
+      setSavedAccent(normalized);
+      setSelectedAccent(normalized);
+      setHexInput(normalized);
+      setHue(hexToHsl(normalized).h);
+    };
+    window.addEventListener("accent-synchronized", handleSynchronizedAccent);
+    return () => window.removeEventListener("accent-synchronized", handleSynchronizedAccent);
+  }, []);
 
   const pickColorAtPoint = (clientX, clientY) => {
     const bounds = colorAreaRef.current?.getBoundingClientRect();
@@ -236,8 +252,8 @@ export function AdminSettings({
   };
 
   const isDirty = useMemo(() => {
-    return JSON.stringify(settings) !== JSON.stringify(lastSavedSettings);
-  }, [settings, lastSavedSettings]);
+    return JSON.stringify(settings) !== JSON.stringify(lastSavedSettings) || selectedAccent !== savedAccent;
+  }, [settings, lastSavedSettings, selectedAccent, savedAccent]);
 
   const processImageFile = (file, callback) => {
     const reader = new FileReader();
@@ -624,9 +640,37 @@ export function AdminSettings({
       window.dispatchEvent(new CustomEvent("avsr-settings-updated", { detail: settingsToSave }));
     } catch {}
 
-    // 2. Server save (authoritative global sync)
+    // 2. Save the restaurant-wide accent through its dedicated endpoint. The
+    // request is made once, from the existing Save Changes action.
     let saveFailed = false;
-    if (onSaveSettings) {
+    if (selectedAccent !== savedAccentRef.current) {
+      try {
+        const themeResponse = await apiClient("/api/v1/settings/theme", {
+          method: "PUT",
+          body: JSON.stringify({ accentColor: selectedAccent }),
+        });
+        const themeBody = themeResponse?.data?.data ?? themeResponse?.data?.Data ?? themeResponse?.data;
+        const savedHex = themeBody?.accentColor ?? themeBody?.AccentColor ?? selectedAccent;
+        if (!themeResponse?.success || !/^#[\da-f]{6}$/i.test(String(savedHex || ""))) {
+          saveFailed = true;
+          setSaveError(themeResponse?.error || themeResponse?.data?.message || "Unable to save the restaurant theme color.");
+        } else {
+          const normalized = applyAccent(savedHex);
+          savedAccentRef.current = normalized;
+          setSavedAccent(normalized);
+          setSelectedAccent(normalized);
+          setHexInput(normalized);
+          setHue(hexToHsl(normalized).h);
+        }
+      } catch (themeError) {
+        saveFailed = true;
+        setSaveError(themeError?.message || "Unable to save the restaurant theme color.");
+      }
+    }
+
+    // 3. Existing restaurant settings save (one call, same handler).
+    const restaurantSettingsChanged = JSON.stringify(settings) !== JSON.stringify(lastSavedSettings);
+    if (onSaveSettings && restaurantSettingsChanged) {
       try {
         const syncRes = await onSaveSettings(settingsToSave);
         if (syncRes && syncRes.success === false) {
@@ -808,7 +852,7 @@ export function AdminSettings({
               </h3>
             </div>
             <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: "0 0 1rem" }}>
-              Choose any accent color. The application updates and saves it immediately, independently of Light or Dark mode.
+              Choose an accent color to preview it. Save Changes applies it to every user in this restaurant, independently of Light or Dark mode.
             </p>
             <div className="accent-picker-layout">
               <div className="accent-picker-controls">
@@ -874,11 +918,10 @@ export function AdminSettings({
                 </label>
                 <div className="accent-picker-actions">
                   <button type="button" onClick={() => {
-                    const reset = applyAccent("var(--accent-amber)");
+                    const reset = applyAccent("#f59e0b", { persist: false });
                     setSelectedAccent(reset);
                     setHexInput(reset);
                     setHue(hexToHsl(reset).h);
-                    setIsAccentSaved(true);
                   }}>Reset</button>
                 </div>
               </div>

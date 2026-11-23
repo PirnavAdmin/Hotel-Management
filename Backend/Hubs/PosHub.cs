@@ -37,14 +37,9 @@ public class PosHub : Hub
 
         string? branchClaim = user?.FindFirstValue("branchId");
         long.TryParse(branchClaim, out long branchId);
-        if (branchId <= 0 && !string.IsNullOrWhiteSpace(restaurantClaim))
+        if (branchId <= 0 && TryParseRestaurantId(restaurantClaim, out var restaurantBranchId))
         {
-            long.TryParse(restaurantClaim.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase), out branchId);
-        }
-        if (branchId <= 0)
-        {
-            // Default to restaurant 1 if not specified
-            branchId = 1;
+            branchId = restaurantBranchId;
         }
 
         bool isAuthenticated = user?.Identity?.IsAuthenticated == true;
@@ -77,7 +72,24 @@ public class PosHub : Hub
             return;
         }
 
-        // Register connection tracking
+        if (branchId <= 0)
+        {
+            _logger.LogWarning(
+                "Rejecting authenticated POS hub connection without a valid restaurant claim. ConnectionId={ConnectionId}, UserId={UserId}, Role={Role}",
+                connectionId, userId, roleName);
+            await Clients.Caller.SendAsync("Connected", new
+            {
+                connectionId,
+                authenticated = false,
+                error = "A valid restaurant context is required.",
+                timestamp = DateTime.UtcNow
+            });
+            Context.Abort();
+            return;
+        }
+
+        // Register connection tracking and join only the server-validated
+        // restaurant group used by RealtimeSyncService broadcasts.
         _syncService.TrackConnection(connectionId, userId, roleName, branchId);
 
         // Join user-specific group
@@ -94,14 +106,9 @@ public class PosHub : Hub
 
         // Join restaurant-specific group
         await Groups.AddToGroupAsync(connectionId, $"restaurant_{branchId}");
-
-        if (!string.IsNullOrWhiteSpace(restaurantClaim))
-        {
-            var restGroup = restaurantClaim.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase)
-                ? restaurantClaim.ToLowerInvariant()
-                : $"restaurant_{restaurantClaim.ToLowerInvariant()}";
-            await Groups.AddToGroupAsync(connectionId, restGroup);
-        }
+        _logger.LogInformation(
+            "POS SignalR connection established. ConnectionId={ConnectionId}, UserId={UserId}, Role={Role}, RestaurantId={RestaurantId}, Group={GroupName}",
+            connectionId, userId, roleName, branchId, $"restaurant_{branchId}");
 
         // Auto-assign station based on authenticated role
         var normalizedRole = roleName?.Trim().ToLowerInvariant();
@@ -168,7 +175,8 @@ public class PosHub : Hub
         }
     }
 
-    // Restaurant-specific group isolation
+        // Restaurant-specific group isolation. The requested tenant must match
+        // the tenant in the authenticated token, including for Admin/Manager.
     public async Task<object> JoinRestaurant(long branchId)
     {
         if (branchId <= 0)
@@ -176,22 +184,11 @@ public class PosHub : Hub
             return new { success = false, message = "Invalid restaurant/branch ID." };
         }
 
-        // Validate restaurant isolation: if user is authenticated with a branchId claim,
-        // they cannot join other restaurants unless they possess Admin/Manager roles.
         var user = Context.User;
-        if (user?.Identity?.IsAuthenticated == true)
+        if (user?.Identity?.IsAuthenticated != true || !TryGetAuthenticatedBranchId(user, out var myBranchId) || myBranchId != branchId)
         {
-            string? roleName = user.FindFirstValue("roleName") ?? user.FindFirstValue(ClaimTypes.Role);
-            var isPrivileged = string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                               string.Equals(roleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
-                               string.Equals(roleName, "Manager", StringComparison.OrdinalIgnoreCase);
-
-            string? userBranch = user.FindFirstValue("branchId");
-            if (!isPrivileged && long.TryParse(userBranch, out long myBranch) && myBranch != branchId)
-            {
-                _logger.LogWarning("Access Denied: User {User} attempted to access restaurant {BranchId}", user.Identity?.Name, branchId);
-                return new { success = false, message = $"Unauthorized: You do not have access to restaurant {branchId}." };
-            }
+            _logger.LogWarning("Blocked restaurant group join. ConnectionId={ConnectionId}, RequestedRestaurantId={RestaurantId}", Context.ConnectionId, branchId);
+            return new { success = false, message = "Unauthorized: the requested restaurant does not match the authenticated account." };
         }
 
         var groupName = $"restaurant_{branchId}";
@@ -203,7 +200,8 @@ public class PosHub : Hub
 
     public async Task LeaveRestaurant(long branchId)
     {
-        if (branchId > 0)
+        if (branchId > 0 && Context.User?.Identity?.IsAuthenticated == true &&
+            TryGetAuthenticatedBranchId(Context.User, out var myBranchId) && myBranchId == branchId)
         {
             var groupName = $"restaurant_{branchId}";
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
@@ -213,31 +211,38 @@ public class PosHub : Hub
 
     public async Task<object> JoinRestaurantGroup(string restaurantId)
     {
-        if (string.IsNullOrWhiteSpace(restaurantId))
+        if (!TryParseRestaurantId(restaurantId, out var branchId))
         {
             return new { success = false, message = "Invalid restaurant ID." };
         }
-
-        var groupName = restaurantId.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase)
-            ? restaurantId.ToLowerInvariant()
-            : $"restaurant_{restaurantId.ToLowerInvariant()}";
-
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-        _logger.LogInformation("Client {ConnectionId} joined restaurant group: {GroupName}", Context.ConnectionId, groupName);
-        await Clients.Caller.SendAsync("RestaurantJoined", new { restaurantId, groupName, timestamp = DateTime.UtcNow });
-        return new { success = true, restaurantId, groupName, message = $"Successfully joined restaurant group {groupName}." };
+        return await JoinRestaurant(branchId);
     }
 
     public async Task LeaveRestaurantGroup(string restaurantId)
     {
-        if (!string.IsNullOrWhiteSpace(restaurantId))
+        if (TryParseRestaurantId(restaurantId, out var branchId))
         {
-            var groupName = restaurantId.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase)
-                ? restaurantId.ToLowerInvariant()
-                : $"restaurant_{restaurantId.ToLowerInvariant()}";
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
-            await Clients.Caller.SendAsync("RestaurantLeft", new { restaurantId, groupName, timestamp = DateTime.UtcNow });
+            await LeaveRestaurant(branchId);
         }
+    }
+
+    private static bool TryParseRestaurantId(string? value, out long branchId)
+    {
+        branchId = 0;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        var normalized = value.Trim();
+        if (normalized.StartsWith("restaurant_", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["restaurant_".Length..];
+        }
+        return long.TryParse(normalized, out branchId) && branchId > 0;
+    }
+
+    private static bool TryGetAuthenticatedBranchId(ClaimsPrincipal user, out long branchId)
+    {
+        branchId = 0;
+        if (long.TryParse(user.FindFirstValue("branchId"), out branchId) && branchId > 0) return true;
+        return TryParseRestaurantId(user.FindFirstValue("restaurantId") ?? user.FindFirstValue("restaurant_id"), out branchId);
     }
 
     // Subscribe to specific module (e.g., "orders", "inventory", "tables")

@@ -83,7 +83,20 @@ public class RealtimeSyncService : IRealtimeSyncService
         }
 
         // Deduplication check
-        string dedupKey = $"{evt.EventType}:{evt.BranchId}:{evt.RecordId}:{evt.Action}";
+        var themeAccentKey = string.Empty;
+        if (string.Equals(evt.EventType, "restaurantSetting:updated", StringComparison.OrdinalIgnoreCase) && evt.Data != null)
+        {
+            var themeData = System.Text.Json.JsonSerializer.SerializeToElement(evt.Data);
+            if (themeData.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                (themeData.TryGetProperty("accentColor", out var accent) || themeData.TryGetProperty("AccentColor", out accent)))
+            {
+                themeAccentKey = accent.GetString()?.Trim().ToLowerInvariant() ?? string.Empty;
+            }
+        }
+        // Theme updates share event/tenant/record/action values. Include the
+        // saved color so a different color selected inside the dedupe window
+        // still reaches every connected client.
+        string dedupKey = $"{evt.EventType}:{evt.BranchId}:{evt.RecordId}:{evt.Action}:{themeAccentKey}";
         var now = DateTime.UtcNow;
         CleanExpiredDedup(now);
 
@@ -130,11 +143,26 @@ public class RealtimeSyncService : IRealtimeSyncService
     {
         // Target selection
         IClientProxy targetClients;
+        string? restaurantGroup = null;
+        int? trackedRestaurantConnections = null;
 
         switch (scope)
         {
             case EventScope.Restaurant when evt.BranchId.HasValue:
-                targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId.Value}");
+                restaurantGroup = $"restaurant_{evt.BranchId.Value}";
+                targetClients = _hubContext.Clients.Group(restaurantGroup);
+                trackedRestaurantConnections = _connections.Values.Count(connection => connection.BranchId == evt.BranchId.Value);
+                if (string.Equals(evt.EventType, "restaurantSetting:updated", StringComparison.OrdinalIgnoreCase))
+                {
+                    var themeData = System.Text.Json.JsonSerializer.SerializeToElement(evt.Data);
+                    var accentColor = themeData.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                        (themeData.TryGetProperty("accentColor", out var accent) || themeData.TryGetProperty("AccentColor", out accent))
+                            ? accent.GetString()
+                            : "unavailable";
+                    _logger.LogInformation(
+                        "Theme event target selected. Event={EventType}, RestaurantId={RestaurantId}, Group={GroupName}, TrackedConnections={ConnectionCount}, AccentColor={AccentColor}",
+                        evt.EventType, evt.BranchId.Value, restaurantGroup, trackedRestaurantConnections, accentColor);
+                }
                 break;
 
             case EventScope.Role when !string.IsNullOrWhiteSpace(targetRoleOrStation):
@@ -168,6 +196,13 @@ public class RealtimeSyncService : IRealtimeSyncService
         if (!string.IsNullOrWhiteSpace(evt.Module))
         {
             await targetClients.SendAsync($"module:{evt.Module.ToLowerInvariant()}", evt);
+        }
+
+        if (string.Equals(evt.EventType, "restaurantSetting:updated", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "Theme SignalR broadcast completed. RestaurantId={RestaurantId}, Group={GroupName}, TrackedConnections={ConnectionCount}",
+                evt.BranchId, restaurantGroup, trackedRestaurantConnections);
         }
 
         // Send legacy SignalR events for complete backward compatibility

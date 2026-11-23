@@ -6,6 +6,7 @@ using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
 
@@ -16,13 +17,16 @@ public sealed class RestaurantThemeColorController : ControllerBase
 {
     private readonly RestaurantThemeColorService _themeService;
     private readonly IRealtimeSyncService _realtimeSync;
+    private readonly ILogger<RestaurantThemeColorController> _logger;
 
     public RestaurantThemeColorController(
         RestaurantThemeColorService themeService,
-        IRealtimeSyncService realtimeSync)
+        IRealtimeSyncService realtimeSync,
+        ILogger<RestaurantThemeColorController> logger)
     {
         _themeService = themeService;
         _realtimeSync = realtimeSync;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -86,7 +90,9 @@ public sealed class RestaurantThemeColorController : ControllerBase
             return StatusCode(403, new { success = false, message = "The authenticated Admin account has no valid user ID." });
         }
 
+        _logger.LogInformation("Admin theme update received. RestaurantId={RestaurantId}, AdminId={AdminId}, AccentColor={AccentColor}", restaurantId, adminId, accentColor);
         var saved = await _themeService.SaveAsync(restaurantId, accentColor, adminId);
+        _logger.LogInformation("Theme database transaction committed. RestaurantId={RestaurantId}, AccentColor={AccentColor}", restaurantId, saved.AccentColor);
         var eventData = new
         {
             restaurantId,
@@ -105,6 +111,7 @@ public sealed class RestaurantThemeColorController : ControllerBase
             TriggeredBy = adminId.ToString(),
             Data = eventData
         }, EventScope.Restaurant);
+        _logger.LogInformation("Theme event dispatch requested. RestaurantId={RestaurantId}, Group={GroupName}, AccentColor={AccentColor}", restaurantId, $"restaurant_{restaurantId}", saved.AccentColor);
 
         return Ok(new
         {
