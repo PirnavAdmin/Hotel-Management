@@ -584,18 +584,20 @@ export function LoginPage({
 
   return (
     <main className="bhanu-login" data-mode={mode}>
-      <div className="auth-back-nav">
-        <button
-          type="button"
-          className="bhanu-login-back-btn"
-          onClick={handleBackToLanding}
-          title="Back to Landing Page"
-          aria-label="Back to Customer Landing Page"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Home</span>
-        </button>
-      </div>
+      {typeof onBackToLanding === 'function' && (
+        <div className="auth-back-nav">
+          <button
+            type="button"
+            className="bhanu-login-back-btn"
+            onClick={handleBackToLanding}
+            title="Back to Customer Menu"
+            aria-label="Back to Customer Menu"
+          >
+            <ArrowLeft size={16} />
+            <span>Customer Menu</span>
+          </button>
+        </div>
+      )}
       <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
       <section className="bhanu-story" aria-label={`Welcome to ${currentRestaurantName}`}><header><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
       <div className="bhanu-welcome"><h1 style={{ color: '#ff9d00' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>

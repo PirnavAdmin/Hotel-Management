@@ -66,31 +66,37 @@ export function processLogoImage(file, callback) {
       try {
         const origW = img.naturalWidth || img.width;
         const origH = img.naturalHeight || img.height;
+        // Cap maximum dimension to 200px for optimal speed and zero storage quota issues
+        const maxTargetDim = 200;
+
         const canvas = document.createElement("canvas");
-        canvas.width = origW;
-        canvas.height = origH;
+        const scaleInitial = Math.min(1, maxTargetDim / Math.max(origW, origH));
+        const sampleW = Math.max(1, Math.round(origW * scaleInitial));
+        const sampleH = Math.max(1, Math.round(origH * scaleInitial));
+        canvas.width = sampleW;
+        canvas.height = sampleH;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) {
           callback({ dataUrl: rawDataUrl, bgColor: "transparent" });
           return;
         }
 
-        ctx.drawImage(img, 0, 0);
-        const imgData = ctx.getImageData(0, 0, origW, origH);
+        ctx.drawImage(img, 0, 0, sampleW, sampleH);
+        const imgData = ctx.getImageData(0, 0, sampleW, sampleH);
         const data = imgData.data;
 
         // Sample corner pixels to detect background color
         const corners = [
           [2, 2],
-          [origW - 3, 2],
-          [2, origH - 3],
-          [origW - 3, origH - 3],
+          [sampleW - 3, 2],
+          [2, sampleH - 3],
+          [sampleW - 3, sampleH - 3],
         ];
 
         let hasAlpha = false;
         let rSum = 0, gSum = 0, bSum = 0;
         corners.forEach(([x, y]) => {
-          const idx = (Math.max(0, Math.min(origH - 1, y)) * origW + Math.max(0, Math.min(origW - 1, x))) * 4;
+          const idx = (Math.max(0, Math.min(sampleH - 1, y)) * sampleW + Math.max(0, Math.min(sampleW - 1, x))) * 4;
           if (data[idx + 3] < 30) hasAlpha = true;
           rSum += data[idx];
           gSum += data[idx + 1];
@@ -103,12 +109,12 @@ export function processLogoImage(file, callback) {
         const detectedBg = hasAlpha ? "transparent" : `rgb(${avgR}, ${avgG}, ${avgB})`;
 
         // Scan pixels to find bounding box of the non-background logo graphic
-        let minX = origW, minY = origH, maxX = 0, maxY = 0;
+        let minX = sampleW, minY = sampleH, maxX = 0, maxY = 0;
         const colorDiffThreshold = hasAlpha ? 35 : 20;
 
-        for (let y = 0; y < origH; y += 2) {
-          for (let x = 0; x < origW; x += 2) {
-            const idx = (y * origW + x) * 4;
+        for (let y = 0; y < sampleH; y += 2) {
+          for (let x = 0; x < sampleW; x += 2) {
+            const idx = (y * sampleW + x) * 4;
             const a = data[idx + 3];
             let isContent = false;
             if (hasAlpha) {
@@ -127,27 +133,25 @@ export function processLogoImage(file, callback) {
           }
         }
 
-        // If a meaningful graphic was found, crop and center it into a clean square canvas
+        const outCanvas = document.createElement("canvas");
+        const targetDim = Math.min(maxTargetDim, Math.max(maxX - minX, maxY - minY, 120));
+        outCanvas.width = targetDim;
+        outCanvas.height = targetDim;
+        const outCtx = outCanvas.getContext("2d");
+
+        if (!hasAlpha) {
+          outCtx.fillStyle = detectedBg;
+          outCtx.fillRect(0, 0, targetDim, targetDim);
+        }
+
         if (maxX > minX && maxY > minY) {
           const contentW = maxX - minX;
           const contentH = maxY - minY;
-          // Add 6% padding around graphic so it fits nicely
-          const pad = Math.round(Math.max(contentW, contentH) * 0.06);
+          const pad = Math.round(Math.max(contentW, contentH) * 0.05);
           const cropX = Math.max(0, minX - pad);
           const cropY = Math.max(0, minY - pad);
-          const cropW = Math.min(origW - cropX, contentW + pad * 2);
-          const cropH = Math.min(origH - cropY, contentH + pad * 2);
-
-          const targetDim = Math.min(480, Math.max(cropW, cropH, 128));
-          const outCanvas = document.createElement("canvas");
-          outCanvas.width = targetDim;
-          outCanvas.height = targetDim;
-          const outCtx = outCanvas.getContext("2d");
-
-          if (!hasAlpha) {
-            outCtx.fillStyle = detectedBg;
-            outCtx.fillRect(0, 0, targetDim, targetDim);
-          }
+          const cropW = Math.min(sampleW - cropX, contentW + pad * 2);
+          const cropH = Math.min(sampleH - cropY, contentH + pad * 2);
 
           const scale = Math.min(targetDim / cropW, targetDim / cropH);
           const drawW = cropW * scale;
@@ -155,13 +159,18 @@ export function processLogoImage(file, callback) {
           const drawX = (targetDim - drawW) / 2;
           const drawY = (targetDim - drawH) / 2;
 
-          outCtx.drawImage(img, cropX, cropY, cropW, cropH, drawX, drawY, drawW, drawH);
-          const finalDataUrl = outCanvas.toDataURL("image/png", 0.95);
-          callback({ dataUrl: finalDataUrl, bgColor: detectedBg });
-          return;
+          outCtx.drawImage(canvas, cropX, cropY, cropW, cropH, drawX, drawY, drawW, drawH);
+        } else {
+          const scale = Math.min(targetDim / sampleW, targetDim / sampleH);
+          const drawW = sampleW * scale;
+          const drawH = sampleH * scale;
+          const drawX = (targetDim - drawW) / 2;
+          const drawY = (targetDim - drawH) / 2;
+          outCtx.drawImage(canvas, 0, 0, sampleW, sampleH, drawX, drawY, drawW, drawH);
         }
 
-        callback({ dataUrl: rawDataUrl, bgColor: detectedBg });
+        const finalDataUrl = outCanvas.toDataURL("image/png", 0.85);
+        callback({ dataUrl: finalDataUrl, bgColor: detectedBg });
       } catch (err) {
         console.warn("[logoHelper] processLogoImage error:", err);
         callback({ dataUrl: rawDataUrl, bgColor: "transparent" });

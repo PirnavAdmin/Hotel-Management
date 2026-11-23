@@ -3,7 +3,8 @@ input::-ms-reveal { display: none !important; width: 0 !important; height: 0 !im
 input::-ms-clear { display: none !important; width: 0 !important; height: 0 !important; pointer-events: none !important; }
 
 :root,
-[data-theme="royal-saffron"] {
+[data-theme="royal-saffron"],
+body[data-theme="royal-saffron"] {
   color-scheme: dark;
   --primary-gradient: linear-gradient(135deg,#ff9d00,#ff5a00);
   --text-on-accent:#fff;
@@ -35,6 +36,7 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   --border-focus: rgba(245, 158, 11, 0.7);
 
   --text-main: #ffffff;
+  --text-primary: #ffffff;
   --text-muted: #cbd5e1;
   --text-dim: #94a3b8;
   --text-secondary: #cbd5e1;
@@ -71,7 +73,9 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
 }
 
 /* Clean Daylight Light Theme */
-[data-theme="light-bistro"] {
+:root[data-theme="light-bistro"],
+[data-theme="light-bistro"],
+body[data-theme="light-bistro"] {
   --primary-gradient:linear-gradient(135deg,#ff9d00,#ff6500);
   --surface-rgb:15,23,42;
   --accent-indigo:#4f46e5;
@@ -100,6 +104,7 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
   --border-focus: rgba(245, 158, 11, 0.6);
 
   --text-main: #0f172a;
+  --text-primary: #0f172a;
   --text-muted: #334155;
   --text-dim: #475569;
   --text-secondary: #334155;
