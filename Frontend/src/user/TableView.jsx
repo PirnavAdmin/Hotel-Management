@@ -935,7 +935,7 @@ export function TableView({
       propTheme ||
       (typeof document !== 'undefined' ? document.documentElement.getAttribute("data-theme") : null) ||
       localStorage.getItem("gourmet_pos_theme_v2") ||
-      "royal-saffron"
+      "light-bistro"
     );
   });
 
@@ -952,7 +952,7 @@ export function TableView({
         propTheme ||
         (typeof document !== 'undefined' ? document.documentElement.getAttribute("data-theme") : null) ||
         localStorage.getItem("gourmet_pos_theme_v2") ||
-        "royal-saffron";
+        "light-bistro";
       setCurrentTheme(th);
     };
 

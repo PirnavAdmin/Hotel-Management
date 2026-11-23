@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, MoonStar } from 'lucide-react';
 import { applyTheme, getSavedTheme, normalizeTheme } from '../utils/theme';
 
 export function ThemeToggle({ currentTheme, onChangeTheme }) {
@@ -38,8 +38,8 @@ export function ThemeToggle({ currentTheme, onChangeTheme }) {
     e.preventDefault();
     e.stopPropagation();
     const nextTheme = isLight ? 'royal-saffron' : 'light-bistro';
-    setActiveTheme(nextTheme);
     applyTheme(nextTheme);
+    setActiveTheme(nextTheme);
     if (typeof onChangeTheme === 'function') {
       onChangeTheme(nextTheme);
     }
@@ -59,7 +59,7 @@ export function ThemeToggle({ currentTheme, onChangeTheme }) {
         cursor: 'pointer',
       }}
     >
-      {isLight ? <Sun size={18} /> : <Moon size={18} />}
+      {isLight ? <MoonStar size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
       <span className="theme-toggle-label">{isLight ? 'Light' : 'Dark'}</span>
     </button>
   );

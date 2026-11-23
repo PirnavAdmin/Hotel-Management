@@ -1176,6 +1176,7 @@ textarea {
 .theme-toggle { width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--border-card); border-radius:50%; background:var(--bg-tertiary); color:var(--accent-amber); box-shadow:var(--shadow-sm); }
 .theme-toggle:hover { background:var(--bg-card-hover); }
 .theme-toggle:focus-visible { outline:2px solid var(--accent-amber); outline-offset:3px; }
+.theme-toggle > svg { animation: none !important; transform: none !important; }
 .theme-toggle-label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 input, select, textarea { color-scheme:inherit; accent-color:var(--accent-amber); }
 input::placeholder, textarea::placeholder { color:var(--text-dim); }

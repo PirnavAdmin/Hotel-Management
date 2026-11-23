@@ -712,11 +712,7 @@ export function App() {
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
 
-      if (!localStorage.getItem(STORAGE_KEY_THEME) && (cleanServer.displayTheme || cleanServer.theme)) {
-        const newTheme = normalizeTheme(cleanServer.displayTheme || cleanServer.theme);
-        setTheme(newTheme);
-        applyTheme(newTheme);
-      }
+      // Theme preference is local to this browser; use the app default until selected.
 
       try { localStorage.setItem(RESTAURANT_SETTINGS_KEY, JSON.stringify(merged)); } catch {}
       if (active) {

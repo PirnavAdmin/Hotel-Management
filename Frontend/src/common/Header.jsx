@@ -18,8 +18,6 @@ import {
   CheckCircle,
   CheckCircle2,
   MapPin,
-  Sun,
-  Moon,
   Trash2,
   ChevronRight,
   Sparkles,
@@ -210,11 +208,6 @@ export function Header({
       ),
   ).length;
 
-
-  const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
-  ];
 
   // Count active KOT tickets that have items and are not completely ready/served
 

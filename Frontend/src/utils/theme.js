@@ -1,10 +1,10 @@
 export const THEME_STORAGE_KEY = 'gourmet_pos_theme_v2';
-export const normalizeTheme = (value) => value === 'light-bistro' || value === 'light' ? 'light-bistro' : 'royal-saffron';
+export const normalizeTheme = (value) => value === 'royal-saffron' || value === 'dark' ? 'royal-saffron' : 'light-bistro';
 export function getSavedTheme() {
   try {
     return normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
   } catch {
-    return 'royal-saffron';
+    return 'light-bistro';
   }
 }
 export function applyTheme(value) {

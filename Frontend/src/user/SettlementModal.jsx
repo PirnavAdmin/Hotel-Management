@@ -34,7 +34,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
     return (
       document.documentElement.getAttribute("data-theme") ||
       localStorage.getItem("gourmet_pos_theme_v2") ||
-      "emerald-spice"
+      "light-bistro"
     );
   });
 
@@ -43,7 +43,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
       const activeTheme =
         document.documentElement.getAttribute("data-theme") ||
         localStorage.getItem("gourmet_pos_theme_v2") ||
-        "emerald-spice";
+        "light-bistro";
       setCurrentTheme(activeTheme);
     };
 

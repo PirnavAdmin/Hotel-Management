@@ -1,6 +1,7 @@
 import { SearchableSelect } from "../common/SearchableSelect";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
+import { applyTheme } from "../utils/theme";
 import {
   X,
   Plus,
@@ -27,8 +28,6 @@ import {
   ExternalLink,
   Filter,
   ArrowLeft,
-  Sun,
-  Moon,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -1438,19 +1437,11 @@ export function AdminPortal({
     }
   };
 
-  const themes = [
-    { id: "royal-saffron", name: "Dark Theme", icon: "🌙", label: "Dark" },
-    { id: "light-bistro", name: "Light Theme", icon: "☀️", label: "Light" },
-  ];
-
   const handleThemeChange = (newTheme) => {
     if (onChangeTheme) {
       onChangeTheme(newTheme);
     } else {
-      document.documentElement.setAttribute("data-theme", newTheme);
-      try {
-        localStorage.setItem("gourmet_pos_theme_v2", newTheme);
-      } catch {}
+      applyTheme(newTheme);
     }
   };
 
