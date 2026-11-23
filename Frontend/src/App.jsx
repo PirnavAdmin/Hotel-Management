@@ -712,7 +712,7 @@ export function App() {
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
 
-      if (cleanServer.displayTheme || cleanServer.theme) {
+      if (!localStorage.getItem(STORAGE_KEY_THEME) && (cleanServer.displayTheme || cleanServer.theme)) {
         const newTheme = normalizeTheme(cleanServer.displayTheme || cleanServer.theme);
         setTheme(newTheme);
         applyTheme(newTheme);
@@ -5116,6 +5116,8 @@ export function App() {
                     onUpdateTable={handleUpdateTable}
                     tableLocks={tableLocks}
                     currentSession={posSession}
+                    currentTheme={theme}
+                    onChangeTheme={setTheme}
                   />
                 </div>
               )}
@@ -5235,6 +5237,8 @@ export function App() {
                   onClearOrder={handleClearOrder}
                   onOpenKOTView={() => navigate("/kot")}
                   onShowToast={showToast}
+                  currentTheme={theme}
+                  onChangeTheme={setTheme}
                 />
               )}
             </>

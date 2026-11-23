@@ -919,6 +919,8 @@ export function TableView({
   loadError = "",
   tableLocks = {},
   currentSession = null,
+  currentTheme: propTheme,
+  onChangeTheme,
 }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -930,33 +932,46 @@ export function TableView({
   // Synchronize with global application theme (e.g. 'light-bistro' vs dark themes)
   const [currentTheme, setCurrentTheme] = useState(() => {
     return (
-      document.documentElement.getAttribute("data-theme") ||
+      propTheme ||
+      (typeof document !== 'undefined' ? document.documentElement.getAttribute("data-theme") : null) ||
       localStorage.getItem("gourmet_pos_theme_v2") ||
       "royal-saffron"
     );
   });
 
   useEffect(() => {
-    const handleThemeChange = () => {
+    if (propTheme) {
+      setCurrentTheme(propTheme);
+    }
+  }, [propTheme]);
+
+  useEffect(() => {
+    const handleThemeChange = (e) => {
       const th =
-        document.documentElement.getAttribute("data-theme") ||
+        e?.detail ||
+        propTheme ||
+        (typeof document !== 'undefined' ? document.documentElement.getAttribute("data-theme") : null) ||
         localStorage.getItem("gourmet_pos_theme_v2") ||
         "royal-saffron";
       setCurrentTheme(th);
     };
 
-    const observer = new MutationObserver(handleThemeChange);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
+    const observer = typeof MutationObserver !== 'undefined' ? new MutationObserver(handleThemeChange) : null;
+    if (observer && typeof document !== 'undefined') {
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
+    }
 
+    window.addEventListener("theme-changed", handleThemeChange);
     window.addEventListener("storage", handleThemeChange);
     return () => {
-      observer.disconnect();
+      if (observer) observer.disconnect();
+      window.removeEventListener("theme-changed", handleThemeChange);
       window.removeEventListener("storage", handleThemeChange);
     };
-  }, []);
+  }, [propTheme]);
 
   const isLight = currentTheme === "light-bistro";
 
