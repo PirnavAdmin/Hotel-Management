@@ -449,6 +449,10 @@ const mergeIncomingTables = (
               cachedTableMap.set(String(backendId), st);
             }
           }
+          const cleanName = String(st?.name || st?.tableName || st?.tableNumber || "").trim().toLowerCase();
+          if (cleanName) {
+            cachedTableMap.set(cleanName, st);
+          }
         });
       }
     }
@@ -495,8 +499,9 @@ const mergeIncomingTables = (
       if (isRogueName(rawName)) return;
 
       const key = String(targetId);
-      const existing = tablesById.get(key) || cachedTableMap.get(key) || {};
       const cleanName = rawName || String(table.tableNumber || table.TableNumber || table.number || `Table-${targetId}`).trim();
+      const cleanNameLower = cleanName.toLowerCase();
+      const existing = tablesById.get(key) || cachedTableMap.get(key) || cachedTableMap.get(cleanNameLower) || {};
       const cleanNumber = String(
         table.tableNumberNumeric ?? table.tableNumber ?? table.TableNumber ?? table.number ?? targetId,
       ).trim();
@@ -611,7 +616,8 @@ const mergeIncomingTables = (
     .filter((table) => !deletedIds.includes(String(table.id)))
     .map((table) => {
       const hasActive = Array.isArray(table.items) && table.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
-      if (!hasActive && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
+      const hasOccupiedChairs = (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0) || Number(table.occupiedChairs) > 0 || Number(table.guests) > 0;
+      if (!hasActive && !hasOccupiedChairs && table.status !== "reserved" && table.status !== "cleaning" && table.status !== "inactive") {
         return {
           ...table,
           status: "vacant",
@@ -4434,7 +4440,21 @@ export function App() {
   };
 
   const handleUpdateTable = (updatedTable) => {
-    const previousTable = tables.find((table) => String(table.id) === String(updatedTable.id));
+    const isSameTable = (a, b) => {
+      if (!a || !b) return false;
+      if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+      if (a.backendTableId != null && b.backendTableId != null && String(a.backendTableId) === String(b.backendTableId)) return true;
+      if (a.backendTableId != null && b.id != null && String(a.backendTableId) === String(b.id)) return true;
+      if (a.id != null && b.backendTableId != null && String(a.id) === String(b.backendTableId)) return true;
+      if (a.tableId != null && b.tableId != null && String(a.tableId) === String(b.tableId)) return true;
+      if (a.tableId != null && b.id != null && String(a.tableId) === String(b.id)) return true;
+      if (a.id != null && b.tableId != null && String(a.id) === String(b.tableId)) return true;
+      const nameA = String(a.name || a.tableName || a.tableNumber || "").trim().toLowerCase();
+      const nameB = String(b.name || b.tableName || b.tableNumber || "").trim().toLowerCase();
+      if (nameA && nameB && nameA === nameB) return true;
+      return false;
+    };
+    const previousTable = tables.find((table) => isSameTable(table, updatedTable));
     const cap = Number(updatedTable.capacity || updatedTable.capacityChairs || updatedTable.chairs || (previousTable?.capacity || 4));
     const selectedSeats = Array.isArray(updatedTable.selectedSeats)
       ? updatedTable.selectedSeats
@@ -4478,7 +4498,7 @@ export function App() {
 
     setTables((prev) => {
       const updated = prev.map((t) =>
-        String(t.id) === String(updatedTable.id) ? normalized : t,
+        isSameTable(t, updatedTable) ? { ...t, ...normalized } : t,
       );
       try {
         localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
@@ -4496,7 +4516,7 @@ export function App() {
       if (assignmentClearUnsupported) {
         showToast("The backend preserves assignedServerId when cleared; staff unassignment requires a backend API update.");
         if (previousTable) setTables((prev) => {
-          const restored = prev.map((table) => String(table.id) === String(previousTable.id) ? previousTable : table);
+          const restored = prev.map((table) => isSameTable(table, previousTable) ? previousTable : table);
           try {
             localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(restored));
             pushGlobalSync({ [STORAGE_KEY_TABLES]: restored });
@@ -4509,14 +4529,14 @@ export function App() {
       if (!result?.success) {
         // Backend offline or route unhandled - gracefully keep changes in local storage!
         console.warn(`Table sync offline (${result?.error || "unreachable"}), saved in local storage.`);
-        showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${persons} Persons)`);
+        showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${normalized.persons || cap} Persons)`);
         return true;
       }
-      showToast(`Updated ${normalized.name} (${cap} Chairs / ${persons} Persons) in shared hotel tables.`);
+      showToast(`Updated ${normalized.name} (${cap} Chairs / ${normalized.persons || cap} Persons) in shared hotel tables.`);
       return true;
     }).catch((error) => {
       console.warn("Table update network error, preserved locally:", error?.message);
-      showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${persons} Persons)`);
+      showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${normalized.persons || cap} Persons)`);
       return true;
     });
   };

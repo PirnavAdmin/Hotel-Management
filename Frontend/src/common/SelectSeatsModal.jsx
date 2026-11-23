@@ -879,6 +879,21 @@ export function DiningRoomBackground() {
   );
 }
 
+function isSameTable(a, b) {
+  if (!a || !b) return false;
+  if (a.id != null && b.id != null && String(a.id) === String(b.id)) return true;
+  if (a.backendTableId != null && b.backendTableId != null && String(a.backendTableId) === String(b.backendTableId)) return true;
+  if (a.backendTableId != null && b.id != null && String(a.backendTableId) === String(b.id)) return true;
+  if (a.id != null && b.backendTableId != null && String(a.id) === String(b.backendTableId)) return true;
+  if (a.tableId != null && b.tableId != null && String(a.tableId) === String(b.tableId)) return true;
+  if (a.tableId != null && b.id != null && String(a.tableId) === String(b.id)) return true;
+  if (a.id != null && b.tableId != null && String(a.id) === String(b.tableId)) return true;
+  const nameA = String(a.name || a.tableName || a.tableNumber || "").trim().toLowerCase();
+  const nameB = String(b.name || b.tableName || b.tableNumber || "").trim().toLowerCase();
+  if (nameA && nameB && nameA === nameB) return true;
+  return false;
+}
+
 export function SelectSeatsModal({
   table,
   isOpen,
@@ -1016,7 +1031,7 @@ export function SelectSeatsModal({
         const parsed = JSON.parse(rawTables);
         if (Array.isArray(parsed)) {
           const up = parsed.map((t) =>
-            String(t.id) === String(currentTable.id)
+            isSameTable(t, currentTable)
               ? {
                   ...t,
                   capacity: updatedCap,
@@ -1083,7 +1098,7 @@ export function SelectSeatsModal({
         const parsed = JSON.parse(rawTables);
         if (Array.isArray(parsed)) {
           const up = parsed.map((t) =>
-            String(t.id) === String(currentTable.id)
+            isSameTable(t, currentTable)
               ? {
                   ...t,
                   capacity: currentCap,
