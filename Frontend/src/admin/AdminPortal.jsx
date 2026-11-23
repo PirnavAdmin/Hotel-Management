@@ -3631,7 +3631,7 @@ export function AdminPortal({
                             gap: "0.45rem",
                             padding: "0.55rem 1.15rem",
                             background: "rgba(59, 130, 246, 0.12)",
-                            color: "#60a5fa",
+                            color: "var(--info)",
                             borderRadius: "8px",
                             fontWeight: 700,
                             fontSize: "0.85rem",
@@ -3641,7 +3641,7 @@ export function AdminPortal({
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.background = "rgba(59, 130, 246, 0.22)";
-                            e.currentTarget.style.borderColor = "#60a5fa";
+                            e.currentTarget.style.borderColor = "var(--info)";
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = "rgba(59, 130, 246, 0.12)";

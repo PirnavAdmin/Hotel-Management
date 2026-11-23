@@ -162,18 +162,19 @@ body[data-theme="light-bistro"] {
 
   --text-main: #0f172a;
   --text-primary: #0f172a;
-  --text-muted: #334155;
-  --text-dim: #475569;
-  --text-secondary: #334155;
+  --text-muted: #1e293b;
+  --text-dim: #334155;
+  --text-secondary: #1e293b;
+  --text-on-accent: #ffffff;
 
   --accent-amber: #d97706;
-  --accent-amber-light: #b45309;
+  --accent-amber-light: #9a3412;
   --accent-saffron: #ea580c;
   --accent-amber-glow: rgba(217, 119, 6, 0.2);
 
   --status-vacant: #047857;
   --status-vacant-bg: #d1fae5;
-  --status-occupied: #b45309;
+  --status-occupied: #9a3412;
   --status-occupied-bg: #fef3c7;
   --status-billed: #7c3aed;
   --status-billed-bg: #ede9fe;
@@ -197,6 +198,21 @@ body[data-theme="light-bistro"] {
 [data-theme="light-bistro"] [data-modal] {
   background-color: var(--bg-card);
   color: var(--text-main);
+}
+
+[data-theme="light-bistro"] .pos-mobile-cart-bar {
+  background: linear-gradient(135deg, #d97706 0%, #ea580c 100%) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light-bistro"] .pos-mobile-cart-bar * {
+  color: #ffffff !important;
+}
+
+[data-theme="light-bistro"] .pos-mobile-cart-bar .pos-mobile-cart-action,
+[data-theme="light-bistro"] .pos-mobile-cart-bar .pos-mobile-cart-action * {
+  background: #ffffff !important;
+  color: #0f172a !important;
 }
 
 [data-theme="light-bistro"] input,
