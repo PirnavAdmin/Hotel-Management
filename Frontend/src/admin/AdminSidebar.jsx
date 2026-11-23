@@ -256,11 +256,11 @@ export function AdminSidebar({
             width: "40px",
             height: "40px",
             borderRadius: "10px",
-            background: liveLogoBg || (liveLogo ? "#ffffff" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"),
+            background: liveLogoBg || (liveLogo ? "#ffffff" : "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)"),
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.25)" : "0 4px 14px rgba(234, 88, 12, 0.45)",
+            boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.25)" : "0 4px 14px color-mix(in srgb, var(--accent-saffron) 45%, transparent)",
             flexShrink: 0,
             overflow: "hidden",
             padding: "0",
@@ -395,11 +395,11 @@ export function AdminSidebar({
                         textAlign: "left",
                         transition: "all 0.15s ease",
                         background: isActive
-                          ? "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)"
+                          ? "var(--primary-gradient)"
                           : "transparent",
                         color: isActive ? "#ffffff" : "var(--text-muted)",
                         boxShadow: isActive
-                          ? "0 4px 14px rgba(245, 158, 11, 0.38)"
+                          ? "0 4px 14px var(--accent-amber-glow)"
                           : "none",
                       }}
                       onMouseEnter={(e) => {
@@ -440,7 +440,7 @@ export function AdminSidebar({
                           style={{
                             background: isActive
                               ? "rgba(0,0,0,0.3)"
-                              : "#ea580c",
+                              : "var(--accent-saffron)",
                             color: "#ffffff",
                             fontSize: "0.68rem",
                             fontWeight: 800,

@@ -133,7 +133,7 @@ export function AuditDocumentsView() {
       return { bg: "rgba(239, 68, 68, 0.15)", text: "#ef4444", border: "rgba(239, 68, 68, 0.35)" };
     }
     if (severity === "WARNING" || action?.includes("ADJUST") || action?.includes("DISCOUNT") || action?.includes("MODIFY")) {
-      return { bg: "rgba(245, 158, 11, 0.15)", text: "#f59e0b", border: "rgba(245, 158, 11, 0.35)" };
+      return { bg: "color-mix(in srgb, var(--accent-amber) 15%, transparent)", text: "var(--accent-amber)", border: "color-mix(in srgb, var(--accent-amber) 35%, transparent)" };
     }
     if (action?.includes("SETTLE") || action?.includes("CREATE") || action?.includes("RECORDED")) {
       return { bg: "rgba(16, 185, 129, 0.15)", text: "#10b981", border: "rgba(16, 185, 129, 0.35)" };
@@ -250,7 +250,7 @@ export function AuditDocumentsView() {
         {[
           { label: "Total Audit Events", value: metrics.total, color: "#3b82f6", icon: FileText },
           { label: "Orders & Sales Audits", value: metrics.orders, color: "#10b981", icon: CheckCircle2 },
-          { label: "Financial & Float Vouchers", value: metrics.financial, color: "#f59e0b", icon: ShieldCheck },
+          { label: "Financial & Float Vouchers", value: metrics.financial, color: "var(--accent-amber)", icon: ShieldCheck },
           { label: "Cancellations & Voids", value: metrics.cancellations, color: "#ef4444", icon: AlertTriangle },
           { label: "Security & Login Events", value: metrics.security, color: "#8b5cf6", icon: Lock },
         ].map((m, idx) => {
@@ -488,7 +488,7 @@ export function AuditDocumentsView() {
                       <td style={{ padding: "0.7rem 1rem", color: "var(--text-muted)", fontFamily: "monospace", fontSize: "0.75rem" }}>
                         {log.tableName}
                       </td>
-                      <td style={{ padding: "0.7rem 1rem", fontWeight: 750, color: "var(--accent-amber-light, #fbbf24)" }}>
+                      <td style={{ padding: "0.7rem 1rem", fontWeight: 750, color: "var(--accent-amber-light, var(--accent-amber-light))" }}>
                         {log.recordId || "-"}
                       </td>
                       <td style={{ padding: "0.7rem 1rem", color: "var(--text-main)", maxWidth: "340px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -546,7 +546,7 @@ export function AuditDocumentsView() {
           <div
             style={{
               background: "var(--bg-card, #111b2b)",
-              border: "1.5px solid var(--accent-amber, #f59e0b)",
+              border: "1.5px solid var(--accent-amber, var(--accent-amber))",
               borderRadius: "14px",
               width: "100%",
               maxWidth: "560px",

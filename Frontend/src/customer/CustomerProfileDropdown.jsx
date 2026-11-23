@@ -97,7 +97,7 @@ export function CustomerProfileDropdown({
           gap: "7px",
           minHeight: "34px",
           padding: "3px 12px 3px 5px",
-          border: "1.5px solid #f59e0b",
+          border: "1.5px solid var(--accent-amber)",
           borderRadius: "20px",
           background: "rgba(25, 16, 12, 0.92)",
           color: "#ffffff",
@@ -106,7 +106,7 @@ export function CustomerProfileDropdown({
           cursor: "pointer",
           transition: "all 0.2s ease",
           boxShadow: isOpen
-            ? "0 0 16px rgba(245, 158, 11, 0.5), 0 0 0 2px #f59e0b"
+            ? "0 0 16px color-mix(in srgb, var(--accent-amber) 50%, transparent), 0 0 0 2px var(--accent-amber)"
             : "0 2px 8px rgba(0,0,0,0.3)",
         }}
       >
@@ -115,7 +115,7 @@ export function CustomerProfileDropdown({
             width: "24px",
             height: "24px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             fontSize: "11.5px",
             fontWeight: 800,
@@ -133,7 +133,7 @@ export function CustomerProfileDropdown({
         </span>
         <ChevronDown
           size={13}
-          color="#f59e0b"
+          color="var(--accent-amber)"
           style={{
             transition: "transform 0.2s ease",
             transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
@@ -151,7 +151,7 @@ export function CustomerProfileDropdown({
             right: 0,
             width: "230px",
             background: "#160f0b",
-            border: "1.5px solid rgba(245, 158, 11, 0.45)",
+            border: "1.5px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
             borderRadius: "14px",
             boxShadow: "0 20px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05)",
             padding: "8px",
@@ -175,14 +175,14 @@ export function CustomerProfileDropdown({
                 width: "38px",
                 height: "38px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 color: "#ffffff",
                 fontSize: "16px",
                 fontWeight: 800,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(234, 88, 12, 0.35)",
+                boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                 flexShrink: 0,
               }}
             >
@@ -206,7 +206,7 @@ export function CustomerProfileDropdown({
                 style={{
                   display: "block",
                   fontSize: "11px",
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   fontWeight: 600,
                   marginTop: "1px",
                 }}
@@ -227,10 +227,10 @@ export function CustomerProfileDropdown({
               gap: "9px",
               width: "100%",
               padding: "8px 10px",
-              background: currentRoute === "/my-orders" ? "rgba(245, 158, 11, 0.18)" : "transparent",
+              background: currentRoute === "/my-orders" ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)" : "transparent",
               border: "none",
               borderRadius: "8px",
-              color: currentRoute === "/my-orders" ? "#f59e0b" : "#f1e5dc",
+              color: currentRoute === "/my-orders" ? "var(--accent-amber)" : "#f1e5dc",
               fontSize: "12.5px",
               fontWeight: 600,
               textAlign: "left",
@@ -254,10 +254,10 @@ export function CustomerProfileDropdown({
               gap: "9px",
               width: "100%",
               padding: "8px 10px",
-              background: currentRoute === "/my-reservations" ? "rgba(245, 158, 11, 0.18)" : "transparent",
+              background: currentRoute === "/my-reservations" ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)" : "transparent",
               border: "none",
               borderRadius: "8px",
-              color: currentRoute === "/my-reservations" ? "#f59e0b" : "#f1e5dc",
+              color: currentRoute === "/my-reservations" ? "var(--accent-amber)" : "#f1e5dc",
               fontSize: "12.5px",
               fontWeight: 600,
               textAlign: "left",
@@ -281,10 +281,10 @@ export function CustomerProfileDropdown({
               gap: "9px",
               width: "100%",
               padding: "8px 10px",
-              background: currentRoute === "/profile" ? "rgba(245, 158, 11, 0.18)" : "transparent",
+              background: currentRoute === "/profile" ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)" : "transparent",
               border: "none",
               borderRadius: "8px",
-              color: currentRoute === "/profile" ? "#f59e0b" : "#f1e5dc",
+              color: currentRoute === "/profile" ? "var(--accent-amber)" : "#f1e5dc",
               fontSize: "12.5px",
               fontWeight: 600,
               textAlign: "left",

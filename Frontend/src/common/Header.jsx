@@ -254,14 +254,14 @@ export function Header({
         >
           <div
             style={{
-              background: liveLogoBg || (liveLogo ? "#ffffff" : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"),
+              background: liveLogoBg || (liveLogo ? "#ffffff" : "var(--primary-gradient)"),
               width: "40px",
               height: "40px",
               borderRadius: "11px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.2)" : "0 4px 14px rgba(245, 158, 11, 0.4)",
+              boxShadow: liveLogo ? "0 2px 8px rgba(0,0,0,0.2)" : "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
               overflow: "hidden",
               border: liveLogo ? "1px solid var(--border-subtle)" : "none",
               padding: "0",
@@ -304,7 +304,7 @@ export function Header({
               </h1>
               <span
                 style={{
-                  background: "rgba(245, 158, 11, 0.18)",
+                  background: "color-mix(in srgb, var(--accent-amber) 18%, transparent)",
                   color: "var(--accent-amber-light)",
                   border: "1px solid var(--border-subtle)",
                   fontSize: "0.62rem",
@@ -514,11 +514,11 @@ export function Header({
               borderRadius: "8px",
               background:
                 kitchenNotifications.length > 0
-                  ? "rgba(245, 158, 11, 0.15)"
+                  ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)"
                   : "var(--bg-tertiary)",
               border:
                 kitchenNotifications.length > 0
-                  ? "1.5px solid rgba(245, 158, 11, 0.45)"
+                  ? "1.5px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)"
                   : "1px solid var(--border-subtle)",
               color:
                 kitchenNotifications.length > 0
@@ -548,7 +548,7 @@ export function Header({
                     position: "absolute",
                     top: "-4px",
                     right: "-4px",
-                    background: hasCompleted ? "#10b981" : "#f59e0b",
+                    background: hasCompleted ? "#10b981" : "var(--accent-amber)",
                     color: "#000000",
                     fontSize: "0.62rem",
                     fontWeight: 900,
@@ -578,10 +578,10 @@ export function Header({
                 width: dropdownCoords ? `${dropdownCoords.width}px` : "360px",
                 maxWidth: "calc(100vw - 24px)",
                 background: "var(--bg-card)",
-                border: "1.5px solid rgba(245, 158, 11, 0.45)",
+                border: "1.5px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
                 borderRadius: "14px",
                 boxShadow:
-                  "0 20px 50px rgba(0,0,0,0.85), 0 0 25px rgba(245, 158, 11, 0.2)",
+                  "0 20px 50px rgba(0,0,0,0.85), 0 0 25px color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                 zIndex: 9999999,
                 overflow: "hidden",
                 display: "flex",
@@ -607,7 +607,7 @@ export function Header({
                     gap: "0.5rem",
                   }}
                 >
-                  <Bell size={16} color="#f59e0b" />
+                  <Bell size={16} color="var(--accent-amber)" />
                   <span
                     style={{
                       fontSize: "0.88rem",
@@ -624,9 +624,9 @@ export function Header({
                     return unreadCount > 0 ? (
                       <span
                         style={{
-                          background: "rgba(245, 158, 11, 0.2)",
+                          background: "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                           color: "var(--accent-amber-light)",
-                          border: "1px solid rgba(245, 158, 11, 0.4)",
+                          border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                           padding: "1px 6px",
                           borderRadius: "10px",
                           fontSize: "0.66rem",
@@ -735,10 +735,10 @@ export function Header({
                           padding: "0.75rem 0.85rem",
                           background: isCompleted
                             ? "rgba(16, 185, 129, 0.08)"
-                            : "rgba(245, 158, 11, 0.08)",
+                            : "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
                           border: isCompleted
                             ? "1px solid rgba(16, 185, 129, 0.25)"
-                            : "1px solid rgba(245, 158, 11, 0.25)",
+                            : "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                           borderRadius: "9px",
                           cursor: n.tableId ? "pointer" : "default",
                           display: "flex",
@@ -749,13 +749,13 @@ export function Header({
                         onMouseEnter={(e) => {
                           e.currentTarget.style.background = isCompleted
                             ? "rgba(16, 185, 129, 0.16)"
-                            : "rgba(245, 158, 11, 0.16)";
+                            : "color-mix(in srgb, var(--accent-amber) 16%, transparent)";
                           e.currentTarget.style.transform = "translateY(-1px)";
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = isCompleted
                             ? "rgba(16, 185, 129, 0.08)"
-                            : "rgba(245, 158, 11, 0.08)";
+                            : "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
                           e.currentTarget.style.transform = "translateY(0)";
                         }}
                       >
@@ -767,10 +767,10 @@ export function Header({
                             flexShrink: 0,
                             background: isCompleted
                               ? "linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2))"
-                              : "linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(234, 88, 12, 0.2))",
+                              : "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 30%, transparent), color-mix(in srgb, var(--accent-saffron) 20%, transparent))",
                             border: isCompleted
                               ? "1.5px solid rgba(16, 185, 129, 0.5)"
-                              : "1.5px solid rgba(245, 158, 11, 0.5)",
+                              : "1.5px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -778,7 +778,7 @@ export function Header({
                             boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
                           }}
                         >
-                          {isCompleted ? <CheckCircle2 size={16} color="#10b981" /> : <Flame size={16} color="#f59e0b" />}
+                          {isCompleted ? <CheckCircle2 size={16} color="#10b981" /> : <Flame size={16} color="var(--accent-amber)" />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
@@ -840,7 +840,7 @@ export function Header({
                                   fontWeight: 800,
                                   background: isCompleted
                                     ? "rgba(16, 185, 129, 0.2)"
-                                    : "rgba(245, 158, 11, 0.2)",
+                                    : "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                                   color: isCompleted ? "var(--success)" : "var(--accent-amber-light)",
                                   padding: "1px 6px",
                                   borderRadius: "4px",

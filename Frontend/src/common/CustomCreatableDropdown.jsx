@@ -148,7 +148,7 @@ export function CustomCreatableDropdown({
             padding: "2px 4px 2px 8px",
             boxSizing: "border-box",
             overflow: "hidden",
-            boxShadow: "0 0 0 2px rgba(245, 158, 11, 0.15)",
+            boxShadow: "0 0 0 2px color-mix(in srgb, var(--accent-amber) 15%, transparent)",
           }}
         >
           <input
@@ -185,7 +185,7 @@ export function CustomCreatableDropdown({
             style={{
               height: "28px",
               padding: "0 9px",
-              background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#ffffff",
               border: "none",
               borderRadius: "6px",
@@ -196,7 +196,7 @@ export function CustomCreatableDropdown({
               alignItems: "center",
               gap: "3px",
               flexShrink: 0,
-              boxShadow: "0 1px 4px rgba(234, 88, 12, 0.3)",
+              boxShadow: "0 1px 4px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
               whiteSpace: "nowrap",
             }}
             title="Add custom option"

@@ -736,11 +736,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 width: "40px",
                 height: "40px",
                 borderRadius: "12px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               }}
             >
               <Package size={19} color="#ffffff" />
@@ -759,8 +759,8 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 </h2>
                 <span
                   style={{
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                     color: "var(--accent-amber-light)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
@@ -822,7 +822,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
               onClick={openAddModal}
               style={{
                 height: "36px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "9px",
@@ -833,7 +833,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                 alignItems: "center",
                 gap: "0.45rem",
                 cursor: "pointer",
-                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
               }}
@@ -1036,7 +1036,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
               label: "Stock Expenditure",
               value: formatCurrency(totalValuation),
               status: "expenditure",
-              color: "#f59e0b",
+              color: "var(--accent-amber)",
               icon: IndianRupee,
             },
             {
@@ -1050,7 +1050,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
               label: "Low Stock",
               value: lowStockCount,
               status: "low_stock",
-              color: "var(--accent-amber-light, #f59e0b)",
+              color: "var(--accent-amber-light, var(--accent-amber))",
               icon: AlertTriangle,
             },
             {
@@ -1210,7 +1210,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                   const statusColor = isOutOfStock
                     ? "#ef4444"
                     : isLowStock
-                      ? "#f59e0b"
+                      ? "var(--accent-amber)"
                       : "#10b981";
 
                   const brandText = String(item.brand || "").trim();
@@ -1326,7 +1326,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                         {stockVal <= 0 ? (
                           <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>₹0.00</span>
                         ) : (
-                          <span style={{ color: "#f59e0b", fontWeight: 800, fontSize: "0.82rem" }}>
+                          <span style={{ color: "var(--accent-amber)", fontWeight: 800, fontSize: "0.82rem" }}>
                             {formatCurrency(stockVal)}
                           </span>
                         )}
@@ -1470,9 +1470,9 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                               setConsumeReason("Bar Usage");
                             }}
                             style={{
-                              background: "rgba(245, 158, 11, 0.14)",
-                              border: "1px solid rgba(245, 158, 11, 0.38)",
-                              color: "#f59e0b",
+                              background: "color-mix(in srgb, var(--accent-amber) 14%, transparent)",
+                              border: "1px solid color-mix(in srgb, var(--accent-amber) 38%, transparent)",
+                              color: "var(--accent-amber)",
                               borderRadius: "6px",
                               padding: "3px 7px",
                               fontSize: "0.72rem",
@@ -1563,7 +1563,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                       onClick={openAddModal}
                       style={{
                         height: "36px",
-                        background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                        background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                         color: "#ffffff",
                         border: "none",
                         borderRadius: "9px",
@@ -1710,7 +1710,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                   gap: "0.4rem",
                 }}
               >
-                <MinusCircle size={18} color="#f59e0b" />
+                <MinusCircle size={18} color="var(--accent-amber)" />
                 Record Used: {consumeItem.name}
               </h3>
               <button
@@ -1747,7 +1747,7 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                     color:
                       Number(consumeItem.stock ?? consumeItem.currentStock ?? 0) <=
                       Number(consumeItem.minThreshold ?? consumeItem.minimumThreshold ?? 0)
-                        ? "#f59e0b"
+                        ? "var(--accent-amber)"
                         : "#10b981",
                   }}
                 >
@@ -1901,11 +1901,11 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                   border: 0,
                   borderRadius: "8px",
                   color: "#fff",
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   fontWeight: 800,
                   fontSize: "0.78rem",
                   cursor: "pointer",
-                  boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                  boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 }}
               >
                 {busy ? "Recording..." : "Record Used"}
@@ -2415,8 +2415,8 @@ function SharedBarInventory({ inventory, loading, error, onRefresh, onRecordInve
                     marginTop: "12px",
                     padding: "0.5rem 0.85rem",
                     borderRadius: "8px",
-                    background: "rgba(245, 158, 11, 0.1)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                     fontSize: "0.78rem",
                     color: "var(--accent-amber-light)",
                     display: "flex",
@@ -3143,11 +3143,11 @@ function BarDrinksMenu({
               width: "38px",
               height: "38px",
               borderRadius: "10px",
-              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               flexShrink: 0,
             }}
           >
@@ -3167,8 +3167,8 @@ function BarDrinksMenu({
               </h2>
               <span
                 style={{
-                  background: "rgba(245, 158, 11, 0.15)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   color: "var(--accent-amber-light)",
                   fontSize: "0.74rem",
                   fontWeight: 700,
@@ -3198,7 +3198,7 @@ function BarDrinksMenu({
             onClick={() => handleOpenItemModal()}
             style={{
               height: "36px",
-              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               color: "#ffffff",
               border: "none",
               borderRadius: "8px",
@@ -3209,7 +3209,7 @@ function BarDrinksMenu({
               alignItems: "center",
               gap: "0.45rem",
               cursor: "pointer",
-              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
             }}
           >
             <Plus size={16} strokeWidth={2.5} />
@@ -3446,9 +3446,9 @@ function BarDrinksMenu({
                                         display: "inline-flex",
                                         alignItems: "center",
                                         gap: "3px",
-                                        background: "rgba(245, 158, 11, 0.15)",
-                                        border: "1px solid rgba(245, 158, 11, 0.35)",
-                                        color: "#f59e0b",
+                                        background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                                        border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
+                                        color: "var(--accent-amber)",
                                         borderRadius: "12px",
                                         padding: "1px 7px",
                                         fontSize: "0.68rem",
@@ -3459,10 +3459,10 @@ function BarDrinksMenu({
                                     >
                                       <Star
                                         size={11}
-                                        fill="#f59e0b"
-                                        color="#f59e0b"
+                                        fill="var(--accent-amber)"
+                                        color="var(--accent-amber)"
                                         style={{
-                                          filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
+                                          filter: "drop-shadow(0 0 2px color-mix(in srgb, var(--accent-amber) 50%, transparent))",
                                         }}
                                       />
                                       <span>Special</span>
@@ -3491,9 +3491,9 @@ function BarDrinksMenu({
                                         display: "inline-flex",
                                         alignItems: "center",
                                         gap: "3px",
-                                        background: "rgba(245, 158, 11, 0.15)",
-                                        border: "1px solid rgba(245, 158, 11, 0.35)",
-                                        color: "#f59e0b",
+                                        background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                                        border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
+                                        color: "var(--accent-amber)",
                                         borderRadius: "12px",
                                         padding: "1px 7px",
                                         fontSize: "0.68rem",
@@ -3504,10 +3504,10 @@ function BarDrinksMenu({
                                     >
                                       <Star
                                         size={11}
-                                        fill="#f59e0b"
-                                        color="#f59e0b"
+                                        fill="var(--accent-amber)"
+                                        color="var(--accent-amber)"
                                         style={{
-                                          filter: "drop-shadow(0 0 2px rgba(245, 158, 11, 0.5))",
+                                          filter: "drop-shadow(0 0 2px color-mix(in srgb, var(--accent-amber) 50%, transparent))",
                                         }}
                                       />
                                       <span>Special</span>
@@ -3669,8 +3669,8 @@ function BarDrinksMenu({
                           type="button"
                           onClick={() => handleOpenItemModal(item)}
                           style={{
-                            border: "1px solid rgba(245, 158, 11, 0.45)",
-                            background: "rgba(245, 158, 11, 0.06)",
+                            border: "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
+                            background: "color-mix(in srgb, var(--accent-amber) 6%, transparent)",
                             color: "var(--accent-amber-light)",
                             borderRadius: "6px",
                             padding: "4px 12px",
@@ -3683,12 +3683,12 @@ function BarDrinksMenu({
                             transition: "all 0.15s ease",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.15)";
+                            e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 15%, transparent)";
                             e.currentTarget.style.borderColor = "var(--accent-amber)";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "rgba(245, 158, 11, 0.06)";
-                            e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                            e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 6%, transparent)";
+                            e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
                           }}
                           title="Edit drink"
                         >
@@ -3800,8 +3800,8 @@ function BarDrinksMenu({
                 style={{
                   width: "26px",
                   height: "26px",
-                  border: pg === safeMenuPage ? "1px solid rgba(245, 158, 11, 0.45)" : "1px solid var(--border-card)",
-                  background: pg === safeMenuPage ? "rgba(245, 158, 11, 0.15)" : "var(--bg-secondary)",
+                  border: pg === safeMenuPage ? "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)" : "1px solid var(--border-card)",
+                  background: pg === safeMenuPage ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)" : "var(--bg-secondary)",
                   color: pg === safeMenuPage ? "var(--accent-amber-light)" : "var(--text-main)",
                   borderRadius: "4px",
                   fontWeight: 700,
@@ -3928,7 +3928,7 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Drink Name <span style={{ color: "#ea580c" }}>*</span>
+                  Drink Name <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -3963,7 +3963,7 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Category <span style={{ color: "#ea580c" }}>*</span>
+                  Category <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 {isCustomCategory ? (
                   <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
@@ -4076,7 +4076,7 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Drink Type <span style={{ color: "#ea580c" }}>*</span>
+                  Drink Type <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 <select
                   value={itemForm.drinkType}
@@ -4249,7 +4249,7 @@ function BarDrinksMenu({
                     marginBottom: "5px",
                   }}
                 >
-                  Selling Price (₹) <span style={{ color: "#ea580c" }}>*</span>
+                  Selling Price (₹) <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 <input
                   type="number"
@@ -4322,7 +4322,7 @@ function BarDrinksMenu({
                     cursor: "pointer",
                     fontSize: "0.86rem",
                     fontWeight: 700,
-                    color: Boolean(itemForm.isChefSpecial) ? "#f59e0b" : "var(--text-main)",
+                    color: Boolean(itemForm.isChefSpecial) ? "var(--accent-amber)" : "var(--text-main)",
                     userSelect: "none",
                   }}
                 >
@@ -4330,7 +4330,7 @@ function BarDrinksMenu({
                     type="checkbox"
                     checked={Boolean(itemForm.isChefSpecial)}
                     onChange={(e) => setItemForm({ ...itemForm, isChefSpecial: e.target.checked })}
-                    style={{ width: "16px", height: "16px", accentColor: "#f59e0b", cursor: "pointer" }}
+                    style={{ width: "16px", height: "16px", accentColor: "var(--accent-amber)", cursor: "pointer" }}
                   />
                   <span>Mark as Bartender's Special ⭐</span>
                 </label>
@@ -4465,14 +4465,14 @@ function BarDrinksMenu({
                 type="submit"
                 style={{
                   padding: "0.65rem 1.6rem",
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   border: "none",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
                   fontWeight: 700,
                   cursor: "pointer",
-                  boxShadow: "0 4px 12px rgba(245, 158, 11, 0.35)",
+                  boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 }}
               >
                 {editingItem ? "Save Drink Changes" : "Add Drink"}
@@ -4837,7 +4837,7 @@ function BarTablesView({
         message: `Cannot delete ${tbl.name || `Table ${tbl.id}`} because it is currently occupied with diners. Clear or settle bill first.`,
         confirmLabel: "Understood",
         cancelLabel: "Close",
-        icon: <AlertCircle size={22} color="#f59e0b" />,
+        icon: <AlertCircle size={22} color="var(--accent-amber)" />,
         onConfirm: () => {},
       });
       return;
@@ -4876,15 +4876,15 @@ function BarTablesView({
               width: "36px",
               height: "36px",
               borderRadius: "8px",
-              background: "rgba(245, 158, 11, 0.15)",
-              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+              border: "1.5px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "var(--accent-amber-light)",
             }}
           >
-            <Armchair size={22} color="#f59e0b" />
+            <Armchair size={22} color="var(--accent-amber)" />
           </div>
           <h2
             style={{
@@ -4907,23 +4907,23 @@ function BarTablesView({
             alignItems: "center",
             gap: "0.45rem",
             padding: "0.55rem 1.3rem",
-            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+            background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
             color: "#ffffff",
             borderRadius: "8px",
             fontWeight: 700,
             fontSize: "0.85rem",
-            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+            boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
             border: "none",
             cursor: "pointer",
             transition: "transform 0.15s ease, box-shadow 0.15s ease",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+            e.currentTarget.style.boxShadow = "0 6px 18px color-mix(in srgb, var(--accent-amber) 50%, transparent)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+            e.currentTarget.style.boxShadow = "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)";
           }}
         >
           <Plus size={16} strokeWidth={2.5} />
@@ -4981,7 +4981,7 @@ function BarTablesView({
                       padding: "0.42rem 0.5rem 0.42rem 1.6rem",
                       background: "var(--input-bg)",
                       border: tableFilters.search
-                        ? "1px solid #f59e0b"
+                        ? "1px solid var(--accent-amber)"
                         : "1px solid rgba(var(--surface-rgb),0.12)",
                       borderRadius: "6px",
                       color: "var(--text-main)",
@@ -5018,10 +5018,10 @@ function BarTablesView({
                       fontSize: "0.74rem",
                       fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
                       background: (!tableFilters.status || tableFilters.status === "all")
-                        ? "rgba(245, 158, 11, 0.2)"
+                        ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                         : "transparent",
                       color: (!tableFilters.status || tableFilters.status === "all")
-                        ? "#f59e0b"
+                        ? "var(--accent-amber)"
                         : "var(--text-dim)",
                       transition: "all 0.15s ease",
                     }}
@@ -5032,7 +5032,7 @@ function BarTablesView({
                         padding: "1px 5px",
                         borderRadius: "8px",
                         background: (!tableFilters.status || tableFilters.status === "all")
-                          ? "#f59e0b"
+                          ? "var(--accent-amber)"
                           : "rgba(var(--surface-rgb),0.08)",
                         color: (!tableFilters.status || tableFilters.status === "all")
                           ? "#081628"
@@ -5110,11 +5110,11 @@ function BarTablesView({
                       fontSize: "0.74rem",
                       fontWeight: tableFilters.status === "occupied" ? 700 : 500,
                       background: tableFilters.status === "occupied"
-                        ? "rgba(245, 158, 11, 0.2)"
+                        ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                         : "transparent",
                       color: tableFilters.status === "occupied" ? "var(--accent-amber-light)" : "var(--text-dim)",
                       boxShadow: tableFilters.status === "occupied"
-                        ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                        ? "0 0 10px color-mix(in srgb, var(--accent-amber) 15%, transparent)"
                         : "none",
                       transition: "all 0.15s ease",
                     }}
@@ -5124,8 +5124,8 @@ function BarTablesView({
                         width: "6px",
                         height: "6px",
                         borderRadius: "50%",
-                        backgroundColor: "#f59e0b",
-                        boxShadow: "0 0 6px #f59e0b",
+                        backgroundColor: "var(--accent-amber)",
+                        boxShadow: "0 0 6px var(--accent-amber)",
                       }}
                     />
                     <span>Occupied</span>
@@ -5134,7 +5134,7 @@ function BarTablesView({
                         padding: "1px 5px",
                         borderRadius: "8px",
                         background: tableFilters.status === "occupied"
-                          ? "#f59e0b"
+                          ? "var(--accent-amber)"
                           : "rgba(var(--surface-rgb),0.08)",
                         color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
                         fontSize: "0.68rem",
@@ -5258,7 +5258,7 @@ function BarTablesView({
                     style={{
                       marginTop: "0.75rem",
                       background: "transparent",
-                      border: "1px solid #f59e0b",
+                      border: "1px solid var(--accent-amber)",
                       color: "var(--accent-amber-light)",
                       padding: "0.35rem 0.9rem",
                       borderRadius: "6px",
@@ -5276,10 +5276,10 @@ function BarTablesView({
             {/* Rows List */}
             {sortedTables.map((tbl) => {
               const isOccupied = isTableOccupied(tbl);
-              const dotColor = isOccupied ? "#f59e0b" : "#10b981";
+              const dotColor = isOccupied ? "var(--accent-amber)" : "#10b981";
               const textColor = isOccupied ? "var(--status-occupied)" : "var(--status-vacant)";
-              const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
-              const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
+              const bgColor = isOccupied ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "rgba(16, 185, 129, 0.12)";
+              const borderColor = isOccupied ? "color-mix(in srgb, var(--accent-amber) 30%, transparent)" : "rgba(16, 185, 129, 0.3)";
               const label = isOccupied ? "OCCUPIED" : "VACANT";
 
               return (
@@ -5298,7 +5298,7 @@ function BarTablesView({
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "var(--bg-tertiary)";
-                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                    e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 30%, transparent)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "var(--bg-secondary)";
@@ -5312,7 +5312,7 @@ function BarTablesView({
                         width: "28px",
                         height: "28px",
                         borderRadius: "6px",
-                        background: "rgba(245, 158, 11, 0.15)",
+                        background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                         color: "var(--accent-amber-light)",
                         display: "flex",
                         alignItems: "center",
@@ -5461,9 +5461,9 @@ function BarTablesView({
                         alignItems: "center",
                         justifyContent: "center",
                         padding: "0.32rem 0.5rem",
-                        background: "rgba(245, 158, 11, 0.08)",
-                        color: "#f59e0b",
-                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                        color: "var(--accent-amber)",
+                        border: "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
                         borderRadius: "6px",
                         fontSize: "0.74rem",
                         cursor: "pointer",
@@ -5471,17 +5471,17 @@ function BarTablesView({
                         flexShrink: 0,
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
-                        e.currentTarget.style.borderColor = "#f59e0b";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 20%, transparent)";
+                        e.currentTarget.style.borderColor = "var(--accent-amber)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
                       }}
                       title="Edit Chairs / Area"
                       aria-label="Edit Chairs / Area"
                     >
-                      <SquarePen size={13} color="#f59e0b" />
+                      <SquarePen size={13} color="var(--accent-amber)" />
                     </button>
 
                     {/* Delete Table */}
@@ -5602,7 +5602,7 @@ function BarTablesView({
                   marginBottom: "5px",
                 }}
               >
-                Table Name / Identifier <span style={{ color: "#ea580c" }}>*</span>
+                Table Name / Identifier <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -5633,7 +5633,7 @@ function BarTablesView({
                   marginBottom: "5px",
                 }}
               >
-                Dining Section / Area <span style={{ color: "#ea580c" }}>*</span>
+                Dining Section / Area <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <CustomCreatableDropdown
                 value={tableForm.section}
@@ -5657,7 +5657,7 @@ function BarTablesView({
                   marginBottom: "6px",
                 }}
               >
-                Chairs / Seating Capacity (Persons) <span style={{ color: "#ea580c" }}>*</span>
+                Chairs / Seating Capacity (Persons) <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <div
                 style={{
@@ -5678,13 +5678,13 @@ function BarTablesView({
                         padding: "0.55rem 0.3rem",
                         borderRadius: "8px",
                         background: isSelected
-                          ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                          ? "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))"
                           : "var(--bg-tertiary)",
                         color: isSelected ? "#ffffff" : "var(--text-main)",
                         fontWeight: 800,
                         fontSize: "0.82rem",
-                        border: isSelected ? "1.5px solid #ea580c" : "1.5px solid var(--border-subtle)",
-                        boxShadow: isSelected ? "0 3px 10px rgba(234, 88, 12, 0.35)" : "none",
+                        border: isSelected ? "1.5px solid var(--accent-saffron)" : "1.5px solid var(--border-subtle)",
+                        boxShadow: isSelected ? "0 3px 10px color-mix(in srgb, var(--accent-saffron) 35%, transparent)" : "none",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                       }}
@@ -5794,14 +5794,14 @@ function BarTablesView({
                 style={{
                   flex: 2,
                   padding: "0.7rem",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontSize: "0.88rem",
                   fontWeight: 800,
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                  boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
                 }}
               >
                 {editingTable ? "Update Table Chairs" : "Add Table"}
@@ -6282,15 +6282,15 @@ function BarStaffView({
               width: "36px",
               height: "36px",
               borderRadius: "8px",
-              background: "rgba(245, 158, 11, 0.15)",
-              border: "1.5px solid rgba(245, 158, 11, 0.4)",
+              background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+              border: "1.5px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "var(--accent-amber-light)",
             }}
           >
-            <Users size={22} color="#f59e0b" />
+            <Users size={22} color="var(--accent-amber)" />
           </div>
           <div>
             <h2
@@ -6347,23 +6347,23 @@ function BarStaffView({
               alignItems: "center",
               gap: "0.45rem",
               padding: "0.55rem 1.3rem",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               color: "#ffffff",
               borderRadius: "8px",
               fontWeight: 700,
               fontSize: "0.85rem",
-              boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+              boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
               border: "none",
               cursor: "pointer",
               transition: "transform 0.15s ease, box-shadow 0.15s ease",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-1px)";
-              e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+              e.currentTarget.style.boxShadow = "0 6px 18px color-mix(in srgb, var(--accent-amber) 50%, transparent)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+              e.currentTarget.style.boxShadow = "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)";
             }}
           >
             <Plus size={16} strokeWidth={2.5} />
@@ -6410,7 +6410,7 @@ function BarStaffView({
                       padding: "0 10px 0 34px",
                       background: "var(--bg-tertiary)",
                       border: staffFilters.search
-                        ? "1px solid #f59e0b"
+                        ? "1px solid var(--accent-amber)"
                         : "1px solid var(--border-card)",
                       borderRadius: "8px",
                       color: "var(--text-main)",
@@ -6434,7 +6434,7 @@ function BarStaffView({
                     padding: "0 10px",
                     background: "var(--bg-tertiary)",
                     border: staffFilters.role
-                      ? "1px solid #f59e0b"
+                      ? "1px solid var(--accent-amber)"
                       : "1px solid var(--border-card)",
                     borderRadius: "8px",
                     color: staffFilters.role ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -6468,7 +6468,7 @@ function BarStaffView({
                     padding: "0 10px",
                     background: "var(--bg-tertiary)",
                     border: staffFilters.shift
-                      ? "1px solid #f59e0b"
+                      ? "1px solid var(--accent-amber)"
                       : "1px solid var(--border-card)",
                     borderRadius: "8px",
                     color: staffFilters.shift ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -6502,7 +6502,7 @@ function BarStaffView({
                     padding: "0 10px",
                     background: "var(--bg-tertiary)",
                     border: staffFilters.assigned
-                      ? "1px solid #f59e0b"
+                      ? "1px solid var(--accent-amber)"
                       : "1px solid var(--border-card)",
                     borderRadius: "8px",
                     color: staffFilters.assigned ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -6608,7 +6608,7 @@ function BarStaffView({
                     style={{
                       marginTop: "0.75rem",
                       background: "transparent",
-                      border: "1px solid #f59e0b",
+                      border: "1px solid var(--accent-amber)",
                       color: "var(--accent-amber-light)",
                       padding: "0.35rem 0.9rem",
                       borderRadius: "6px",
@@ -6628,7 +6628,7 @@ function BarStaffView({
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "0.4rem",
-                        background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                        background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                         color: "#fff",
                         border: "none",
                         padding: "0.45rem 1rem",
@@ -6691,7 +6691,7 @@ function BarStaffView({
                   className="staff-table-grid"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "var(--bg-tertiary)";
-                    e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                    e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 30%, transparent)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "var(--bg-secondary)";
@@ -6705,7 +6705,7 @@ function BarStaffView({
                         width: "28px",
                         height: "28px",
                         borderRadius: "6px",
-                        background: "rgba(245, 158, 11, 0.15)",
+                        background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                         color: "var(--accent-amber-light)",
                         display: "flex",
                         alignItems: "center",
@@ -6848,26 +6848,26 @@ function BarStaffView({
                         alignItems: "center",
                         justifyContent: "center",
                         padding: "0.35rem 0.55rem",
-                        background: "rgba(245, 158, 11, 0.08)",
-                        color: "#f59e0b",
-                        border: "1px solid rgba(245, 158, 11, 0.45)",
+                        background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                        color: "var(--accent-amber)",
+                        border: "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
                         borderRadius: "6px",
                         fontSize: "0.74rem",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
-                        e.currentTarget.style.borderColor = "#f59e0b";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 20%, transparent)";
+                        e.currentTarget.style.borderColor = "var(--accent-amber)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
                       }}
                       title="Edit Staff"
                       aria-label="Edit Staff"
                     >
-                      <SquarePen size={13} color="#f59e0b" />
+                      <SquarePen size={13} color="var(--accent-amber)" />
                     </button>
 
                     <button
@@ -6991,7 +6991,7 @@ function BarStaffView({
                   marginBottom: "5px",
                 }}
               >
-                Person Full Name <span style={{ color: "#ea580c" }}>*</span>
+                Person Full Name <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -7158,7 +7158,7 @@ function BarStaffView({
                               }));
                             }
                           }}
-                          style={{ accentColor: "#f59e0b", cursor: "pointer" }}
+                          style={{ accentColor: "var(--accent-amber)", cursor: "pointer" }}
                         />
                         <span>{tbl.label || tbl.tableNumber || `Table ${tbl.tableId}`}</span>
                         {tbl.isCurrentlyAssigned && tbl.assignedStaffName && !isChecked && (
@@ -7202,14 +7202,14 @@ function BarStaffView({
                 style={{
                   flex: 2,
                   padding: "0.7rem",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontSize: "0.88rem",
                   fontWeight: 800,
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                  boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
                 }}
               >
                 {editingStaff ? "Save Changes" : "Add Person"}
@@ -8219,8 +8219,8 @@ export function BarWorkspace({
         /* 1. Unified Header Banner Card (Matching Dine Dashboard) */
         <div
           style={{
-            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
-            border: "1px solid rgba(245, 158, 11, 0.25)",
+            background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 15%, transparent) 0%, color-mix(in srgb, var(--accent-saffron) 8%, transparent) 100%)",
+            border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
             borderRadius: "12px",
             padding: "0.85rem 1.15rem",
             display: "flex",
@@ -8237,11 +8237,11 @@ export function BarWorkspace({
                 width: "38px",
                 height: "38px",
                 borderRadius: "10px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 flexShrink: 0,
               }}
             >
@@ -8270,7 +8270,7 @@ export function BarWorkspace({
               type="button"
               onClick={() => { go("bar-drinks"); openForm("drink"); }}
               style={{
-                background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "8px",
@@ -8281,7 +8281,7 @@ export function BarWorkspace({
                 alignItems: "center",
                 gap: "0.35rem",
                 cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+                boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 height: "32px",
               }}
             >
@@ -8386,7 +8386,7 @@ export function BarWorkspace({
               disabled={overviewLoading}
               style={{
                 background: "var(--bg-card)",
-                border: "1px solid rgba(245, 158, 11, 0.35)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 color: "var(--text-main)",
                 borderRadius: "8px",
                 padding: "0.42rem 0.85rem",
@@ -8445,8 +8445,8 @@ export function BarWorkspace({
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 Bar Sales Today
               </span>
-              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <IndianRupee size={12} color="#f59e0b" />
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <IndianRupee size={12} color="var(--accent-amber)" />
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -8603,8 +8603,8 @@ export function BarWorkspace({
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 Drinks Catalog
               </span>
-              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Martini size={12} color="#f59e0b" />
+              <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Martini size={12} color="var(--accent-amber)" />
               </div>
             </div>
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -8638,7 +8638,7 @@ export function BarWorkspace({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                <Armchair size={16} color="#f59e0b" />
+                <Armchair size={16} color="var(--accent-amber)" />
                 <h3
                   style={{
                     fontSize: "0.92rem",
@@ -8653,7 +8653,7 @@ export function BarWorkspace({
                   style={{
                     fontSize: "0.68rem",
                     fontWeight: 700,
-                    background: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                    background: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)" : "rgba(16, 185, 129, 0.15)",
                     color: (overviewData?.occupiedTables ?? occupiedBarTables.length) > 0 ? "var(--accent-amber-light)" : "var(--success)",
                     padding: "1px 6px",
                     borderRadius: "10px",
@@ -8700,8 +8700,8 @@ export function BarWorkspace({
                     key={tbl.id}
                     onClick={() => go("bar-tables")}
                     style={{
-                      background: isOccupied ? "rgba(245, 158, 11, 0.12)" : "var(--bg-tertiary)",
-                      border: isOccupied ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid var(--border-subtle)",
+                      background: isOccupied ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "var(--bg-tertiary)",
+                      border: isOccupied ? "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)" : "1px solid var(--border-subtle)",
                       borderRadius: "8px",
                       padding: "0.5rem 0.4rem",
                       textAlign: "center",
@@ -8712,7 +8712,7 @@ export function BarWorkspace({
                       e.currentTarget.style.borderColor = "var(--accent-amber)";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = isOccupied ? "rgba(245, 158, 11, 0.4)" : "var(--border-subtle)";
+                      e.currentTarget.style.borderColor = isOccupied ? "color-mix(in srgb, var(--accent-amber) 40%, transparent)" : "var(--border-subtle)";
                     }}
                     title={tbl.number + " • " + tbl.area + " • " + (isOccupied ? ((tbl.guests || 2) + " Guests") : "Vacant")}
                   >
@@ -8745,7 +8745,7 @@ export function BarWorkspace({
                           width: "5px",
                           height: "5px",
                           borderRadius: "50%",
-                          background: isOccupied ? "#f59e0b" : "#10b981",
+                          background: isOccupied ? "var(--accent-amber)" : "#10b981",
                           flexShrink: 0,
                         }}
                       />
@@ -8789,7 +8789,7 @@ export function BarWorkspace({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                <Martini size={16} color="#ea580c" />
+                <Martini size={16} color="var(--accent-saffron)" />
                 <h3
                   style={{
                     fontSize: "0.92rem",
@@ -8806,8 +8806,8 @@ export function BarWorkspace({
                   type="button"
                   onClick={() => { go("bar-drinks"); openForm("drink"); }}
                   style={{
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                     color: "var(--accent-amber-light)",
                     borderRadius: "6px",
                     padding: "0.25rem 0.55rem",
@@ -8828,7 +8828,7 @@ export function BarWorkspace({
                   style={{
                     background: "transparent",
                     border: "none",
-                    color: "#ea580c",
+                    color: "var(--accent-saffron)",
                     fontSize: "0.74rem",
                     fontWeight: 700,
                     cursor: "pointer",

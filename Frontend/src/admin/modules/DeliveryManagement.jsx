@@ -123,13 +123,13 @@ export function DeliveryManagement({ isLight = false, showToast = alert }) {
               alignItems: 'center',
               gap: '0.4rem',
               padding: '0.55rem 1rem',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)',
               border: 'none',
               borderRadius: 'var(--radius-md)',
               color: '#ffffff',
               cursor: 'pointer',
               fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+              boxShadow: '0 2px 6px color-mix(in srgb, var(--accent-amber) 30%, transparent)',
             }}
           >
             <Plus size={16} /> New Delivery
@@ -150,7 +150,7 @@ export function DeliveryManagement({ isLight = false, showToast = alert }) {
           {orders.map((d) => {
             const isDelivered = d.deliveryStatus?.toLowerCase() === 'delivered';
             const isDispatched = d.deliveryStatus?.toLowerCase() === 'dispatched' || d.deliveryStatus?.toLowerCase() === 'out_for_delivery';
-            const statusColor = isDelivered ? '#10b981' : isDispatched ? '#3b82f6' : '#f59e0b';
+            const statusColor = isDelivered ? '#10b981' : isDispatched ? '#3b82f6' : 'var(--accent-amber)';
 
             return (
               <div
@@ -323,7 +323,7 @@ export function DeliveryManagement({ isLight = false, showToast = alert }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-amber))', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {saving ? 'Saving...' : 'Dispatch Order'}
                 </button>

@@ -579,9 +579,9 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
               const orderTotal = order.grandTotal ?? order.GrandTotal ?? order.totalAmount ?? order.TotalAmount ?? order.total ?? order.amount;
               const dishCount = orderItems.reduce((sum, item) => sum + (Number(item.quantity ?? item.Quantity ?? item.qty) || 1), 0);
               const kotNotSent = orderItems.some((item) => !(item.kotId ?? item.KotId));
-              const statusBg = allReady ? "rgba(16, 185, 129, .15)" : isCooking ? "rgba(245, 158, 11, .15)" : "rgba(59, 130, 246, .15)";
-              const statusColor = allReady ? "#10b981" : isCooking ? "#f59e0b" : "#3b82f6";
-              const statusBorder = allReady ? "rgba(16, 185, 129, .4)" : isCooking ? "rgba(245, 158, 11, .4)" : "rgba(59, 130, 246, .4)";
+              const statusBg = allReady ? "rgba(16, 185, 129, .15)" : isCooking ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)" : "rgba(59, 130, 246, .15)";
+              const statusColor = allReady ? "#10b981" : isCooking ? "var(--accent-amber)" : "#3b82f6";
+              const statusBorder = allReady ? "rgba(16, 185, 129, .4)" : isCooking ? "color-mix(in srgb, var(--accent-amber) 40%, transparent)" : "rgba(59, 130, 246, .4)";
               const isBusy = dispatchingOrderId === orderId;
               return (
                 <article key={orderId ?? `takeaway-${orderIndex}`} className="takeaway-active-order-card">

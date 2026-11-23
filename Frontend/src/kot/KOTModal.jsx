@@ -44,7 +44,7 @@ export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "
         width: '100%',
         maxWidth: '380px',
         borderRadius: '12px',
-        boxShadow: '0 25px 65px rgba(0,0,0,0.85), 0 0 35px rgba(245, 158, 11, 0.25)',
+        boxShadow: '0 25px 65px rgba(0,0,0,0.85), 0 0 35px color-mix(in srgb, var(--accent-amber) 25%, transparent)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -61,7 +61,7 @@ export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "
           borderBottom: '1px solid var(--border-card)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <ChefHat size={18} color="#f59e0b" />
+            <ChefHat size={18} color="var(--accent-amber)" />
             <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.02em' }}>
               Kitchen Order Ticket (KOT)
             </span>
@@ -211,7 +211,7 @@ export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "
               flex: 1.5,
               padding: '0.52rem',
               borderRadius: '6px',
-              background: '#f59e0b',
+              background: 'var(--accent-amber)',
               color: '#000000',
               fontWeight: 800,
               fontSize: '0.82rem',
@@ -221,7 +221,7 @@ export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "
               gap: '0.4rem',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
+              boxShadow: '0 2px 8px color-mix(in srgb, var(--accent-amber) 40%, transparent)'
             }}
           >
             <Printer size={15} />

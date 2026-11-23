@@ -92,7 +92,7 @@ export function RolesManagement({ isLight = false, showToast = alert }) {
                         width: '32px',
                         height: '32px',
                         borderRadius: '8px',
-                        background: isSuperAdmin ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                        background: isSuperAdmin ? 'rgba(239, 68, 68, 0.15)' : 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
                         color: isSuperAdmin ? '#ef4444' : 'var(--accent-amber-light)',
                         display: 'flex',
                         alignItems: 'center',

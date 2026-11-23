@@ -218,13 +218,13 @@
 
 //           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
 //             <div style={{
-//               background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+//               background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))',
 //               color: '#ffffff',
 //               padding: '0.35rem 0.75rem',
 //               borderRadius: 'var(--radius-sm)',
 //               fontWeight: 800,
 //               fontSize: '1rem',
-//               boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
+//               boxShadow: '0 2px 8px color-mix(in srgb, var(--accent-amber) 35%, transparent)'
 //             }}>
 //               {table.name}
 //             </div>
@@ -387,7 +387,7 @@
 //                 fontSize: '0.78rem',
 //                 fontWeight: 700,
 //                 background: (tableStatusFilter !== 'all' || tableSectionFilter !== 'all' || isFilterDropdownOpen)
-//                   ? 'rgba(245, 158, 11, 0.22)'
+//                   ? 'color-mix(in srgb, var(--accent-amber) 22%, transparent)'
 //                   : 'var(--bg-tertiary)',
 //                 color: (tableStatusFilter !== 'all' || tableSectionFilter !== 'all' || isFilterDropdownOpen)
 //                   ? 'var(--accent-amber-light)'
@@ -522,7 +522,7 @@
 //                             borderRadius: '6px',
 //                             fontSize: '0.74rem',
 //                             fontWeight: isSelected ? 800 : 600,
-//                             background: isSelected ? 'rgba(245, 158, 11, 0.22)' : 'var(--bg-tertiary)',
+//                             background: isSelected ? 'color-mix(in srgb, var(--accent-amber) 22%, transparent)' : 'var(--bg-tertiary)',
 //                             color: isSelected ? 'var(--accent-amber-light)' : 'var(--text-main)',
 //                             border: isSelected ? '1px solid var(--accent-amber)' : '1px solid var(--border-subtle)',
 //                             display: 'flex',
@@ -805,14 +805,14 @@
 //                     fontSize: '0.82rem',
 //                     fontWeight: isSelected ? 700 : (isBiryaniCat ? 700 : 500),
 //                     background: isSelected
-//                       ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0.12) 100%)'
-//                       : (isBiryaniCat ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-secondary)'),
+//                       ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 30%, transparent) 0%, color-mix(in srgb, var(--accent-amber) 12%, transparent) 100%)'
+//                       : (isBiryaniCat ? 'color-mix(in srgb, var(--accent-amber) 8%, transparent)' : 'var(--bg-secondary)'),
 //                     color: isSelected
 //                       ? 'var(--accent-amber-light)'
 //                       : (isBiryaniCat ? 'var(--accent-amber-light)' : 'var(--text-muted)'),
 //                     border: isSelected
 //                       ? '1px solid var(--accent-amber)'
-//                       : (isBiryaniCat ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-subtle)'),
+//                       : (isBiryaniCat ? '1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)' : '1px solid var(--border-subtle)'),
 //                     whiteSpace: 'nowrap'
 //                   }}
 //                 >
@@ -882,7 +882,7 @@
 //                       overflow: 'hidden',
 //                       display: 'flex',
 //                       flexDirection: 'column',
-//                       boxShadow: currentQty > 0 ? '0 3px 10px rgba(245, 158, 11, 0.22)' : 'var(--shadow-sm)',
+//                       boxShadow: currentQty > 0 ? '0 3px 10px color-mix(in srgb, var(--accent-amber) 22%, transparent)' : 'var(--shadow-sm)',
 //                       transition: 'border-color 0.15s, box-shadow 0.15s'
 //                     }}
 //                   >
@@ -960,7 +960,7 @@
 //                           top: '4px',
 //                           right: '4px',
 //                           zIndex: 2,
-//                           background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+//                           background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))',
 //                           color: '#ffffff',
 //                           padding: '1px 5px',
 //                           borderRadius: '3px',
@@ -1066,11 +1066,11 @@
 //                               gap: '0.2rem',
 //                               padding: '0.22rem 0.5rem',
 //                               borderRadius: 'var(--radius-sm)',
-//                               background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+//                               background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)',
 //                               color: '#ffffff',
 //                               fontWeight: 800,
 //                               fontSize: '0.7rem',
-//                               boxShadow: '0 2px 4px rgba(245, 158, 11, 0.35)',
+//                               boxShadow: '0 2px 4px color-mix(in srgb, var(--accent-amber) 35%, transparent)',
 //                               cursor: 'pointer'
 //                             }}
 //                           >
@@ -1192,7 +1192,7 @@
 //             </div>
 
 //             <div style={{
-//               background: 'rgba(245, 158, 11, 0.18)',
+//               background: 'color-mix(in srgb, var(--accent-amber) 18%, transparent)',
 //               color: 'var(--accent-amber-light)',
 //               padding: '0.25rem 0.6rem',
 //               borderRadius: '6px',
@@ -1254,8 +1254,8 @@
 //               if (hasCooking) {
 //                 return (
 //                   <div style={{
-//                     background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(245, 158, 11, 0.1))',
-//                     border: '1.5px solid #ea580c',
+//                     background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-saffron) 20%, transparent), color-mix(in srgb, var(--accent-amber) 10%, transparent))',
+//                     border: '1.5px solid var(--accent-saffron)',
 //                     borderRadius: '8px',
 //                     padding: '0.65rem 0.85rem',
 //                     display: 'flex',
@@ -1362,14 +1362,14 @@
 //                           display: 'inline-block',
 //                           background: (item.kotStatus === 'ready' || item.kotStatus === 'served')
 //                             ? 'rgba(16, 185, 129, 0.15)'
-//                             : (item.kotStatus === 'cooking' ? 'rgba(234, 88, 12, 0.15)' : 'rgba(245, 158, 11, 0.15)'),
+//                             : (item.kotStatus === 'cooking' ? 'color-mix(in srgb, var(--accent-saffron) 15%, transparent)' : 'color-mix(in srgb, var(--accent-amber) 15%, transparent)'),
 //                           color: (item.kotStatus === 'ready' || item.kotStatus === 'served')
 //                             ? '#10b981'
-//                             : (item.kotStatus === 'cooking' ? '#ea580c' : '#f59e0b'),
+//                             : (item.kotStatus === 'cooking' ? 'var(--accent-saffron)' : 'var(--accent-amber)'),
 //                           border: `1px solid ${
 //                             (item.kotStatus === 'ready' || item.kotStatus === 'served')
 //                               ? 'rgba(16, 185, 129, 0.3)'
-//                               : (item.kotStatus === 'cooking' ? 'rgba(234, 88, 12, 0.3)' : 'rgba(245, 158, 11, 0.3)')
+//                               : (item.kotStatus === 'cooking' ? 'color-mix(in srgb, var(--accent-saffron) 30%, transparent)' : 'color-mix(in srgb, var(--accent-amber) 30%, transparent)')
 //                           }`
 //                         }}>
 //                           {(item.kotStatus === 'ready' || item.kotStatus === 'served')
@@ -1668,12 +1668,12 @@
 //                   padding: '0.85rem',
 //                   borderRadius: 'var(--radius-md)',
 //                   background: table.items.length === 0
-//                     ? 'rgba(245, 158, 11, 0.2)'
-//                     : 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+//                     ? 'color-mix(in srgb, var(--accent-amber) 20%, transparent)'
+//                     : 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)',
 //                   color: table.items.length === 0 ? 'var(--text-dim)' : '#ffffff',
 //                   fontSize: '0.92rem',
 //                   fontWeight: 800,
-//                   boxShadow: table.items.length === 0 ? 'none' : '0 4px 14px rgba(245, 158, 11, 0.4)',
+//                   boxShadow: table.items.length === 0 ? 'none' : '0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)',
 //                   cursor: table.items.length === 0 ? 'not-allowed' : 'pointer'
 //                 }}
 //               >
@@ -2164,11 +2164,11 @@ export function TableDetailView({
         }
 
         .pos-menu-row:hover {
-          background: rgba(245, 158, 11, 0.06);
+          background: color-mix(in srgb, var(--accent-amber) 6%, transparent);
         }
 
         .pos-menu-row.has-qty {
-          background: rgba(245, 158, 11, 0.08);
+          background: color-mix(in srgb, var(--accent-amber) 8%, transparent);
         }
 
         .pos-menu-row.is-unavailable {
@@ -2250,8 +2250,8 @@ export function TableDetailView({
         }
 
         @keyframes cartPulse {
-          0%, 100% { box-shadow: 0 8px 28px rgba(245, 158, 11, 0.45); }
-          50% { box-shadow: 0 8px 36px rgba(245, 158, 11, 0.75), 0 0 0 6px rgba(245,158,11,0.12); }
+          0%, 100% { box-shadow: 0 8px 28px color-mix(in srgb, var(--accent-amber) 45%, transparent); }
+          50% { box-shadow: 0 8px 36px color-mix(in srgb, var(--accent-amber) 75%, transparent), 0 0 0 6px color-mix(in srgb, var(--accent-amber) 12%, transparent); }
         }
 
         @keyframes slideInDrawer {
@@ -2309,13 +2309,13 @@ export function TableDetailView({
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <div
               style={{
-                background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 color: "#ffffff",
                 padding: "0.35rem 0.75rem",
                 borderRadius: "var(--radius-sm)",
                 fontWeight: 800,
                 fontSize: "1rem",
-                boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               }}
             >
               {table.name}
@@ -2561,7 +2561,7 @@ export function TableDetailView({
                 fontWeight: 800,
                 cursor: "pointer",
                 boxShadow: isTableDropdownOpen
-                  ? "0 4px 12px rgba(245,158,11,0.25)"
+                  ? "0 4px 12px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
                   : "none",
               }}
             >
@@ -2668,7 +2668,7 @@ export function TableDetailView({
                             fontSize: "0.7rem",
                             fontWeight: isActive ? 800 : 600,
                             background: isActive
-                              ? "rgba(245,158,11,0.2)"
+                              ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                               : "var(--bg-tertiary)",
                             color: isActive
                               ? "var(--accent-amber-light)"
@@ -2732,11 +2732,11 @@ export function TableDetailView({
                             marginBottom: "2px",
                             borderRadius: "7px",
                             background: isCurrent
-                              ? "rgba(245,158,11,0.14)"
+                              ? "color-mix(in srgb, var(--accent-amber) 14%, transparent)"
                               : "transparent",
                             color: "var(--text-main)",
                             border: isCurrent
-                              ? "1px solid rgba(245,158,11,0.5)"
+                              ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)"
                               : "1px solid transparent",
                             cursor: "pointer",
                             textAlign: "left",
@@ -2886,13 +2886,13 @@ export function TableDetailView({
                       padding: "0.65rem 0.75rem",
                       borderRadius: "var(--radius-sm)",
                       background: isSelected
-                        ? "rgba(245, 158, 11, 0.1)"
+                        ? "color-mix(in srgb, var(--accent-amber) 10%, transparent)"
                         : "transparent",
                       color: isSelected
                         ? "var(--accent-amber-light)"
                         : "var(--text-main)",
                       border: isSelected
-                        ? "1px solid rgba(245, 158, 11, 0.3)"
+                        ? "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)"
                         : "1px solid transparent",
                       cursor: "pointer",
                       marginBottom: "2px",
@@ -3004,7 +3004,7 @@ export function TableDetailView({
                       padding: "0.25rem 0.55rem",
                       borderRadius: "var(--radius-md)",
                       border: `1px solid ${isActive ? "var(--accent-amber)" : "var(--border-subtle)"}`,
-                      background: isActive ? "rgba(245, 158, 11, 0.16)" : "var(--bg-primary)",
+                      background: isActive ? "color-mix(in srgb, var(--accent-amber) 16%, transparent)" : "var(--bg-primary)",
                       color: isActive ? "var(--accent-amber-light)" : "var(--text-muted)",
                       fontSize: "0.76rem",
                       fontWeight: isActive ? 800 : 650,
@@ -3120,7 +3120,7 @@ export function TableDetailView({
                   id: "special",
                   label: "Specials",
                   icon: Star,
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                 },
               ].map((filter) => {
                 const isActive = dietaryFilter === filter.id;
@@ -3430,7 +3430,7 @@ export function TableDetailView({
                             style={{
                               cursor: isAvailable ? "pointer" : "not-allowed",
                               opacity: isAvailable ? 1 : 0.6,
-                              background: currentQty > 0 ? "rgba(245, 158, 11, 0.06)" : undefined,
+                              background: currentQty > 0 ? "color-mix(in srgb, var(--accent-amber) 6%, transparent)" : undefined,
                             }}
                           >
                             {/* Dish Name */}
@@ -3487,7 +3487,7 @@ export function TableDetailView({
                                       {item.name}
                                     </span>
                                     {Boolean(item.isChefSpecial || item.isChefsSpecial) && (
-                                      <Star size={13} fill="#f59e0b" color="#f59e0b" title="Chef's Special" />
+                                      <Star size={13} fill="var(--accent-amber)" color="var(--accent-amber)" title="Chef's Special" />
                                     )}
                                     {item.prepTime && (
                                       <span
@@ -3602,7 +3602,7 @@ export function TableDetailView({
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "0.25rem",
-                                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                    background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                                     color: "#ffffff",
                                     border: "none",
                                     borderRadius: "6px",
@@ -3610,7 +3610,7 @@ export function TableDetailView({
                                     fontSize: "0.78rem",
                                     fontWeight: 700,
                                     cursor: "pointer",
-                                    boxShadow: "0 2px 6px rgba(245, 158, 11, 0.3)",
+                                    boxShadow: "0 2px 6px color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                                     transition: "transform 0.12s ease",
                                   }}
                                   onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.04)")}
@@ -3860,7 +3860,7 @@ export function TableDetailView({
               </div>
               <div
                 style={{
-                  background: "rgba(245, 158, 11, 0.18)",
+                  background: "color-mix(in srgb, var(--accent-amber) 18%, transparent)",
                   color: "var(--accent-amber-light)",
                   padding: "0.18rem 0.5rem",
                   borderRadius: "5px",
@@ -3964,7 +3964,7 @@ export function TableDetailView({
                     return (
                       <div
                         style={{
-                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(234, 88, 12, 0.08))",
+                          background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 16%, transparent), color-mix(in srgb, var(--accent-saffron) 8%, transparent))",
                           border: "1px dashed var(--accent-amber)",
                           borderRadius: "6px",
                           padding: "0.35rem 0.55rem",
@@ -3983,9 +3983,9 @@ export function TableDetailView({
                         </div>
                         <span
                           style={{
-                            background: "rgba(245, 158, 11, 0.2)",
+                            background: "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                             color: "var(--accent-amber-light)",
-                            border: "1px solid rgba(245, 158, 11, 0.4)",
+                            border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                             fontSize: "0.62rem",
                             fontWeight: 800,
                             padding: "1px 5px",
@@ -4075,8 +4075,8 @@ export function TableDetailView({
                   if (hasCooking) {
                     return (
                       <div style={{
-                        background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(245, 158, 11, 0.1))',
-                        border: '1.5px solid #ea580c',
+                        background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-saffron) 20%, transparent), color-mix(in srgb, var(--accent-amber) 10%, transparent))',
+                        border: '1.5px solid var(--accent-saffron)',
                         borderRadius: '8px',
                         padding: '0.45rem 0.75rem',
                         display: 'flex',
@@ -4212,9 +4212,9 @@ export function TableDetailView({
                               fontWeight: 800,
                               padding: "1px 5px",
                               borderRadius: "999px",
-                              background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                              background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "color-mix(in srgb, var(--accent-amber) 14%, transparent)",
                               color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
-                              border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                              border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "color-mix(in srgb, var(--accent-amber) 35%, transparent)"}`,
                               whiteSpace: "nowrap",
                             }}
                           >
@@ -4271,9 +4271,9 @@ export function TableDetailView({
                                     fontWeight: 800,
                                     padding: "1px 5px",
                                     borderRadius: "3px",
-                                    background: "rgba(234, 88, 12, 0.15)",
-                                    color: "#ea580c",
-                                    border: "1px solid rgba(234, 88, 12, 0.35)",
+                                    background: "color-mix(in srgb, var(--accent-saffron) 15%, transparent)",
+                                    color: "var(--accent-saffron)",
+                                    border: "1px solid color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                                   }}
                                 >
                                   🔥 Cooking
@@ -4289,9 +4289,9 @@ export function TableDetailView({
                                     fontWeight: 800,
                                     padding: "1px 5px",
                                     borderRadius: "3px",
-                                    background: "rgba(245, 158, 11, 0.15)",
-                                    color: "#f59e0b",
-                                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                                    color: "var(--accent-amber)",
+                                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                                   }}
                                 >
                                   📥 {isBarMenuItem(item) ? "BOT Sent" : "KOT Sent"}
@@ -4796,7 +4796,7 @@ export function TableDetailView({
                       background: isSendingKot
                         ? "var(--bg-tertiary)"
                         : hasUnsentItems
-                          ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 25%, transparent), color-mix(in srgb, var(--accent-saffron) 15%, transparent))"
                           : "var(--bg-tertiary)",
                       color:
                         safeItems.length === 0 || isSendingKot
@@ -4810,7 +4810,7 @@ export function TableDetailView({
                       cursor:
                         safeItems.length === 0 || isSendingKot ? "not-allowed" : "pointer",
                       boxShadow: hasUnsentItems && !isSendingKot
-                        ? "0 0 10px rgba(245, 158, 11, 0.3)"
+                        ? "0 0 10px color-mix(in srgb, var(--accent-amber) 30%, transparent)"
                         : "none",
                     }}
                   >
@@ -4911,13 +4911,13 @@ export function TableDetailView({
             bottom: "12px",
             left: "12px",
             right: "12px",
-            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+            background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
             color: "#ffffff",
             borderRadius: "12px",
             padding: "0.75rem 1rem",
             alignItems: "center",
             justifyContent: "space-between",
-            boxShadow: "0 8px 24px rgba(234, 88, 12, 0.45)",
+            boxShadow: "0 8px 24px color-mix(in srgb, var(--accent-saffron) 45%, transparent)",
             zIndex: 90,
             cursor: "pointer",
           }}
@@ -5140,9 +5140,9 @@ export function TableDetailView({
                           fontWeight: 800,
                           padding: "1px 6px",
                           borderRadius: "999px",
-                          background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                          background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "color-mix(in srgb, var(--accent-amber) 14%, transparent)",
                           color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
-                          border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                          border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "color-mix(in srgb, var(--accent-amber) 35%, transparent)"}`,
                         }}
                       >
                         {isBarMenuItem(item) ? "Bar" : "Kitchen"}
@@ -5291,7 +5291,7 @@ export function TableDetailView({
                     background: isSendingKot
                       ? "var(--bg-primary)"
                       : hasUnsentItems
-                        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 88, 12, 0.15))"
+                        ? "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 25%, transparent), color-mix(in srgb, var(--accent-saffron) 15%, transparent))"
                         : "var(--bg-primary)",
                     color: safeItems.length === 0 || isSendingKot
                       ? "var(--text-dim)"

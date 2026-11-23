@@ -282,7 +282,7 @@ export function UpiOtpVerificationModal({
           <span style={{ fontWeight: 800, color: "var(--text-main, #ffffff)" }}>
             Slot #{ (currentActiveIndex ?? 0) + 1 } ({currentActiveQr?.label || "Current Active"})
           </span>
-          <ArrowRight size={13} color="#f59e0b" />
+          <ArrowRight size={13} color="var(--accent-amber)" />
           <span style={{ fontWeight: 800, color: "#10b981" }}>
             Slot #{ (index ?? 0) + 1 } ({targetQr?.label || "New Selected"})
           </span>
@@ -293,7 +293,7 @@ export function UpiOtpVerificationModal({
       return (
         <div style={{ fontSize: "0.83rem" }}>
           <span>Upload/replace QR image for </span>
-          <span style={{ fontWeight: 800, color: "#f59e0b" }}>
+          <span style={{ fontWeight: 800, color: "var(--accent-amber)" }}>
             Slot #{ (index ?? 0) + 1 } ({targetQr?.label || "Counter UPI"})
           </span>
         </div>
@@ -336,10 +336,10 @@ export function UpiOtpVerificationModal({
             : "linear-gradient(180deg, #131b2e 0%, #0d1322 100%)",
           border: isLight
             ? "1.5px solid var(--border-subtle, #e2e8f0)"
-            : "1px solid rgba(245, 158, 11, 0.35)",
+            : "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
           boxShadow: isLight
             ? "0 20px 40px rgba(0, 0, 0, 0.15)"
-            : "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.15)",
+            : "0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px color-mix(in srgb, var(--accent-amber) 15%, transparent)",
           borderRadius: "18px",
           overflow: "hidden",
           display: "flex",
@@ -364,12 +364,12 @@ export function UpiOtpVerificationModal({
                 width: "40px",
                 height: "40px",
                 borderRadius: "10px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#ffffff",
-                boxShadow: "0 4px 12px rgba(234, 88, 12, 0.35)",
+                boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                 flexShrink: 0,
               }}
             >
@@ -443,7 +443,7 @@ export function UpiOtpVerificationModal({
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
                 fontWeight: 700,
-                color: "#f59e0b",
+                color: "var(--accent-amber)",
               }}
             >
               Requested Action:
@@ -456,8 +456,8 @@ export function UpiOtpVerificationModal({
           {/* Email Recipient Info Box - Default Admin Registered Mail only */}
           <div
             style={{
-              background: isLight ? "rgba(245, 158, 11, 0.08)" : "rgba(245, 158, 11, 0.1)",
-              border: "1px solid rgba(245, 158, 11, 0.25)",
+              background: isLight ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)" : "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
               borderRadius: "12px",
               padding: "0.85rem 1rem",
               display: "flex",
@@ -472,14 +472,14 @@ export function UpiOtpVerificationModal({
                   width: "36px",
                   height: "36px",
                   borderRadius: "8px",
-                  background: "rgba(245, 158, 11, 0.15)",
+                  background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
                 }}
               >
-                <Mail size={18} color="#f59e0b" />
+                <Mail size={18} color="var(--accent-amber)" />
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: "0.72rem", color: "var(--text-dim, #94a3b8)", fontWeight: 600 }}>
@@ -564,7 +564,7 @@ export function UpiOtpVerificationModal({
                     border: error
                       ? "1.5px solid #ef4444"
                       : digit
-                      ? "1.5px solid #f59e0b"
+                      ? "1.5px solid var(--accent-amber)"
                       : isLight
                       ? "1.5px solid #cbd5e1"
                       : "1.5px solid rgba(255, 255, 255, 0.15)",
@@ -576,13 +576,13 @@ export function UpiOtpVerificationModal({
                     outline: "none",
                     fontFamily: "monospace",
                     boxShadow: digit
-                      ? "0 0 12px rgba(245, 158, 11, 0.25)"
+                      ? "0 0 12px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
                       : "none",
                     transition: "all 0.15s ease",
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "#f59e0b";
-                    e.currentTarget.style.boxShadow = "0 0 14px rgba(245, 158, 11, 0.35)";
+                    e.currentTarget.style.borderColor = "var(--accent-amber)";
+                    e.currentTarget.style.boxShadow = "0 0 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)";
                   }}
                   onBlur={(e) => {
                     if (!digit && !error) {
@@ -644,8 +644,8 @@ export function UpiOtpVerificationModal({
           {devOtp && (
             <div
               style={{
-                background: isLight ? "#fffbeb" : "rgba(245, 158, 11, 0.08)",
-                border: "1px dashed rgba(245, 158, 11, 0.4)",
+                background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                border: "1px dashed color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 borderRadius: "10px",
                 padding: "0.65rem 0.85rem",
                 display: "flex",
@@ -658,7 +658,7 @@ export function UpiOtpVerificationModal({
                 <div
                   style={{
                     fontSize: "0.68rem",
-                    color: "#f59e0b",
+                    color: "var(--accent-amber)",
                     fontWeight: 700,
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
@@ -690,7 +690,7 @@ export function UpiOtpVerificationModal({
                   }
                 }}
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   border: "none",
                   borderRadius: "8px",
                   padding: "6px 14px",
@@ -701,7 +701,7 @@ export function UpiOtpVerificationModal({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
-                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.3)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
                 }}
               >
                 <span>Auto-fill Code</span>
@@ -758,7 +758,7 @@ export function UpiOtpVerificationModal({
               style={{
                 background: "transparent",
                 border: "none",
-                color: countdown > 0 ? "var(--text-dim, #64748b)" : "#f59e0b",
+                color: countdown > 0 ? "var(--text-dim, #64748b)" : "var(--accent-amber)",
                 fontWeight: 700,
                 fontSize: "0.76rem",
                 cursor: countdown > 0 ? "not-allowed" : "pointer",
@@ -809,7 +809,7 @@ export function UpiOtpVerificationModal({
                 padding: "0.75rem",
                 borderRadius: "10px",
                 border: "none",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 color: "#ffffff",
                 fontSize: "0.88rem",
                 fontWeight: 800,
@@ -818,7 +818,7 @@ export function UpiOtpVerificationModal({
                     ? "not-allowed"
                     : "pointer",
                 opacity: isVerifying || otp.join("").length !== 6 ? 0.6 : 1,
-                boxShadow: "0 4px 14px rgba(234, 88, 12, 0.35)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

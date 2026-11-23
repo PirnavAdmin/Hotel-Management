@@ -267,9 +267,9 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
                   gap: "4px",
                   fontSize: "0.72rem",
                   fontWeight: 700,
-                  color: "#f59e0b",
-                  background: "rgba(245, 158, 11, 0.15)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  color: "var(--accent-amber)",
+                  background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   padding: "2px 8px",
                   borderRadius: "20px",
                 }}
@@ -390,10 +390,10 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
             <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
               1. Opening Balance
             </span>
-            <Wallet size={16} color="#f59e0b" />
+            <Wallet size={16} color="var(--accent-amber)" />
           </div>
           <div style={{ margin: "0.6rem 0" }}>
-            <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#f59e0b" }}>
+            <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--accent-amber)" }}>
               {formatCurrency(openingCash + openingBank)}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>

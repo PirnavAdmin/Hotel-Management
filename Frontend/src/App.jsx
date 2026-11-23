@@ -4873,8 +4873,8 @@ export function App() {
       >
         <style>{`
           @keyframes pulseHotelGlow {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.3)); }
-            50% { transform: scale(1.04); filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.55)); }
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px color-mix(in srgb, var(--accent-amber) 30%, transparent)); }
+            50% { transform: scale(1.04); filter: drop-shadow(0 0 25px color-mix(in srgb, var(--accent-amber) 55%, transparent)); }
           }
           @keyframes spinRing {
             0% { transform: rotate(0deg); }
@@ -4889,7 +4889,7 @@ export function App() {
               position: "absolute",
               inset: "-6px",
               borderRadius: "22px",
-              border: "2px dashed rgba(245, 158, 11, 0.45)",
+              border: "2px dashed color-mix(in srgb, var(--accent-amber) 45%, transparent)",
               animation: "spinRing 10s linear infinite",
             }}
           />
@@ -4902,7 +4902,7 @@ export function App() {
                 height: "72px",
                 borderRadius: "18px",
                 objectFit: "cover",
-                border: "2px solid rgba(245, 158, 11, 0.4)",
+                border: "2px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 boxShadow: "0 8px 24px rgba(0, 0, 0, 0.5)",
                 animation: "pulseHotelGlow 2.5s ease-in-out infinite",
               }}
@@ -4913,11 +4913,11 @@ export function App() {
                 width: "72px",
                 height: "72px",
                 borderRadius: "18px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 8px 24px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 8px 24px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 animation: "pulseHotelGlow 2.5s ease-in-out infinite",
               }}
             >
@@ -4970,8 +4970,8 @@ export function App() {
             style={{
               width: "14px",
               height: "14px",
-              border: "2px solid rgba(245, 158, 11, 0.25)",
-              borderTopColor: "#f59e0b",
+              border: "2px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
+              borderTopColor: "var(--accent-amber)",
               borderRadius: "50%",
               animation: "spinRing 0.8s linear infinite",
             }}
@@ -5355,10 +5355,10 @@ export function App() {
                 ? "linear-gradient(135deg, rgba(6, 78, 59, 0.96), rgba(15, 23, 42, 0.98))"
                 : "linear-gradient(135deg, rgba(124, 45, 18, 0.96), rgba(15, 23, 42, 0.98))",
               backdropFilter: "blur(16px)",
-              border: `2px solid ${isCompleted ? "#10b981" : "#f97316"}`,
+              border: `2px solid ${isCompleted ? "#10b981" : "var(--accent-amber)"}`,
               borderRadius: "16px",
               padding: "1rem 1.15rem",
-              boxShadow: `0 20px 45px rgba(0, 0, 0, 0.7), 0 0 30px ${isCompleted ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.45)"}`,
+              boxShadow: `0 20px 45px rgba(0, 0, 0, 0.7), 0 0 30px ${isCompleted ? "rgba(16, 185, 129, 0.45)" : "color-mix(in srgb, var(--accent-amber) 45%, transparent)"}`,
               display: "flex",
               flexDirection: "column",
               gap: "0.55rem",
@@ -5382,8 +5382,8 @@ export function App() {
                     borderRadius: "10px",
                     background: isCompleted
                       ? "rgba(16, 185, 129, 0.25)"
-                      : "rgba(249, 115, 22, 0.25)",
-                    border: `1.5px solid ${isCompleted ? "rgba(16, 185, 129, 0.5)" : "rgba(249, 115, 22, 0.5)"}`,
+                      : "color-mix(in srgb, var(--accent-amber) 25%, transparent)",
+                    border: `1.5px solid ${isCompleted ? "rgba(16, 185, 129, 0.5)" : "color-mix(in srgb, var(--accent-amber) 50%, transparent)"}`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -5485,7 +5485,7 @@ export function App() {
                   style={{
                     background: isCompleted
                       ? "linear-gradient(135deg, #10b981, #059669)"
-                      : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                      : "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                     border: "none",
                     color: "#ffffff",
                     padding: "5px 14px",
@@ -5498,7 +5498,7 @@ export function App() {
                     gap: "6px",
                     boxShadow: isCompleted
                       ? "0 4px 14px rgba(16, 185, 129, 0.4)"
-                      : "0 4px 14px rgba(245, 158, 11, 0.4)",
+                      : "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                   }}
                 >
                   <span>View {tableLabel}</span>

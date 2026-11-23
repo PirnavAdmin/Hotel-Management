@@ -476,11 +476,11 @@ export function AdminInvoices({
                 width: "44px",
                 height: "44px",
                 borderRadius: "12px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               }}
             >
               <FileText size={22} color="#ffffff" />
@@ -501,8 +501,8 @@ export function AdminInvoices({
                 </h2>
                 <span
                   style={{
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                     color: "var(--accent-amber-light)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
@@ -698,11 +698,11 @@ export function AdminInvoices({
             style={{
               background:
                 paymentFilter === "all"
-                  ? "rgba(245, 158, 11, 0.08)"
+                  ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)"
                   : "var(--bg-tertiary)",
               border:
                 paymentFilter === "all"
-                  ? "1px solid rgba(245, 158, 11, 0.45)"
+                  ? "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)"
                   : "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "0.85rem 1rem",
@@ -713,18 +713,18 @@ export function AdminInvoices({
               transition: "all 0.15s ease",
               boxShadow:
                 paymentFilter === "all"
-                  ? "0 2px 10px rgba(245, 158, 11, 0.18)"
+                  ? "0 2px 10px color-mix(in srgb, var(--accent-amber) 18%, transparent)"
                   : "none",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "#f59e0b";
+              e.currentTarget.style.borderColor = "var(--accent-amber)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
               e.currentTarget.style.borderColor =
                 paymentFilter === "all"
-                  ? "rgba(245, 158, 11, 0.45)"
+                  ? "color-mix(in srgb, var(--accent-amber) 45%, transparent)"
                   : "var(--border-subtle)";
             }}
             title="Total settled billing revenue"
@@ -767,15 +767,15 @@ export function AdminInvoices({
                 width: "38px",
                 height: "38px",
                 borderRadius: "10px",
-                background: "rgba(245, 158, 11, 0.15)",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
+                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <IndianRupee size={18} color="#f59e0b" />
+              <IndianRupee size={18} color="var(--accent-amber)" />
             </div>
           </div>
 
@@ -966,11 +966,11 @@ export function AdminInvoices({
             style={{
               background:
                 orderTypeFilter === "takeaway"
-                  ? "rgba(249, 115, 22, 0.12)"
+                  ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)"
                   : "var(--bg-tertiary)",
               border:
                 orderTypeFilter === "takeaway"
-                  ? "1px solid #f97316"
+                  ? "1px solid var(--accent-amber)"
                   : "1px solid var(--border-subtle)",
               borderRadius: "12px",
               padding: "0.85rem 1rem",
@@ -981,17 +981,17 @@ export function AdminInvoices({
               transition: "all 0.15s ease",
               boxShadow:
                 orderTypeFilter === "takeaway"
-                  ? "0 2px 10px rgba(249, 115, 22, 0.22)"
+                  ? "0 2px 10px color-mix(in srgb, var(--accent-amber) 22%, transparent)"
                   : "none",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "#f97316";
+              e.currentTarget.style.borderColor = "var(--accent-amber)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
               e.currentTarget.style.borderColor =
-                orderTypeFilter === "takeaway" ? "#f97316" : "var(--border-subtle)";
+                orderTypeFilter === "takeaway" ? "var(--accent-amber)" : "var(--border-subtle)";
             }}
             title="Click to filter by Takeaway invoices"
           >
@@ -1011,7 +1011,7 @@ export function AdminInvoices({
                 style={{
                   fontSize: "1.35rem",
                   fontWeight: 800,
-                  color: "#f97316",
+                  color: "var(--accent-amber)",
                   marginTop: "2px",
                   lineHeight: 1.2,
                 }}
@@ -1034,15 +1034,15 @@ export function AdminInvoices({
                 width: "38px",
                 height: "38px",
                 borderRadius: "10px",
-                background: "rgba(249, 115, 22, 0.15)",
-                border: "1px solid rgba(249, 115, 22, 0.3)",
+                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <ShoppingBag size={18} color="#f97316" />
+              <ShoppingBag size={18} color="var(--accent-amber)" />
             </div>
           </div>
         </div>
@@ -1050,7 +1050,7 @@ export function AdminInvoices({
         {/* Invoice date & dining type filters */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "0.85rem", flexWrap: "wrap", minHeight: "56px", boxSizing: "border-box", padding: "0.6rem 0.9rem", marginBottom: "0.95rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "12px", boxShadow: "0 4px 14px rgba(0, 0, 0, 0.14)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", height: "38px", flex: "0 0 auto" }}>
-            <Calendar size={15} color="#f59e0b" style={{ flex: "0 0 auto" }} />
+            <Calendar size={15} color="var(--accent-amber)" style={{ flex: "0 0 auto" }} />
             <SearchableSelect
               aria-label="Filter invoices by date"
               value={dateFilter}
@@ -1069,7 +1069,7 @@ export function AdminInvoices({
 
           {/* Service / Dining Type Filter Dropdown */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", height: "38px", flex: "0 0 auto" }}>
-            <Utensils size={15} color="#f59e0b" style={{ flex: "0 0 auto" }} />
+            <Utensils size={15} color="var(--accent-amber)" style={{ flex: "0 0 auto" }} />
             <SearchableSelect
               aria-label="Filter by Service / Dining Type"
               value={orderTypeFilter}
@@ -1211,7 +1211,7 @@ export function AdminInvoices({
                       ? "rgba(56, 189, 248, 0.2)"
                       : id === "cash"
                       ? "rgba(16, 185, 129, 0.2)"
-                      : "rgba(245, 158, 11, 0.2)"
+                      : "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                     : "transparent",
                   border: active
                     ? id === "upi"
@@ -1276,7 +1276,7 @@ export function AdminInvoices({
                     whiteSpace: "nowrap",
                     cursor: "pointer",
                     userSelect: "none",
-                    color: sortField === "invoiceNo" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                    color: sortField === "invoiceNo" ? "var(--accent-amber, var(--accent-amber))" : "inherit",
                   }}
                   title="Click to sort by sequential Invoice Number"
                 >
@@ -1290,7 +1290,7 @@ export function AdminInvoices({
                     whiteSpace: "nowrap",
                     cursor: "pointer",
                     userSelect: "none",
-                    color: sortField === "date" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                    color: sortField === "date" ? "var(--accent-amber, var(--accent-amber))" : "inherit",
                   }}
                   title="Click to sort by Date &amp; Time"
                 >
@@ -1305,7 +1305,7 @@ export function AdminInvoices({
                     whiteSpace: "nowrap",
                     cursor: "pointer",
                     userSelect: "none",
-                    color: sortField === "amount" ? "var(--accent-amber, #f59e0b)" : "inherit",
+                    color: sortField === "amount" ? "var(--accent-amber, var(--accent-amber))" : "inherit",
                   }}
                   title="Click to sort by Grand Total"
                 >
@@ -1472,8 +1472,8 @@ export function AdminInvoices({
                         <button
                           onClick={() => setSelectedReceipt(order)}
                           style={{
-                            background: "rgba(245, 158, 11, 0.08)",
-                            border: "1px solid rgba(245, 158, 11, 0.35)",
+                            background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                             color: "var(--accent-amber-light)",
                             borderRadius: "6px",
                             padding: "4px 8px",
@@ -1695,17 +1695,17 @@ export function AdminInvoices({
                             padding: "0 7px",
                             borderRadius: "6px",
                             background: isActive
-                              ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                              ? "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)"
                               : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
                             border: isActive
-                              ? "1px solid #f59e0b"
+                              ? "1px solid var(--accent-amber)"
                               : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
                             color: isActive ? "#ffffff" : "var(--text-main, #e2e8f0)",
                             cursor: "pointer",
                             fontSize: "0.76rem",
                             fontWeight: isActive ? 800 : 600,
                             boxShadow: isActive
-                              ? "0 2px 8px rgba(245, 158, 11, 0.4)"
+                              ? "0 2px 8px color-mix(in srgb, var(--accent-amber) 40%, transparent)"
                               : "none",
                             transition: "all 0.15s ease",
                           }}
@@ -1827,7 +1827,7 @@ export function AdminInvoices({
               <button type="button" onClick={() => setEditingInvoice(null)} disabled={isSavingEdit} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "transparent", cursor: "pointer" }}>
                 Cancel
               </button>
-              <button type="submit" disabled={isSavingEdit} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.65rem", borderRadius: "8px", border: 0, color: "#fff", background: "linear-gradient(135deg, #f59e0b, #ea580c)", fontWeight: 700, cursor: isSavingEdit ? "wait" : "pointer", opacity: isSavingEdit ? 0.7 : 1 }}>
+              <button type="submit" disabled={isSavingEdit} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.65rem", borderRadius: "8px", border: 0, color: "#fff", background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))", fontWeight: 700, cursor: isSavingEdit ? "wait" : "pointer", opacity: isSavingEdit ? 0.7 : 1 }}>
                 <Save size={14} />
                 {isSavingEdit ? "Saving..." : "Save Discount"}
               </button>

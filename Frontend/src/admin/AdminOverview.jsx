@@ -317,8 +317,8 @@ export function AdminOverview({
       <div
         className="admin-overview-kpis"
         style={{
-          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.08) 100%)",
-          border: "1px solid rgba(245, 158, 11, 0.25)",
+          background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 15%, transparent) 0%, color-mix(in srgb, var(--accent-saffron) 8%, transparent) 100%)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
           borderRadius: "12px",
           padding: "0.85rem 1.15rem",
           display: "flex",
@@ -334,11 +334,11 @@ export function AdminOverview({
               width: "38px",
               height: "38px",
               borderRadius: "10px",
-              background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+              boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               flexShrink: 0,
             }}
           >
@@ -366,7 +366,7 @@ export function AdminOverview({
           <button
             onClick={() => onNavigateTab("menu")}
             style={{
-              background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#ffffff",
               border: "none",
               borderRadius: "8px",
@@ -377,7 +377,7 @@ export function AdminOverview({
               alignItems: "center",
               gap: "0.35rem",
               cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+              boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-amber) 30%, transparent)",
               height: "32px",
             }}
           >
@@ -501,14 +501,14 @@ export function AdminOverview({
                 width: "24px",
                 height: "24px",
                 borderRadius: "6px",
-                background: "rgba(245, 158, 11, 0.15)",
+                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <IndianRupee size={12} color="#f59e0b" />
+              <IndianRupee size={12} color="var(--accent-amber)" />
             </div>
           </div>
           <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -777,14 +777,14 @@ export function AdminOverview({
                 width: "24px",
                 height: "24px",
                 borderRadius: "6px",
-                background: "rgba(234, 88, 12, 0.15)",
+                background: "color-mix(in srgb, var(--accent-saffron) 15%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <Utensils size={12} color="#ea580c" />
+              <Utensils size={12} color="var(--accent-saffron)" />
             </div>
           </div>
           <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -884,7 +884,7 @@ export function AdminOverview({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-              <Armchair size={16} color="#f59e0b" />
+              <Armchair size={16} color="var(--accent-amber)" />
               <h3
                 style={{
                   fontSize: "0.92rem",
@@ -899,7 +899,7 @@ export function AdminOverview({
                 style={{
                   fontSize: "0.68rem",
                   fontWeight: 700,
-                  background: occupiedTables.length > 0 ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                  background: occupiedTables.length > 0 ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)" : "rgba(16, 185, 129, 0.15)",
                   color: occupiedTables.length > 0 ? "var(--accent-amber-light)" : "var(--success)",
                   padding: "1px 6px",
                   borderRadius: "10px",
@@ -949,10 +949,10 @@ export function AdminOverview({
                     onClick={() => onNavigateTab("tables")}
                     style={{
                       background: isOccupied
-                        ? "rgba(245, 158, 11, 0.12)"
+                        ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)"
                         : "var(--bg-tertiary)",
                       border: isOccupied
-                        ? "1px solid rgba(245, 158, 11, 0.4)"
+                        ? "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)"
                         : "1px solid var(--border-subtle)",
                       borderRadius: "8px",
                       padding: "0.5rem 0.4rem",
@@ -965,7 +965,7 @@ export function AdminOverview({
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = isOccupied
-                        ? "rgba(245, 158, 11, 0.4)"
+                        ? "color-mix(in srgb, var(--accent-amber) 40%, transparent)"
                         : "var(--border-subtle)";
                     }}
                   >
@@ -995,7 +995,7 @@ export function AdminOverview({
                           width: "5px",
                           height: "5px",
                           borderRadius: "50%",
-                          background: isOccupied ? "#f59e0b" : "#10b981",
+                          background: isOccupied ? "var(--accent-amber)" : "#10b981",
                         }}
                       />
                       {(() => {
@@ -1051,7 +1051,7 @@ export function AdminOverview({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-              <Utensils size={16} color="#ea580c" />
+              <Utensils size={16} color="var(--accent-saffron)" />
               <h3
                 style={{
                   fontSize: "0.92rem",
@@ -1068,8 +1068,8 @@ export function AdminOverview({
                 <button
                   onClick={() => onOpenItemModal(null)}
                   style={{
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                     color: "var(--accent-amber-light)",
                     borderRadius: "6px",
                     padding: "0.25rem 0.55rem",
@@ -1090,7 +1090,7 @@ export function AdminOverview({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "#ea580c",
+                  color: "var(--accent-saffron)",
                   fontSize: "0.74rem",
                   fontWeight: 700,
                   cursor: "pointer",

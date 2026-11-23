@@ -401,15 +401,15 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           transition: all 0.2s ease;
         }
         .payment-tab-btn:hover {
-          border-color: var(--accent-amber, #f59e0b);
+          border-color: var(--accent-amber, var(--accent-amber));
           color: var(--text-main, #ffffff);
           transform: translateY(-1px);
         }
         .payment-tab-btn.active {
-          border: 1.5px solid var(--accent-amber, #f59e0b) !important;
-          color: var(--accent-amber, #f59e0b) !important;
-          background: ${isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)'} !important;
-          box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+          border: 1.5px solid var(--accent-amber, var(--accent-amber)) !important;
+          color: var(--accent-amber, var(--accent-amber)) !important;
+          background: ${isLight ? 'color-mix(in srgb, var(--accent-amber) 12%, transparent)' : 'color-mix(in srgb, var(--accent-amber) 15%, transparent)'} !important;
+          box-shadow: 0 0 20px color-mix(in srgb, var(--accent-amber) 20%, transparent);
         }
       `}</style>
       <div className="settlement-modal" role="dialog" aria-modal="true" aria-label={`Settle order for ${table.name}`} style={{
@@ -420,7 +420,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         borderRadius: '18px',
         boxShadow: isLight
           ? '0 25px 60px -10px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0,0,0,0.1)'
-          : '0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px rgba(245, 158, 11, 0.08)',
+          : '0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 40px color-mix(in srgb, var(--accent-amber) 8%, transparent)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
@@ -439,12 +439,12 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#ffffff',
-              boxShadow: '0 4px 14px rgba(245, 158, 11, 0.35)',
+              boxShadow: '0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)',
               flexShrink: 0
             }}>
               <Receipt size={22} strokeWidth={2.4} />
@@ -481,20 +481,20 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                 <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
                 <span>Server: {table.server || '-'}</span>
                 <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber, #f59e0b)', fontWeight: 600 }}>
-                  <Calendar size={12} color="var(--accent-amber, #f59e0b)" />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber, var(--accent-amber))', fontWeight: 600 }}>
+                  <Calendar size={12} color="var(--accent-amber, var(--accent-amber))" />
                   {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
                 <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber, #f59e0b)', fontWeight: 600 }}>
-                  <Clock size={12} color="var(--accent-amber, #f59e0b)" />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber, var(--accent-amber))', fontWeight: 600 }}>
+                  <Clock size={12} color="var(--accent-amber, var(--accent-amber))" />
                   {table.orderTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
                 {(table.customerName || table.customer) && (
                   <>
                     <span style={{ color: isLight ? '#cbd5e1' : '#475569' }}>•</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber-light, #fbbf24)', fontWeight: 700 }}>
-                      <User size={12} color="var(--accent-amber, #f59e0b)" />
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--accent-amber-light, var(--accent-amber-light))', fontWeight: 700 }}>
+                      <User size={12} color="var(--accent-amber, var(--accent-amber))" />
                       {table.customerName || table.customer}
                       {(table.customerPhone || table.phone) ? ` (${table.customerPhone || table.phone})` : ''}
                     </span>
@@ -549,12 +549,12 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: isLight ? 'rgba(217, 119, 6, 0.12)' : 'rgba(245, 158, 11, 0.15)',
-              border: isLight ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+              background: isLight ? 'color-mix(in srgb, var(--accent-amber) 12%, transparent)' : 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
+              border: isLight ? '1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)' : '1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--accent-amber, #f59e0b)',
+              color: 'var(--accent-amber, var(--accent-amber))',
               flexShrink: 0
             }}>
               <Receipt size={22} strokeWidth={2.2} />
@@ -676,10 +676,10 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               flexShrink: 0
             }}>
               {/* Corner Brackets */}
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '15px', height: '15px', borderTop: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '4px 0 0 0' }} />
-              <div style={{ position: 'absolute', top: 0, right: 0, width: '15px', height: '15px', borderTop: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 4px 0 0' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderLeft: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 0 4px' }} />
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, #f59e0b)', borderRight: '2.5px solid var(--accent-amber, #f59e0b)', borderRadius: '0 0 4px 0' }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '15px', height: '15px', borderTop: '2.5px solid var(--accent-amber, var(--accent-amber))', borderLeft: '2.5px solid var(--accent-amber, var(--accent-amber))', borderRadius: '4px 0 0 0' }} />
+              <div style={{ position: 'absolute', top: 0, right: 0, width: '15px', height: '15px', borderTop: '2.5px solid var(--accent-amber, var(--accent-amber))', borderRight: '2.5px solid var(--accent-amber, var(--accent-amber))', borderRadius: '0 4px 0 0' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, var(--accent-amber))', borderLeft: '2.5px solid var(--accent-amber, var(--accent-amber))', borderRadius: '0 0 0 4px' }} />
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '15px', height: '15px', borderBottom: '2.5px solid var(--accent-amber, var(--accent-amber))', borderRight: '2.5px solid var(--accent-amber, var(--accent-amber))', borderRadius: '0 0 4px 0' }} />
 
               {activeQr?.image ? <div style={{
                 background: 'var(--bg-card)',
@@ -708,12 +708,12 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.45rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Zap size={16} color="var(--accent-amber, #f59e0b)" fill="var(--accent-amber, #f59e0b)" />
+                  <Zap size={16} color="var(--accent-amber, var(--accent-amber))" fill="var(--accent-amber, var(--accent-amber))" />
                   <span style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main, #ffffff)' }}>
                     {activeQr?.image ? 'Scan & Pay' : 'UPI payment unavailable'}
                   </span>
                 </div>
-                <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-amber, #f59e0b)' }}>
+                <span className="font-mono" style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-amber, var(--accent-amber))' }}>
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
@@ -735,13 +735,13 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                       onClick={() => handleSelectQr(idx)}
                       style={{
                         background: selectedQrIndex === idx
-                          ? 'var(--accent-amber, #f59e0b)'
+                          ? 'var(--accent-amber, var(--accent-amber))'
                           : isLight
                           ? '#f1f5f9'
                           : 'rgba(255, 255, 255, 0.08)',
                         color: selectedQrIndex === idx ? '#ffffff' : 'var(--text-main, #cbd5e1)',
                         border: selectedQrIndex === idx
-                          ? '1px solid var(--accent-amber, #f59e0b)'
+                          ? '1px solid var(--accent-amber, var(--accent-amber))'
                           : isLight
                           ? '1px solid #cbd5e1'
                           : '1px solid rgba(255, 255, 255, 0.12)',
@@ -883,7 +883,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                     width: '100%',
                     boxSizing: 'border-box',
                     background: isLight ? '#ffffff' : 'rgba(2, 6, 23, 0.8)',
-                    border: '1.5px solid var(--accent-amber, #f59e0b)',
+                    border: '1.5px solid var(--accent-amber, var(--accent-amber))',
                     borderRadius: '8px',
                     padding: '0.55rem 0.8rem',
                     color: 'var(--text-main, #ffffff)',
@@ -909,7 +909,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                       flex: '1 1 0px',
                       minWidth: '52px',
                       background: Number(cashTendered) === Number(quickVal)
-                        ? 'var(--accent-amber, #f59e0b)'
+                        ? 'var(--accent-amber, var(--accent-amber))'
                         : isLight
                         ? '#f1f5f9'
                         : 'rgba(255, 255, 255, 0.06)',
@@ -917,7 +917,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
                         ? '#ffffff'
                         : 'var(--text-main, #f8fafc)',
                       border: Number(cashTendered) === Number(quickVal)
-                        ? '1px solid var(--accent-amber, #f59e0b)'
+                        ? '1px solid var(--accent-amber, var(--accent-amber))'
                         : isLight
                         ? '1px solid #cbd5e1'
                         : '1px solid rgba(255, 255, 255, 0.1)',
@@ -1009,7 +1009,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               height: '46px',
               borderRadius: '10px',
               border: 'none',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+              background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)',
               color: '#ffffff',
               fontWeight: 800,
               fontSize: '0.92rem',
@@ -1019,7 +1019,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
               gap: '0.5rem',
               cursor: isProcessing || hasInvalidItems || upiUnavailable ? 'not-allowed' : 'pointer',
               opacity: hasInvalidItems || upiUnavailable ? 0.55 : 1,
-              boxShadow: '0 6px 20px rgba(234, 88, 12, 0.4)',
+              boxShadow: '0 6px 20px color-mix(in srgb, var(--accent-saffron) 40%, transparent)',
               transition: 'all 0.18s ease'
             }}
             onMouseEnter={e => {

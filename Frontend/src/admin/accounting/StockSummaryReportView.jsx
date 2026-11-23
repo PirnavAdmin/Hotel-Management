@@ -514,12 +514,12 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(245, 158, 11, 0.12)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)", color: "var(--accent-amber)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <DollarSign size={18} />
             </div>
             <div>
               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 700 }}>Stock Value</div>
-              <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "#f59e0b", marginTop: "1px" }}>
+              <div style={{ fontSize: "1.45rem", fontWeight: 900, color: "var(--accent-amber)", marginTop: "1px" }}>
                 {formatCurrency(totals.stockValue)}
               </div>
             </div>
@@ -527,7 +527,7 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.8rem" }}>
             <span style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>Asset Valuation</span>
             <svg width="60" height="20">
-              <path d="M 2 12 Q 18 4, 38 14 T 58 6" fill="none" stroke="#f59e0b" strokeWidth="2" />
+              <path d="M 2 12 Q 18 4, 38 14 T 58 6" fill="none" stroke="var(--accent-amber)" strokeWidth="2" />
             </svg>
           </div>
         </div>
@@ -672,7 +672,7 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
                     <td style={{ textAlign: "right", padding: "0.6rem 0.6rem", fontWeight: 700, color: "var(--text-main)" }}>
                       {item.closingStock} <span style={{ fontSize: "0.68rem", color: "var(--text-dim)" }}>{item.unit}</span>
                     </td>
-                    <td style={{ textAlign: "right", padding: "0.6rem 0.6rem", fontWeight: 700, color: "#f59e0b" }}>
+                    <td style={{ textAlign: "right", padding: "0.6rem 0.6rem", fontWeight: 700, color: "var(--accent-amber)" }}>
                       {formatCurrency(item.stockValue)}
                     </td>
                     <td style={{ textAlign: "center", padding: "0.6rem 0.6rem" }}>
@@ -687,19 +687,19 @@ export function StockSummaryReportView({ inventoryItems = [], inventoryPurchases
                             item.status === "In Stock"
                               ? "rgba(16, 185, 129, 0.15)"
                               : item.status === "Low Stock"
-                              ? "rgba(245, 158, 11, 0.15)"
+                              ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)"
                               : "rgba(239, 68, 68, 0.15)",
                           color:
                             item.status === "In Stock"
                               ? "#10b981"
                               : item.status === "Low Stock"
-                              ? "#f59e0b"
+                              ? "var(--accent-amber)"
                               : "#ef4444",
                           border: `1px solid ${
                             item.status === "In Stock"
                               ? "rgba(16, 185, 129, 0.3)"
                               : item.status === "Low Stock"
-                              ? "rgba(245, 158, 11, 0.3)"
+                              ? "color-mix(in srgb, var(--accent-amber) 30%, transparent)"
                               : "rgba(239, 68, 68, 0.3)"
                           }`,
                         }}

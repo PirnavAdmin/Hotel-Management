@@ -347,7 +347,7 @@ export function logApiResponse({ method = "GET", url, status = 200, statusText =
     const badgeStyle = `background: ${badgeColor}; color: ${textColor}; font-weight: 800; padding: 2px 6px; border-radius: 4px;`;
     const statusStyle = `color: ${textColor}; font-weight: 900;`;
     const urlStyle = "color: #f8fafc; font-weight: 600;";
-    const durationStyle = "color: #fbbf24; font-weight: 700;";
+    const durationStyle = "color: var(--accent-amber-light); font-weight: 700;";
     const metaStyle = "color: #94a3b8; font-weight: normal; font-size: 0.9em;";
 
     const cleanData = safeApiLogData(data, API_LOGGING_CONFIG.includeResponseData);
@@ -499,7 +499,7 @@ export function logFormSubmission(formName, data = {}, isValid = true, validatio
 export function logUserAction(actionName, details = {}) {
   if (!isLoggingEnabled()) return;
   try {
-    const badgeStyle = "background: #78350f; color: #fbbf24; font-weight: 800; padding: 2px 6px; border-radius: 4px;";
+    const badgeStyle = "background: #78350f; color: var(--accent-amber-light); font-weight: 800; padding: 2px 6px; border-radius: 4px;";
     const actionStyle = "color: #fef3c7; font-weight: 700;";
     const cleanDetails = redactSensitiveData(details);
     console.log(

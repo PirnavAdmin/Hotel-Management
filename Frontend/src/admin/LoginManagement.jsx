@@ -203,17 +203,17 @@ export function LoginManagement({ currentAdminSession }) {
       label: 'User POS',
       icon: <Utensils size={15} />,
       color: 'var(--accent-amber-light)',
-      bg: 'rgba(245, 158, 11, 0.15)',
-      border: 'rgba(245, 158, 11, 0.4)',
-      gradient: 'linear-gradient(135deg, #f59e0b, #ea580c)'
+      bg: 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
+      border: 'color-mix(in srgb, var(--accent-amber) 40%, transparent)',
+      gradient: 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))'
     },
     kot: {
       label: 'Kitchen KOT',
       icon: <ChefHat size={15} />,
       color: 'var(--accent-amber-light)',
-      bg: 'rgba(234, 88, 12, 0.15)',
-      border: 'rgba(234, 88, 12, 0.4)',
-      gradient: 'linear-gradient(135deg, #ea580c, #c2410c)'
+      bg: 'color-mix(in srgb, var(--accent-saffron) 15%, transparent)',
+      border: 'color-mix(in srgb, var(--accent-saffron) 40%, transparent)',
+      gradient: 'linear-gradient(135deg, var(--accent-saffron), var(--accent-amber))'
     },
     admin: {
       label: 'Admin',
@@ -302,7 +302,7 @@ export function LoginManagement({ currentAdminSession }) {
             onClick={() => openEditForm(user)}
             title="Edit login details"
             style={{
-              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+              background: 'color-mix(in srgb, var(--accent-amber) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)',
               color: 'var(--accent-amber-light)', padding: '5px 8px', borderRadius: '7px',
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
               fontSize: '0.72rem', fontWeight: 700
@@ -405,12 +405,12 @@ export function LoginManagement({ currentAdminSession }) {
           <button
             onClick={() => { setEditingUser(null); setFormRole('pos'); setFormName(''); setFormUser(''); setFormMobile(''); setFormEmail(''); setFormPass(''); setShowForm(true); setFormError(''); setFormSuccess(''); }}
             style={{
-              background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+              background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))',
               border: 'none', color: '#ffffff',
               padding: '0.45rem 1rem', borderRadius: '8px',
               cursor: 'pointer', display: 'flex', alignItems: 'center',
               gap: '0.4rem', fontSize: '0.82rem', fontWeight: 800,
-              boxShadow: '0 3px 12px rgba(245,158,11,0.4)'
+              boxShadow: '0 3px 12px color-mix(in srgb, var(--accent-amber) 40%, transparent)'
             }}
           >
             <Plus size={16} /> Create Login
@@ -477,7 +477,7 @@ export function LoginManagement({ currentAdminSession }) {
                 id="new-login-role"
                 value={formRole}
                 onChange={(event) => setFormRole(event.target.value)}
-                style={{ width: '100%', padding: '0.7rem 0.8rem', background: 'var(--bg-card)', border: '1.5px solid rgba(245,158,11,0.55)', borderRadius: '9px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
+                style={{ width: '100%', padding: '0.7rem 0.8rem', background: 'var(--bg-card)', border: '1.5px solid color-mix(in srgb, var(--accent-amber) 55%, transparent)', borderRadius: '9px', color: 'var(--text-main)', fontSize: '0.88rem', fontWeight: 700, outline: 'none' }}
               >
                 <option value="pos">User POS - Billing &amp; floor orders</option>
                 <option value="kot">Kitchen KOT - Kitchen display system</option>
@@ -593,10 +593,10 @@ export function LoginManagement({ currentAdminSession }) {
                 disabled={isSubmitting}
                 style={{
                   flex: 2, padding: '0.65rem', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                  background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))',
                   color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
                   border: 'none', cursor: isSubmitting ? 'wait' : 'pointer', opacity: isSubmitting ? 0.75 : 1,
-                  boxShadow: '0 3px 12px rgba(245,158,11,0.4)',
+                  boxShadow: '0 3px 12px color-mix(in srgb, var(--accent-amber) 40%, transparent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -687,7 +687,7 @@ export function LoginManagement({ currentAdminSession }) {
         aria-labelledby={`account-tab-${activeAccountTab}`}
         style={{ minWidth: 0 }}
       >
-        {activeAccountTab === 'pos' && <Section title="User POS Accounts" icon={<Utensils size={16} />} color="#f59e0b" users={posUsers} emptyMsg="No POS users yet. Create one above." />}
+        {activeAccountTab === 'pos' && <Section title="User POS Accounts" icon={<Utensils size={16} />} color="var(--accent-amber)" users={posUsers} emptyMsg="No POS users yet. Create one above." />}
         {activeAccountTab === 'kot' && <Section title="Kitchen KOT Accounts" icon={<ChefHat size={16} />} color="#fb923c" users={kotUsers} emptyMsg="No KOT users yet. Create one above." />}
         {activeAccountTab === 'admin' && <Section title="Admin Accounts" icon={<ShieldCheck size={16} />} color="var(--accent-indigo)" users={adminUsers} emptyMsg="No admin accounts found." />}
       </div>
@@ -711,7 +711,7 @@ export function LoginManagement({ currentAdminSession }) {
           justifyContent: 'center', zIndex: 200, padding: '1rem'
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'var(--bg-card)', border: '1.5px solid rgba(245,158,11,0.4)',
+            background: 'var(--bg-card)', border: '1.5px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)',
             borderRadius: '16px', padding: '1.5rem', maxWidth: '360px', width: '100%',
             boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
           }}>
@@ -760,7 +760,7 @@ export function LoginManagement({ currentAdminSession }) {
               <div style={{ display: 'flex', gap: '0.6rem' }}>
                 <button type="submit" style={{
                   flex: 2, padding: '0.6rem', borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                  background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))',
                   color: '#ffffff', fontWeight: 800, fontSize: '0.85rem',
                   border: 'none', cursor: 'pointer'
                 }}>

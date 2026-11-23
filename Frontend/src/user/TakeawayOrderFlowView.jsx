@@ -154,7 +154,7 @@ export function TakeawayOrderFlowView({ onBack }) {
           justifyContent: "space-between",
           padding: "16px 28px",
           background: "rgba(23, 11, 7, 0.88)",
-          border: "1px solid rgba(245, 158, 11, 0.35)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
           backdropFilter: "blur(14px)",
           borderRadius: "18px",
           boxShadow: "0 12px 30px rgba(0,0,0,0.5)",
@@ -169,12 +169,12 @@ export function TakeawayOrderFlowView({ onBack }) {
               width: "48px",
               height: "48px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #f59e0b, #d97706, #b45309)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber), var(--accent-amber))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "2px solid #fbbf24",
-              boxShadow: "0 0 16px rgba(245, 158, 11, 0.45)",
+              border: "2px solid var(--accent-amber-light)",
+              boxShadow: "0 0 16px color-mix(in srgb, var(--accent-amber) 45%, transparent)",
             }}
           >
             <ChefHat size={26} color="#ffffff" />
@@ -197,7 +197,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 fontSize: "11px",
                 textTransform: "uppercase",
                 letterSpacing: "2px",
-                color: "#f59e0b",
+                color: "var(--accent-amber)",
                 fontWeight: 700,
               }}
             >
@@ -219,7 +219,7 @@ export function TakeawayOrderFlowView({ onBack }) {
             }}
           >
             The Rustic Spin – Takeaway Order Flow{" "}
-            <span style={{ fontSize: "18px", color: "#f59e0b", fontWeight: 600 }}>
+            <span style={{ fontSize: "18px", color: "var(--accent-amber)", fontWeight: 600 }}>
               (Self Pickup & Pre-Order)
             </span>
           </h2>
@@ -270,7 +270,7 @@ export function TakeawayOrderFlowView({ onBack }) {
             <button
               onClick={onBack}
               style={{
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 border: "none",
                 color: "#fff",
                 padding: "8px 18px",
@@ -278,7 +278,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 fontSize: "13px",
                 fontWeight: 700,
                 cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(234, 88, 12, 0.4)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
               }}
             >
               Back to POS
@@ -317,7 +317,7 @@ export function TakeawayOrderFlowView({ onBack }) {
               border:
                 activeFilter === f.key
                   ? "1px solid #f57c00"
-                  : "1px solid rgba(245, 158, 11, 0.25)",
+                  : "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
               padding: "7px 18px",
               borderRadius: "24px",
               fontSize: "13px",
@@ -352,7 +352,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 style={{
                   fontFamily: "'Cinzel', Georgia, serif",
                   fontSize: "18px",
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   textTransform: "uppercase",
                   fontWeight: 700,
                   letterSpacing: "0.5px",
@@ -365,7 +365,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                   flexGrow: 1,
                   height: "1px",
                   background:
-                    "linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.05))",
+                    "linear-gradient(90deg, color-mix(in srgb, var(--accent-amber) 50%, transparent), color-mix(in srgb, var(--accent-amber) 5%, transparent))",
                 }}
               />
             </div>
@@ -406,12 +406,12 @@ export function TakeawayOrderFlowView({ onBack }) {
               <div
                 style={{
                   background: "rgba(28, 14, 9, 0.85)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   padding: "5px 16px",
                   borderRadius: "20px",
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "8px",
@@ -452,7 +452,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 style={{
                   fontFamily: "'Cinzel', Georgia, serif",
                   fontSize: "18px",
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   textTransform: "uppercase",
                   fontWeight: 700,
                   letterSpacing: "0.5px",
@@ -465,7 +465,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                   flexGrow: 1,
                   height: "1px",
                   background:
-                    "linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.05))",
+                    "linear-gradient(90deg, color-mix(in srgb, var(--accent-amber) 50%, transparent), color-mix(in srgb, var(--accent-amber) 5%, transparent))",
                 }}
               />
             </div>
@@ -506,12 +506,12 @@ export function TakeawayOrderFlowView({ onBack }) {
               <div
                 style={{
                   background: "rgba(28, 14, 9, 0.85)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   padding: "5px 16px",
                   borderRadius: "20px",
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "8px",
@@ -552,7 +552,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 style={{
                   fontFamily: "'Cinzel', Georgia, serif",
                   fontSize: "18px",
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   textTransform: "uppercase",
                   fontWeight: 700,
                   letterSpacing: "0.5px",
@@ -565,7 +565,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                   flexGrow: 1,
                   height: "1px",
                   background:
-                    "linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.05))",
+                    "linear-gradient(90deg, color-mix(in srgb, var(--accent-amber) 50%, transparent), color-mix(in srgb, var(--accent-amber) 5%, transparent))",
                 }}
               />
             </div>
@@ -606,12 +606,12 @@ export function TakeawayOrderFlowView({ onBack }) {
               <div
                 style={{
                   background: "rgba(28, 14, 9, 0.85)",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   padding: "5px 16px",
                   borderRadius: "20px",
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "8px",
@@ -652,7 +652,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                 style={{
                   fontFamily: "'Cinzel', Georgia, serif",
                   fontSize: "18px",
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   textTransform: "uppercase",
                   fontWeight: 700,
                   letterSpacing: "0.5px",
@@ -665,7 +665,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                   flexGrow: 1,
                   height: "1px",
                   background:
-                    "linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.05))",
+                    "linear-gradient(90deg, color-mix(in srgb, var(--accent-amber) 50%, transparent), color-mix(in srgb, var(--accent-amber) 5%, transparent))",
                 }}
               />
             </div>
@@ -757,7 +757,7 @@ export function TakeawayOrderFlowView({ onBack }) {
                   fontSize: "11px",
                   textTransform: "uppercase",
                   letterSpacing: "1.5px",
-                  color: "#f59e0b",
+                  color: "var(--accent-amber)",
                   fontWeight: 700,
                 }}
               >
@@ -801,7 +801,7 @@ export function TakeawayOrderFlowView({ onBack }) {
               <button
                 onClick={() => setSelectedScreenModal(null)}
                 style={{
-                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   border: "none",
                   color: "#fff",
                   padding: "8px 20px",
@@ -837,13 +837,13 @@ function ArrowConnector({ isGold = false }) {
           height: "36px",
           borderRadius: "50%",
           background: isGold
-            ? "linear-gradient(135deg, #d97706, #b45309)"
-            : "linear-gradient(135deg, #f97316, #ea580c)",
+            ? "linear-gradient(135deg, var(--accent-amber), var(--accent-amber))"
+            : "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           color: "#ffffff",
-          boxShadow: "0 4px 14px rgba(234, 88, 12, 0.5)",
+          boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-saffron) 50%, transparent)",
           border: "2px solid rgba(255, 255, 255, 0.35)",
         }}
       >
@@ -876,9 +876,9 @@ function ScreenItem({ screen, onClick }) {
           backgroundSize: "cover",
           backgroundPosition: "center",
           borderRadius: "18px",
-          border: "1px solid rgba(245, 158, 11, 0.25)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
           boxShadow:
-            "0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(245, 158, 11, 0.22)",
+            "0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px color-mix(in srgb, var(--accent-amber) 22%, transparent)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -887,11 +887,11 @@ function ScreenItem({ screen, onClick }) {
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "translateY(-4px)";
-          e.currentTarget.style.borderColor = "#f97316";
+          e.currentTarget.style.borderColor = "var(--accent-amber)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.25)";
+          e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 25%, transparent)";
         }}
       >
         {/* App Topbar */}
@@ -899,7 +899,7 @@ function ScreenItem({ screen, onClick }) {
           style={{
             height: "36px",
             background: "rgba(18, 9, 6, 0.94)",
-            borderBottom: "1px solid rgba(245, 158, 11, 0.2)",
+            borderBottom: "1px solid color-mix(in srgb, var(--accent-amber) 20%, transparent)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -914,7 +914,7 @@ function ScreenItem({ screen, onClick }) {
                 width: "18px",
                 height: "18px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber))",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -945,7 +945,7 @@ function ScreenItem({ screen, onClick }) {
             }}
           >
             <span>Home</span>
-            <span style={{ color: "#f97316" }}>Menu</span>
+            <span style={{ color: "var(--accent-amber)" }}>Menu</span>
             <span>About</span>
             <span>Contact</span>
           </div>
@@ -1016,14 +1016,14 @@ function ScreenItem({ screen, onClick }) {
             width: "26px",
             height: "26px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             fontSize: "13px",
             fontWeight: 800,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 2px 6px rgba(234, 88, 12, 0.45)",
+            boxShadow: "0 2px 6px color-mix(in srgb, var(--accent-saffron) 45%, transparent)",
             flexShrink: 0,
           }}
         >
@@ -1145,7 +1145,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
                     marginTop: "2px",
                   }}
                 >
-                  <strong style={{ fontSize: "9.5px", color: "#c2410c" }}>₹340</strong>
+                  <strong style={{ fontSize: "9.5px", color: "var(--accent-amber)" }}>₹340</strong>
                   <span
                     style={{
                       background: "#fff5ee",
@@ -1199,7 +1199,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
                     marginTop: "2px",
                   }}
                 >
-                  <strong style={{ fontSize: "9.5px", color: "#c2410c" }}>₹260</strong>
+                  <strong style={{ fontSize: "9.5px", color: "var(--accent-amber)" }}>₹260</strong>
                   <span
                     style={{
                       background: "#e65100",
@@ -1230,7 +1230,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             }}
           >
             <span style={{ fontSize: "9px", fontWeight: 600 }}>3 Items Added • ₹720</span>
-            <span style={{ fontSize: "9.5px", fontWeight: 700, color: "#f59e0b" }}>
+            <span style={{ fontSize: "9.5px", fontWeight: 700, color: "var(--accent-amber)" }}>
               View Cart →
             </span>
           </div>
@@ -1254,7 +1254,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
               <div style={{ fontSize: "11px", fontWeight: 700 }}>Customize Dum Biryani</div>
               <div style={{ fontSize: "8px", color: "#786c62" }}>Spice & Add-ons</div>
             </div>
-            <strong style={{ fontSize: "11px", color: "#c2410c" }}>₹340</strong>
+            <strong style={{ fontSize: "11px", color: "var(--accent-amber)" }}>₹340</strong>
           </div>
 
           <div style={{ flexGrow: 1, overflowY: "auto", fontSize: "9px" }}>
@@ -1270,7 +1270,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
                     padding: "2px 6px",
                     borderRadius: "4px",
                     fontWeight: 700,
-                    color: "#c2410c",
+                    color: "var(--accent-amber)",
                   }}
                 >
                   Medium 🟡
@@ -1331,7 +1331,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             <span style={{ fontSize: "9.5px", fontWeight: 700 }}>Qty: 1</span>
             <button
               style={{
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 color: "#fff",
                 border: "none",
                 borderRadius: "6px",
@@ -1432,14 +1432,14 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
                 }}
               >
                 <span>Grand Total:</span>
-                <span style={{ color: "#c2410c" }}>₹815.00</span>
+                <span style={{ color: "var(--accent-amber)" }}>₹815.00</span>
               </div>
             </div>
           </div>
 
           <button
             style={{
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#fff",
               border: "none",
               borderRadius: "6px",
@@ -1463,12 +1463,12 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             <div
               style={{
                 background: "#fff7ed",
-                border: "1px solid #ea580c",
+                border: "1px solid var(--accent-saffron)",
                 borderRadius: "4px",
                 padding: "3px 5px",
               }}
             >
-              <div style={{ fontWeight: 800, color: "#c2410c" }}>⚡ Self Pickup</div>
+              <div style={{ fontWeight: 800, color: "var(--accent-amber)" }}>⚡ Self Pickup</div>
               <div style={{ fontSize: "7.5px", color: "#7c6d61" }}>Ready in 25 mins</div>
             </div>
             <div
@@ -1513,7 +1513,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             <button
               style={{
                 flex: 1.5,
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 color: "#fff",
                 border: "none",
                 borderRadius: "4px",
@@ -1532,14 +1532,14 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
         <div style={{ display: "flex", flexDirection: "column", height: "100%", fontSize: "9px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
             <strong style={{ fontSize: "11px" }}>Select Payment</strong>
-            <span style={{ fontWeight: 800, color: "#c2410c" }}>₹815.00</span>
+            <span style={{ fontWeight: 800, color: "var(--accent-amber)" }}>₹815.00</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "3px", flexGrow: 1 }}>
             <div
               style={{
                 background: "#fff7ed",
-                border: "1.5px solid #ea580c",
+                border: "1.5px solid var(--accent-saffron)",
                 borderRadius: "4px",
                 padding: "3px 6px",
                 display: "flex",
@@ -1547,7 +1547,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
               }}
             >
               <span>🟢 UPI (Google Pay, PhonePe)</span>
-              <strong style={{ color: "#ea580c", fontSize: "8px" }}>SELECTED</strong>
+              <strong style={{ color: "var(--accent-saffron)", fontSize: "8px" }}>SELECTED</strong>
             </div>
             <div
               style={{
@@ -1583,7 +1583,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
 
           <button
             style={{
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#fff",
               border: "none",
               borderRadius: "6px",
@@ -1616,14 +1616,14 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
               height: "36px",
               borderRadius: "50%",
               background: "#fff7ed",
-              border: "2px solid #ea580c",
+              border: "2px solid var(--accent-saffron)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               marginBottom: "6px",
             }}
           >
-            <Clock size={18} color="#ea580c" />
+            <Clock size={18} color="var(--accent-saffron)" />
           </div>
           <strong style={{ fontSize: "12px", color: "#1f1610" }}>
             Confirming Order...
@@ -1645,7 +1645,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
           >
             <div>✓ Payment Verified (UPI - ₹815)</div>
             <div>✓ Order Logged in POS</div>
-            <div style={{ color: "#c2410c", fontWeight: 700 }}>
+            <div style={{ color: "var(--accent-amber)", fontWeight: 700 }}>
               ⏳ Confirming with The Rustic Spin Kitchen...
             </div>
           </div>
@@ -1675,7 +1675,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
           >
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
               <span>Order ID:</span>
-              <strong style={{ color: "#c2410c" }}>TKO-1023</strong>
+              <strong style={{ color: "var(--accent-amber)" }}>TKO-1023</strong>
             </div>
             <div>Customer: Priya Sharma • 08:15 PM (Today)</div>
             <div>Items: 1x Biryani, 1x Paneer Masala, 2x Naan</div>
@@ -1689,7 +1689,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             <button
               style={{
                 flex: 1.5,
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                 color: "#fff",
                 border: "none",
                 borderRadius: "4px",
@@ -1720,7 +1720,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
             }}
           >
             <div>
-              <strong style={{ color: "#c2410c" }}>🔥 Food Prep Started</strong>
+              <strong style={{ color: "var(--accent-amber)" }}>🔥 Food Prep Started</strong>
               <div style={{ fontSize: "7.5px", color: "#7c6d61" }}>Chef Rajesh preparing</div>
             </div>
             <strong style={{ fontSize: "10px" }}>18 Mins</strong>
@@ -1729,7 +1729,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "3px", flexGrow: 1 }}>
             <div>✓ 07:50 PM: Order Received</div>
             <div>✓ 07:51 PM: Accepted by Bistro</div>
-            <div style={{ color: "#c2410c", fontWeight: 700 }}>
+            <div style={{ color: "var(--accent-amber)", fontWeight: 700 }}>
               🍳 07:54 PM: Preparation in Progress
             </div>
             <div style={{ opacity: 0.6 }}>⚪ 08:15 PM: Ready for Pickup</div>
@@ -1764,11 +1764,11 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <strong>#TKO-1023</strong>
-              <span style={{ color: "#c2410c", fontWeight: 700 }}>🍳 08:15 PM</span>
+              <span style={{ color: "var(--accent-amber)", fontWeight: 700 }}>🍳 08:15 PM</span>
             </div>
             <div>Biryani, Paneer, Naan • ₹815.00</div>
             <div style={{ display: "flex", gap: "3px", marginTop: "3px" }}>
-              <span style={{ background: "#ea580c", color: "#fff", padding: "1px 5px", borderRadius: "3px" }}>
+              <span style={{ background: "var(--accent-saffron)", color: "#fff", padding: "1px 5px", borderRadius: "3px" }}>
                 Track
               </span>
               <span style={{ border: "1px solid #fca5a5", color: "#dc2626", padding: "1px 5px", borderRadius: "3px" }}>
@@ -1783,7 +1783,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
               <span style={{ color: "#16a34a" }}>✓ Completed</span>
             </div>
             <div>2x Biryani, Chicken 65 • ₹940.00</div>
-            <span style={{ color: "#ea580c", fontWeight: 700, marginTop: "2px", display: "inline-block" }}>
+            <span style={{ color: "var(--accent-saffron)", fontWeight: 700, marginTop: "2px", display: "inline-block" }}>
               🔁 Reorder
             </span>
           </div>
@@ -1871,7 +1871,7 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
 
           <button
             style={{
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#fff",
               border: "none",
               borderRadius: "4px",
@@ -1919,13 +1919,13 @@ function ScreenContentRenderer({ screenType, isModal = false }) {
               }}
             >
               <span>Total Payable:</span>
-              <span style={{ color: "#c2410c" }}>₹1,122.00</span>
+              <span style={{ color: "var(--accent-amber)" }}>₹1,122.00</span>
             </div>
           </div>
 
           <button
             style={{
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#fff",
               border: "none",
               borderRadius: "4px",

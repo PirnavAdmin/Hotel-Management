@@ -194,7 +194,7 @@ export function CustomerProfilePage({
         width: "100%",
         backgroundColor: "#0c0705",
         backgroundImage:
-          "radial-gradient(circle at 50% 20%, rgba(234, 88, 12, 0.14) 0%, transparent 60%), url('/assets/login-restaurant.jpg')",
+          "radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--accent-saffron) 14%, transparent) 0%, transparent 60%), url('/assets/login-restaurant.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         display: "flex",
@@ -213,7 +213,7 @@ export function CustomerProfilePage({
           padding: "8px 24px",
           minHeight: "52px",
           background: "rgba(16, 9, 7, 0.94)",
-          borderBottom: "1px solid rgba(245, 158, 11, 0.25)",
+          borderBottom: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
           backdropFilter: "blur(12px)",
           flexShrink: 0,
           zIndex: 100,
@@ -228,8 +228,8 @@ export function CustomerProfilePage({
               width: "34px",
               height: "34px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #f59e0b, #d97706)",
-              border: "1.5px solid #f59e0b",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber))",
+              border: "1.5px solid var(--accent-amber)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -251,7 +251,7 @@ export function CustomerProfilePage({
             <strong style={{ display: "block", fontSize: "15px", color: "#ffffff", fontWeight: 800, lineHeight: 1.15 }}>
               {restaurantName}
             </strong>
-            <small style={{ color: "#f59e0b", fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase" }}>
+            <small style={{ color: "var(--accent-amber)", fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase" }}>
               Fine Dining &amp; Reservations
             </small>
           </div>
@@ -288,9 +288,9 @@ export function CustomerProfilePage({
               display: "inline-flex",
               alignItems: "center",
               gap: "4px",
-              background: "rgba(245, 158, 11, 0.15)",
-              border: "1px solid rgba(245, 158, 11, 0.35)",
-              color: "#f59e0b",
+              background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
+              color: "var(--accent-amber)",
               padding: "5px 10px",
               borderRadius: "20px",
               fontSize: "12px",
@@ -354,8 +354,8 @@ export function CustomerProfilePage({
             borderRadius: "20px",
             padding: "20px 26px 24px",
             color: "#1c1109",
-            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.65), 0 0 25px rgba(245, 158, 11, 0.15)",
-            border: "1.5px solid rgba(245, 158, 11, 0.45)",
+            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.65), 0 0 25px color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+            border: "1.5px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
             boxSizing: "border-box",
             position: "relative",
           }}
@@ -368,9 +368,9 @@ export function CustomerProfilePage({
                   width: "62px",
                   height: "62px",
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   border: "3px solid #ffedd5",
-                  boxShadow: "0 0 0 2px #f59e0b",
+                  boxShadow: "0 0 0 2px var(--accent-amber)",
                   color: "#ffffff",
                   display: "flex",
                   alignItems: "center",
@@ -434,7 +434,7 @@ export function CustomerProfilePage({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Sparkles size={18} color={isNewCustomer ? "#16a34a" : "#ea580c"} />
+              <Sparkles size={18} color={isNewCustomer ? "#16a34a" : "var(--accent-saffron)"} />
               <div>
                 <strong style={{ display: "block", fontSize: "13px", fontWeight: 750 }}>
                   {isNewCustomer
@@ -454,7 +454,7 @@ export function CustomerProfilePage({
                 type="button"
                 onClick={() => onNavigate("/reserve")}
                 style={{
-                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#ffffff",
                   border: "none",
                   borderRadius: "8px",
@@ -463,7 +463,7 @@ export function CustomerProfilePage({
                   fontWeight: 700,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
-                  boxShadow: "0 2px 6px rgba(234, 88, 12, 0.35)",
+                  boxShadow: "0 2px 6px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                 }}
               >
                 Book a Table Now
@@ -476,7 +476,7 @@ export function CustomerProfilePage({
             style={{
               display: "flex",
               gap: "8px",
-              borderBottom: "1.5px solid rgba(245, 158, 11, 0.25)",
+              borderBottom: "1.5px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
               paddingBottom: "10px",
               marginBottom: "16px",
             }}
@@ -485,9 +485,9 @@ export function CustomerProfilePage({
               type="button"
               onClick={() => setActiveTab("overview")}
               style={{
-                background: activeTab === "overview" ? "#ea580c" : "rgba(255,255,255,0.7)",
+                background: activeTab === "overview" ? "var(--accent-saffron)" : "rgba(255,255,255,0.7)",
                 color: activeTab === "overview" ? "#ffffff" : "#6b5d52",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 padding: "6px 14px",
                 borderRadius: "8px",
                 fontSize: "12px",
@@ -506,9 +506,9 @@ export function CustomerProfilePage({
               type="button"
               onClick={() => setActiveTab("bookings")}
               style={{
-                background: activeTab === "bookings" ? "#ea580c" : "rgba(255,255,255,0.7)",
+                background: activeTab === "bookings" ? "var(--accent-saffron)" : "rgba(255,255,255,0.7)",
                 color: activeTab === "bookings" ? "#ffffff" : "#6b5d52",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 padding: "6px 14px",
                 borderRadius: "8px",
                 fontSize: "12px",
@@ -527,9 +527,9 @@ export function CustomerProfilePage({
               type="button"
               onClick={() => setActiveTab("visits")}
               style={{
-                background: activeTab === "visits" ? "#ea580c" : "rgba(255,255,255,0.7)",
+                background: activeTab === "visits" ? "var(--accent-saffron)" : "rgba(255,255,255,0.7)",
                 color: activeTab === "visits" ? "#ffffff" : "#6b5d52",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 padding: "6px 14px",
                 borderRadius: "8px",
                 fontSize: "12px",
@@ -561,7 +561,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.88)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "9px 12px",
                     display: "flex",
@@ -576,7 +576,7 @@ export function CustomerProfilePage({
                       height: "32px",
                       borderRadius: "50%",
                       background: "#ffedd5",
-                      color: "#ea580c",
+                      color: "var(--accent-saffron)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -599,7 +599,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.88)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "9px 12px",
                     display: "flex",
@@ -614,7 +614,7 @@ export function CustomerProfilePage({
                       height: "32px",
                       borderRadius: "50%",
                       background: "#ffedd5",
-                      color: "#ea580c",
+                      color: "var(--accent-saffron)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -637,7 +637,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.88)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "9px 12px",
                     display: "flex",
@@ -652,7 +652,7 @@ export function CustomerProfilePage({
                       height: "32px",
                       borderRadius: "50%",
                       background: "#ffedd5",
-                      color: "#ea580c",
+                      color: "var(--accent-saffron)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -682,12 +682,12 @@ export function CustomerProfilePage({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                  <Crown size={15} color="#ea580c" />
+                  <Crown size={15} color="var(--accent-saffron)" />
                   <span style={{ fontSize: "12px", fontWeight: 800, color: "#1c1109" }}>
                     Customer Stay &amp; Spend Statistics
                   </span>
                 </div>
-                <div style={{ flex: 1, height: "1px", background: "rgba(245, 158, 11, 0.25)" }} />
+                <div style={{ flex: 1, height: "1px", background: "color-mix(in srgb, var(--accent-amber) 25%, transparent)" }} />
               </div>
 
               <div
@@ -702,7 +702,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.9)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "10px 12px",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
@@ -711,7 +711,7 @@ export function CustomerProfilePage({
                   <small style={{ display: "block", fontSize: "10px", color: "#8c786a", fontWeight: 700, textTransform: "uppercase" }}>
                     Total Visits
                   </small>
-                  <strong style={{ fontSize: "18px", color: "#ea580c", fontWeight: 800, display: "block", marginTop: "2px" }}>
+                  <strong style={{ fontSize: "18px", color: "var(--accent-saffron)", fontWeight: 800, display: "block", marginTop: "2px" }}>
                     {stats.totalVisits ?? 0}
                   </strong>
                   <span style={{ fontSize: "10px", color: "#786556" }}>
@@ -723,7 +723,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.9)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "10px 12px",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
@@ -744,7 +744,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.9)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "10px 12px",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
@@ -776,7 +776,7 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.9)",
-                    border: "1px solid rgba(245, 158, 11, 0.28)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
                     borderRadius: "12px",
                     padding: "10px 12px",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
@@ -813,7 +813,7 @@ export function CustomerProfilePage({
                   style={{
                     width: "100%",
                     height: "38px",
-                    background: "linear-gradient(90deg, #f97316 0%, #ea580c 100%)",
+                    background: "linear-gradient(90deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                     color: "#ffffff",
                     border: "none",
                     borderRadius: "10px",
@@ -824,7 +824,7 @@ export function CustomerProfilePage({
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "7px",
-                    boxShadow: "0 4px 14px rgba(234, 88, 12, 0.35)",
+                    boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                   }}
                 >
                   <Edit2 size={14} />
@@ -920,7 +920,7 @@ export function CustomerProfilePage({
                       style={{
                         flex: 1,
                         height: "36px",
-                        background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                        background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                         color: "#ffffff",
                         border: "none",
                         borderRadius: "8px",
@@ -969,13 +969,13 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.88)",
-                    border: "1.5px dashed rgba(245, 158, 11, 0.4)",
+                    border: "1.5px dashed color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                     borderRadius: "14px",
                     padding: "36px 20px",
                     textAlign: "center",
                   }}
                 >
-                  <CalendarDays size={38} color="#ea580c" style={{ margin: "0 auto 10px" }} />
+                  <CalendarDays size={38} color="var(--accent-saffron)" style={{ margin: "0 auto 10px" }} />
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#1c1109", margin: "0 0 6px" }}>
                     Welcome! You haven't completed any stays with us yet.
                   </h3>
@@ -986,7 +986,7 @@ export function CustomerProfilePage({
                     type="button"
                     onClick={() => onNavigate("/reserve")}
                     style={{
-                      background: "linear-gradient(135deg, #f97316, #ea580c)",
+                      background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                       color: "#ffffff",
                       border: "none",
                       borderRadius: "8px",
@@ -994,7 +994,7 @@ export function CustomerProfilePage({
                       fontSize: "13px",
                       fontWeight: 750,
                       cursor: "pointer",
-                      boxShadow: "0 4px 12px rgba(234, 88, 12, 0.35)",
+                      boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                     }}
                   >
                     Book a Table Now
@@ -1017,7 +1017,7 @@ export function CustomerProfilePage({
                     >
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <strong style={{ fontSize: "13px", color: "#ea580c" }}>{b.reservationNumber}</strong>
+                          <strong style={{ fontSize: "13px", color: "var(--accent-saffron)" }}>{b.reservationNumber}</strong>
                           <span
                             style={{
                               fontSize: "10px",
@@ -1040,7 +1040,7 @@ export function CustomerProfilePage({
                         <div style={{ fontSize: "13px", fontWeight: 800, color: "#1c1109" }}>
                           ₹{(b.totalAmount || 0).toLocaleString("en-IN")}
                         </div>
-                        <small style={{ fontSize: "10.5px", color: b.paymentStatus === "PAID" ? "#16a34a" : "#ea580c", fontWeight: 700 }}>
+                        <small style={{ fontSize: "10.5px", color: b.paymentStatus === "PAID" ? "#16a34a" : "var(--accent-saffron)", fontWeight: 700 }}>
                           {b.paymentStatus || "UNPAID"}
                         </small>
                       </div>
@@ -1058,13 +1058,13 @@ export function CustomerProfilePage({
                 <div
                   style={{
                     background: "rgba(255, 255, 255, 0.88)",
-                    border: "1.5px dashed rgba(245, 158, 11, 0.4)",
+                    border: "1.5px dashed color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                     borderRadius: "14px",
                     padding: "36px 20px",
                     textAlign: "center",
                   }}
                 >
-                  <History size={38} color="#ea580c" style={{ margin: "0 auto 10px" }} />
+                  <History size={38} color="var(--accent-saffron)" style={{ margin: "0 auto 10px" }} />
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#1c1109", margin: "0 0 6px" }}>
                     No previous visits
                   </h3>
@@ -1075,7 +1075,7 @@ export function CustomerProfilePage({
                     type="button"
                     onClick={() => onNavigate("/reserve")}
                     style={{
-                      background: "linear-gradient(135deg, #f97316, #ea580c)",
+                      background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                       color: "#ffffff",
                       border: "none",
                       borderRadius: "8px",
@@ -1083,7 +1083,7 @@ export function CustomerProfilePage({
                       fontSize: "13px",
                       fontWeight: 750,
                       cursor: "pointer",
-                      boxShadow: "0 4px 12px rgba(234, 88, 12, 0.35)",
+                      boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                     }}
                   >
                     Plan Your First Visit

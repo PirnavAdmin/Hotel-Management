@@ -238,7 +238,7 @@ export function ChartOfAccountsView() {
                 fontWeight: 700,
                 border: "none",
                 cursor: "pointer",
-                background: groupFilter === g ? "var(--accent, #f59e0b)" : "var(--bg-secondary)",
+                background: groupFilter === g ? "var(--accent, var(--accent-amber))" : "var(--bg-secondary)",
                 color: groupFilter === g ? "#ffffff" : "var(--text-muted)",
               }}
             >
@@ -328,7 +328,7 @@ export function ChartOfAccountsView() {
                             : a.group === "Income"
                             ? "rgba(16, 185, 129, 0.12)"
                             : a.group === "Expenses"
-                            ? "rgba(245, 158, 11, 0.12)"
+                            ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)"
                             : "rgba(168, 85, 247, 0.12)",
                         color:
                           a.group === "Assets"
@@ -338,7 +338,7 @@ export function ChartOfAccountsView() {
                             : a.group === "Income"
                             ? "#10b981"
                             : a.group === "Expenses"
-                            ? "#f59e0b"
+                            ? "var(--accent-amber)"
                             : "#a855f7",
                       }}
                     >

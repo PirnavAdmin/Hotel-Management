@@ -19,9 +19,9 @@
 .takeaway-view-tab svg { width: 16px; height: 16px; flex: 0 0 auto; }
 .takeaway-view-tab:hover:not(.is-active) { border-color: var(--border-card); background: var(--bg-tertiary); color: var(--text-main); }
 .takeaway-view-tab.is-active {
-  border-color: rgba(245,158,11,.45);
-  background: linear-gradient(135deg,rgba(245,158,11,.2),rgba(234,88,12,.14));
-  color: var(--accent-amber-light); box-shadow: inset 0 0 0 1px rgba(245,158,11,.08), 0 3px 12px rgba(0,0,0,.12);
+  border-color: color-mix(in srgb, var(--accent-amber) 45%, transparent);
+  background: linear-gradient(135deg,color-mix(in srgb, var(--accent-amber) 20%, transparent),color-mix(in srgb, var(--accent-saffron) 14%, transparent));
+  color: var(--accent-amber-light); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-amber) 8%, transparent), 0 3px 12px rgba(0,0,0,.12);
 }
 .takeaway-view-tab:active { transform: translateY(1px); }
 .takeaway-view-tab-count {
@@ -29,7 +29,7 @@
   padding: 0 .2rem; border: 1px solid var(--border-subtle); border-radius: 999px;
   background: var(--bg-primary); color: var(--text-main); font-size: .64rem; font-weight: 700; line-height: 1;
 }
-.takeaway-view-tab.is-active .takeaway-view-tab-count { border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
+.takeaway-view-tab.is-active .takeaway-view-tab-count { border-color: color-mix(in srgb, var(--accent-amber) 35%, transparent); background: color-mix(in srgb, var(--accent-amber) 14%, transparent); color: var(--accent-amber-light); }
 
 .takeaway-page-header {
   display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center;
@@ -78,10 +78,10 @@
 .takeaway-dietary-badge,.takeaway-prep-badge,.takeaway-special-badge { position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; border: 1px solid rgba(var(--surface-rgb),.1); border-radius: 5px; background: rgba(0,0,0,.76); color: #fff; font-size: .62rem; font-weight: 700; }
 .takeaway-dietary-badge { top: 7px; left: 7px; }
 .takeaway-dietary-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; }
-.takeaway-special-badge { top: 7px; right: 7px; background: linear-gradient(135deg,#f59e0b,#ea580c); }
+.takeaway-special-badge { top: 7px; right: 7px; background: linear-gradient(135deg,var(--accent-amber),var(--accent-saffron)); }
 .takeaway-prep-badge { right: 7px; bottom: 7px; }
-.takeaway-add-button,.takeaway-qty-button { display: inline-flex; flex: 0 0 auto; min-height: 32px; align-items: center; justify-content: center; gap: .2rem; padding: .4rem .6rem; border: 1px solid rgba(245,158,11,.45); border-radius: 7px; background: linear-gradient(135deg,#f59e0b,#ea580c); color: #111827; font-size: .74rem; font-weight: 700; }
-.takeaway-qty-button { width: 30px; height: 30px; min-height: 30px; padding: 0; background: rgba(245,158,11,.14); color: var(--accent-amber-light); }
+.takeaway-add-button,.takeaway-qty-button { display: inline-flex; flex: 0 0 auto; min-height: 32px; align-items: center; justify-content: center; gap: .2rem; padding: .4rem .6rem; border: 1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent); border-radius: 7px; background: linear-gradient(135deg,var(--accent-amber),var(--accent-saffron)); color: #111827; font-size: .74rem; font-weight: 700; }
+.takeaway-qty-button { width: 30px; height: 30px; min-height: 30px; padding: 0; background: color-mix(in srgb, var(--accent-amber) 14%, transparent); color: var(--accent-amber-light); }
 
 .takeaway-order-panel { position: sticky; top: 1rem; width: 100%; min-width: 0; box-sizing: border-box; padding: 1rem; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--bg-secondary); box-shadow: var(--shadow-sm); }
 .takeaway-cart-line { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .4rem .6rem; align-items: start; padding-bottom: .65rem; border-bottom: 1px solid var(--border-subtle); }

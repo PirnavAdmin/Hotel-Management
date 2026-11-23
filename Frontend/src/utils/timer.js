@@ -94,10 +94,10 @@ export function getTimerUrgencyColor(totalSeconds) {
   }
   if (totalSeconds >= 1800) {
     return {
-      text: '#f59e0b',
-      bg: 'rgba(245, 158, 11, 0.14)',
-      border: 'rgba(245, 158, 11, 0.35)',
-      dot: '#f59e0b',
+      text: 'var(--accent-amber)',
+      bg: 'color-mix(in srgb, var(--accent-amber) 14%, transparent)',
+      border: 'color-mix(in srgb, var(--accent-amber) 35%, transparent)',
+      dot: 'var(--accent-amber)',
       label: 'Serving'
     };
   }

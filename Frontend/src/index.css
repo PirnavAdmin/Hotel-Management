@@ -6,7 +6,7 @@ input::-ms-clear { display: none !important; width: 0 !important; height: 0 !imp
 [data-theme="royal-saffron"],
 body[data-theme="royal-saffron"] {
   color-scheme: dark;
-  --primary-gradient: linear-gradient(135deg,#ff9d00,#ff5a00);
+  --primary-gradient: linear-gradient(135deg,var(--accent-amber),var(--accent-saffron));
   --text-on-accent:#fff;
   --surface-rgb:255,255,255;
   --accent-indigo:#818cf8;
@@ -72,11 +72,68 @@ body[data-theme="royal-saffron"] {
   --radius-xl: 22px;
 }
 
+:root {
+  --accent-rgb: 245, 158, 11;
+}
+
+:root[data-accent],
+body[data-accent] {
+  --primary-gradient: linear-gradient(135deg, var(--accent-gradient-start, var(--accent-amber)), var(--accent-gradient-end, var(--accent-saffron)));
+  --accent-amber: var(--accent-active, #f59e0b);
+  --accent-amber-light: var(--accent-light, var(--accent-active, #fbbf24));
+  --accent-saffron: var(--accent-gradient-end, #ea580c);
+  --border-focus: var(--accent-active-border, rgba(245, 158, 11, 0.7));
+  --accent-amber-glow: var(--accent-active-glow, rgba(245, 158, 11, 0.35));
+  --surface-tint: var(--accent-surface, rgba(255,255,255,.04));
+  --surface-tint-hover: var(--accent-surface-hover, rgba(255,255,255,.08));
+  --border-subtle: var(--accent-border, rgba(245, 158, 11, 0.24));
+}
+
+/* Reapply accent aliases after the light-mode palette so mode-specific base
+   colours cannot override the user's selected accent. */
+:root[data-theme][data-accent],
+body[data-theme][data-accent] {
+  --accent-amber: var(--accent-primary);
+  --accent-amber-light: var(--accent-light, var(--accent-primary));
+  --accent-saffron: var(--accent-gradient-end, var(--accent-primary));
+  --accent-amber-glow: var(--accent-active-glow);
+  --border-focus: var(--accent-active-border);
+  --primary-gradient: linear-gradient(135deg, var(--accent-gradient-start), var(--accent-gradient-end));
+  --color-primary: var(--accent-primary);
+  --color-primary-hover: var(--accent-hover);
+  --color-primary-active: var(--accent-dark);
+  --color-primary-light: var(--accent-light);
+  --color-primary-dark: var(--accent-dark);
+  --color-accent: var(--accent-primary);
+  --color-background: var(--bg-primary);
+  --color-surface: var(--bg-secondary);
+  --color-sidebar: var(--bg-secondary);
+  --color-header: var(--bg-secondary);
+  --color-card: var(--bg-card);
+  --color-border: var(--border-card);
+  --color-text: var(--text-main);
+  --color-text-secondary: var(--text-muted);
+  --color-focus: var(--border-focus);
+  --radiance-glow: 0 0 20px var(--accent-amber-glow);
+}
+
+:root[data-theme="light-bistro"][data-accent],
+body[data-theme="light-bistro"][data-accent] {
+  --accent-amber-light: var(--accent-dark);
+}
+
+/* Accent override for legacy inline orange primary action gradients. */
+button[style*="linear-gradient"][style*="var(--accent-amber)"],
+button[style*="linear-gradient"][style*="var(--accent-amber)"],
+button[style*="linear-gradient"][style*="var(--accent-amber)"] {
+  background: var(--primary-gradient) !important;
+}
+
 /* Clean Daylight Light Theme */
 :root[data-theme="light-bistro"],
 [data-theme="light-bistro"],
 body[data-theme="light-bistro"] {
-  --primary-gradient:linear-gradient(135deg,#ff9d00,#ff6500);
+  --primary-gradient:linear-gradient(135deg,var(--accent-amber),var(--accent-saffron));
   --surface-rgb:15,23,42;
   --accent-indigo:#4f46e5;
   --accent-purple:#7e22ce;
@@ -223,14 +280,12 @@ body {
 
 .no-scrollbar,
 .no-scrollbar * {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  scrollbar-width: auto;
 }
 .no-scrollbar::-webkit-scrollbar,
 .no-scrollbar *::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 6px;
+  height: 6px;
 }
 
 .clean-date-input::-webkit-calendar-picker-indicator {
@@ -272,54 +327,54 @@ button {
    their backgrounds or the styling of outlined/secondary variants. */
 :is(
   .primary-action-button,
-  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
-  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
   button[style*="linear-gradient"][style*="#ff7b00"],
   button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
-  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
 ) {
-  color: #ffffff !important;
+  color: var(--accent-on, #ffffff) !important;
   font-size: 0.82rem !important;
   font-weight: 700 !important;
 }
 
 :is(
   .primary-action-button,
-  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
-  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
   button[style*="linear-gradient"][style*="#ff7b00"],
   button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
-  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
 ):is(:hover, :focus, :focus-visible, :active, :disabled) {
-  color: #ffffff !important;
+  color: var(--accent-on, #ffffff) !important;
 }
 
 :is(
   .primary-action-button,
-  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
-  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
   button[style*="linear-gradient"][style*="#ff7b00"],
   button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
-  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
 ) > *,
 :is(
   .primary-action-button,
-  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
-  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
   button[style*="linear-gradient"][style*="#ff7b00"],
   button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
-  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
 ) svg {
   color: inherit !important;
@@ -327,13 +382,13 @@ button {
 
 :is(
   .primary-action-button,
-  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
-  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
   button[style*="linear-gradient"][style*="#ff7b00"],
   button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
-  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
 ) span {
   font-size: inherit !important;
@@ -342,13 +397,13 @@ button {
 
 :is(
   .primary-action-button,
-  button[style*="linear-gradient"][style*="#f59e0b"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(245, 158, 11)"],
-  button[style*="linear-gradient"][style*="#f97316"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(249, 115, 22)"],
   button[style*="linear-gradient"][style*="#ff7b00"],
   button[style*="linear-gradient"][style*="rgb(255, 123, 0)"],
-  button[style*="linear-gradient"][style*="#ff9d00"],
+  button[style*="linear-gradient"][style*="var(--accent-amber)"],
   button[style*="linear-gradient"][style*="rgb(255, 157, 0)"]
 ) svg {
   stroke: currentColor !important;
@@ -382,7 +437,7 @@ textarea {
 .badge-occupied {
   background: var(--status-occupied-bg);
   color: var(--status-occupied);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent);
 }
 
 .badge-billed {
@@ -905,8 +960,8 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 0 16px;
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(245, 158, 11, 0.08);
+  border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-amber) 8%, transparent);
   color: var(--accent-amber);
   cursor: pointer;
   font-weight: 700;
@@ -914,9 +969,9 @@ textarea {
   transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 .menu-filter-clear:hover {
-  background: rgba(245, 158, 11, 0.15);
+  background: color-mix(in srgb, var(--accent-amber) 15%, transparent);
   border-color: var(--accent-amber);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-amber) 12%, transparent);
 }
 @media (max-width: 540px) {
   .menu-filter-search {
@@ -980,7 +1035,7 @@ textarea {
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 .menu-items-table tbody tr.menu-admin-item-row:hover {
-  border-color: rgba(245, 158, 11, 0.55) !important;
+  border-color: color-mix(in srgb, var(--accent-amber) 55%, transparent) !important;
   box-shadow: 0 5px 16px rgba(0, 0, 0, 0.12);
 }
 .menu-admin-item-row > td {
@@ -1170,7 +1225,7 @@ textarea {
 .login-account-tabs button { display: flex; flex: 1 1 160px; min-width: 0; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border-card); border-radius: 8px; background: var(--bg-tertiary); color: var(--text-muted); font-family: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
 .login-account-tabs button svg { flex-shrink: 0; }
 .login-account-tabs button span { overflow-wrap: anywhere; }
-.login-account-tabs button[aria-selected="true"] { background: rgba(245,158,11,0.14); border-color: var(--accent-amber); color: var(--accent-amber); }
+.login-account-tabs button[aria-selected="true"] { background: var(--accent-surface, color-mix(in srgb, var(--accent-amber) 14%, transparent)); border-color: var(--accent-amber); color: var(--accent-amber); }
 .login-account-tabs button:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
 
 .theme-toggle { width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--border-card); border-radius:50%; background:var(--bg-tertiary); color:var(--accent-amber); box-shadow:var(--shadow-sm); }
@@ -1178,6 +1233,36 @@ textarea {
 .theme-toggle:focus-visible { outline:2px solid var(--accent-amber); outline-offset:3px; }
 .theme-toggle > svg { animation: none !important; transform: none !important; }
 .theme-toggle-label { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.accent-color-options { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.accent-color-option { display: flex; flex-direction: column; align-items: center; gap: 0.45rem; min-width: 76px; padding: 0.5rem; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--text-main); cursor: pointer; }
+.accent-color-option:hover { background: var(--surface-tint-hover); }
+.accent-color-option:focus-visible { outline: 2px solid var(--accent-amber); outline-offset: 2px; }
+.accent-color-option.is-selected { border-color: var(--accent-amber); background: var(--surface-tint); }
+.accent-color-swatch { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #fff; background: var(--swatch-color); box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.accent-color-name { font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+.accent-picker-layout { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, 230px); gap: 1rem; align-items: stretch; max-width: 620px; }
+.accent-picker-controls { display: grid; grid-template-rows: minmax(150px, 210px) auto; gap: 0.8rem; min-width: 0; }
+.accent-picker-saturation { position: relative; overflow: hidden; border-radius: 8px; background-color: var(--picker-hue); background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent); cursor: crosshair; touch-action: none; outline: none; }
+.accent-picker-saturation:focus-visible { box-shadow: 0 0 0 3px var(--accent-amber); }
+.accent-picker-handle { position: absolute; width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 1px 4px rgba(0,0,0,.75); pointer-events: none; }
+.accent-picker-hue-label { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 0.6rem; color: var(--text-muted); font-size: 0.76rem; font-weight: 700; }
+.accent-picker-hue-label input { width: 100%; height: 14px; margin: 0; border: 0; border-radius: 99px; appearance: none; background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); cursor: pointer; }
+.accent-picker-hue-label input::-webkit-slider-thumb { width: 18px; height: 18px; border: 2px solid #fff; border-radius: 50%; appearance: none; background: var(--accent-amber); box-shadow: 0 1px 4px rgba(0,0,0,.55); }
+.accent-picker-hue-label input::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%; background: var(--accent-amber); box-shadow: 0 1px 4px rgba(0,0,0,.55); }
+.accent-picker-preview { display: grid; grid-template-columns: 1fr auto; grid-template-rows: 58px auto auto auto auto; align-content: start; gap: 0.55rem; min-width: 0; padding: 0.7rem; border: 1px solid var(--border-card); border-radius: 10px; background: var(--bg-secondary); }
+.accent-picker-preview-color { grid-column: 1 / -1; border-radius: 7px; }
+.accent-picker-value-field { display: flex; align-items: center; gap: 0.5rem; min-width: 0; color: var(--text-dim); font-size: 0.68rem; font-weight: 800; }
+.accent-picker-value-field input { width: 100%; min-width: 0; padding: 0.42rem 0.5rem; border: 1px solid var(--border-card); border-radius: 6px; background: var(--bg-primary); color: var(--text-main); font: 700 0.78rem var(--font-mono); }
+.accent-picker-copy { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--border-card); border-radius: 6px; background: var(--bg-tertiary); color: var(--text-main); cursor: pointer; }
+.accent-picker-rgb { grid-column: 1 / -1; color: var(--text-dim); font-size: 0.72rem; }
+.accent-picker-rgb strong { margin-left: 0.35rem; color: var(--text-main); font-family: var(--font-mono); font-size: 0.74rem; }
+.accent-picker-native { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.72rem; cursor: pointer; }
+.accent-picker-native input { width: 28px; height: 24px; padding: 0; border: 1px solid var(--border-card); border-radius: 5px; background: transparent; cursor: pointer; }
+.accent-picker-actions { grid-column: 1 / -1; display: flex; gap: 0.5rem; margin-top: 0.15rem; }
+.accent-picker-actions button { flex: 1; padding: 0.45rem 0.6rem; border: 1px solid var(--border-card); border-radius: 6px; background: var(--bg-tertiary); color: var(--text-main); font-size: 0.74rem; font-weight: 700; cursor: pointer; }
+.accent-picker-actions button:first-child { border-color: var(--accent-amber); background: var(--primary-gradient); color: var(--accent-on, #fff); }
+.accent-picker-actions button:disabled { cursor: default; opacity: 0.5; }
+@media (max-width: 620px) { .accent-picker-layout { grid-template-columns: minmax(0, 1fr); } .accent-picker-preview { grid-template-columns: 1fr auto; } }
 input, select, textarea { color-scheme:inherit; accent-color:var(--accent-amber); }
 input::placeholder, textarea::placeholder { color:var(--text-dim); }
 select option { color:var(--text-main); background:var(--input-bg); }
@@ -1214,8 +1299,8 @@ select option { color:var(--text-main); background:var(--input-bg); }
 }
 
 @keyframes tableActiveGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-  50% { box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.25); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-amber) 0%, transparent); }
+  50% { box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent-amber) 25%, transparent); }
 }
 
 /* Dish card hover elevate & image zoom */
@@ -1225,7 +1310,7 @@ select option { color:var(--text-main); background:var(--input-bg); }
 
 .pos-dish-card:hover, .takeaway-dish-card:hover, .customer-menu-card:hover, article[class*="dish"]:hover, article[class*="menu-item"]:hover {
   transform: translateY(-3px) !important;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(245, 158, 11, 0.28) !important;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28), 0 0 0 1px color-mix(in srgb, var(--accent-amber) 28%, transparent) !important;
 }
 
 .pos-dish-card img, .takeaway-dish-card img, .customer-menu-card img {

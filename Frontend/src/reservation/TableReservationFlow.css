@@ -47,9 +47,9 @@
 .table-reservation-flow input:focus,
 .table-reservation-flow select:focus,
 .table-reservation-flow textarea:focus {
-  border-color: #ea580c !important;
+  border-color: var(--accent-saffron) !important;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-saffron) 20%, transparent);
 }
 
 @media (max-width: 600px) {

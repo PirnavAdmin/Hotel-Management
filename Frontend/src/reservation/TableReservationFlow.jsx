@@ -433,7 +433,7 @@ export function TableReservationFlow({
               toast.type === "error"
                 ? "#dc2626"
                 : toast.type === "info"
-                  ? "#ea580c"
+                  ? "var(--accent-saffron)"
                   : "#16a34a",
             color: "#ffffff",
             padding: "12px 20px",
@@ -468,7 +468,7 @@ export function TableReservationFlow({
           padding: "8px 20px",
           minHeight: "52px",
           background: "rgba(23, 11, 7, 0.92)",
-          border: "1px solid rgba(245, 158, 11, 0.35)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
           backdropFilter: "blur(14px)",
           borderRadius: "14px",
           boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
@@ -483,12 +483,12 @@ export function TableReservationFlow({
               width: "36px",
               height: "36px",
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #f59e0b, #d97706, #b45309)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber), var(--accent-amber))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "1.5px solid #fbbf24",
-              boxShadow: "0 0 10px rgba(245, 158, 11, 0.35)",
+              border: "1.5px solid var(--accent-amber-light)",
+              boxShadow: "0 0 10px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
             }}
           >
             <Compass size={20} color="#ffffff" />
@@ -510,7 +510,7 @@ export function TableReservationFlow({
                 fontSize: "9px",
                 textTransform: "uppercase",
                 letterSpacing: "1.5px",
-                color: "#f59e0b",
+                color: "var(--accent-amber)",
                 fontWeight: 700,
               }}
             >
@@ -529,7 +529,7 @@ export function TableReservationFlow({
               }}
               style={{
                 background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 color: "#f5ede6",
                 padding: "6px 14px",
                 borderRadius: "20px",
@@ -807,13 +807,13 @@ export function TableReservationFlow({
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px", padding: "12px", background: "#faf7f4", borderRadius: "12px" }}>
-              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, #f59e0b, #ea580c)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", fontWeight: 800 }}>
+              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "20px", fontWeight: 800 }}>
                 {(profileUserData.name || "P")[0].toUpperCase()}
               </div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: "16px", color: "#1a100b" }}>{profileUserData.name}</div>
                 <div style={{ fontSize: "13px", color: "#6f6158" }}>{profileUserData.phone}</div>
-                <div style={{ fontSize: "12px", color: "#ea580c" }}>{profileUserData.email}</div>
+                <div style={{ fontSize: "12px", color: "var(--accent-saffron)" }}>{profileUserData.email}</div>
               </div>
             </div>
 
@@ -863,7 +863,7 @@ export function TableReservationFlow({
                   setShowProfileModal(false);
                   showToast("Profile updated successfully!", "success");
                 }}
-                style={{ flex: 1, height: "42px", background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}
+                style={{ flex: 1, height: "42px", background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer" }}
               >
                 Save &amp; Close
               </button>
@@ -921,8 +921,8 @@ export function TableReservationFlow({
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "360px", overflowY: "auto" }}>
               <div style={{ padding: "14px", border: "1px solid #fed7aa", borderRadius: "12px", background: "#fffaf5" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ fontWeight: 800, color: "#ea580c" }}>ORD-9421</span>
-                  <span style={{ fontSize: "12px", background: "#ffedd5", color: "#c2410c", padding: "2px 8px", borderRadius: "12px", fontWeight: 700 }}>
+                  <span style={{ fontWeight: 800, color: "var(--accent-saffron)" }}>ORD-9421</span>
+                  <span style={{ fontSize: "12px", background: "#ffedd5", color: "var(--accent-amber)", padding: "2px 8px", borderRadius: "12px", fontWeight: 700 }}>
                     Preparing
                   </span>
                 </div>
@@ -988,19 +988,19 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
-            color: "#f59e0b",
+            color: "var(--accent-amber)",
             fontSize: "11px",
             fontWeight: 800,
             textTransform: "uppercase",
             letterSpacing: "1px",
             marginBottom: "8px",
-            background: "rgba(245, 158, 11, 0.12)",
+            background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
             padding: "4px 10px",
             borderRadius: "16px",
-            border: "1px solid rgba(245, 158, 11, 0.3)",
+            border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
           }}
         >
-          <Calendar size={14} color="#f59e0b" /> Table Reservation
+          <Calendar size={14} color="var(--accent-amber)" /> Table Reservation
         </div>
 
         <h1
@@ -1014,7 +1014,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             letterSpacing: "0.5px",
           }}
         >
-          Reserve <span style={{ color: "#f59e0b" }}>Your Table</span>
+          Reserve <span style={{ color: "var(--accent-amber)" }}>Your Table</span>
         </h1>
 
         <p
@@ -1039,7 +1039,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             overflow: "hidden",
             marginBottom: "12px",
             boxShadow: "0 10px 24px rgba(0,0,0,0.5)",
-            border: "1px solid rgba(245, 158, 11, 0.3)",
+            border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
             position: "relative",
           }}
         >
@@ -1070,7 +1070,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           <div
             style={{
               background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(245, 158, 11, 0.22)",
+              border: "1px solid color-mix(in srgb, var(--accent-amber) 22%, transparent)",
               borderRadius: "8px",
               padding: "8px 4px",
               backdropFilter: "blur(6px)",
@@ -1078,7 +1078,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           >
             <CheckCircle2
               size={16}
-              color="#f59e0b"
+              color="var(--accent-amber)"
               style={{ margin: "0 auto 4px" }}
             />
             <div
@@ -1095,13 +1095,13 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           <div
             style={{
               background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(245, 158, 11, 0.22)",
+              border: "1px solid color-mix(in srgb, var(--accent-amber) 22%, transparent)",
               borderRadius: "8px",
               padding: "8px 4px",
               backdropFilter: "blur(6px)",
             }}
           >
-            <Users size={16} color="#f59e0b" style={{ margin: "0 auto 4px" }} />
+            <Users size={16} color="var(--accent-amber)" style={{ margin: "0 auto 4px" }} />
             <div
               style={{
                 fontSize: "10px",
@@ -1116,7 +1116,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           <div
             style={{
               background: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(245, 158, 11, 0.22)",
+              border: "1px solid color-mix(in srgb, var(--accent-amber) 22%, transparent)",
               borderRadius: "8px",
               padding: "8px 4px",
               backdropFilter: "blur(6px)",
@@ -1124,7 +1124,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
           >
             <Sparkles
               size={16}
-              color="#f59e0b"
+              color="var(--accent-amber)"
               style={{ margin: "0 auto 4px" }}
             />
             <div
@@ -1160,7 +1160,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             marginBottom: "10px",
           }}
         >
-          <Calendar size={18} color="#ea580c" />
+          <Calendar size={18} color="var(--accent-saffron)" />
           <h2
             style={{
               fontSize: "16px",
@@ -1333,7 +1333,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
                     color: "#1f1610",
                   }}
                 >
-                  <Users size={13} color="#ea580c" />
+                  <Users size={13} color="var(--accent-saffron)" />
                   <span style={{ color: "#1f1610" }}>{form.guests} Guests</span>
                 </div>
                 <button
@@ -1569,7 +1569,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
             style={{
               width: "100%",
               height: "36px",
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#ffffff",
               border: "none",
               borderRadius: "8px",
@@ -1580,7 +1580,7 @@ function Step1BookTable({ form, setForm, errors, onSubmit }) {
               alignItems: "center",
               justifyContent: "center",
               gap: "6px",
-              boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
+              boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
             }}
           >
             <Calendar size={15} />
@@ -1650,7 +1650,7 @@ function Step2SelectTable({
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Calendar size={20} color="#ea580c" />
+            <Calendar size={20} color="var(--accent-saffron)" />
             <h2
               style={{
                 fontSize: "19px",
@@ -1742,7 +1742,7 @@ function Step2SelectTable({
                 key={f.id}
                 onClick={() => setTableFilter(f.id)}
                 style={{
-                  background: tableFilter === f.id ? "#ea580c" : "#f4eee7",
+                  background: tableFilter === f.id ? "var(--accent-saffron)" : "#f4eee7",
                   color: tableFilter === f.id ? "#fff" : "#4b3f36",
                   border: "none",
                   borderRadius: "16px",
@@ -1782,7 +1782,7 @@ function Step2SelectTable({
               setTableFilter("all");
             }}
             style={{
-              background: "#ea580c",
+              background: "var(--accent-saffron)",
               color: "#fff",
               border: "none",
               borderRadius: "8px",
@@ -1816,7 +1816,7 @@ function Step2SelectTable({
               }}
               style={{
                 border: isSelected
-                  ? "2px solid #ea580c"
+                  ? "2px solid var(--accent-saffron)"
                   : isReserved
                     ? "1px solid #e5ded5"
                     : "1px solid #d4c8bd",
@@ -1831,7 +1831,7 @@ function Step2SelectTable({
                 opacity: isReserved ? 0.65 : 1,
                 position: "relative",
                 boxShadow: isSelected
-                  ? "0 4px 14px rgba(234, 88, 12, 0.22)"
+                  ? "0 4px 14px color-mix(in srgb, var(--accent-saffron) 22%, transparent)"
                   : "0 1px 4px rgba(0,0,0,0.04)",
                 transition: "all 0.15s ease",
               }}
@@ -1846,7 +1846,7 @@ function Step2SelectTable({
                     width: "18px",
                     height: "18px",
                     borderRadius: "50%",
-                    background: "#ea580c",
+                    background: "var(--accent-saffron)",
                     color: "#ffffff",
                     display: "flex",
                     alignItems: "center",
@@ -1924,7 +1924,7 @@ function Step2SelectTable({
           type="button"
           onClick={onContinue}
           style={{
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             border: "none",
             borderRadius: "8px",
@@ -1935,7 +1935,7 @@ function Step2SelectTable({
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
+            boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
           }}
         >
           Continue to Payment <ArrowRight size={16} />
@@ -1988,7 +1988,7 @@ function Step3Payment({
         <span style={{ color: "#c4b5a6" }}>→</span>
         <span
           style={{
-            color: "#ea580c",
+            color: "var(--accent-saffron)",
             background: "#fff5ee",
             padding: "2px 8px",
             borderRadius: "12px",
@@ -2065,7 +2065,7 @@ function Step3Payment({
               </div>
               <div>
                 <span style={{ color: "#6b5d52" }}>Table:</span>{" "}
-                <strong style={{ color: "#ea580c" }}>
+                <strong style={{ color: "var(--accent-saffron)" }}>
                   {selectedTable?.name || ""} (
                   {selectedTable?.section || "Indoor"})
                 </strong>
@@ -2087,7 +2087,7 @@ function Step3Payment({
                 fontSize: "10.5px",
                 fontWeight: 800,
                 textTransform: "uppercase",
-                color: "#ea580c",
+                color: "var(--accent-saffron)",
                 marginBottom: "6px",
               }}
             >
@@ -2099,7 +2099,7 @@ function Step3Payment({
                 justifyContent: "space-between",
                 fontSize: "12px",
                 padding: "2px 0",
-                color: "#ea580c",
+                color: "var(--accent-saffron)",
                 fontWeight: 700,
               }}
             >
@@ -2119,7 +2119,7 @@ function Step3Payment({
               }}
             >
               <span>Payable Now:</span>
-              <span style={{ color: "#ea580c" }}>₹100.00</span>
+              <span style={{ color: "var(--accent-saffron)" }}>₹100.00</span>
             </div>
           </div>
         </div>
@@ -2153,7 +2153,7 @@ function Step3Payment({
                 gap: "10px",
                 padding: "10px 12px",
                 borderRadius: "10px",
-                border: "1.5px solid #ea580c",
+                border: "1.5px solid var(--accent-saffron)",
                 background: "#fff8f3",
                 cursor: "pointer",
               }}
@@ -2163,7 +2163,7 @@ function Step3Payment({
                 name="payment"
                 checked={paymentMethod === "upi"}
                 onChange={() => setPaymentMethod("upi")}
-                style={{ accentColor: "#ea580c", marginTop: "3px" }}
+                style={{ accentColor: "var(--accent-saffron)", marginTop: "3px" }}
               />
               <div>
                 <div
@@ -2254,7 +2254,7 @@ function Step3Payment({
             onClick={onPayNow}
             style={{
               width: "100%",
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#ffffff",
               border: "none",
               borderRadius: "9px",
@@ -2262,7 +2262,7 @@ function Step3Payment({
               fontSize: "13.5px",
               fontWeight: 800,
               cursor: "pointer",
-              boxShadow: "0 4px 14px rgba(234, 88, 12, 0.45)",
+              boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-saffron) 45%, transparent)",
             }}
           >
             Pay ₹100.00 & Confirm Booking
@@ -2313,14 +2313,14 @@ function Step4PaymentProcessing() {
           height: "60px",
           borderRadius: "50%",
           background: "#fff7ed",
-          border: "2.5px solid #ea580c",
+          border: "2.5px solid var(--accent-saffron)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           margin: "0 auto 16px",
         }}
       >
-        <CreditCard size={30} color="#ea580c" />
+        <CreditCard size={30} color="var(--accent-saffron)" />
       </div>
 
       <h2
@@ -2376,7 +2376,7 @@ function Step4PaymentProcessing() {
           </span>
         </div>
 
-        <div style={{ width: "40px", height: "2px", background: "#ea580c" }} />
+        <div style={{ width: "40px", height: "2px", background: "var(--accent-saffron)" }} />
 
         <div
           style={{
@@ -2391,7 +2391,7 @@ function Step4PaymentProcessing() {
               width: "28px",
               height: "28px",
               borderRadius: "50%",
-              background: "#ea580c",
+              background: "var(--accent-saffron)",
               color: "#fff",
               display: "flex",
               alignItems: "center",
@@ -2403,7 +2403,7 @@ function Step4PaymentProcessing() {
           >
             ⏳
           </div>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "#ea580c" }}>
+          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--accent-saffron)" }}>
             Processing with Bank
           </span>
         </div>
@@ -2522,7 +2522,7 @@ function Step5ReservationConfirmed({
             style={{
               fontSize: "14px",
               fontWeight: 800,
-              color: "#ea580c",
+              color: "var(--accent-saffron)",
               background: "#ffedd5",
               padding: "2px 10px",
               borderRadius: "6px",
@@ -2554,7 +2554,7 @@ function Step5ReservationConfirmed({
           </div>
           <div>
             <span style={{ color: "#6b5d52" }}>Table:</span>{" "}
-            <strong style={{ color: "#ea580c" }}>
+            <strong style={{ color: "var(--accent-saffron)" }}>
               {reservation?.tableName || reservation?.tableNumber || "—"}
             </strong>
           </div>
@@ -2597,8 +2597,8 @@ function Step5ReservationConfirmed({
           onClick={onViewReservation}
           style={{
             background: "#ffffff",
-            border: "1.5px solid #ea580c",
-            color: "#ea580c",
+            border: "1.5px solid var(--accent-saffron)",
+            color: "var(--accent-saffron)",
             padding: "10px 22px",
             borderRadius: "8px",
             fontSize: "13.5px",
@@ -2616,7 +2616,7 @@ function Step5ReservationConfirmed({
           type="button"
           onClick={onBackToHome}
           style={{
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             border: "none",
             borderRadius: "8px",
@@ -2627,7 +2627,7 @@ function Step5ReservationConfirmed({
             display: "flex",
             alignItems: "center",
             gap: "6px",
-            boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
+            boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
           }}
         >
           <Home size={16} /> Back to Home
@@ -2712,7 +2712,7 @@ function Step6MyReservations({
       >
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Calendar size={20} color="#ea580c" />
+            <Calendar size={20} color="var(--accent-saffron)" />
             <h2
               style={{
                 fontSize: "19px",
@@ -2732,7 +2732,7 @@ function Step6MyReservations({
         <button
           onClick={onNewBooking}
           style={{
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             border: "none",
             borderRadius: "8px",
@@ -2752,7 +2752,7 @@ function Step6MyReservations({
           <button
             onClick={() => setActiveTab?.("upcoming")}
             style={{
-              background: activeTab === "upcoming" ? "#ea580c" : "#f4eee7",
+              background: activeTab === "upcoming" ? "var(--accent-saffron)" : "#f4eee7",
               color: activeTab === "upcoming" ? "#ffffff" : "#4b3f36",
               border: "none",
               borderRadius: "20px",
@@ -2767,7 +2767,7 @@ function Step6MyReservations({
           <button
             onClick={() => setActiveTab?.("past")}
             style={{
-              background: activeTab === "past" ? "#ea580c" : "#f4eee7",
+              background: activeTab === "past" ? "var(--accent-saffron)" : "#f4eee7",
               color: activeTab === "past" ? "#ffffff" : "#4b3f36",
               border: "none",
               borderRadius: "20px",
@@ -2856,7 +2856,7 @@ function Step6MyReservations({
               style={{
                 background: "#fff7ed",
                 border: "1px solid #fed7aa",
-                color: "#ea580c",
+                color: "var(--accent-saffron)",
                 borderRadius: "8px",
                 padding: "7px 10px",
                 fontSize: "12px",
@@ -2875,7 +2875,7 @@ function Step6MyReservations({
         {error ? (
           <div role="alert" style={{ padding: "26px 20px", textAlign: "center", background: "#fff7ed", borderRadius: "12px", color: "#9a3412" }}>
             <p style={{ fontSize: "13px", fontWeight: 600 }}>{error}</p>
-            <button type="button" onClick={onRetry} style={{ background: "#ea580c", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
+            <button type="button" onClick={onRetry} style={{ background: "var(--accent-saffron)", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: 700, cursor: "pointer" }}>Retry</button>
           </div>
         ) : loading ? (
           [0, 1, 2].map((key) => <div key={key} role="status" aria-label="Loading reservation" style={{ height: "112px", borderRadius: "12px", background: "linear-gradient(100deg, #f3eee8 20%, #e7ded4 40%, #f3eee8 60%)", backgroundSize: "200% 100%", animation: "reservation-skeleton 1.4s ease-in-out infinite" }} />)
@@ -2909,7 +2909,7 @@ function Step6MyReservations({
                   setStatusFilter("");
                 }}
                 style={{
-                  background: "#ea580c",
+                  background: "var(--accent-saffron)",
                   color: "#fff",
                   border: "none",
                   borderRadius: "8px",
@@ -2925,7 +2925,7 @@ function Step6MyReservations({
               <button
                 onClick={onNewBooking}
                 style={{
-                  background: "#ea580c",
+                  background: "var(--accent-saffron)",
                   color: "#fff",
                   border: "none",
                   borderRadius: "8px",
@@ -3058,8 +3058,8 @@ function Step6MyReservations({
                     disabled={actionBusy}
                     style={{
                       background: "#ffffff",
-                      border: "1px solid #ea580c",
-                      color: "#ea580c",
+                      border: "1px solid var(--accent-saffron)",
+                      color: "var(--accent-saffron)",
                       padding: "6px 14px",
                       borderRadius: "6px",
                       fontSize: "12px",
@@ -3144,7 +3144,7 @@ function Step7ModifyReservation({
           marginBottom: "6px",
         }}
       >
-        <Calendar size={22} color="#ea580c" />
+        <Calendar size={22} color="var(--accent-saffron)" />
         <h2
           style={{
             fontSize: "19px",
@@ -3435,7 +3435,7 @@ function Step7ModifyReservation({
           onClick={onSave}
           disabled={actionBusy}
           style={{
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             border: "none",
             borderRadius: "8px",
@@ -3443,7 +3443,7 @@ function Step7ModifyReservation({
             fontSize: "14px",
             fontWeight: 800,
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
+            boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
           }}
         >
           {actionBusy ? "Saving…" : "Update Reservation"}
@@ -3719,7 +3719,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
         type="button"
         onClick={onBackToReservations}
         style={{
-          background: "linear-gradient(135deg, #f97316, #ea580c)",
+          background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
           color: "#ffffff",
           border: "none",
           borderRadius: "8px",
@@ -3727,7 +3727,7 @@ function Step9CancellationConfirmed({ reservation, onBackToReservations }) {
           fontSize: "14px",
           fontWeight: 800,
           cursor: "pointer",
-          boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
+          boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
         }}
       >
         Back to My Reservations
@@ -3809,7 +3809,7 @@ function ReservationFlowPoster({
               <div
                 style={{
                   background: "#fff7ed",
-                  border: "1.5px solid #ea580c",
+                  border: "1.5px solid var(--accent-saffron)",
                   padding: "4px",
                   borderRadius: "4px",
                 }}
@@ -3854,7 +3854,7 @@ function ReservationFlowPoster({
               }}
             >
               <div>Estimated total from current reservation details</div>
-              <div style={{ fontWeight: 800, color: "#ea580c" }}>
+              <div style={{ fontWeight: 800, color: "var(--accent-saffron)" }}>
                 Advance amount from backend
               </div>
             </div>
@@ -3863,7 +3863,7 @@ function ReservationFlowPoster({
                 background: "#fff7ed",
                 padding: "3px 6px",
                 borderRadius: "4px",
-                color: "#ea580c",
+                color: "var(--accent-saffron)",
                 fontWeight: 700,
               }}
             >
@@ -3890,7 +3890,7 @@ function ReservationFlowPoster({
           <div style={{ textAlign: "center", padding: "12px 0" }}>
             <CreditCard
               size={22}
-              color="#ea580c"
+              color="var(--accent-saffron)"
               style={{ margin: "0 auto 4px" }}
             />
             <div style={{ fontWeight: 800, fontSize: "11px" }}>
@@ -3970,7 +3970,7 @@ function ReservationFlowPoster({
               <div style={{ display: "flex", gap: "4px", marginTop: "3px" }}>
                 <span
                   style={{
-                    background: "#ea580c",
+                    background: "var(--accent-saffron)",
                     color: "#fff",
                     padding: "1px 4px",
                     borderRadius: "3px",
@@ -4108,12 +4108,12 @@ function PosterArrow() {
         width: "34px",
         height: "34px",
         borderRadius: "50%",
-        background: "linear-gradient(135deg, #f97316, #ea580c)",
+        background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         color: "#ffffff",
-        boxShadow: "0 4px 12px rgba(234, 88, 12, 0.4)",
+        boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
         border: "2px solid rgba(255, 255, 255, 0.35)",
       }}
     >
@@ -4142,7 +4142,7 @@ function PosterScreenCard({ step, title, children, onClick }) {
           backgroundSize: "cover",
           backgroundPosition: "center",
           borderRadius: "16px",
-          border: "1px solid rgba(245, 158, 11, 0.25)",
+          border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
           boxShadow: "0 14px 32px rgba(0,0,0,0.6)",
           overflow: "hidden",
           display: "flex",
@@ -4166,7 +4166,7 @@ function PosterScreenCard({ step, title, children, onClick }) {
             alignItems: "center",
             justifyContent: "space-between",
             padding: "0 10px",
-            borderBottom: "1px solid rgba(245, 158, 11, 0.2)",
+            borderBottom: "1px solid color-mix(in srgb, var(--accent-amber) 20%, transparent)",
           }}
         >
           <span
@@ -4190,7 +4190,7 @@ function PosterScreenCard({ step, title, children, onClick }) {
             <span>Home</span>
             <span>Menu</span>
           </div>
-          <span style={{ fontSize: "8.5px", color: "#f59e0b" }}>Hi, Priya</span>
+          <span style={{ fontSize: "8.5px", color: "var(--accent-amber)" }}>Hi, Priya</span>
         </div>
 
         {/* Inner Card */}
@@ -4241,7 +4241,7 @@ function PosterScreenCard({ step, title, children, onClick }) {
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             color: "#ffffff",
             fontSize: "12px",
             fontWeight: 800,

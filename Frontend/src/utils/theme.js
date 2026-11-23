@@ -1,3 +1,5 @@
+import { getSavedAccent, updateAccentVariables } from './accentColor';
+
 export const THEME_STORAGE_KEY = 'gourmet_pos_theme_v2';
 export const normalizeTheme = (value) => value === 'royal-saffron' || value === 'dark' ? 'royal-saffron' : 'light-bistro';
 export function getSavedTheme() {
@@ -16,6 +18,7 @@ export function applyTheme(value) {
     if (document.body) {
       document.body.setAttribute('data-theme', theme);
     }
+    updateAccentVariables(document.documentElement.dataset.accent || getSavedAccent(), theme);
   }
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);

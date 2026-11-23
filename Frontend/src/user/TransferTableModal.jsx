@@ -130,7 +130,7 @@ export function TransferTableModal({ sourceTable, allTables, onClose, onConfirmT
               flex: 2,
               padding: '0.65rem',
               borderRadius: 'var(--radius-sm)',
-              background: targetTableId ? 'var(--accent-amber)' : 'rgba(245, 158, 11, 0.2)',
+              background: targetTableId ? 'var(--accent-amber)' : 'color-mix(in srgb, var(--accent-amber) 20%, transparent)',
               color: targetTableId ? '#000000' : 'var(--text-dim)',
               fontWeight: 800,
               fontSize: '0.85rem',

@@ -42,10 +42,10 @@ import { ReceiptModal, formatOrderNumber } from "../../user/ReceiptModal";
 // ── Default Curated Seed Reservations (matches Takeaway scale & IDs: RES-4964, RES-3884, etc.) ──
 const STATUS_TAB_THEMES = {
   all: {
-    text: "#ea580c",
-    background: "rgba(234, 88, 12, 0.12)",
-    border: "rgba(234, 88, 12, 0.35)",
-    activeBg: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+    text: "var(--accent-saffron)",
+    background: "color-mix(in srgb, var(--accent-saffron) 12%, transparent)",
+    border: "color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
+    activeBg: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
   },
   confirmed: {
     text: "#16a34a",
@@ -54,10 +54,10 @@ const STATUS_TAB_THEMES = {
     activeBg: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
   },
   pending: {
-    text: "#d97706",
-    background: "rgba(245, 158, 11, 0.12)",
-    border: "rgba(245, 158, 11, 0.35)",
-    activeBg: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+    text: "var(--accent-amber)",
+    background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+    border: "color-mix(in srgb, var(--accent-amber) 35%, transparent)",
+    activeBg: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)",
   },
   seated: {
     text: "#2563eb",
@@ -421,9 +421,9 @@ export function ReservationsManagement({
       default:
         return {
           label: "Pending",
-          color: "#f59e0b",
-          bg: "rgba(245, 158, 11, 0.12)",
-          border: "rgba(245, 158, 11, 0.35)",
+          color: "var(--accent-amber)",
+          bg: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+          border: "color-mix(in srgb, var(--accent-amber) 35%, transparent)",
           icon: Hourglass,
         };
     }
@@ -485,7 +485,7 @@ export function ReservationsManagement({
         overlay: "rgba(23, 32, 51, 0.35)",
         surface: "#ffffff",
         border: "#e1e7f0",
-        header: "linear-gradient(135deg, rgba(234, 88, 12, 0.1) 0%, rgba(245, 158, 11, 0.06) 100%)",
+        header: "linear-gradient(135deg, color-mix(in srgb, var(--accent-saffron) 10%, transparent) 0%, color-mix(in srgb, var(--accent-amber) 6%, transparent) 100%)",
         text: "#0f172a",
         muted: "#64748b",
         secondary: "#334155",
@@ -501,7 +501,7 @@ export function ReservationsManagement({
         overlay: "rgba(0, 0, 0, 0.75)",
         surface: "#18181b",
         border: "#27272a",
-        header: "linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(245, 158, 11, 0.08) 100%)",
+        header: "linear-gradient(135deg, color-mix(in srgb, var(--accent-saffron) 18%, transparent) 0%, color-mix(in srgb, var(--accent-amber) 8%, transparent) 100%)",
         text: "#f8fafc",
         muted: "#94a3b8",
         secondary: "#cbd5e1",
@@ -540,12 +540,12 @@ export function ReservationsManagement({
               width: "48px",
               height: "48px",
               borderRadius: "12px",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              boxShadow: "0 4px 12px rgba(234, 88, 12, 0.3)",
+              boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
               flexShrink: 0,
             }}
           >
@@ -600,7 +600,7 @@ export function ReservationsManagement({
                 transition: "all 0.15s ease",
               }}
             >
-              <Calendar size={15} color="#ea580c" />
+              <Calendar size={15} color="var(--accent-saffron)" />
               <span>{dateRangeLabel}</span>
               <ChevronDown size={14} style={{ opacity: 0.6 }} />
             </button>
@@ -645,8 +645,8 @@ export function ReservationsManagement({
                       padding: "0.55rem 0.85rem",
                       borderRadius: "6px",
                       border: "none",
-                      background: dateFilter === preset.value && !particularDate ? "rgba(234, 88, 12, 0.15)" : "transparent",
-                      color: dateFilter === preset.value && !particularDate ? "#ea580c" : "var(--text-main, #f8fafc)",
+                      background: dateFilter === preset.value && !particularDate ? "color-mix(in srgb, var(--accent-saffron) 15%, transparent)" : "transparent",
+                      color: dateFilter === preset.value && !particularDate ? "var(--accent-saffron)" : "var(--text-main, #f8fafc)",
                       fontSize: "0.82rem",
                       fontWeight: dateFilter === preset.value && !particularDate ? 600 : 400,
                       cursor: "pointer",
@@ -664,8 +664,8 @@ export function ReservationsManagement({
                     padding: "0.55rem 0.85rem",
                     borderRadius: "6px",
                     border: "none",
-                    background: customDateRangeOpen || dateFilter === "custom" ? "rgba(234, 88, 12, 0.15)" : "transparent",
-                    color: customDateRangeOpen || dateFilter === "custom" ? "#ea580c" : "var(--text-main, #f8fafc)",
+                    background: customDateRangeOpen || dateFilter === "custom" ? "color-mix(in srgb, var(--accent-saffron) 15%, transparent)" : "transparent",
+                    color: customDateRangeOpen || dateFilter === "custom" ? "var(--accent-saffron)" : "var(--text-main, #f8fafc)",
                     fontSize: "0.82rem",
                     fontWeight: customDateRangeOpen || dateFilter === "custom" ? 600 : 400,
                     cursor: "pointer",
@@ -759,7 +759,7 @@ export function ReservationsManagement({
                         padding: "0.45rem",
                         borderRadius: "6px",
                         border: "none",
-                        background: "linear-gradient(135deg, #f97316, #ea580c)",
+                        background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                         color: "#fff",
                         fontSize: "0.78rem",
                         fontWeight: 600,
@@ -786,12 +786,12 @@ export function ReservationsManagement({
               padding: "0 1.25rem",
               borderRadius: "10px",
               border: "none",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               color: "#fff",
               fontSize: "0.88rem",
               fontWeight: 600,
               cursor: "pointer",
-              boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
+              boxShadow: "0 3px 10px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
               transition: "transform 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
@@ -812,9 +812,9 @@ export function ReservationsManagement({
         }}
       >
         {[
-          { label: "Total Reservations", value: metrics.total, icon: Calendar, color: "#ea580c", tint: "rgba(249, 115, 22, 0.12)" },
+          { label: "Total Reservations", value: metrics.total, icon: Calendar, color: "var(--accent-saffron)", tint: "color-mix(in srgb, var(--accent-amber) 12%, transparent)" },
           { label: "Confirmed", value: metrics.confirmed, icon: CheckCircle2, color: "#16a34a", tint: "rgba(34, 197, 94, 0.12)" },
-          { label: "Pending", value: metrics.pending, icon: Hourglass, color: "#d97706", tint: "rgba(245, 158, 11, 0.12)" },
+          { label: "Pending", value: metrics.pending, icon: Hourglass, color: "var(--accent-amber)", tint: "color-mix(in srgb, var(--accent-amber) 12%, transparent)" },
           { label: "Seated", value: metrics.seated, icon: Utensils, color: "#2563eb", tint: "rgba(59, 130, 246, 0.12)" },
           { label: "Completed", value: metrics.completed, icon: Check, color: "#059669", tint: "rgba(16, 185, 129, 0.12)" },
           { label: "Cancelled", value: metrics.cancelled, icon: XCircle, color: "#dc2626", tint: "rgba(239, 68, 68, 0.12)" },
@@ -864,7 +864,7 @@ export function ReservationsManagement({
                   fontSize: "1.35rem",
                   fontWeight: 800,
                   marginTop: "0.1rem",
-                  color: color === "#ea580c" ? "var(--text-main)" : color,
+                  color: color === "var(--accent-saffron)" ? "var(--text-main)" : color,
                   whiteSpace: "nowrap",
                   letterSpacing: "-0.02em",
                   lineHeight: 1.1,
@@ -1059,14 +1059,14 @@ export function ReservationsManagement({
                   height: "42px",
                   padding: "0 0.85rem",
                   borderRadius: "10px",
-                  border: "1.5px solid #ea580c",
+                  border: "1.5px solid var(--accent-saffron)",
                   background: "var(--bg-card)",
                   color: "var(--text-main)",
                   fontSize: "0.83rem",
                   fontWeight: 600,
                   outline: "none",
                   cursor: "pointer",
-                  boxShadow: "0 0 10px rgba(234, 88, 12, 0.25)",
+                  boxShadow: "0 0 10px color-mix(in srgb, var(--accent-saffron) 25%, transparent)",
                 }}
                 title="Select specific reservation date"
               />
@@ -1226,7 +1226,7 @@ export function ReservationsManagement({
                       color: "var(--text-muted)",
                     }}
                   >
-                    <Calendar size={36} color="#ea580c" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
+                    <Calendar size={36} color="var(--accent-saffron)" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
                     <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main)", marginBottom: "0.25rem" }}>
                       {loading ? "Loading reservations…" : "No reservations found"}
                     </div>
@@ -1268,7 +1268,7 @@ export function ReservationsManagement({
                           style={{
                             fontFamily: "monospace",
                             letterSpacing: "-0.01em",
-                            color: "#ea580c",
+                            color: "var(--accent-saffron)",
                           }}
                         >
                           {resId}
@@ -1283,8 +1283,8 @@ export function ReservationsManagement({
                               width: "20px",
                               height: "20px",
                               borderRadius: "50%",
-                              background: "rgba(249, 115, 22, 0.15)",
-                              color: "#ea580c",
+                              background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                              color: "var(--accent-saffron)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -1322,7 +1322,7 @@ export function ReservationsManagement({
                             whiteSpace: "nowrap",
                           }}
                         >
-                          <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
+                          <MapPin size={12} color="var(--accent-saffron)" style={{ flexShrink: 0 }} />
                           {r.tableName || (r.tableNumber ? `Table #${r.tableNumber}` : `Table ${r.tableId}`)}
                         </span>
                       </td>
@@ -1330,7 +1330,7 @@ export function ReservationsManagement({
                       {/* Guests Count */}
                       <td style={{ padding: "0.4rem 0.45rem", color: "var(--text-main, #f8fafc)", whiteSpace: "nowrap" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                          <Users size={14} color="#f59e0b" />
+                          <Users size={14} color="var(--accent-amber)" />
                           <strong>{r.guestsCount || r.guests || 2}</strong> Guests
                         </span>
                       </td>
@@ -1340,7 +1340,7 @@ export function ReservationsManagement({
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", whiteSpace: "nowrap" }}>
                           <span>{r.reservationDate || r.date || "Today"}</span>
                           <span style={{ fontSize: "0.7rem", color: "var(--text-muted, #94a3b8)", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                            <Clock size={12} color="#ea580c" />
+                            <Clock size={12} color="var(--accent-saffron)" />
                             {r.reservationTime || r.time || "07:30 PM"}
                           </span>
                         </span>
@@ -1389,8 +1389,8 @@ export function ReservationsManagement({
                               transition: "all 0.15s ease",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "#ea580c";
-                              e.currentTarget.style.color = "#ea580c";
+                              e.currentTarget.style.borderColor = "var(--accent-saffron)";
+                              e.currentTarget.style.color = "var(--accent-saffron)";
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderColor = "var(--border-card, #27272a)";
@@ -1419,8 +1419,8 @@ export function ReservationsManagement({
                               transition: "all 0.15s ease",
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "#ea580c";
-                              e.currentTarget.style.color = "#ea580c";
+                              e.currentTarget.style.borderColor = "var(--accent-saffron)";
+                              e.currentTarget.style.color = "var(--accent-saffron)";
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderColor = "var(--border-card, #27272a)";
@@ -1441,8 +1441,8 @@ export function ReservationsManagement({
                                 height: "32px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card, #27272a)",
-                                background: isMenuOpen ? "rgba(234, 88, 12, 0.15)" : "rgba(255, 255, 255, 0.04)",
-                                color: isMenuOpen ? "#ea580c" : "var(--text-main, #f8fafc)",
+                                background: isMenuOpen ? "color-mix(in srgb, var(--accent-saffron) 15%, transparent)" : "rgba(255, 255, 255, 0.04)",
+                                color: isMenuOpen ? "var(--accent-saffron)" : "var(--text-main, #f8fafc)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -1662,8 +1662,8 @@ export function ReservationsManagement({
                         minWidth: "28px",
                         padding: "0.3rem 0.5rem",
                         borderRadius: "6px",
-                        border: pNum === safePage ? "1px solid #ea580c" : "1px solid var(--border-card, #27272a)",
-                        background: pNum === safePage ? "#ea580c" : "var(--bg-card, #18181b)",
+                        border: pNum === safePage ? "1px solid var(--accent-saffron)" : "1px solid var(--border-card, #27272a)",
+                        background: pNum === safePage ? "var(--accent-saffron)" : "var(--bg-card, #18181b)",
                         color: pNum === safePage ? "#ffffff" : "var(--text-main, #f8fafc)",
                         fontSize: "0.72rem",
                         fontWeight: 700,
@@ -1734,7 +1734,7 @@ export function ReservationsManagement({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <Calendar size={20} color="#ea580c" />
+                <Calendar size={20} color="var(--accent-saffron)" />
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: reservationModalColors.text }}>
                     New Table Reservation
@@ -1961,14 +1961,14 @@ export function ReservationsManagement({
                   disabled={saving}
                   style={{
                     padding: "0.6rem 1.4rem",
-                    background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                    background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                     border: "none",
                     borderRadius: "8px",
                     color: "#ffffff",
                     fontWeight: 700,
                     cursor: "pointer",
                     fontSize: "0.84rem",
-                    boxShadow: "0 2px 8px rgba(234, 88, 12, 0.35)",
+                    boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                   }}
                 >
                   {saving ? "Confirming..." : "Confirm Reservation"}
@@ -2017,7 +2017,7 @@ export function ReservationsManagement({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <Calendar size={20} color="#ea580c" />
+                <Calendar size={20} color="var(--accent-saffron)" />
                 <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: reservationModalColors.text }}>
                   Reservation {viewingReservation.reservationId || viewingReservation.id}
                 </h3>
@@ -2058,7 +2058,7 @@ export function ReservationsManagement({
                 </div>
                 <div>
                   <small style={{ color: reservationModalColors.muted, fontSize: "0.72rem" }}>Assigned Table</small>
-                  <div style={{ fontWeight: 650, color: "#ea580c", fontSize: "0.9rem" }}>
+                  <div style={{ fontWeight: 650, color: "var(--accent-saffron)", fontSize: "0.9rem" }}>
                     {viewingReservation.tableName || `Table ${viewingReservation.tableId}`}
                   </div>
                 </div>
@@ -2119,7 +2119,7 @@ export function ReservationsManagement({
                     setViewingReservation(null);
                     setPrintReceiptReservation(r);
                   }}
-                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid #ea580c", background: "rgba(234, 88, 12, 0.15)", color: "#ea580c", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+                  style={{ flex: 1, padding: "0.55rem", borderRadius: "8px", border: "1px solid var(--accent-saffron)", background: "color-mix(in srgb, var(--accent-saffron) 15%, transparent)", color: "var(--accent-saffron)", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
                 >
                   <ReceiptIcon size={14} />
                   <span>View / Print Bill</span>

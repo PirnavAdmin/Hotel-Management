@@ -1092,12 +1092,12 @@ export function AdminReports({
               </tr>
               <tr style="font-size: 10pt;">
                 <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">7</td>
-                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: #b45309;">Less: Bill Discounts Given</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: var(--accent-amber);">Less: Bill Discounts Given</td>
                 <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Promotions &amp; customer reductions</td>
                 <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Bill Reductions</td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: var(--accent-amber); mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
                 <td style="border: 1px solid #000000;"></td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: var(--accent-amber); mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
               </tr>
               <!-- Revenue Subtotal Row matching pattern -->
               <tr class="balance-row" style="font-size: 10.5pt;">
@@ -1126,12 +1126,12 @@ export function AdminReports({
               ${salaryHtml}
               <tr style="font-size: 10pt;">
                 <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px;">•</td>
-                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: #b45309;">Customer Discounts Absorbed</td>
+                <td style="border: 1px solid #000000; padding: 5px 8px; font-weight: bold; color: var(--accent-amber);">Customer Discounts Absorbed</td>
                 <td style="border: 1px solid #000000; padding: 5px 8px; color: #4b5563;">Promotional reductions absorbed on settled bills</td>
                 <td style="border: 1px solid #000000; padding: 5px 8px; text-align: center;">Operating Cost</td>
                 <td style="border: 1px solid #000000;"></td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: var(--accent-amber); mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 5px 10px; font-weight: bold; color: var(--accent-amber); mso-number-format: '0\\.00';">-${totalDiscount.toFixed(2)}</td>
               </tr>
               <!-- Expenditure Subtotal Row matching pattern -->
               <tr class="balance-row" style="font-size: 10.5pt;">
@@ -1213,7 +1213,7 @@ export function AdminReports({
         totalValuationSum += val;
 
         const status = stock <= 0 ? "Out of Stock" : (stock <= min ? "Low Stock" : "In Stock");
-        const statusColor = stock <= 0 ? "#ef4444" : (stock <= min ? "#f59e0b" : "#10b981");
+        const statusColor = stock <= 0 ? "#ef4444" : (stock <= min ? "var(--accent-amber)" : "#10b981");
 
         return `
           <tr style="font-size: 10pt;">
@@ -1351,7 +1351,7 @@ export function AdminReports({
               <tr class="total-row">
                 <td colspan="4" style="border: 1px solid #000000; text-align: center; padding: 7px 8px; font-weight: bold;">Total Stock Summary</td>
                 <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">${inStockItems} OK</td>
-                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; color: #f59e0b;">${lowStockItems} Low</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; color: var(--accent-amber);">${lowStockItems} Low</td>
                 <td style="border: 1px solid #000000; text-align: center; font-weight: bold; color: #ef4444;">${outOfStockItems} Out</td>
                 <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #b91c1c; mso-number-format: '0\\.00';">${totalValuationSum.toFixed(2)}</td>
                 <td style="background-color: #D9EAD3; border: 1px solid #000000;"></td>
@@ -1499,9 +1499,9 @@ export function AdminReports({
             <td style="border: 1px solid #000000; text-align: left; padding: 5px 8px;">${items.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
             <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600; color: #2563eb;">${pay}</td>
             <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: #10b981; mso-number-format: '0\\.00';">${tax.toFixed(2)}</td>
-            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: #b45309; mso-number-format: '0\\.00';">${discount.toFixed(2)}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: var(--accent-amber); mso-number-format: '0\\.00';">${discount.toFixed(2)}</td>
             <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; font-weight: bold; color: #166534; mso-number-format: '0\\.00';">${debit.toFixed(2)}</td>
-            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: #b45309; mso-number-format: '0\\.00';">${credit > 0 ? credit.toFixed(2) : '-'}</td>
+            <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; color: var(--accent-amber); mso-number-format: '0\\.00';">${credit > 0 ? credit.toFixed(2) : '-'}</td>
             <td style="border: 1px solid #000000; text-align: center; padding: 5px 6px; font-weight: 600;">${drOrCr}</td>
             <td style="border: 1px solid #000000; text-align: right; padding: 5px 8px; font-weight: bold; mso-number-format: '0\\.00';">${runningBalance.toFixed(2)}</td>
           </tr>
@@ -1610,7 +1610,7 @@ export function AdminReports({
               <tr class="balance-row" style="font-size: 10.5pt;">
                 <td colspan="8" style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold; padding: 7px 8px;">CLOSING LEDGER BALANCE (NET SETTLED VALUE)</td>
                 <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; color: #166534; mso-number-format: '0\\.00';">${totalDebitSum.toFixed(2)}</td>
-                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; color: #b45309; mso-number-format: '0\\.00';">${totalCreditSum.toFixed(2)}</td>
+                <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; color: var(--accent-amber); mso-number-format: '0\\.00';">${totalCreditSum.toFixed(2)}</td>
                 <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: center; font-weight: bold;">Dr</td>
                 <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; font-weight: bold; padding: 7px 8px; font-size: 11pt; color: #166534; mso-number-format: '0\\.00';">${runningBalance.toFixed(2)}</td>
               </tr>
@@ -1619,9 +1619,9 @@ export function AdminReports({
               <tr class="total-row">
                 <td colspan="6" style="border: 1px solid #000000; text-align: center; padding: 7px 8px; font-weight: bold;">TOTAL SUMMARY (${searchedOrders.length} TICKETS)</td>
                 <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #10b981; mso-number-format: '0\\.00';">${totalTaxSum.toFixed(2)}</td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">${totalDiscSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: var(--accent-amber); mso-number-format: '0\\.00';">${totalDiscSum.toFixed(2)}</td>
                 <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #166534; mso-number-format: '0\\.00';">${totalDebitSum.toFixed(2)}</td>
-                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: #b45309; mso-number-format: '0\\.00';">${totalCreditSum.toFixed(2)}</td>
+                <td style="border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; color: var(--accent-amber); mso-number-format: '0\\.00';">${totalCreditSum.toFixed(2)}</td>
                 <td style="border: 1px solid #000000; text-align: center; font-weight: bold;">Dr</td>
                 <td style="background-color: #D9EAD3; border: 1px solid #000000; text-align: right; padding: 7px 8px; font-weight: bold; font-size: 11pt; color: #166534; mso-number-format: '0\\.00';">${runningBalance.toFixed(2)}</td>
               </tr>
@@ -1864,11 +1864,11 @@ export function AdminReports({
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                  background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 3px 12px rgba(245, 158, 11, 0.35)',
+                  boxShadow: '0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)',
                   flexShrink: 0,
                 }}
               >
@@ -1909,7 +1909,7 @@ export function AdminReports({
                   boxSizing: "border-box",
                 }}
               >
-                <Calendar size={13} color="#f59e0b" />
+                <Calendar size={13} color="var(--accent-amber)" />
                 <SearchableSelect
                   value={filterPeriod}
                   onChange={(e) => handleSelectPeriod(e.target.value)}
@@ -1960,7 +1960,7 @@ export function AdminReports({
                   display: "flex",
                   alignItems: "center",
                   gap: "0.35rem",
-                  background: filterPeriod === "custom" ? "rgba(245, 158, 11, 0.12)" : "var(--bg-tertiary)",
+                  background: filterPeriod === "custom" ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "var(--bg-tertiary)",
                   border: filterPeriod === "custom" ? "1.5px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
                   borderRadius: "9px",
                   padding: "0.3rem 0.55rem",
@@ -2079,7 +2079,7 @@ export function AdminReports({
                 }}
                 title="Print or export full audit report to PDF"
               >
-                <Printer size={13} color="#f59e0b" />
+                <Printer size={13} color="var(--accent-amber)" />
                 <span>Print Report</span>
               </button>
 
@@ -2088,7 +2088,7 @@ export function AdminReports({
                 onClick={() => { setIsFetching(true); setInvoiceLoadError(""); handleFetchData(); }}
                 disabled={isFetching}
                 style={{
-                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   border: "none",
                   borderRadius: "9px",
                   padding: "0.38rem 0.8rem",
@@ -2099,7 +2099,7 @@ export function AdminReports({
                   display: "flex",
                   alignItems: "center",
                   gap: "0.35rem",
-                  boxShadow: "0 2px 8px rgba(245, 158, 11, 0.3)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   transition: "all 0.15s ease",
                 }}
               >
@@ -2141,7 +2141,7 @@ export function AdminReports({
                 </span>
                 <TrendingUp size={13} color="var(--success)" />
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--accent-amber)', marginTop: '2px' }}>
                 {formatCurrency(totalRevenue)}
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', marginTop: '2px' }}>
@@ -2280,8 +2280,8 @@ export function AdminReports({
                 // - statement: profit -> green, loss -> red
                 // - expenditure: orange
                 // - sales & income: amber/orange
-                let activeBackground = 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)';
-                let activeShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
+                let activeBackground = 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)';
+                let activeShadow = '0 2px 8px color-mix(in srgb, var(--accent-amber) 30%, transparent)';
 
                 if (tab.id === 'statement') {
                   if (isProfit) {
@@ -2292,8 +2292,8 @@ export function AdminReports({
                     activeShadow = '0 2px 8px rgba(239, 68, 68, 0.35)';
                   }
                 } else if (tab.id === 'expenditure') {
-                  activeBackground = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
-                  activeShadow = '0 2px 8px rgba(249, 115, 22, 0.35)';
+                  activeBackground = 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)';
+                  activeShadow = '0 2px 8px color-mix(in srgb, var(--accent-amber) 35%, transparent)';
                 }
 
                 // Inactive styling for statement badge
@@ -2464,7 +2464,7 @@ export function AdminReports({
                         gap: '0.4rem',
                       }}
                     >
-                      <Award size={15} color="#f59e0b" />
+                      <Award size={15} color="var(--accent-amber)" />
                       <span>Top Selling Items</span>
                     </h3>
                     {sortedDishes.length > 3 && (
@@ -2473,7 +2473,7 @@ export function AdminReports({
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#f59e0b',
+                          color: 'var(--accent-amber)',
                           fontSize: '0.74rem',
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -2523,7 +2523,7 @@ export function AdminReports({
                                 width: "20px",
                                 height: "20px",
                                 borderRadius: "50%",
-                                background: index === 0 ? "#f59e0b" : index === 1 ? "#64748b" : "var(--border-card)",
+                                background: index === 0 ? "var(--accent-amber)" : index === 1 ? "#64748b" : "var(--border-card)",
                                 color: index <= 1 ? "#000000" : "var(--text-main)",
                                 fontWeight: 800,
                                 fontSize: "0.68rem",
@@ -2694,7 +2694,7 @@ export function AdminReports({
                     }}
                     title="Click to select date or filter period"
                   >
-                    <Calendar size={13} color="#f59e0b" />
+                    <Calendar size={13} color="var(--accent-amber)" />
                     <span>{getCornerDateLabel()}</span>
                     <ChevronDown size={13} color="var(--text-muted)" style={{ transform: isCornerDateOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
                   </button>
@@ -2750,8 +2750,8 @@ export function AdminReports({
                               padding: '0.35rem 0.55rem',
                               borderRadius: '6px',
                               border: filterPeriod === opt.id ? '1px solid var(--accent-amber)' : '1px solid transparent',
-                              background: filterPeriod === opt.id ? 'rgba(245, 158, 11, 0.18)' : 'var(--bg-tertiary)',
-                              color: filterPeriod === opt.id ? '#f59e0b' : 'var(--text-main)',
+                              background: filterPeriod === opt.id ? 'color-mix(in srgb, var(--accent-amber) 18%, transparent)' : 'var(--bg-tertiary)',
+                              color: filterPeriod === opt.id ? 'var(--accent-amber)' : 'var(--text-main)',
                               fontSize: '0.74rem',
                               fontWeight: 700,
                               cursor: 'pointer',
@@ -2846,7 +2846,7 @@ export function AdminReports({
                         style={{
                           marginTop: '4px',
                           padding: '0.4rem',
-                          background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+                          background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)',
                           border: 'none',
                           borderRadius: '6px',
                           color: '#fff',
@@ -3165,13 +3165,13 @@ export function AdminReports({
                           </td>
                         </tr>
                         <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '7px 12px', color: '#f59e0b', fontWeight: 600 }}>
+                          <td style={{ padding: '7px 12px', color: 'var(--accent-amber)', fontWeight: 600 }}>
                             Less: Bill Discounts Given
                           </td>
                           <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
                             Promotions &amp; customer reductions
                           </td>
-                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--accent-amber)' }}>
                             -{formatCurrency(totalDiscount)}
                           </td>
                         </tr>
@@ -3327,13 +3327,13 @@ export function AdminReports({
                         )}
 
                         <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '7px 12px', color: '#f59e0b', fontWeight: 600 }}>
+                          <td style={{ padding: '7px 12px', color: 'var(--accent-amber)', fontWeight: 600 }}>
                             Customer Discounts Absorbed
                           </td>
                           <td style={{ padding: '7px 12px', color: 'var(--text-muted)', fontSize: '0.73rem' }}>
                             Promotional reductions on bills
                           </td>
-                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: '#f59e0b' }}>
+                          <td style={{ padding: '7px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--accent-amber)' }}>
                             -{formatCurrency(totalDiscount)}
                           </td>
                         </tr>
@@ -3618,7 +3618,7 @@ export function AdminReports({
                             <td style={{ padding: '7px 10px', textAlign: 'right', color: 'var(--accent-purple)', fontWeight: 600 }}>
                               {formatCurrency(ord.discountAmount || 0)}
                             </td>
-                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, color: '#f59e0b' }}>
+                            <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 800, color: 'var(--accent-amber)' }}>
                               {formatCurrency(ord.grandTotal || ord.total || 0)}
                             </td>
                           </tr>
@@ -3637,7 +3637,7 @@ export function AdminReports({
                       <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800, color: 'var(--accent-purple)' }}>
                         {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.discountAmount) || 0), 0))}
                       </td>
-                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: '#f59e0b', fontSize: '0.88rem' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 900, color: 'var(--accent-amber)', fontSize: '0.88rem' }}>
                         {formatCurrency(searchedOrders.reduce((s, o) => s + (Number(o.grandTotal || o.total || 0)), 0))}
                       </td>
                     </tr>
@@ -3736,7 +3736,7 @@ export function AdminReports({
                         minHeight: '42px',
                         border: 'none',
                         borderRadius: '8px',
-                        background: isSelected ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'transparent',
+                        background: isSelected ? 'linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))' : 'transparent',
                         color: isSelected ? '#fff' : 'var(--text-muted)',
                         fontSize: '0.84rem',
                         fontWeight: 750,
@@ -3767,7 +3767,7 @@ export function AdminReports({
                 </div>}
                 {expenditureView === 'inventory' && <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: '9px', padding: '0.6rem 0.85rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 600 }}>Low Stock Alert</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-amber)', marginTop: '2px' }}>
                     {lowStockCount} Items
                   </div>
                 </div>}
@@ -4038,7 +4038,7 @@ export function AdminReports({
                             <td style={{ padding: '7px 10px', color: 'var(--text-muted)', fontSize: '0.74rem' }}>
                               {item.supplier || 'Local Supplier'}
                             </td>
-                            <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--text-main)' }}>
+                            <td style={{ padding: '7px 10px', textAlign: 'center', fontWeight: 700, color: isOut ? 'var(--danger)' : isLow ? 'var(--accent-amber)' : 'var(--text-main)' }}>
                               {stock} {item.unit || ''}
                             </td>
                             <td style={{ padding: '7px 10px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.72rem' }}>
@@ -4064,14 +4064,14 @@ export function AdminReports({
                                   background: isOut
                                     ? 'rgba(239, 68, 68, 0.14)'
                                     : isLow
-                                    ? 'rgba(245, 158, 11, 0.14)'
+                                    ? 'color-mix(in srgb, var(--accent-amber) 14%, transparent)'
                                     : 'rgba(16, 185, 129, 0.14)',
-                                  color: isOut ? 'var(--danger)' : isLow ? '#f59e0b' : 'var(--success)',
+                                  color: isOut ? 'var(--danger)' : isLow ? 'var(--accent-amber)' : 'var(--success)',
                                   border: `1px solid ${
                                     isOut
                                       ? 'rgba(239, 68, 68, 0.35)'
                                       : isLow
-                                      ? 'rgba(245, 158, 11, 0.35)'
+                                      ? 'color-mix(in srgb, var(--accent-amber) 35%, transparent)'
                                       : 'rgba(16, 185, 129, 0.35)'
                                   }`,
                                 }}
@@ -4081,7 +4081,7 @@ export function AdminReports({
                                     width: '5px',
                                     height: '5px',
                                     borderRadius: '50%',
-                                    background: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
+                                    background: isOut ? '#ef4444' : isLow ? 'var(--accent-amber)' : '#10b981',
                                   }}
                                 />
                                 {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
@@ -4206,7 +4206,7 @@ export function AdminReports({
               style={{
                 fontSize: '13px',
                 fontWeight: 800,
-                color: '#b45309',
+                color: 'var(--accent-amber)',
                 marginTop: '4px',
                 letterSpacing: '0.02em',
               }}

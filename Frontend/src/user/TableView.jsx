@@ -291,7 +291,7 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
         filter: isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
@@ -305,7 +305,7 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
         e.currentTarget.style.filter = isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
@@ -316,8 +316,8 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
             <stop offset="100%" stopColor="#6e3c21" />
           </linearGradient>
           <linearGradient id={gradSelId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ea580c" />
+            <stop offset="0%" stopColor="var(--accent-amber)" />
+            <stop offset="100%" stopColor="var(--accent-saffron)" />
           </linearGradient>
         </defs>
 
@@ -331,7 +331,7 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
         {/* Seat Cushion Top: Green for Available, Orange for Selected, Slate for Occupied */}
         <path
           d="M 12 44 Q 30 41 48 44 L 51 56 Q 30 59 9 56 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
+          fill={isSelected ? "var(--accent-saffron)" : isOccupied ? "#475569" : "#10b981"}
         />
         <ellipse
           cx="30"
@@ -387,12 +387,12 @@ function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) {
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             border: "2px solid #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 12px rgba(245, 158, 11, 0.95)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--accent-amber) 95%, transparent)",
             zIndex: 10,
           }}
         >
@@ -470,7 +470,7 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
         filter: isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
@@ -484,7 +484,7 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
         e.currentTarget.style.filter = isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
@@ -495,8 +495,8 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
             <stop offset="100%" stopColor="#67391f" />
           </linearGradient>
           <linearGradient id={gradSelId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ea580c" />
+            <stop offset="0%" stopColor="var(--accent-amber)" />
+            <stop offset="100%" stopColor="var(--accent-saffron)" />
           </linearGradient>
         </defs>
 
@@ -512,7 +512,7 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
         {/* Seat cushion underside: Green for Available, Orange for Selected, Slate for Occupied */}
         <path
           d="M 10 50 Q 33 46 56 50 L 54 62 Q 33 65 12 62 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
+          fill={isSelected ? "var(--accent-saffron)" : isOccupied ? "#475569" : "#10b981"}
         />
 
         {/* Backrest viewed from rear: Green Border for Available, Full Orange for Selected */}
@@ -555,12 +555,12 @@ function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLight }) 
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             border: "2px solid #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 12px rgba(245, 158, 11, 0.95)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--accent-amber) 95%, transparent)",
             zIndex: 10,
           }}
         >
@@ -639,7 +639,7 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
         filter: isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
@@ -653,7 +653,7 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
         e.currentTarget.style.filter = isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
@@ -671,8 +671,8 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
             <stop offset="100%" stopColor="#67391f" />
           </linearGradient>
           <linearGradient id={gradSelId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ea580c" />
+            <stop offset="0%" stopColor="var(--accent-amber)" />
+            <stop offset="100%" stopColor="var(--accent-saffron)" />
           </linearGradient>
         </defs>
 
@@ -686,7 +686,7 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
         {/* Seat Cushion: Green for Available, Orange for Selected, Slate for Occupied */}
         <path
           d="M 14 38 Q 32 37 46 41 L 43 51 Q 30 48 13 47 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
+          fill={isSelected ? "var(--accent-saffron)" : isOccupied ? "#475569" : "#10b981"}
         />
 
         {/* Backrest on the left: Green Border for Available, Full Orange for Selected */}
@@ -713,12 +713,12 @@ function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, isLight
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             border: "2px solid #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 12px rgba(245, 158, 11, 0.95)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--accent-amber) 95%, transparent)",
             zIndex: 10,
           }}
         >
@@ -1160,10 +1160,10 @@ export function TableView({
       pillColor = "#64748b";
     } else if (isSelected) {
       glowFilter =
-        "drop-shadow(0 0 14px rgba(245, 158, 11, 0.85)) drop-shadow(0 8px 16px rgba(0,0,0,0.7))";
-      pillBorder = "#f59e0b";
-      pillBg = "rgba(245, 158, 11, 0.3)";
-      pillColor = "#f59e0b";
+        "drop-shadow(0 0 14px color-mix(in srgb, var(--accent-amber) 85%, transparent)) drop-shadow(0 8px 16px rgba(0,0,0,0.7))";
+      pillBorder = "var(--accent-amber)";
+      pillBg = "color-mix(in srgb, var(--accent-amber) 30%, transparent)";
+      pillColor = "var(--accent-amber)";
     }
 
     const chairSize = isCompact ? 72 : 86;
@@ -1345,7 +1345,7 @@ export function TableView({
                 borderRadius: "20px",
                 color: "var(--text-main)",
                 outline: "none",
-                boxShadow: "0 0 10px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 0 10px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               }}
             />
           ) : (
@@ -1361,7 +1361,7 @@ export function TableView({
                 fontWeight: 800,
                 letterSpacing: "0.5px",
                 boxShadow: isSelected
-                  ? "0 0 14px rgba(245, 158, 11, 0.6)"
+                  ? "0 0 14px color-mix(in srgb, var(--accent-amber) 60%, transparent)"
                   : "0 4px 12px rgba(0,0,0,0.6)",
                 display: "flex",
                 alignItems: "center",
@@ -1538,7 +1538,7 @@ export function TableView({
             </h2>
             <span
               style={{
-                background: "rgba(245, 158, 11, 0.15)",
+                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                 color: "var(--accent-amber-light)",
                 padding: "2px 8px",
                 borderRadius: "6px",
@@ -1666,7 +1666,7 @@ export function TableView({
               onChange={(e) => setTableFilter(e.target.value)}
               title="Filter by Table Number"
               style={{
-                background: tableFilter !== "all" ? "rgba(245, 158, 11, 0.16)" : "var(--bg-secondary)",
+                background: tableFilter !== "all" ? "color-mix(in srgb, var(--accent-amber) 16%, transparent)" : "var(--bg-secondary)",
                 border: tableFilter !== "all" ? "1px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
                 borderRadius: "var(--radius-md)",
                 color: tableFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -1711,7 +1711,7 @@ export function TableView({
               onChange={(e) => setServerFilter(e.target.value)}
               title="Filter by Server Name"
               style={{
-                background: serverFilter !== "all" ? "rgba(245, 158, 11, 0.16)" : "var(--bg-secondary)",
+                background: serverFilter !== "all" ? "color-mix(in srgb, var(--accent-amber) 16%, transparent)" : "var(--bg-secondary)",
                 border: serverFilter !== "all" ? "1px solid var(--accent-amber)" : "1px solid var(--border-subtle)",
                 borderRadius: "var(--radius-md)",
                 color: serverFilter !== "all" ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -1846,7 +1846,7 @@ export function TableView({
                 fontSize: "0.84rem",
                 fontWeight: isSelected ? 700 : 500,
                 background: isSelected
-                  ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.1) 100%)"
+                  ? "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 25%, transparent) 0%, color-mix(in srgb, var(--accent-amber) 10%, transparent) 100%)"
                   : "var(--bg-secondary)",
                 color: isSelected
                   ? "var(--accent-amber-light)"
@@ -1906,7 +1906,7 @@ export function TableView({
               width: "48px",
               height: "48px",
               borderRadius: "50%",
-              background: "rgba(245, 158, 11, 0.12)",
+              background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1946,7 +1946,7 @@ export function TableView({
             type="button"
             onClick={handleResetFilters}
             style={{
-              background: "linear-gradient(135deg, #f59e0b, #d97706)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber))",
               color: "#000000",
               fontWeight: 800,
               border: "none",
@@ -1957,7 +1957,7 @@ export function TableView({
               display: "flex",
               alignItems: "center",
               gap: "0.5rem",
-              boxShadow: "0 2px 10px rgba(245, 158, 11, 0.25)",
+              boxShadow: "0 2px 10px color-mix(in srgb, var(--accent-amber) 25%, transparent)",
             }}
           >
             <RotateCcw size={14} />
@@ -2029,10 +2029,10 @@ export function TableView({
 
             const cardBorderColor = !isOccupied
               ? "var(--border-subtle)"
-              : "rgba(245, 158, 11, 0.45)";
+              : "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
             const cardShadow = !isOccupied
               ? "var(--shadow-sm)"
-              : "0 4px 14px rgba(245, 158, 11, 0.16)";
+              : "0 4px 14px color-mix(in srgb, var(--accent-amber) 16%, transparent)";
 
             const currentLock = tableLocks && tableLocks[String(table.id)];
             const isLockedByOther =
@@ -2048,13 +2048,13 @@ export function TableView({
                 style={{
                   background: "var(--bg-secondary)",
                   borderRadius: "var(--radius-md)",
-                  border: isLockedByOther ? "1.5px solid #f59e0b" : `1.5px solid ${cardBorderColor}`,
+                  border: isLockedByOther ? "1.5px solid var(--accent-amber)" : `1.5px solid ${cardBorderColor}`,
                   padding: "0.75rem 0.85rem",
                   position: "relative",
                   cursor: isLockedByOther ? "not-allowed" : "pointer",
                   opacity: isLockedByOther ? 0.9 : 1,
                   transition: "all 0.18s ease",
-                  boxShadow: isLockedByOther ? "0 4px 14px rgba(245, 158, 11, 0.25)" : cardShadow,
+                  boxShadow: isLockedByOther ? "0 4px 14px color-mix(in srgb, var(--accent-amber) 25%, transparent)" : cardShadow,
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
@@ -2081,9 +2081,9 @@ export function TableView({
                         gap: "4px",
                         fontSize: "0.68rem",
                         fontWeight: 800,
-                        color: "#f59e0b",
-                        background: "rgba(245, 158, 11, 0.15)",
-                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                        color: "var(--accent-amber)",
+                        background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                         borderRadius: "4px",
                         padding: "2px 6px",
                         marginBottom: "4px",
@@ -2179,11 +2179,11 @@ export function TableView({
                         justifyContent: "center",
                         width: "100%",
                         gap: "0.3rem",
-                        background: "rgba(245, 158, 11, 0.08)",
-                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                        background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                         borderRadius: "8px",
                         padding: "0.18rem 0.45rem",
-                        color: "#f59e0b",
+                        color: "var(--accent-amber)",
                         fontSize: "0.71rem",
                         fontWeight: 600,
                         cursor: "pointer",
@@ -2192,15 +2192,15 @@ export function TableView({
                         transition: "all 0.15s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.22)";
-                        e.currentTarget.style.borderColor = "#f59e0b";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 22%, transparent)";
+                        e.currentTarget.style.borderColor = "var(--accent-amber)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.35)";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 35%, transparent)";
                       }}
                     >
-                      <Armchair size={12} color="#f59e0b" />
+                      <Armchair size={12} color="var(--accent-amber)" />
                       <span>
                         {table.capacity} Seats ·{" "}
                         {isOccupied && (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0))
@@ -2226,7 +2226,7 @@ export function TableView({
                             (table.server || "Staff")
                               .toLowerCase()
                               .includes(searchQuery.trim().toLowerCase()))
-                          ? "rgba(245, 158, 11, 0.22)"
+                          ? "color-mix(in srgb, var(--accent-amber) 22%, transparent)"
                           : "rgba(var(--surface-rgb),0.04)",
                       border:
                         (serverFilter !== "all" &&
@@ -2328,8 +2328,8 @@ export function TableView({
                       ) : hasCooking ? (
                         <div
                           style={{
-                            background: "rgba(234, 88, 12, 0.15)",
-                            border: "1px solid #ea580c",
+                            background: "color-mix(in srgb, var(--accent-saffron) 15%, transparent)",
+                            border: "1px solid var(--accent-saffron)",
                             borderRadius: "6px",
                             padding: "3px 6px",
                             display: "flex",
@@ -2502,7 +2502,7 @@ export function TableView({
                       background:
                         table.status === "vacant"
                           ? "rgba(var(--surface-rgb),0.05)"
-                          : "linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(245, 158, 11, 0.12))",
+                          : "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 28%, transparent), color-mix(in srgb, var(--accent-amber) 12%, transparent))",
                       color:
                         table.status === "vacant"
                           ? "var(--text-main)"
@@ -2663,8 +2663,8 @@ export function TableView({
                       width: "44px",
                       height: "44px",
                       borderRadius: "10px",
-                      background: isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.12)",
-                      border: isLight ? "1px solid rgba(217, 119, 6, 0.35)" : "1px solid rgba(245, 158, 11, 0.35)",
+                      background: isLight ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+                      border: isLight ? "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)" : "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -2734,8 +2734,8 @@ export function TableView({
                       padding: "0.42rem 0.85rem",
                       borderRadius: "8px",
                       background: isEditingSeats
-                        ? (isLight ? "rgba(217, 119, 6, 0.18)" : "rgba(245, 158, 11, 0.25)")
-                        : (isLight ? "rgba(217, 119, 6, 0.08)" : "rgba(245, 158, 11, 0.1)"),
+                        ? (isLight ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)" : "color-mix(in srgb, var(--accent-amber) 25%, transparent)")
+                        : (isLight ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)" : "color-mix(in srgb, var(--accent-amber) 10%, transparent)"),
                       border: isEditingSeats
                         ? "1.5px solid var(--accent-amber)"
                         : "1px solid var(--border-focus)",
@@ -2789,8 +2789,8 @@ export function TableView({
               {isEditingSeats && (
                 <div
                   style={{
-                    background: isLight ? "rgba(217, 119, 6, 0.06)" : "rgba(245, 158, 11, 0.08)",
-                    border: isLight ? "1.5px solid rgba(217, 119, 6, 0.3)" : "1.5px solid rgba(245, 158, 11, 0.45)",
+                    background: isLight ? "color-mix(in srgb, var(--accent-amber) 6%, transparent)" : "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                    border: isLight ? "1.5px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)" : "1.5px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
                     borderRadius: "12px",
                     padding: "0.75rem 1rem",
                     display: "flex",
@@ -2835,7 +2835,7 @@ export function TableView({
                           width: "28px",
                           height: "28px",
                           borderRadius: "6px",
-                          background: capacity <= 1 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
+                          background: capacity <= 1 ? "transparent" : (isLight ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "color-mix(in srgb, var(--accent-amber) 18%, transparent)"),
                           border: "none",
                           color: capacity <= 1 ? "var(--text-dim)" : "var(--accent-amber)",
                           fontWeight: 900,
@@ -2867,7 +2867,7 @@ export function TableView({
                           width: "28px",
                           height: "28px",
                           borderRadius: "6px",
-                          background: capacity >= 24 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
+                          background: capacity >= 24 ? "transparent" : (isLight ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "color-mix(in srgb, var(--accent-amber) 18%, transparent)"),
                           border: "none",
                           color: capacity >= 24 ? "var(--text-dim)" : "var(--accent-amber)",
                           fontWeight: 900,
@@ -3213,8 +3213,8 @@ export function TableView({
                               width: "13px",
                               height: "13px",
                               borderRadius: "50%",
-                              background: "#f59e0b",
-                              boxShadow: "0 0 10px #f59e0b",
+                              background: "var(--accent-amber)",
+                              boxShadow: "0 0 10px var(--accent-amber)",
                               display: "inline-block",
                               flexShrink: 0,
                             }}
@@ -3262,7 +3262,7 @@ export function TableView({
                     }}
                     style={{
                       background: "transparent",
-                      border: isLight ? "1.5px solid var(--accent-amber)" : "1.5px solid rgba(245, 158, 11, 0.65)",
+                      border: isLight ? "1.5px solid var(--accent-amber)" : "1.5px solid color-mix(in srgb, var(--accent-amber) 65%, transparent)",
                       color: "var(--accent-amber)",
                       padding: "0.58rem 1.7rem",
                       borderRadius: "8px",
@@ -3272,7 +3272,7 @@ export function TableView({
                       transition: "all 0.15s ease",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isLight ? "rgba(217, 119, 6, 0.08)" : "rgba(245, 158, 11, 0.12)";
+                      e.currentTarget.style.background = isLight ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)" : "color-mix(in srgb, var(--accent-amber) 12%, transparent)";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = "transparent";
@@ -3284,7 +3284,7 @@ export function TableView({
                     type="button"
                     onClick={handleConfirmSeats}
                     style={{
-                      background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                      background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                       color: "#ffffff",
                       border: "none",
                       padding: "0.6rem 1.8rem",
@@ -3292,7 +3292,7 @@ export function TableView({
                       fontSize: "0.86rem",
                       fontWeight: 700,
                       cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+                      boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                       transition: "all 0.15s ease",
                     }}
                     onMouseEnter={(e) => {

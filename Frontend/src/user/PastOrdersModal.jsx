@@ -785,7 +785,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
                     setViewMode('single_day');
                   }}
                   style={{
-                    background: 'rgba(245, 158, 11, 0.15)',
+                    background: 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
                     border: '1px solid var(--accent-amber)',
                     color: 'var(--accent-amber-light)',
                     padding: '0.4rem 0.75rem',
@@ -897,7 +897,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
                     setViewMode('monthly');
                   }}
                   style={{
-                    background: 'rgba(245, 158, 11, 0.15)',
+                    background: 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
                     border: '1px solid var(--accent-amber)',
                     color: 'var(--accent-amber-light)',
                     padding: '0.4rem 0.75rem',
@@ -1262,7 +1262,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
                           {group.date}
                         </span>
                         <span style={{
-                          background: 'rgba(245, 158, 11, 0.15)',
+                          background: 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
                           color: 'var(--accent-amber-light)',
                           fontSize: '0.72rem',
                           fontWeight: 800,
@@ -1361,7 +1361,7 @@ function OrderCard({ order, onReprintReceipt }) {
         transition: 'all 0.15s ease'
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+        e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent-amber) 45%, transparent)';
         e.currentTarget.style.background = 'rgba(var(--surface-rgb),0.04)';
       }}
       onMouseLeave={e => {
@@ -1420,9 +1420,9 @@ function OrderCard({ order, onReprintReceipt }) {
           style={{
             padding: '0.28rem 0.65rem',
             borderRadius: '4px',
-            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(234, 88, 12, 0.18))',
+            background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 18%, transparent), color-mix(in srgb, var(--accent-saffron) 18%, transparent))',
             color: 'var(--accent-amber-light)',
-            border: '1px solid rgba(245, 158, 11, 0.45)',
+            border: '1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)',
             fontSize: '0.72rem',
             fontWeight: 800,
             display: 'flex',

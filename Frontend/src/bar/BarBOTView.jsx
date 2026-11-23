@@ -500,9 +500,9 @@ export function BarBOTView({
             </h3>
             <span
               style={{
-                background: "rgba(245, 158, 11, 0.2)",
-                color: "var(--accent-amber-light, #fbbf24)",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
+                background: "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
+                color: "var(--accent-amber-light, var(--accent-amber-light))",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 fontSize: "0.7rem",
                 fontWeight: 800,
                 padding: "2px 8px",
@@ -549,13 +549,13 @@ export function BarBOTView({
               gap: "0.4rem",
               padding: "0.55rem 1rem",
               borderRadius: "var(--radius-sm, 8px)",
-              background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+              background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
               color: "#ffffff",
               fontWeight: 800,
               fontSize: "0.82rem",
               border: "none",
               cursor: "pointer",
-              boxShadow: "0 2px 10px rgba(245, 158, 11, 0.35)",
+              boxShadow: "0 2px 10px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
             }}
           >
             {isFullScreen ? <Minimize2 size={15} /> : <ExternalLink size={15} />}
@@ -591,7 +591,7 @@ export function BarBOTView({
               gap: "0.35rem",
               fontSize: "0.76rem",
               fontWeight: 800,
-              color: "var(--accent-amber-light, #fbbf24)",
+              color: "var(--accent-amber-light, var(--accent-amber-light))",
             }}
           >
             <Filter size={14} />
@@ -604,13 +604,13 @@ export function BarBOTView({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                background: "rgba(245, 158, 11, 0.15)",
-                border: "1px solid rgba(245, 158, 11, 0.4)",
+                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 padding: "3px 8px",
                 borderRadius: "6px",
                 fontSize: "0.75rem",
                 fontWeight: 700,
-                color: "var(--accent-amber-light, #fbbf24)",
+                color: "var(--accent-amber-light, var(--accent-amber-light))",
               }}
             >
               <span>
@@ -627,7 +627,7 @@ export function BarBOTView({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "var(--accent-amber-light, #fbbf24)",
+                  color: "var(--accent-amber-light, var(--accent-amber-light))",
                   cursor: "pointer",
                   fontSize: "0.8rem",
                   lineHeight: 1,
@@ -664,17 +664,17 @@ export function BarBOTView({
               padding: "0.5rem 0.8rem",
               borderRadius: "8px",
               background: isBotTableDropdownOpen
-                ? "var(--accent-amber, #f59e0b)"
+                ? "var(--accent-amber, var(--accent-amber))"
                 : "var(--bg-tertiary, #1e293b)",
               color: isBotTableDropdownOpen ? "#000000" : "var(--text-main)",
               border: isBotTableDropdownOpen
-                ? "1px solid var(--accent-amber, #f59e0b)"
+                ? "1px solid var(--accent-amber, var(--accent-amber))"
                 : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))",
               fontSize: "0.8rem",
               fontWeight: 800,
               cursor: "pointer",
               boxShadow: isBotTableDropdownOpen
-                ? "0 4px 12px rgba(245, 158, 11, 0.25)"
+                ? "0 4px 12px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
                 : "none",
             }}
           >
@@ -683,7 +683,7 @@ export function BarBOTView({
               color={
                 isBotTableDropdownOpen
                   ? "#000000"
-                  : "var(--accent-amber, #f59e0b)"
+                  : "var(--accent-amber, var(--accent-amber))"
               }
             />
             <span>
@@ -787,7 +787,7 @@ export function BarBOTView({
                         count: tables.filter(
                           (t) => (t.status || "").toLowerCase() === "occupied"
                         ).length,
-                        dot: "var(--status-occupied, #f59e0b)",
+                        dot: "var(--status-occupied, var(--accent-amber))",
                       },
                       {
                         id: "billed",
@@ -813,13 +813,13 @@ export function BarBOTView({
                             fontSize: "0.7rem",
                             fontWeight: isActive ? 800 : 600,
                             background: isActive
-                              ? "rgba(245, 158, 11, 0.2)"
+                              ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                               : "var(--bg-tertiary, #1e293b)",
                             color: isActive
-                              ? "var(--accent-amber-light, #fbbf24)"
+                              ? "var(--accent-amber-light, var(--accent-amber-light))"
                               : "var(--text-muted, #94a3b8)",
                             border: isActive
-                              ? "1px solid var(--accent-amber, #f59e0b)"
+                              ? "1px solid var(--accent-amber, var(--accent-amber))"
                               : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))",
                             cursor: "pointer",
                           }}
@@ -869,12 +869,12 @@ export function BarBOTView({
                       borderRadius: "7px",
                       background:
                         adminBotTableFilter === "all"
-                          ? "rgba(245, 158, 11, 0.14)"
+                          ? "color-mix(in srgb, var(--accent-amber) 14%, transparent)"
                           : "transparent",
                       color: "var(--text-main)",
                       border:
                         adminBotTableFilter === "all"
-                          ? "1px solid rgba(245, 158, 11, 0.5)"
+                          ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)"
                           : "1px solid transparent",
                       cursor: "pointer",
                       textAlign: "left",
@@ -892,7 +892,7 @@ export function BarBOTView({
                           width: "7px",
                           height: "7px",
                           borderRadius: "50%",
-                          background: "var(--accent-amber, #f59e0b)",
+                          background: "var(--accent-amber, var(--accent-amber))",
                           flexShrink: 0,
                         }}
                       />
@@ -911,7 +911,7 @@ export function BarBOTView({
                         textTransform: "uppercase",
                         color:
                           adminBotTableFilter === "all"
-                            ? "var(--accent-amber-light, #fbbf24)"
+                            ? "var(--accent-amber-light, var(--accent-amber-light))"
                             : "var(--text-dim, #94a3b8)",
                       }}
                     >
@@ -936,7 +936,7 @@ export function BarBOTView({
                       const status = (t.status || "vacant").toLowerCase();
                       let statusDot = "var(--status-vacant, #10b981)";
                       if (status === "occupied")
-                        statusDot = "var(--status-occupied, #f59e0b)";
+                        statusDot = "var(--status-occupied, var(--accent-amber))";
                       if (status === "billed")
                         statusDot = "var(--status-billed, #a855f7)";
 
@@ -958,11 +958,11 @@ export function BarBOTView({
                             marginBottom: "2px",
                             borderRadius: "7px",
                             background: isCurrent
-                              ? "rgba(245, 158, 11, 0.14)"
+                              ? "color-mix(in srgb, var(--accent-amber) 14%, transparent)"
                               : "transparent",
                             color: "var(--text-main)",
                             border: isCurrent
-                              ? "1px solid rgba(245, 158, 11, 0.5)"
+                              ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)"
                               : "1px solid transparent",
                             cursor: "pointer",
                             textAlign: "left",
@@ -998,9 +998,9 @@ export function BarBOTView({
                               fontWeight: 800,
                               textTransform: "uppercase",
                               color: isCurrent
-                                ? "var(--accent-amber-light, #fbbf24)"
+                                ? "var(--accent-amber-light, var(--accent-amber-light))"
                                 : status === "occupied"
-                                ? "var(--status-occupied, #f59e0b)"
+                                ? "var(--status-occupied, var(--accent-amber))"
                                 : status === "billed"
                                 ? "var(--status-billed, #a855f7)"
                                 : "var(--text-dim, #94a3b8)",
@@ -1031,7 +1031,7 @@ export function BarBOTView({
             gap: "0.75rem",
           }}
         >
-          <Martini size={38} color="var(--accent-amber, #f59e0b)" />
+          <Martini size={38} color="var(--accent-amber, var(--accent-amber))" />
           <h4
             style={{
               fontSize: "1.1rem",
@@ -1086,20 +1086,20 @@ export function BarBOTView({
             const cardBorderColor = allCompleted
               ? "#10b981"
               : isPreparing
-              ? "#ea580c"
-              : "rgba(245, 158, 11, 0.7)";
+              ? "var(--accent-saffron)"
+              : "color-mix(in srgb, var(--accent-amber) 70%, transparent)";
 
             const cardShadow = allCompleted
               ? "0 4px 16px rgba(16, 185, 129, 0.2)"
               : isPreparing
-              ? "0 4px 16px rgba(234, 88, 12, 0.2)"
-              : "0 4px 14px rgba(245, 158, 11, 0.16)";
+              ? "0 4px 16px color-mix(in srgb, var(--accent-saffron) 20%, transparent)"
+              : "0 4px 14px color-mix(in srgb, var(--accent-amber) 16%, transparent)";
 
             const statusDot = allCompleted
               ? "var(--status-vacant, #10b981)"
               : isPreparing
-              ? "var(--accent-saffron, #ea580c)"
-              : "var(--status-occupied, #f59e0b)";
+              ? "var(--accent-saffron, var(--accent-saffron))"
+              : "var(--status-occupied, var(--accent-amber))";
 
             const statusBadge = allCompleted
               ? {
@@ -1111,15 +1111,15 @@ export function BarBOTView({
               : isPreparing
               ? {
                   text: "🔥 In Preparation",
-                  color: "#ea580c",
-                  bg: "rgba(234, 88, 12, 0.15)",
-                  border: "rgba(234, 88, 12, 0.3)",
+                  color: "var(--accent-saffron)",
+                  bg: "color-mix(in srgb, var(--accent-saffron) 15%, transparent)",
+                  border: "color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
                 }
               : {
                   text: "🍸 Order Received",
-                  color: "#f59e0b",
-                  bg: "rgba(245, 158, 11, 0.15)",
-                  border: "rgba(245, 158, 11, 0.3)",
+                  color: "var(--accent-amber)",
+                  bg: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                  border: "color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 };
 
             const firstItem = activeItems[0];
@@ -1155,7 +1155,7 @@ export function BarBOTView({
                   e.currentTarget.style.transform = "translateY(-2px)";
                   e.currentTarget.style.boxShadow =
                     "0 6px 18px rgba(0,0,0,0.35)";
-                  e.currentTarget.style.borderColor = "var(--accent-amber, #f59e0b)";
+                  e.currentTarget.style.borderColor = "var(--accent-amber, var(--accent-amber))";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
@@ -1187,7 +1187,7 @@ export function BarBOTView({
                         style={{
                           background: allCompleted
                             ? "var(--status-vacant, #10b981)"
-                            : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                            : "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                           color: "#ffffff",
                           fontWeight: 900,
                           fontSize: "0.74rem",
@@ -1305,7 +1305,7 @@ export function BarBOTView({
                         justifyContent: "space-between",
                         alignItems: "center",
                         fontWeight: 800,
-                        color: "var(--accent-amber-light, #fbbf24)",
+                        color: "var(--accent-amber-light, var(--accent-amber-light))",
                         fontSize: "0.74rem",
                       }}
                     >
@@ -1375,13 +1375,13 @@ export function BarBOTView({
                     borderRadius: "6px",
                     background: allCompleted
                       ? "rgba(16, 185, 129, 0.15)"
-                      : "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.2))",
+                      : "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 20%, transparent), color-mix(in srgb, var(--accent-saffron) 20%, transparent))",
                     border: allCompleted
                       ? "1px solid rgba(16, 185, 129, 0.4)"
-                      : "1px solid rgba(245, 158, 11, 0.4)",
+                      : "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                     color: allCompleted
                       ? "#10b981"
-                      : "var(--accent-amber-light, #fbbf24)",
+                      : "var(--accent-amber-light, var(--accent-amber-light))",
                     fontWeight: 800,
                     fontSize: "0.74rem",
                     cursor: "pointer",
@@ -1425,9 +1425,9 @@ export function BarBOTView({
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "var(--bg-secondary, #131d31)",
-              border: "1.5px solid var(--accent-amber, #f59e0b)",
+              border: "1.5px solid var(--accent-amber, var(--accent-amber))",
               boxShadow:
-                "0 25px 60px rgba(0,0,0,0.85), 0 0 30px rgba(245, 158, 11, 0.25)",
+                "0 25px 60px rgba(0,0,0,0.85), 0 0 30px color-mix(in srgb, var(--accent-amber) 25%, transparent)",
               borderRadius: "14px",
               width: "100%",
               maxWidth: "520px",
@@ -1458,7 +1458,7 @@ export function BarBOTView({
               >
                 <div
                   style={{
-                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                    background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                     color: "#ffffff",
                     padding: "0.3rem 0.65rem",
                     borderRadius: "7px",
@@ -1599,7 +1599,7 @@ export function BarBOTView({
                         border: isReady
                           ? "1px solid rgba(16, 185, 129, 0.4)"
                           : isPreparing
-                          ? "1px solid rgba(234, 88, 12, 0.4)"
+                          ? "1px solid color-mix(in srgb, var(--accent-saffron) 40%, transparent)"
                           : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.1))",
                         gap: "0.75rem",
                       }}
@@ -1615,9 +1615,9 @@ export function BarBOTView({
                       >
                         <span
                           style={{
-                            background: "rgba(245, 158, 11, 0.16)",
-                            border: "1px solid rgba(245, 158, 11, 0.4)",
-                            color: "var(--accent-amber-light, #fbbf24)",
+                            background: "color-mix(in srgb, var(--accent-amber) 16%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
+                            color: "var(--accent-amber-light, var(--accent-amber-light))",
                             padding: "3px 8px",
                             borderRadius: "6px",
                             fontWeight: 800,
@@ -1688,18 +1688,18 @@ export function BarBOTView({
                           background: isReady
                             ? "rgba(16, 185, 129, 0.18)"
                             : isPreparing
-                            ? "rgba(234, 88, 12, 0.18)"
-                            : "rgba(245, 158, 11, 0.18)",
+                            ? "color-mix(in srgb, var(--accent-saffron) 18%, transparent)"
+                            : "color-mix(in srgb, var(--accent-amber) 18%, transparent)",
                           border: isReady
                             ? "1px solid rgba(16, 185, 129, 0.4)"
                             : isPreparing
-                            ? "1px solid rgba(234, 88, 12, 0.4)"
-                            : "1px solid rgba(245, 158, 11, 0.4)",
+                            ? "1px solid color-mix(in srgb, var(--accent-saffron) 40%, transparent)"
+                            : "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                           color: isReady
                             ? "#10b981"
                             : isPreparing
-                            ? "#ea580c"
-                            : "#f59e0b",
+                            ? "var(--accent-saffron)"
+                            : "var(--accent-amber)",
                           transition: "all 0.15s ease",
                         }}
                       >

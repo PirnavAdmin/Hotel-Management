@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import './design-system.css'
+import { applyAccent, getSavedAccent } from './utils/accentColor.js'
 import App from './App.jsx'
 import { ErrorBoundary } from './common/ErrorBoundary.jsx'
 import { DialogProvider } from './common/DialogProvider.jsx'
@@ -15,6 +16,7 @@ installButtonLoading();
 installGlobalFetchInterceptor();
 installGlobalEventSourceInterceptor();
 installGlobalErrorHandlers();
+applyAccent(getSavedAccent());
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

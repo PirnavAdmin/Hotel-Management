@@ -238,24 +238,24 @@ export function LoginPage({
   const cfgMap = {
     pos: {
       icon: <Utensils size={24} color="#fff" />,
-      iconBg: 'linear-gradient(135deg,#f59e0b,#ea580c)',
-      iconGlow: 'rgba(245,158,11,0.5)',
-      accent: '#f59e0b', accentLight: '#fbbf24',
+      iconBg: 'linear-gradient(135deg,var(--accent-amber),var(--accent-saffron))',
+      iconGlow: 'color-mix(in srgb, var(--accent-amber) 50%, transparent)',
+      accent: 'var(--accent-amber)', accentLight: 'var(--accent-amber-light)',
       btnBg: 'var(--primary-gradient)',
       btnShadow: '0 4px 18px rgba(255,157,0,.25)',
       badge: '🍽️ BILLING COUNTER',
-      badgeBg: 'rgba(245,158,11,0.15)', badgeBorder: 'rgba(245,158,11,0.4)',
+      badgeBg: 'color-mix(in srgb, var(--accent-amber) 15%, transparent)', badgeBorder: 'color-mix(in srgb, var(--accent-amber) 40%, transparent)',
       hint: 'Access: Billing, Table orders, Settlements'
     },
     kot: {
       icon: <ChefHat size={24} color="#fff" />,
-      iconBg: 'linear-gradient(135deg,#ea580c,#c2410c)',
-      iconGlow: 'rgba(234,88,12,0.5)',
-      accent: '#ea580c', accentLight: '#fb923c',
+      iconBg: 'linear-gradient(135deg,var(--accent-saffron),var(--accent-amber))',
+      iconGlow: 'color-mix(in srgb, var(--accent-saffron) 50%, transparent)',
+      accent: 'var(--accent-saffron)', accentLight: '#fb923c',
       btnBg: 'var(--primary-gradient)',
       btnShadow: '0 4px 18px rgba(255,157,0,.25)',
       badge: '🔥 KITCHEN DISPLAY',
-      badgeBg: 'rgba(234,88,12,0.15)', badgeBorder: 'rgba(234,88,12,0.4)',
+      badgeBg: 'color-mix(in srgb, var(--accent-saffron) 15%, transparent)', badgeBorder: 'color-mix(in srgb, var(--accent-saffron) 40%, transparent)',
       hint: 'Access: Kitchen orders, Live food status'
     },
     admin: {
@@ -600,7 +600,7 @@ export function LoginPage({
       )}
       <div className="auth-theme-toggle"><ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/></div>
       <section className="bhanu-story" aria-label={`Welcome to ${currentRestaurantName}`}><header><div className="bhanu-brand"><span className="bhanu-logo">{currentRestaurantLogo ? <img src={currentRestaurantLogo} alt="Restaurant logo" /> : <Utensils size={30}/>}</span><div><strong>{currentRestaurantName}</strong><small>{currentTagline || "RESTAURANT MANAGEMENT SYSTEM"}</small></div></div></header>
-      <div className="bhanu-welcome"><h1 style={{ color: '#ff9d00' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
+      <div className="bhanu-welcome"><h1 style={{ color: 'var(--accent-amber)' }}>Welcome</h1><h2>Your restaurant, running smoothly.</h2><p>Manage orders, billing, kitchen operations and your entire restaurant, all in one place.</p>
       <div className="bhanu-features">{[{title:'POS Counter',description:'Fast & Easy Point of Sale',icon:<Printer/>},{title:'Kitchen Display',description:'Real-time Order Management',icon:<ChefHat/>},{title:'Admin Portal',description:'Complete Restaurant Control',icon:<Settings/>}].map(feature => <div key={feature.title}><span className="bhanu-feature-icon">{feature.icon}</span><h3>{feature.title}</h3><p>{feature.description}</p></div>)}</div></div>
       <img className="bhanu-dish" src="/assets/chicken-dum-biryani.jpg" alt="Restaurant biryani"/>
       <div className="bhanu-benefits" aria-label="Restaurant headlines">
@@ -635,9 +635,9 @@ export function LoginPage({
         boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)'
       }}>
         {[
-          { id: 'pos', label: 'POS', icon: <MonitorCheck size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(245,158,11,0.35)' },
-          { id: 'kot', label: 'Kitchen', icon: <ChefHat size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(234,88,12,0.35)' },
-          { id: 'admin', label: 'Admin', icon: <Settings size={16}/>, accent: '#ff9d00', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
+          { id: 'pos', label: 'POS', icon: <MonitorCheck size={16}/>, accent: 'var(--accent-amber)', shadow: '0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)' },
+          { id: 'kot', label: 'Kitchen', icon: <ChefHat size={16}/>, accent: 'var(--accent-amber)', shadow: '0 4px 14px color-mix(in srgb, var(--accent-saffron) 35%, transparent)' },
+          { id: 'admin', label: 'Admin', icon: <Settings size={16}/>, accent: 'var(--accent-amber)', shadow: '0 4px 14px rgba(99,102,241,0.35)' }
         ].map(t => {
           const isActive = mode !== 'register' && currentRole === t.id;
           return (
@@ -795,7 +795,7 @@ export function LoginPage({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--accent-amber-light, #f59e0b)',
+                  color: 'var(--accent-amber-light, var(--accent-amber))',
                   fontSize: '0.74rem',
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -930,7 +930,7 @@ export function LoginPage({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--accent-amber-light, #f59e0b)',
+                  color: 'var(--accent-amber-light, var(--accent-amber))',
                   fontSize: '0.72rem',
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -983,8 +983,8 @@ export function LoginPage({
                 {/* Visual Auto-Generated OTP Card */}
                 {generatedOtp && (
                   <div style={{
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1.5px dashed rgba(245, 158, 11, 0.6)',
+                    background: 'color-mix(in srgb, var(--accent-amber) 10%, transparent)',
+                    border: '1.5px dashed color-mix(in srgb, var(--accent-amber) 60%, transparent)',
                     borderRadius: '10px',
                     padding: '0.65rem 0.85rem',
                     marginBottom: '0.35rem',
@@ -993,8 +993,8 @@ export function LoginPage({
                     gap: '0.3rem'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <KeyRound size={12} color="#f59e0b" /> AUTO-GENERATED OTP
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-amber)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <KeyRound size={12} color="var(--accent-amber)" /> AUTO-GENERATED OTP
                       </span>
                       <span style={{ fontSize: '0.66rem', color: '#10b981', fontWeight: 800, background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>
                         ✓ Auto-Filled
@@ -1051,7 +1051,7 @@ export function LoginPage({
                           right: '8px',
                           top: '50%',
                           transform: 'translateY(-50%)',
-                          background: 'var(--accent-amber, #f59e0b)',
+                          background: 'var(--accent-amber, var(--accent-amber))',
                           border: 'none',
                           color: '#000000',
                           fontSize: '0.65rem',

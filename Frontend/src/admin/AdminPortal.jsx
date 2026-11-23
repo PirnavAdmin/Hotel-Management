@@ -1524,7 +1524,7 @@ export function AdminPortal({
           message: `Category was not saved: ${result?.error || result?.data?.message || "API error"}`,
           confirmLabel: "Understood",
           cancelLabel: "Close",
-          icon: <AlertCircle size={22} color="#f59e0b" />,
+          icon: <AlertCircle size={22} color="var(--accent-amber)" />,
           onConfirm: () => {},
         });
         return;
@@ -2426,7 +2426,7 @@ export function AdminPortal({
       }
     >
       <div
-        className="admin-portal-inner no-scrollbar"
+        className="admin-portal-inner"
         style={
           isFullPage
             ? {
@@ -2488,6 +2488,7 @@ export function AdminPortal({
             display: "flex",
             flexDirection: "column",
             height: "100%",
+            minHeight: 0,
             overflow: "hidden",
             background: "var(--bg-primary)",
             minWidth: 0,
@@ -2514,6 +2515,9 @@ export function AdminPortal({
             style={{
               flex: 1,
               overflowY: "auto",
+              overflowX: "hidden",
+              scrollbarWidth: "auto",
+              overscrollBehaviorY: "contain",
               padding:
                 portalMode === "bar" || activeTab === "logins"
                   ? "1rem"
@@ -2604,11 +2608,11 @@ export function AdminPortal({
                             width: "38px",
                             height: "38px",
                             borderRadius: "10px",
-                            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                            background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                            boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                             flexShrink: 0,
                           }}
                         >
@@ -2638,8 +2642,8 @@ export function AdminPortal({
                             </h2>
                             <span
                               style={{
-                                background: "rgba(245, 158, 11, 0.15)",
-                                border: "1px solid rgba(245, 158, 11, 0.3)",
+                                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                                 color: "var(--accent-amber-light)",
                                 fontSize: "0.74rem",
                                 fontWeight: 700,
@@ -2708,7 +2712,7 @@ export function AdminPortal({
                           onClick={() => handleOpenItemModal()}
                           style={{
                             height: "36px",
-                            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                            background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                             color: "#ffffff",
                             border: "none",
                             borderRadius: "8px",
@@ -2719,7 +2723,7 @@ export function AdminPortal({
                             alignItems: "center",
                             gap: "0.45rem",
                             cursor: "pointer",
-                            boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                            boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                           }}
                         >
                           <Plus size={16} strokeWidth={2.5} />
@@ -3026,13 +3030,13 @@ export function AdminPortal({
                                                   <span>{item.name}</span>
                                                   <Star
                                                     size={14}
-                                                    fill="#f59e0b"
-                                                    color="#f59e0b"
+                                                    fill="var(--accent-amber)"
+                                                    color="var(--accent-amber)"
                                                     title="Chef's Special"
                                                     style={{
                                                       flexShrink: 0,
                                                       filter:
-                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                        "drop-shadow(0 0 3px color-mix(in srgb, var(--accent-amber) 45%, transparent))",
                                                     }}
                                                   />
                                                 </span>
@@ -3055,13 +3059,13 @@ export function AdminPortal({
                                                   <span>{lastWord}</span>
                                                   <Star
                                                     size={14}
-                                                    fill="#f59e0b"
-                                                    color="#f59e0b"
+                                                    fill="var(--accent-amber)"
+                                                    color="var(--accent-amber)"
                                                     title="Chef's Special"
                                                     style={{
                                                       flexShrink: 0,
                                                       filter:
-                                                        "drop-shadow(0 0 3px rgba(245, 158, 11, 0.45))",
+                                                        "drop-shadow(0 0 3px color-mix(in srgb, var(--accent-amber) 45%, transparent))",
                                                     }}
                                                   />
                                                 </span>
@@ -3232,8 +3236,8 @@ export function AdminPortal({
                                           handleOpenItemModal(item)
                                         }
                                         style={{
-                                          border: "1px solid rgba(245, 158, 11, 0.45)",
-                                          background: "rgba(245, 158, 11, 0.06)",
+                                          border: "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
+                                          background: "color-mix(in srgb, var(--accent-amber) 6%, transparent)",
                                           color: "var(--accent-amber-light)",
                                           borderRadius: "6px",
                                           padding: "4px 12px",
@@ -3565,15 +3569,15 @@ export function AdminPortal({
                             width: "36px",
                             height: "36px",
                             borderRadius: "8px",
-                            background: "rgba(245, 158, 11, 0.15)",
-                            border: "1.5px solid rgba(245, 158, 11, 0.4)",
+                            background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                            border: "1.5px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             color: "var(--accent-amber-light)",
                           }}
                         >
-                          <Armchair size={22} color="#f59e0b" />
+                          <Armchair size={22} color="var(--accent-amber)" />
                         </div>
                         <h2
                           style={{
@@ -3628,23 +3632,23 @@ export function AdminPortal({
                             alignItems: "center",
                             gap: "0.45rem",
                             padding: "0.55rem 1.3rem",
-                            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                            background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                             color: "#ffffff",
                             borderRadius: "8px",
                             fontWeight: 700,
                             fontSize: "0.85rem",
-                            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+                            boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                             border: "none",
                             cursor: "pointer",
                             transition: "transform 0.15s ease, box-shadow 0.15s ease",
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = "translateY(-1px)";
-                            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+                            e.currentTarget.style.boxShadow = "0 6px 18px color-mix(in srgb, var(--accent-amber) 50%, transparent)";
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+                            e.currentTarget.style.boxShadow = "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)";
                           }}
                         >
                           <Plus size={16} strokeWidth={2.5} />
@@ -3703,7 +3707,7 @@ export function AdminPortal({
                                     padding: "0.42rem 0.5rem 0.42rem 1.6rem",
                                     background: "var(--input-bg)",
                                     border: tableFilters.search
-                                      ? "1px solid #f59e0b"
+                                      ? "1px solid var(--accent-amber)"
                                       : "1px solid rgba(var(--surface-rgb),0.12)",
                                     borderRadius: "6px",
                                     color: "var(--text-main)",
@@ -3740,10 +3744,10 @@ export function AdminPortal({
                                     fontSize: "0.74rem",
                                     fontWeight: (!tableFilters.status || tableFilters.status === "all") ? 700 : 500,
                                     background: (!tableFilters.status || tableFilters.status === "all")
-                                      ? "rgba(245, 158, 11, 0.2)"
+                                      ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                                       : "transparent",
                                     color: (!tableFilters.status || tableFilters.status === "all")
-                                      ? "#f59e0b"
+                                      ? "var(--accent-amber)"
                                       : "var(--text-dim)",
                                     transition: "all 0.15s ease",
                                   }}
@@ -3754,7 +3758,7 @@ export function AdminPortal({
                                       padding: "1px 5px",
                                       borderRadius: "8px",
                                       background: (!tableFilters.status || tableFilters.status === "all")
-                                        ? "#f59e0b"
+                                        ? "var(--accent-amber)"
                                         : "rgba(var(--surface-rgb),0.08)",
                                       color: (!tableFilters.status || tableFilters.status === "all")
                                         ? "#081628"
@@ -3832,11 +3836,11 @@ export function AdminPortal({
                                     fontSize: "0.74rem",
                                     fontWeight: tableFilters.status === "occupied" ? 700 : 500,
                                     background: tableFilters.status === "occupied"
-                                      ? "rgba(245, 158, 11, 0.2)"
+                                      ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                                       : "transparent",
                                     color: tableFilters.status === "occupied" ? "var(--accent-amber-light)" : "var(--text-dim)",
                                     boxShadow: tableFilters.status === "occupied"
-                                      ? "0 0 10px rgba(245, 158, 11, 0.15)"
+                                      ? "0 0 10px color-mix(in srgb, var(--accent-amber) 15%, transparent)"
                                       : "none",
                                     transition: "all 0.15s ease",
                                   }}
@@ -3846,8 +3850,8 @@ export function AdminPortal({
                                       width: "6px",
                                       height: "6px",
                                       borderRadius: "50%",
-                                      backgroundColor: "#f59e0b",
-                                      boxShadow: "0 0 6px #f59e0b",
+                                      backgroundColor: "var(--accent-amber)",
+                                      boxShadow: "0 0 6px var(--accent-amber)",
                                     }}
                                   />
                                   <span>Occupied</span>
@@ -3856,7 +3860,7 @@ export function AdminPortal({
                                       padding: "1px 5px",
                                       borderRadius: "8px",
                                       background: tableFilters.status === "occupied"
-                                        ? "#f59e0b"
+                                        ? "var(--accent-amber)"
                                         : "rgba(var(--surface-rgb),0.08)",
                                       color: tableFilters.status === "occupied" ? "#081628" : "var(--text-dim)",
                                       fontSize: "0.68rem",
@@ -3980,7 +3984,7 @@ export function AdminPortal({
                                   style={{
                                     marginTop: "0.75rem",
                                     background: "transparent",
-                                    border: "1px solid #f59e0b",
+                                    border: "1px solid var(--accent-amber)",
                                     color: "var(--accent-amber-light)",
                                     padding: "0.35rem 0.9rem",
                                     borderRadius: "6px",
@@ -3998,10 +4002,10 @@ export function AdminPortal({
                           {/* Rows List */}
                           {sortedTables.map((tbl) => {
                             const isOccupied = isTableOccupied(tbl);
-                            const dotColor = isOccupied ? "#f59e0b" : "#10b981";
+                            const dotColor = isOccupied ? "var(--accent-amber)" : "#10b981";
                             const textColor = isOccupied ? "var(--status-occupied)" : "var(--status-vacant)";
-                            const bgColor = isOccupied ? "rgba(245, 158, 11, 0.12)" : "rgba(16, 185, 129, 0.12)";
-                            const borderColor = isOccupied ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)";
+                            const bgColor = isOccupied ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "rgba(16, 185, 129, 0.12)";
+                            const borderColor = isOccupied ? "color-mix(in srgb, var(--accent-amber) 30%, transparent)" : "rgba(16, 185, 129, 0.3)";
                             const label = isOccupied ? "OCCUPIED" : "VACANT";
 
                             return (
@@ -4020,7 +4024,7 @@ export function AdminPortal({
                                 }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background = "var(--bg-tertiary)";
-                                  e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                                  e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 30%, transparent)";
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.background = "var(--bg-secondary)";
@@ -4088,7 +4092,7 @@ export function AdminPortal({
                                       );
                                       return (
                                         <span>
-                                          <strong style={{ color: occupied > 0 ? "#f59e0b" : "var(--text-main)" }}>
+                                          <strong style={{ color: occupied > 0 ? "var(--accent-amber)" : "var(--text-main)" }}>
                                             {cap}/{occupied}
                                           </strong>{" "}
                                           ({cap} Chairs / {occupied > 0 ? `${occupied} Seated` : "0 Seated"})
@@ -4214,9 +4218,9 @@ export function AdminPortal({
                                       alignItems: "center",
                                       justifyContent: "center",
                                       padding: "0.32rem 0.5rem",
-                                      background: "rgba(245, 158, 11, 0.08)",
-                                      color: "#f59e0b",
-                                      border: "1px solid rgba(245, 158, 11, 0.45)",
+                                      background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                                      color: "var(--accent-amber)",
+                                      border: "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
                                       cursor: "pointer",
@@ -4224,17 +4228,17 @@ export function AdminPortal({
                                       flexShrink: 0,
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
-                                      e.currentTarget.style.borderColor = "#f59e0b";
+                                      e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 20%, transparent)";
+                                      e.currentTarget.style.borderColor = "var(--accent-amber)";
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                                      e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                                      e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
+                                      e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
                                     }}
                                     title="Edit Chairs / Area"
                                     aria-label="Edit Chairs / Area"
                                   >
-                                    <SquarePen size={13} color="#f59e0b" />
+                                    <SquarePen size={13} color="var(--accent-amber)" />
                                   </button>
 
                                   {/* Delete Table */}
@@ -4248,7 +4252,7 @@ export function AdminPortal({
                                           confirmLabel: "Understood",
                                           cancelLabel: "Close",
                                           icon: (
-                                            <AlertCircle size={22} color="#f59e0b" />
+                                            <AlertCircle size={22} color="var(--accent-amber)" />
                                           ),
                                           onConfirm: () => {},
                                         });
@@ -4380,15 +4384,15 @@ export function AdminPortal({
                             width: "36px",
                             height: "36px",
                             borderRadius: "8px",
-                            background: "rgba(245, 158, 11, 0.15)",
-                            border: "1.5px solid rgba(245, 158, 11, 0.4)",
+                            background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                            border: "1.5px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             color: "var(--accent-amber-light)",
                           }}
                         >
-                          <Users size={22} color="#f59e0b" />
+                          <Users size={22} color="var(--accent-amber)" />
                         </div>
                         <div>
                           <h2
@@ -4445,23 +4449,23 @@ export function AdminPortal({
                             alignItems: "center",
                             gap: "0.45rem",
                             padding: "0.55rem 1.3rem",
-                            background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                            background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                             color: "#ffffff",
                             borderRadius: "8px",
                             fontWeight: 700,
                             fontSize: "0.85rem",
-                            boxShadow: "0 4px 14px rgba(249, 115, 22, 0.4)",
+                            boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                             border: "none",
                             cursor: "pointer",
                             transition: "transform 0.15s ease, box-shadow 0.15s ease",
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.transform = "translateY(-1px)";
-                            e.currentTarget.style.boxShadow = "0 6px 18px rgba(249, 115, 22, 0.5)";
+                            e.currentTarget.style.boxShadow = "0 6px 18px color-mix(in srgb, var(--accent-amber) 50%, transparent)";
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow = "0 4px 14px rgba(249, 115, 22, 0.4)";
+                            e.currentTarget.style.boxShadow = "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)";
                           }}
                         >
                           <Plus size={16} strokeWidth={2.5} />
@@ -4508,7 +4512,7 @@ export function AdminPortal({
                                     padding: "0 10px 0 34px",
                                     background: "var(--bg-tertiary)",
                                     border: staffFilters.search
-                                      ? "1px solid #f59e0b"
+                                      ? "1px solid var(--accent-amber)"
                                       : "1px solid var(--border-card)",
                                     borderRadius: "8px",
                                     color: "var(--text-main)",
@@ -4532,7 +4536,7 @@ export function AdminPortal({
                                   padding: "0 10px",
                                   background: "var(--bg-tertiary)",
                                   border: staffFilters.role
-                                    ? "1px solid #f59e0b"
+                                    ? "1px solid var(--accent-amber)"
                                     : "1px solid var(--border-card)",
                                   borderRadius: "8px",
                                   color: staffFilters.role ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -4566,7 +4570,7 @@ export function AdminPortal({
                                   padding: "0 10px",
                                   background: "var(--bg-tertiary)",
                                   border: staffFilters.shift
-                                    ? "1px solid #f59e0b"
+                                    ? "1px solid var(--accent-amber)"
                                     : "1px solid var(--border-card)",
                                   borderRadius: "8px",
                                   color: staffFilters.shift ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -4600,7 +4604,7 @@ export function AdminPortal({
                                   padding: "0 10px",
                                   background: "var(--bg-tertiary)",
                                   border: staffFilters.assigned
-                                    ? "1px solid #f59e0b"
+                                    ? "1px solid var(--accent-amber)"
                                     : "1px solid var(--border-card)",
                                   borderRadius: "8px",
                                   color: staffFilters.assigned ? "var(--accent-amber-light)" : "var(--text-main)",
@@ -4706,7 +4710,7 @@ export function AdminPortal({
                                   style={{
                                     marginTop: "0.75rem",
                                     background: "transparent",
-                                    border: "1px solid #f59e0b",
+                                    border: "1px solid var(--accent-amber)",
                                     color: "var(--accent-amber-light)",
                                     padding: "0.35rem 0.9rem",
                                     borderRadius: "6px",
@@ -4781,7 +4785,7 @@ export function AdminPortal({
                                 className="staff-table-grid"
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background = "var(--bg-tertiary)";
-                                  e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.3)";
+                                  e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 30%, transparent)";
                                 }}
                                 onMouseLeave={(e) => {
                                   e.currentTarget.style.background = "var(--bg-secondary)";
@@ -4795,7 +4799,7 @@ export function AdminPortal({
                                       width: "28px",
                                       height: "28px",
                                       borderRadius: "6px",
-                                      background: "rgba(245, 158, 11, 0.15)",
+                                      background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                                       color: "var(--accent-amber-light)",
                                       display: "flex",
                                       alignItems: "center",
@@ -4942,26 +4946,26 @@ export function AdminPortal({
                                       alignItems: "center",
                                       justifyContent: "center",
                                       padding: "0.35rem 0.55rem",
-                                      background: "rgba(245, 158, 11, 0.08)",
-                                      color: "#f59e0b",
-                                      border: "1px solid rgba(245, 158, 11, 0.45)",
+                                      background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                                      color: "var(--accent-amber)",
+                                      border: "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
                                       borderRadius: "6px",
                                       fontSize: "0.74rem",
                                       cursor: "pointer",
                                       transition: "all 0.15s ease",
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.background = "rgba(245, 158, 11, 0.2)";
-                                      e.currentTarget.style.borderColor = "#f59e0b";
+                                      e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 20%, transparent)";
+                                      e.currentTarget.style.borderColor = "var(--accent-amber)";
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.background = "rgba(245, 158, 11, 0.08)";
-                                      e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.45)";
+                                      e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
+                                      e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
                                     }}
                                     title="Edit Staff"
                                     aria-label="Edit Staff"
                                   >
-                                    <SquarePen size={13} color="#f59e0b" />
+                                    <SquarePen size={13} color="var(--accent-amber)" />
                                   </button>
 
                                   {/* Delete Staff button */}
@@ -5042,9 +5046,9 @@ export function AdminPortal({
                           </h3>
                           <span
                             style={{
-                              background: "rgba(245, 158, 11, 0.2)",
+                              background: "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                               color: "var(--accent-amber-light)",
-                              border: "1px solid rgba(245, 158, 11, 0.4)",
+                              border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                               fontSize: "0.7rem",
                               fontWeight: 800,
                               padding: "2px 8px",
@@ -5113,7 +5117,7 @@ export function AdminPortal({
                               padding: "5px 12px",
                               borderRadius: "6px",
                               border: "none",
-                              background: adminKotStation === "takeaway" ? "#f97316" : "transparent",
+                              background: adminKotStation === "takeaway" ? "var(--accent-amber)" : "transparent",
                               color: adminKotStation === "takeaway" ? "#ffffff" : "var(--text-muted)",
                               fontSize: "0.78rem",
                               fontWeight: 750,
@@ -5156,13 +5160,13 @@ export function AdminPortal({
                             gap: "0.4rem",
                             padding: "0.55rem 1rem",
                             borderRadius: "var(--radius-sm)",
-                            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                             color: "#ffffff",
                             fontWeight: 800,
                             fontSize: "0.82rem",
                             border: "none",
                             cursor: "pointer",
-                            boxShadow: "0 2px 10px rgba(245, 158, 11, 0.35)",
+                            boxShadow: "0 2px 10px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                           }}
                         >
                           <ExternalLink size={15} />
@@ -5225,8 +5229,8 @@ export function AdminPortal({
                               display: "inline-flex",
                               alignItems: "center",
                               gap: "6px",
-                              background: "rgba(245, 158, 11, 0.15)",
-                              border: "1px solid rgba(245, 158, 11, 0.4)",
+                              background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                              border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                               padding: "3px 8px",
                               borderRadius: "6px",
                               fontSize: "0.75rem",
@@ -5304,7 +5308,7 @@ export function AdminPortal({
                             fontWeight: 800,
                             cursor: "pointer",
                             boxShadow: isKotTableDropdownOpen
-                              ? "0 4px 12px rgba(245,158,11,0.25)"
+                              ? "0 4px 12px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
                               : "none",
                           }}
                         >
@@ -5427,7 +5431,7 @@ export function AdminPortal({
                                           (t.status || "").toLowerCase() ===
                                           "occupied",
                                       ).length,
-                                      dot: "var(--status-occupied, #f59e0b)",
+                                      dot: "var(--status-occupied, var(--accent-amber))",
                                     },
                                     {
                                       id: "billed",
@@ -5458,7 +5462,7 @@ export function AdminPortal({
                                           fontSize: "0.7rem",
                                           fontWeight: isActive ? 800 : 600,
                                           background: isActive
-                                            ? "rgba(245,158,11,0.2)"
+                                            ? "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
                                             : "var(--bg-tertiary)",
                                           color: isActive
                                             ? "var(--accent-amber-light)"
@@ -5516,12 +5520,12 @@ export function AdminPortal({
                                     borderRadius: "7px",
                                     background:
                                       adminKotTableFilter === "all"
-                                        ? "rgba(245,158,11,0.14)"
+                                        ? "color-mix(in srgb, var(--accent-amber) 14%, transparent)"
                                         : "transparent",
                                     color: "var(--text-main)",
                                     border:
                                       adminKotTableFilter === "all"
-                                        ? "1px solid rgba(245,158,11,0.5)"
+                                        ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)"
                                         : "1px solid transparent",
                                     cursor: "pointer",
                                     textAlign: "left",
@@ -5598,12 +5602,12 @@ export function AdminPortal({
                                     borderRadius: "7px",
                                     background:
                                       adminKotTableFilter === "takeaway"
-                                        ? "rgba(249,115,22,0.18)"
+                                        ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)"
                                         : "transparent",
                                     color: "var(--text-main)",
                                     border:
                                       adminKotTableFilter === "takeaway"
-                                        ? "1px solid rgba(249,115,22,0.5)"
+                                        ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)"
                                         : "1px solid transparent",
                                     cursor: "pointer",
                                     textAlign: "left",
@@ -5645,7 +5649,7 @@ export function AdminPortal({
                                       textTransform: "uppercase",
                                       color:
                                         adminKotTableFilter === "takeaway"
-                                          ? "#f97316"
+                                          ? "var(--accent-amber)"
                                           : "var(--text-dim)",
                                     }}
                                   >
@@ -5676,7 +5680,7 @@ export function AdminPortal({
                                       "var(--status-vacant, #10b981)";
                                     if (status === "occupied")
                                       statusDot =
-                                        "var(--status-occupied, #f59e0b)";
+                                        "var(--status-occupied, var(--accent-amber))";
                                     if (status === "billed")
                                       statusDot =
                                         "var(--status-billed, #a855f7)";
@@ -5699,11 +5703,11 @@ export function AdminPortal({
                                           marginBottom: "2px",
                                           borderRadius: "7px",
                                           background: isCurrent
-                                            ? "rgba(245,158,11,0.14)"
+                                            ? "color-mix(in srgb, var(--accent-amber) 14%, transparent)"
                                             : "transparent",
                                           color: "var(--text-main)",
                                           border: isCurrent
-                                            ? "1px solid rgba(245,158,11,0.5)"
+                                            ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)"
                                             : "1px solid transparent",
                                           cursor: "pointer",
                                           textAlign: "left",
@@ -5751,7 +5755,7 @@ export function AdminPortal({
                                             color: isCurrent
                                               ? "var(--accent-amber-light)"
                                               : status === "occupied"
-                                                ? "var(--status-occupied, #f59e0b)"
+                                                ? "var(--status-occupied, var(--accent-amber))"
                                                 : status === "billed"
                                                   ? "var(--status-billed, #a855f7)"
                                                   : "var(--text-dim)",
@@ -5901,26 +5905,26 @@ export function AdminPortal({
                               const cardBorderColor = allCompleted
                                 ? "#10b981"
                                 : isCooking
-                                  ? "#ea580c"
-                                  : "rgba(245, 158, 11, 0.7)";
+                                  ? "var(--accent-saffron)"
+                                  : "color-mix(in srgb, var(--accent-amber) 70%, transparent)";
 
                               const cardShadow = allCompleted
                                 ? "0 4px 16px rgba(16, 185, 129, 0.2)"
                                 : isCooking
-                                  ? "0 4px 16px rgba(234, 88, 12, 0.2)"
-                                  : "0 4px 14px rgba(245, 158, 11, 0.16)";
+                                  ? "0 4px 16px color-mix(in srgb, var(--accent-saffron) 20%, transparent)"
+                                  : "0 4px 14px color-mix(in srgb, var(--accent-amber) 16%, transparent)";
 
                               const statusDot = allCompleted
                                 ? "var(--status-vacant, #10b981)"
                                 : isCooking
-                                  ? "var(--accent-saffron, #ea580c)"
-                                  : "var(--status-occupied, #f59e0b)";
+                                  ? "var(--accent-saffron, var(--accent-saffron))"
+                                  : "var(--status-occupied, var(--accent-amber))";
 
                               const statusBadge = allCompleted
                                 ? { text: isTakeaway ? "🔔 Ready for Pickup" : "🔔 Ready to Serve", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.3)" }
                                 : isCooking
-                                  ? { text: "🔥 In Preparation", color: "#ea580c", bg: "rgba(234, 88, 12, 0.15)", border: "rgba(234, 88, 12, 0.3)" }
-                                  : { text: "📥 Order Received", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", border: "rgba(245, 158, 11, 0.3)" };
+                                  ? { text: "🔥 In Preparation", color: "var(--accent-saffron)", bg: "color-mix(in srgb, var(--accent-saffron) 15%, transparent)", border: "color-mix(in srgb, var(--accent-saffron) 30%, transparent)" }
+                                  : { text: "📥 Order Received", color: "var(--accent-amber)", bg: "color-mix(in srgb, var(--accent-amber) 15%, transparent)", border: "color-mix(in srgb, var(--accent-amber) 30%, transparent)" };
 
                               const firstItem = activeItems[0];
                               const moreCount = activeItems.length - 1;
@@ -5982,10 +5986,10 @@ export function AdminPortal({
                                         <span
                                           style={{
                                             background: isTakeaway
-                                              ? "#f97316"
+                                              ? "var(--accent-amber)"
                                               : (allCompleted
                                                   ? "var(--status-vacant, #10b981)"
-                                                  : "linear-gradient(135deg, #f59e0b, #ea580c)"),
+                                                  : "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))"),
                                             color: "#ffffff",
                                             fontWeight: 900,
                                             fontSize: "0.74rem",
@@ -6092,7 +6096,7 @@ export function AdminPortal({
                                           justifyContent: "space-between",
                                           alignItems: "center",
                                           fontWeight: 800,
-                                          color: "var(--accent-amber-light, #f59e0b)",
+                                          color: "var(--accent-amber-light, var(--accent-amber))",
                                           fontSize: "0.74rem",
                                         }}
                                       >
@@ -6148,11 +6152,11 @@ export function AdminPortal({
                                       borderRadius: "6px",
                                       background: allCompleted
                                         ? "rgba(16, 185, 129, 0.15)"
-                                        : "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 88, 12, 0.2))",
+                                        : "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 20%, transparent), color-mix(in srgb, var(--accent-saffron) 20%, transparent))",
                                       border: allCompleted
                                         ? "1px solid rgba(16, 185, 129, 0.4)"
-                                        : "1px solid rgba(245, 158, 11, 0.4)",
-                                      color: allCompleted ? "#10b981" : "var(--accent-amber-light, #f59e0b)",
+                                        : "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
+                                      color: allCompleted ? "#10b981" : "var(--accent-amber-light, var(--accent-amber))",
                                       fontWeight: 800,
                                       fontSize: "0.74rem",
                                       cursor: "pointer",
@@ -6221,9 +6225,9 @@ export function AdminPortal({
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
                                   background: "var(--bg-secondary, #131d31)",
-                                  border: "1.5px solid var(--accent-amber, #f59e0b)",
+                                  border: "1.5px solid var(--accent-amber, var(--accent-amber))",
                                   boxShadow:
-                                    "0 25px 60px rgba(0,0,0,0.85), 0 0 30px rgba(245, 158, 11, 0.25)",
+                                    "0 25px 60px rgba(0,0,0,0.85), 0 0 30px color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                                   borderRadius: "14px",
                                   width: "100%",
                                   maxWidth: "520px",
@@ -6249,8 +6253,8 @@ export function AdminPortal({
                                     <div
                                       style={{
                                         background: activeKotModalTable.isTakeaway
-                                          ? "#f97316"
-                                          : "linear-gradient(135deg, #f59e0b, #ea580c)",
+                                          ? "var(--accent-amber)"
+                                          : "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                                         color: "#ffffff",
                                         padding: "0.3rem 0.65rem",
                                         borderRadius: "7px",
@@ -6330,14 +6334,14 @@ export function AdminPortal({
                                                 alignItems: "center",
                                                 justifyContent: "space-between",
                                                 padding: "0.4rem 0.65rem",
-                                                background: "rgba(245, 158, 11, 0.1)",
-                                                border: "1px solid rgba(245, 158, 11, 0.25)",
+                                                background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+                                                border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                                                 borderRadius: "7px",
                                               }}
                                             >
                                               <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                                                <ChefHat size={15} color="#f59e0b" />
-                                                <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "#f59e0b", letterSpacing: "0.02em" }}>
+                                                <ChefHat size={15} color="var(--accent-amber)" />
+                                                <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "var(--accent-amber)", letterSpacing: "0.02em" }}>
                                                   🍳 KITCHEN KOT ({activeKotModalTable.kitchenKotNumber || (activeKotModalTable.kotId ? `KOT-${activeKotModalTable.kotId}` : "KOT")})
                                                 </span>
                                               </div>
@@ -6363,7 +6367,7 @@ export function AdminPortal({
                                                     border: isReady
                                                       ? "1px solid rgba(16, 185, 129, 0.4)"
                                                       : isCooking
-                                                        ? "1px solid rgba(234, 88, 12, 0.4)"
+                                                        ? "1px solid color-mix(in srgb, var(--accent-saffron) 40%, transparent)"
                                                         : "1px solid var(--border-subtle)",
                                                     gap: "0.75rem",
                                                   }}
@@ -6371,9 +6375,9 @@ export function AdminPortal({
                                                   <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
                                                     <span
                                                       style={{
-                                                        background: "rgba(245, 158, 11, 0.16)",
-                                                        border: "1px solid rgba(245, 158, 11, 0.4)",
-                                                        color: "var(--accent-amber-light, #f59e0b)",
+                                                        background: "color-mix(in srgb, var(--accent-amber) 16%, transparent)",
+                                                        border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
+                                                        color: "var(--accent-amber-light, var(--accent-amber))",
                                                         padding: "2px 7px",
                                                         borderRadius: "5px",
                                                         fontWeight: 800,
@@ -6424,9 +6428,9 @@ export function AdminPortal({
                                                       borderRadius: "6px",
                                                       flexShrink: 0,
                                                       cursor: onUpdateItemKotStatus ? "pointer" : "default",
-                                                      background: isReady ? "rgba(16, 185, 129, 0.18)" : isCooking ? "rgba(234, 88, 12, 0.18)" : "rgba(245, 158, 11, 0.18)",
-                                                      border: isReady ? "1px solid rgba(16, 185, 129, 0.4)" : isCooking ? "1px solid rgba(234, 88, 12, 0.4)" : "1px solid rgba(245, 158, 11, 0.4)",
-                                                      color: isReady ? "#10b981" : isCooking ? "#ea580c" : "#f59e0b",
+                                                      background: isReady ? "rgba(16, 185, 129, 0.18)" : isCooking ? "color-mix(in srgb, var(--accent-saffron) 18%, transparent)" : "color-mix(in srgb, var(--accent-amber) 18%, transparent)",
+                                                      border: isReady ? "1px solid rgba(16, 185, 129, 0.4)" : isCooking ? "1px solid color-mix(in srgb, var(--accent-saffron) 40%, transparent)" : "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
+                                                      color: isReady ? "#10b981" : isCooking ? "var(--accent-saffron)" : "var(--accent-amber)",
                                                       transition: "all 0.15s ease",
                                                     }}
                                                   >
@@ -6607,7 +6611,7 @@ export function AdminPortal({
                                         style={{
                                           padding: "0.55rem 0.9rem",
                                           borderRadius: "7px",
-                                          background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                          background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber))",
                                           border: "none",
                                           color: "#ffffff",
                                           fontWeight: 800,
@@ -6616,7 +6620,7 @@ export function AdminPortal({
                                           display: "flex",
                                           alignItems: "center",
                                           gap: "0.35rem",
-                                          boxShadow: "0 3px 10px rgba(245, 158, 11, 0.25)",
+                                          boxShadow: "0 3px 10px color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                                         }}
                                         title="Mark only kitchen food items as ready"
                                       >
@@ -6931,7 +6935,7 @@ export function AdminPortal({
                   marginBottom: "5px",
                 }}
               >
-                Dish Name <span style={{ color: "#ea580c" }}>*</span>
+                Dish Name <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -6966,7 +6970,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Category <span style={{ color: "#ea580c" }}>*</span>
+                  Category <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 <CustomCreatableDropdown
                   value={itemForm.category}
@@ -6993,7 +6997,7 @@ export function AdminPortal({
                   }}
                 >
                   Price in Rupees (₹){" "}
-                  <span style={{ color: "#ea580c" }}>*</span>
+                  <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 <input
                   type="number"
@@ -7033,7 +7037,7 @@ export function AdminPortal({
                     marginBottom: "5px",
                   }}
                 >
-                  Dietary Type <span style={{ color: "#ea580c" }}>*</span>
+                  Dietary Type <span style={{ color: "var(--accent-saffron)" }}>*</span>
                 </label>
                 <select
                   value={itemForm.isVeg ? "veg" : "non-veg"}
@@ -7316,7 +7320,7 @@ export function AdminPortal({
             {/* INGREDIENTS & INVENTORY BREAKDOWN (RECIPE) */}
             <div
               style={{
-                background: "rgba(245, 158, 11, 0.03)",
+                background: "color-mix(in srgb, var(--accent-amber) 3%, transparent)",
                 border: "1.5px solid var(--border-subtle)",
                 borderRadius: "10px",
                 padding: "0.9rem",
@@ -7344,7 +7348,7 @@ export function AdminPortal({
                       style={{
                         fontSize: "0.68rem",
                         fontWeight: 800,
-                        background: "rgba(245, 158, 11, 0.15)",
+                        background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
                         color: "var(--accent-amber-light)",
                         padding: "2px 7px",
                         borderRadius: "10px",
@@ -7391,8 +7395,8 @@ export function AdminPortal({
                       alignItems: "center",
                       gap: "0.3rem",
                       padding: "0.3rem 0.65rem",
-                      background: "rgba(245, 158, 11, 0.15)",
-                      border: "1px solid rgba(245, 158, 11, 0.4)",
+                      background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                       color: "var(--accent-amber-light)",
                       borderRadius: "6px",
                       fontSize: "0.74rem",
@@ -7582,14 +7586,14 @@ export function AdminPortal({
                 style={{
                   flex: 2,
                   padding: "0.7rem",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontSize: "0.88rem",
                   fontWeight: 800,
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                  boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
                 }}
               >
                 {isImageUploading
@@ -7685,7 +7689,7 @@ export function AdminPortal({
                 }}
               >
                 Table Name / Identifier{" "}
-                <span style={{ color: "#ea580c" }}>*</span>
+                <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -7720,7 +7724,7 @@ export function AdminPortal({
                 }}
               >
                 Dining Section / Area{" "}
-                <span style={{ color: "#ea580c" }}>*</span>
+                <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <CustomCreatableDropdown
                 value={tableForm.section}
@@ -7745,7 +7749,7 @@ export function AdminPortal({
                 }}
               >
                 Chairs / Seating Capacity (Persons){" "}
-                <span style={{ color: "#ea580c" }}>*</span>
+                <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <div className="responsive-choice-grid" style={{ gap: "0.5rem", marginBottom: "0.6rem" }}>
                 {[2, 4, 6, 8, 10].map((chairCount) => {
@@ -7761,16 +7765,16 @@ export function AdminPortal({
                         padding: "0.55rem 0.3rem",
                         borderRadius: "8px",
                         background: isSelected
-                          ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                          ? "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))"
                           : "var(--bg-tertiary)",
                         color: isSelected ? "#ffffff" : "var(--text-main)",
                         fontWeight: 800,
                         fontSize: "0.82rem",
                         border: isSelected
-                          ? "1.5px solid #ea580c"
+                          ? "1.5px solid var(--accent-saffron)"
                           : "1.5px solid var(--border-subtle)",
                         boxShadow: isSelected
-                          ? "0 3px 10px rgba(234, 88, 12, 0.35)"
+                          ? "0 3px 10px color-mix(in srgb, var(--accent-saffron) 35%, transparent)"
                           : "none",
                         cursor: "pointer",
                         transition: "all 0.15s ease",
@@ -7893,14 +7897,14 @@ export function AdminPortal({
                 style={{
                   flex: 2,
                   padding: "0.7rem",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontSize: "0.88rem",
                   fontWeight: 800,
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                  boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
                 }}
               >
                 {editingTable ? "Update Table Chairs" : "Add Table"}
@@ -7994,7 +7998,7 @@ export function AdminPortal({
                   marginBottom: "5px",
                 }}
               >
-                Person Full Name <span style={{ color: "#ea580c" }}>*</span>
+                Person Full Name <span style={{ color: "var(--accent-saffron)" }}>*</span>
               </label>
               <input
                 type="text"
@@ -8169,14 +8173,14 @@ export function AdminPortal({
                 style={{
                   flex: 2,
                   padding: "0.7rem",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontSize: "0.88rem",
                   fontWeight: 800,
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                  boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
                 }}
               >
                 {editingStaff ? "Save Changes" : "Add Person"}
@@ -8454,7 +8458,7 @@ export function AdminPortal({
                 margin: "0.75rem 0",
               }}
             >
-              <div style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px", color: "#ea580c" }}>
+              <div style={{ fontSize: "1.1rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--accent-saffron)" }}>
                 {restaurantSettings?.restaurantName || "THE RUSTIC SPIN"}
               </div>
               <div style={{ fontSize: "0.78rem", color: "#64748b", margin: "0.2rem 0 0.8rem" }}>
@@ -8479,7 +8483,7 @@ export function AdminPortal({
                 <span
                   style={{
                     display: "inline-block",
-                    background: "#ea580c",
+                    background: "var(--accent-saffron)",
                     color: "#ffffff",
                     fontSize: "0.85rem",
                     fontWeight: 800,
@@ -8555,13 +8559,13 @@ export function AdminPortal({
                       <style>
                         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 40px 20px; background: #fff; color: #111; }
                         .card { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 32px 24px; max-width: 360px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-                        .rest-name { font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; color: #ea580c; }
+                        .rest-name { font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; color: var(--accent-saffron); }
                         .tagline { font-size: 13px; color: #64748b; margin-bottom: 20px; }
                         .qr-box { margin: 16px auto; }
                         .qr-box img { width: 230px; height: 230px; display: block; margin: 0 auto; }
-                        .table-badge { display: inline-block; background: #ea580c; color: #fff; font-size: 16px; font-weight: 800; padding: 6px 20px; border-radius: 20px; margin-top: 14px; text-transform: uppercase; }
+                        .table-badge { display: inline-block; background: var(--accent-saffron); color: #fff; font-size: 16px; font-weight: 800; padding: 6px 20px; border-radius: 20px; margin-top: 14px; text-transform: uppercase; }
                         .instruction { font-size: 13px; font-weight: 600; color: #475569; margin-top: 14px; line-height: 1.4; }
-                        .instruction span { color: #ea580c; font-weight: 700; }
+                        .instruction span { color: var(--accent-saffron); font-weight: 700; }
                         @media print { body { padding: 0; } .card { border: 2px solid #000; box-shadow: none; } }
                       </style>
                     </head>
@@ -8587,14 +8591,14 @@ export function AdminPortal({
                   justifyContent: "center",
                   gap: "0.45rem",
                   padding: "0.65rem 1rem",
-                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   color: "#ffffff",
                   borderRadius: "8px",
                   fontWeight: 800,
                   fontSize: "0.82rem",
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 4px 12px rgba(249, 115, 22, 0.3)",
+                  boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                 }}
               >
                 <Printer size={15} />
@@ -8660,7 +8664,7 @@ export function AdminPortal({
             padding: "10px 18px",
             borderRadius: "8px",
             boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
-            border: "1.5px solid rgba(245, 158, 11, 0.6)",
+            border: "1.5px solid color-mix(in srgb, var(--accent-amber) 60%, transparent)",
             fontSize: "13px",
             fontWeight: 700,
             display: "flex",

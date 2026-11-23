@@ -248,11 +248,11 @@ const INITIAL_SEED_CUSTOMERS = [
 ];
 
 const TIER_THEMES = {
-  all: { text: "#ea580c", background: "rgba(234, 88, 12, 0.1)", border: "rgba(234, 88, 12, 0.3)", activeBg: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" },
+  all: { text: "var(--accent-saffron)", background: "color-mix(in srgb, var(--accent-saffron) 10%, transparent)", border: "color-mix(in srgb, var(--accent-saffron) 30%, transparent)", activeBg: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)" },
   vip: { text: "#a855f7", background: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.35)", activeBg: "linear-gradient(135deg, #a855f7 0%, #9333ea 100%)" },
   regular: { text: "#16a34a", background: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.3)", activeBg: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)" },
   new: { text: "#2563eb", background: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.3)", activeBg: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" },
-  occasional: { text: "#d97706", background: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.35)", activeBg: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" },
+  occasional: { text: "var(--accent-amber)", background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)", border: "color-mix(in srgb, var(--accent-amber) 35%, transparent)", activeBg: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)" },
 };
 
 function getStoredCustomers() {
@@ -628,9 +628,9 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
     if (t === "occasional") {
       return {
         label: "Occasional",
-        color: "#fbbf24",
-        bg: "rgba(245, 158, 11, 0.15)",
-        border: "rgba(245, 158, 11, 0.35)",
+        color: "var(--accent-amber-light)",
+        bg: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+        border: "color-mix(in srgb, var(--accent-amber) 35%, transparent)",
         icon: Clock,
       };
     }
@@ -669,12 +669,12 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               width: "48px",
               height: "48px",
               borderRadius: "12px",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              boxShadow: "0 4px 12px rgba(234, 88, 12, 0.3)",
+              boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
               flexShrink: 0,
             }}
           >
@@ -718,12 +718,12 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               padding: "0 1.25rem",
               borderRadius: "10px",
               border: "none",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               color: "#fff",
               fontSize: "0.88rem",
               fontWeight: 600,
               cursor: "pointer",
-              boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
+              boxShadow: "0 3px 10px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
               transition: "transform 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
@@ -762,11 +762,11 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
               width: "40px",
               height: "40px",
               borderRadius: "50%",
-              background: "rgba(249, 115, 22, 0.12)",
+              background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#ea580c",
+              color: "var(--accent-saffron)",
               flexShrink: 0,
             }}
           >
@@ -1242,7 +1242,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                       color: "var(--text-muted)",
                     }}
                   >
-                    <Users size={36} color="#ea580c" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
+                    <Users size={36} color="var(--accent-saffron)" style={{ margin: "0 auto 0.75rem", display: "block", opacity: 0.8 }} />
                     <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-main)", marginBottom: "0.25rem" }}>
                       No customers found
                     </div>
@@ -1284,7 +1284,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                           style={{
                             fontFamily: "monospace",
                             letterSpacing: "-0.01em",
-                            color: "#ea580c",
+                            color: "var(--accent-saffron)",
                           }}
                         >
                           {custId}
@@ -1299,8 +1299,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                               width: "22px",
                               height: "22px",
                               borderRadius: "50%",
-                              background: String(c.tier || "").toLowerCase() === "vip" ? "rgba(168, 85, 247, 0.2)" : "rgba(249, 115, 22, 0.15)",
-                              color: String(c.tier || "").toLowerCase() === "vip" ? "#c084fc" : "#ea580c",
+                              background: String(c.tier || "").toLowerCase() === "vip" ? "rgba(168, 85, 247, 0.2)" : "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                              color: String(c.tier || "").toLowerCase() === "vip" ? "#c084fc" : "var(--accent-saffron)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -1338,7 +1338,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          <MapPin size={12} color="#ea580c" style={{ flexShrink: 0 }} />
+                          <MapPin size={12} color="var(--accent-saffron)" style={{ flexShrink: 0 }} />
                           <span>{c.address ? c.address.split(",")[0].trim() : "Hyderabad"}</span>
                         </span>
                       </td>
@@ -1348,8 +1348,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                         <span
                           style={{
                             display: "inline-block",
-                            background: "rgba(249, 115, 22, 0.12)",
-                            color: "#ea580c",
+                            background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+                            color: "var(--accent-saffron)",
                             padding: "0.15rem 0.45rem",
                             borderRadius: "6px",
                             fontSize: "0.7rem",
@@ -1409,8 +1409,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                               flexShrink: 0,
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor = "#ea580c";
-                              e.currentTarget.style.color = "#ea580c";
+                              e.currentTarget.style.borderColor = "var(--accent-saffron)";
+                              e.currentTarget.style.color = "var(--accent-saffron)";
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.borderColor = "var(--border-card)";
@@ -1474,8 +1474,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                 height: "30px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card)",
-                                background: isMenuOpen ? "rgba(234, 88, 12, 0.15)" : "rgba(255, 255, 255, 0.04)",
-                                color: isMenuOpen ? "#ea580c" : "var(--text-main)",
+                                background: isMenuOpen ? "color-mix(in srgb, var(--accent-saffron) 15%, transparent)" : "rgba(255, 255, 255, 0.04)",
+                                color: isMenuOpen ? "var(--accent-saffron)" : "var(--text-main)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -1532,7 +1532,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)")}
                                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                                 >
-                                  <FileText size={14} color="#ea580c" />
+                                  <FileText size={14} color="var(--accent-saffron)" />
                                   <span>View Order History</span>
                                 </button>
 
@@ -1680,8 +1680,8 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                         height: "30px",
                         padding: "0 0.45rem",
                         borderRadius: "8px",
-                        border: pNum === safePage ? "1px solid #ea580c" : "1px solid var(--border-card)",
-                        background: pNum === safePage ? "#ea580c" : "var(--bg-card)",
+                        border: pNum === safePage ? "1px solid var(--accent-saffron)" : "1px solid var(--border-card)",
+                        background: pNum === safePage ? "var(--accent-saffron)" : "var(--bg-card)",
                         color: pNum === safePage ? "#ffffff" : "var(--text-main)",
                         fontSize: "0.78rem",
                         fontWeight: 700,
@@ -1749,7 +1749,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             {/* Modal Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.85rem", borderBottom: "1px solid var(--border-card)", paddingBottom: "0.65rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(249, 115, 22, 0.15)", color: "#ea580c", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)", color: "var(--accent-saffron)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {editingCustomer ? <Edit2 size={16} /> : <UserPlus size={16} />}
                 </div>
                 <div>
@@ -1904,12 +1904,12 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     padding: "0.48rem 1.25rem",
                     borderRadius: "7px",
                     border: "none",
-                    background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                    background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                     color: "#ffffff",
                     fontWeight: 700,
                     cursor: "pointer",
                     fontSize: "0.8rem",
-                    boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
+                    boxShadow: "0 3px 10px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                   }}
                 >
                   {isSaving ? "Saving..." : editingCustomer ? "Update Customer" : "Save Customer"}
@@ -1959,7 +1959,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     width: "48px",
                     height: "48px",
                     borderRadius: "50%",
-                    background: String(viewingCustomer.tier || "").toLowerCase() === "vip" ? "linear-gradient(135deg, #a855f7, #7e22ce)" : "linear-gradient(135deg, #f97316, #ea580c)",
+                    background: String(viewingCustomer.tier || "").toLowerCase() === "vip" ? "linear-gradient(135deg, #a855f7, #7e22ce)" : "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                     color: "#fff",
                     display: "flex",
                     alignItems: "center",
@@ -2001,7 +2001,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                     })()}
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <span style={{ fontFamily: "monospace", color: "#ea580c" }}>{viewingCustomer.customerId || viewingCustomer.id}</span>
+                    <span style={{ fontFamily: "monospace", color: "var(--accent-saffron)" }}>{viewingCustomer.customerId || viewingCustomer.id}</span>
                     <span>•</span>
                     <span>Last visit: {viewingCustomer.lastVisit || "Recent"}</span>
                   </div>
@@ -2021,7 +2021,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.55rem", marginBottom: "1.25rem" }}>
               <div style={{ background: "var(--bg-main)", padding: "0.65rem 0.5rem", borderRadius: "10px", textAlign: "center", border: "1px solid var(--border-card)" }}>
                 <div style={{ fontSize: "0.66rem", color: "var(--text-muted)", fontWeight: 600 }}>Total Visits</div>
-                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ea580c", marginTop: "2px" }}>
+                <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--accent-saffron)", marginTop: "2px" }}>
                   {viewingCustomer.visitsCount || 1}
                 </div>
               </div>
@@ -2048,23 +2048,23 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
             {/* Contact Details & Dining Preferences */}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", background: "var(--bg-main)", padding: "0.9rem", borderRadius: "10px", border: "1px solid var(--border-card)", marginBottom: "1.25rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
-                <Phone size={14} color="#ea580c" />
+                <Phone size={14} color="var(--accent-saffron)" />
                 <span style={{ color: "var(--text-muted)", width: "90px" }}>Phone:</span>
                 <span style={{ fontWeight: 600, color: "var(--text-main)" }}>{viewingCustomer.phone || "—"}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
-                <Mail size={14} color="#ea580c" />
+                <Mail size={14} color="var(--accent-saffron)" />
                 <span style={{ color: "var(--text-muted)", width: "90px" }}>Email:</span>
                 <span style={{ color: "var(--text-main)" }}>{viewingCustomer.email || "No email on file"}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
-                <MapPin size={14} color="#ea580c" />
+                <MapPin size={14} color="var(--accent-saffron)" />
                 <span style={{ color: "var(--text-muted)", width: "90px" }}>Location:</span>
                 <span style={{ color: "var(--text-main)" }}>{viewingCustomer.address || "Hyderabad"}</span>
               </div>
               {viewingCustomer.birthday && (
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.82rem" }}>
-                  <Cake size={14} color="#f59e0b" />
+                  <Cake size={14} color="var(--accent-amber)" />
                   <span style={{ color: "var(--text-muted)", width: "90px" }}>Birthday:</span>
                   <span style={{ color: "var(--text-main)" }}>{viewingCustomer.birthday}</span>
                 </div>
@@ -2111,7 +2111,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
                       {act.type === "Dine-In" ? (
-                        <Utensils size={14} color="#ea580c" />
+                        <Utensils size={14} color="var(--accent-saffron)" />
                       ) : (
                         <ShoppingBag size={14} color="#2563eb" />
                       )}
@@ -2161,7 +2161,7 @@ export function CustomersManagement({ isLight = false, showToast = alert }) {
                   padding: "0.5rem 1.2rem",
                   borderRadius: "8px",
                   border: "none",
-                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   color: "#fff",
                   fontSize: "0.82rem",
                   fontWeight: 700,

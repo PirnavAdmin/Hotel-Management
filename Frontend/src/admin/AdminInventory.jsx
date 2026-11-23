@@ -1523,7 +1523,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
         message: `"${trimmedName}" is already in your inventory as "${duplicate.name}". If restocking, use the Restock button or edit the existing item to add more quantity. Duplicate ingredients cannot be added multiple times.`,
         confirmLabel: "OK",
         cancelLabel: "Close",
-        icon: <AlertTriangle size={22} color="#f59e0b" />,
+        icon: <AlertTriangle size={22} color="var(--accent-amber)" />,
         onConfirm: () => {},
       });
       return;
@@ -1778,11 +1778,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 width: "40px",
                 height: "40px",
                 borderRadius: "12px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
               }}
             >
               <Package size={19} color="#ffffff" />
@@ -1803,8 +1803,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 </h2>
                 <span
                   style={{
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                     color: "var(--accent-amber-light)",
                     fontSize: "0.75rem",
                     fontWeight: 700,
@@ -1866,7 +1866,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               onClick={openNewItemModal}
               style={{
                 height: "36px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "9px",
@@ -1877,7 +1877,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                 alignItems: "center",
                 gap: "0.45rem",
                 cursor: "pointer",
-                boxShadow: "0 3px 12px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 whiteSpace: "nowrap",
                 transition: "all 0.15s ease",
               }}
@@ -2060,7 +2060,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               label: "Stock Expenditure",
               value: formatCurrency(totalStockExpenditure),
               status: "expenditure",
-              color: "#f59e0b",
+              color: "var(--accent-amber)",
               icon: IndianRupee,
             },
             {
@@ -2183,7 +2183,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               minWidth: 0,
             }}
           >
-            <ClipboardList size={17} color="#f59e0b" />
+            <ClipboardList size={17} color="var(--accent-amber)" />
             <div>
               <div
                 style={{
@@ -2242,9 +2242,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
               style={{
                 height: "36px",
                 padding: "0 0.75rem",
-                background: "rgba(245, 158, 11, 0.14)",
+                background: "color-mix(in srgb, var(--accent-amber) 14%, transparent)",
                 color: "var(--accent-amber-light)",
-                border: "1px solid rgba(245, 158, 11, 0.35)",
+                border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 borderRadius: "7px",
                 fontWeight: 700,
                 fontSize: "0.75rem",
@@ -2401,7 +2401,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                           color: isOutOfStock
                             ? "#ef4444"
                             : isLowStock
-                              ? "#f59e0b"
+                              ? "var(--accent-amber)"
                               : "#10b981",
                           fontSize: "0.74rem",
                           whiteSpace: "nowrap",
@@ -2437,7 +2437,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                         return (
                           <span
                             style={{
-                              color: "#f59e0b",
+                              color: "var(--accent-amber)",
                               fontWeight: 800,
                               fontSize: "0.74rem",
                             }}
@@ -2609,9 +2609,9 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                             setConsumeReason("Kitchen Usage");
                           }}
                           style={{
-                            background: "rgba(245, 158, 11, 0.14)",
-                            border: "1px solid rgba(245, 158, 11, 0.38)",
-                            color: "#f59e0b",
+                            background: "color-mix(in srgb, var(--accent-amber) 14%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--accent-amber) 38%, transparent)",
+                            color: "var(--accent-amber)",
                             borderRadius: "6px",
                             padding: "3px 7px",
                             fontSize: "0.72rem",
@@ -3223,7 +3223,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     border: 0,
                     borderRadius: "8px",
                     color: "#fff",
-                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                    background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                     fontWeight: 800,
                     fontSize: "0.76rem",
                     cursor: "pointer",
@@ -3282,7 +3282,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   gap: "0.4rem",
                 }}
               >
-                <MinusCircle size={18} color="#f59e0b" />
+                <MinusCircle size={18} color="var(--accent-amber)" />
                 Record Used: {consumeItem.name}
               </h3>
               <button
@@ -3319,7 +3319,7 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                     color:
                       Number(consumeItem.stock || 0) <=
                       Number(consumeItem.minThreshold || 0)
-                        ? "#f59e0b"
+                        ? "var(--accent-amber)"
                         : "#10b981",
                   }}
                 >
@@ -3473,11 +3473,11 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   borderRadius: "8px",
                   color: "#000000",
                   background:
-                    "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                    "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   fontWeight: 800,
                   fontSize: "0.72rem",
                   cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(245, 158, 11, 0.35)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 }}
               >
                 Record Used
@@ -3784,8 +3784,8 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   style={{
                     padding: "0.45rem 0.75rem",
                     borderRadius: "8px",
-                    background: "rgba(245, 158, 11, 0.1)",
-                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                    background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 25%, transparent)",
                     fontSize: "0.76rem",
                     color: "var(--accent-amber-light)",
                     display: "flex",
@@ -4089,14 +4089,14 @@ export function AdminInventory({ menuItems = [], onUpdateMenuItem, inventory: sh
                   style={{
                     flex: 2,
                     padding: "0.7rem",
-                    background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                    background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                     border: "none",
                     borderRadius: "8px",
                     color: "#ffffff",
                     fontSize: "0.88rem",
                     fontWeight: 800,
                     cursor: "pointer",
-                    boxShadow: "0 3px 12px rgba(234, 88, 12, 0.4)",
+                    boxShadow: "0 3px 12px color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
                   }}
                 >
                   {editingItemId !== null ? "Save Changes" : "Save Ingredient"}

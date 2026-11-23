@@ -547,7 +547,7 @@ export function TrialBalanceView({
                               : row.group === "Income"
                               ? "rgba(16, 185, 129, 0.12)"
                               : row.group === "Expenses"
-                              ? "rgba(245, 158, 11, 0.12)"
+                              ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)"
                               : "rgba(168, 85, 247, 0.12)",
                           color:
                             row.group === "Assets"
@@ -557,7 +557,7 @@ export function TrialBalanceView({
                               : row.group === "Income"
                               ? "#10b981"
                               : row.group === "Expenses"
-                              ? "#f59e0b"
+                              ? "var(--accent-amber)"
                               : "#a855f7",
                         }}
                       >

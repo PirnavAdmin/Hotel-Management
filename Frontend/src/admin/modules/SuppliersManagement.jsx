@@ -163,13 +163,13 @@ export function SuppliersManagement({ isLight = false, showToast = alert }) {
                 alignItems: 'center',
                 gap: '0.4rem',
                 padding: '0.55rem 1rem',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)',
                 border: 'none',
                 borderRadius: 'var(--radius-md)',
                 color: '#ffffff',
                 cursor: 'pointer',
                 fontWeight: 700,
-                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+                boxShadow: '0 2px 6px color-mix(in srgb, var(--accent-amber) 30%, transparent)',
               }}
             >
               <Plus size={16} /> Add Supplier
@@ -183,13 +183,13 @@ export function SuppliersManagement({ isLight = false, showToast = alert }) {
                 alignItems: 'center',
                 gap: '0.4rem',
                 padding: '0.55rem 1rem',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                background: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)',
                 border: 'none',
                 borderRadius: 'var(--radius-md)',
                 color: '#ffffff',
                 cursor: 'pointer',
                 fontWeight: 700,
-                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+                boxShadow: '0 2px 6px color-mix(in srgb, var(--accent-amber) 30%, transparent)',
               }}
             >
               <Plus size={16} /> Create PO
@@ -324,9 +324,9 @@ export function SuppliersManagement({ isLight = false, showToast = alert }) {
                             borderRadius: '6px',
                             fontSize: '0.72rem',
                             fontWeight: 800,
-                            background: isReceived ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                            color: isReceived ? '#10b981' : '#f59e0b',
-                            border: isReceived ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+                            background: isReceived ? 'rgba(16, 185, 129, 0.15)' : 'color-mix(in srgb, var(--accent-amber) 15%, transparent)',
+                            color: isReceived ? '#10b981' : 'var(--accent-amber)',
+                            border: isReceived ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)',
                           }}
                         >
                           {po.status}
@@ -416,7 +416,7 @@ export function SuppliersManagement({ isLight = false, showToast = alert }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-amber))', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {saving ? 'Saving...' : 'Register'}
                 </button>
@@ -468,7 +468,7 @@ export function SuppliersManagement({ isLight = false, showToast = alert }) {
                 <button
                   type="submit"
                   disabled={saving}
-                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '0.55rem 1.25rem', background: 'linear-gradient(135deg, var(--accent-amber), var(--accent-amber))', border: 'none', borderRadius: 'var(--radius-md)', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {saving ? 'Creating...' : 'Generate PO'}
                 </button>

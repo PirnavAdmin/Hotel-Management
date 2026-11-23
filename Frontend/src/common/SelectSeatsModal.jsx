@@ -33,7 +33,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
         filter: isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
@@ -47,7 +47,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
         e.currentTarget.style.filter = isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
@@ -58,8 +58,8 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
             <stop offset="100%" stopColor="#6e3c21" />
           </linearGradient>
           <linearGradient id={gradSelId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ea580c" />
+            <stop offset="0%" stopColor="var(--accent-amber)" />
+            <stop offset="100%" stopColor="var(--accent-saffron)" />
           </linearGradient>
         </defs>
 
@@ -73,7 +73,7 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
         {/* Seat Cushion Top */}
         <path
           d="M 12 44 Q 30 41 48 44 L 51 56 Q 30 59 9 56 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
+          fill={isSelected ? "var(--accent-saffron)" : isOccupied ? "#475569" : "#10b981"}
         />
         <ellipse
           cx="30"
@@ -128,12 +128,12 @@ export function TopDiningChair({ seat, isSelected, isOccupied, onToggle, isLight
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             border: "2px solid #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 12px rgba(245, 158, 11, 0.95)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--accent-amber) 95%, transparent)",
             zIndex: 10,
           }}
         >
@@ -211,7 +211,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
         filter: isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
@@ -225,7 +225,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
         e.currentTarget.style.filter = isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
@@ -236,8 +236,8 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
             <stop offset="100%" stopColor="#67391f" />
           </linearGradient>
           <linearGradient id={gradSelId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ea580c" />
+            <stop offset="0%" stopColor="var(--accent-amber)" />
+            <stop offset="100%" stopColor="var(--accent-saffron)" />
           </linearGradient>
         </defs>
 
@@ -253,7 +253,7 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
         {/* Seat cushion underside */}
         <path
           d="M 10 50 Q 33 46 56 50 L 54 62 Q 33 65 12 62 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
+          fill={isSelected ? "var(--accent-saffron)" : isOccupied ? "#475569" : "#10b981"}
         />
 
         {/* Backrest viewed from rear */}
@@ -295,12 +295,12 @@ export function BottomDiningChair({ seat, isSelected, isOccupied, onToggle, isLi
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             border: "2px solid #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 12px rgba(245, 158, 11, 0.95)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--accent-amber) 95%, transparent)",
             zIndex: 10,
           }}
         >
@@ -379,7 +379,7 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
         filter: isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))",
       }}
       onMouseEnter={(e) => {
@@ -393,7 +393,7 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
         e.currentTarget.style.filter = isOccupied
           ? "grayscale(0.7) opacity(0.4)"
           : isSelected
-          ? "drop-shadow(0 0 16px rgba(245, 158, 11, 0.95)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
+          ? "drop-shadow(0 0 16px color-mix(in srgb, var(--accent-amber) 95%, transparent)) drop-shadow(0 6px 12px rgba(0,0,0,0.5))"
           : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.12))";
       }}
     >
@@ -411,8 +411,8 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
             <stop offset="100%" stopColor="#67391f" />
           </linearGradient>
           <linearGradient id={gradSelId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#ea580c" />
+            <stop offset="0%" stopColor="var(--accent-amber)" />
+            <stop offset="100%" stopColor="var(--accent-saffron)" />
           </linearGradient>
         </defs>
 
@@ -426,7 +426,7 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
         {/* Seat Cushion */}
         <path
           d="M 14 38 Q 32 37 46 41 L 43 51 Q 30 48 13 47 Z"
-          fill={isSelected ? "#ea580c" : isOccupied ? "#475569" : "#10b981"}
+          fill={isSelected ? "var(--accent-saffron)" : isOccupied ? "#475569" : "#10b981"}
         />
 
         {/* Backrest on the side */}
@@ -453,12 +453,12 @@ export function SideDiningChair({ seat, side, isSelected, isOccupied, onToggle, 
             width: "22px",
             height: "22px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+            background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
             border: "2px solid #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            boxShadow: "0 0 12px rgba(245, 158, 11, 0.95)",
+            boxShadow: "0 0 12px color-mix(in srgb, var(--accent-amber) 95%, transparent)",
             zIndex: 10,
           }}
         >
@@ -1168,8 +1168,8 @@ export function SelectSeatsModal({
                 width: "44px",
                 height: "44px",
                 borderRadius: "10px",
-                background: isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.12)",
-                border: isLight ? "1px solid rgba(217, 119, 6, 0.35)" : "1px solid rgba(245, 158, 11, 0.35)",
+                background: isLight ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+                border: isLight ? "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)" : "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1239,8 +1239,8 @@ export function SelectSeatsModal({
                 padding: "0.42rem 0.85rem",
                 borderRadius: "8px",
                 background: isEditingSeats
-                  ? (isLight ? "rgba(217, 119, 6, 0.18)" : "rgba(245, 158, 11, 0.25)")
-                  : (isLight ? "rgba(217, 119, 6, 0.08)" : "rgba(245, 158, 11, 0.1)"),
+                  ? (isLight ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)" : "color-mix(in srgb, var(--accent-amber) 25%, transparent)")
+                  : (isLight ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)" : "color-mix(in srgb, var(--accent-amber) 10%, transparent)"),
                 border: isEditingSeats
                   ? "1.5px solid var(--accent-amber)"
                   : "1px solid var(--border-focus)",
@@ -1294,8 +1294,8 @@ export function SelectSeatsModal({
         {isEditingSeats && (
           <div
             style={{
-              background: isLight ? "rgba(217, 119, 6, 0.06)" : "rgba(245, 158, 11, 0.08)",
-              border: isLight ? "1.5px solid rgba(217, 119, 6, 0.3)" : "1.5px solid rgba(245, 158, 11, 0.45)",
+              background: isLight ? "color-mix(in srgb, var(--accent-amber) 6%, transparent)" : "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+              border: isLight ? "1.5px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)" : "1.5px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)",
               borderRadius: "12px",
               padding: "0.75rem 1rem",
               display: "flex",
@@ -1340,7 +1340,7 @@ export function SelectSeatsModal({
                     width: "28px",
                     height: "28px",
                     borderRadius: "6px",
-                    background: capacity <= 1 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
+                    background: capacity <= 1 ? "transparent" : (isLight ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "color-mix(in srgb, var(--accent-amber) 18%, transparent)"),
                     border: "none",
                     color: capacity <= 1 ? "var(--text-dim)" : "var(--accent-amber)",
                     fontWeight: 900,
@@ -1372,7 +1372,7 @@ export function SelectSeatsModal({
                     width: "28px",
                     height: "28px",
                     borderRadius: "6px",
-                    background: capacity >= 24 ? "transparent" : (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(245, 158, 11, 0.18)"),
+                    background: capacity >= 24 ? "transparent" : (isLight ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)" : "color-mix(in srgb, var(--accent-amber) 18%, transparent)"),
                     border: "none",
                     color: capacity >= 24 ? "var(--text-dim)" : "var(--accent-amber)",
                     fontWeight: 900,
@@ -1715,8 +1715,8 @@ export function SelectSeatsModal({
                         width: "13px",
                         height: "13px",
                         borderRadius: "50%",
-                        background: "#f59e0b",
-                        boxShadow: "0 0 10px #f59e0b",
+                        background: "var(--accent-amber)",
+                        boxShadow: "0 0 10px var(--accent-amber)",
                         display: "inline-block",
                         flexShrink: 0,
                       }}
@@ -1788,13 +1788,13 @@ export function SelectSeatsModal({
               style={{
                 padding: "0.65rem 1.65rem",
                 borderRadius: "10px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                 border: "none",
                 color: "#ffffff",
                 fontSize: "0.88rem",
                 fontWeight: 800,
                 cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.4)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 gap: "0.45rem",

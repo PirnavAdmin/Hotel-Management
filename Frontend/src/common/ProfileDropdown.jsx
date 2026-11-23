@@ -226,19 +226,19 @@ export function ProfileDropdown({
     },
     pos: {
       label: 'POS Billing Operator',
-      badgeBg: 'rgba(245, 158, 11, 0.12)',
-      badgeBorder: 'rgba(245, 158, 11, 0.35)',
+      badgeBg: 'color-mix(in srgb, var(--accent-amber) 12%, transparent)',
+      badgeBorder: 'color-mix(in srgb, var(--accent-amber) 35%, transparent)',
       badgeColor: 'var(--accent-amber)',
-      avatarGradient: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-      avatarGlow: '0 0 12px rgba(245, 158, 11, 0.25)'
+      avatarGradient: 'linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)',
+      avatarGlow: '0 0 12px color-mix(in srgb, var(--accent-amber) 25%, transparent)'
     },
     kot: {
       label: 'Kitchen Head / Chef',
-      badgeBg: 'rgba(234, 88, 12, 0.12)',
-      badgeBorder: 'rgba(234, 88, 12, 0.35)',
-      badgeColor: '#ea580c',
-      avatarGradient: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
-      avatarGlow: '0 0 12px rgba(234, 88, 12, 0.25)'
+      badgeBg: 'color-mix(in srgb, var(--accent-saffron) 12%, transparent)',
+      badgeBorder: 'color-mix(in srgb, var(--accent-saffron) 35%, transparent)',
+      badgeColor: 'var(--accent-saffron)',
+      avatarGradient: 'linear-gradient(135deg, var(--accent-saffron) 0%, var(--accent-amber) 100%)',
+      avatarGlow: '0 0 12px color-mix(in srgb, var(--accent-saffron) 25%, transparent)'
     }
   };
 
@@ -480,7 +480,7 @@ export function ProfileDropdown({
                   width: '100%',
                   padding: '0.6rem 1rem',
                   background: 'var(--surface-tint)',
-                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
+                  border: '1.5px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)',
                   borderRadius: '10px',
                   color: 'var(--accent-amber-light)',
                   fontSize: '0.84rem',
@@ -493,7 +493,7 @@ export function ProfileDropdown({
                   transition: 'all 0.15s ease'
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(245, 158, 11, 0.15)';
+                  e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-amber) 15%, transparent)';
                   e.currentTarget.style.color = 'var(--text-main)';
                 }}
                 onMouseLeave={e => {

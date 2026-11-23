@@ -122,7 +122,7 @@ export function ItemDetailModal({
           maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(245, 158, 11, 0.15)",
+          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px color-mix(in srgb, var(--accent-amber) 15%, transparent)",
           overflow: "hidden",
           animation: "posModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
@@ -252,13 +252,13 @@ export function ItemDetailModal({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "4px",
-                  background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-amber))",
                   color: "#000000",
                   padding: "3px 8px",
                   borderRadius: "6px",
                   fontSize: "0.7rem",
                   fontWeight: 800,
-                  boxShadow: "0 2px 8px rgba(245, 158, 11, 0.4)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                 }}
               >
                 <Sparkles size={11} />
@@ -388,8 +388,8 @@ export function ItemDetailModal({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                     color: "var(--accent-amber)",
-                    background: "rgba(245, 158, 11, 0.12)",
-                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                     padding: "2px 6px",
                     borderRadius: "4px",
                   }}
@@ -552,7 +552,7 @@ export function ItemDetailModal({
                   width: "32px",
                   height: "32px",
                   borderRadius: "6px",
-                  background: "var(--accent-amber, #f59e0b)",
+                  background: "var(--accent-amber, var(--accent-amber))",
                   border: "none",
                   color: "#000000",
                   display: "flex",
@@ -637,7 +637,7 @@ export function ItemDetailModal({
                     onClick={() => handlePresetClick(preset)}
                     style={{
                       background: isSelected
-                        ? "rgba(245, 158, 11, 0.18)"
+                        ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)"
                         : "var(--bg-tertiary)",
                       border: isSelected
                         ? "1px solid var(--accent-amber)"
@@ -730,7 +730,7 @@ export function ItemDetailModal({
                 flex: 2,
                 padding: "0.75rem 1rem",
                 borderRadius: "8px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-amber) 100%)",
                 border: "none",
                 color: "#000000",
                 fontSize: "0.88rem",
@@ -740,7 +740,7 @@ export function ItemDetailModal({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "0.5rem",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                 transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {

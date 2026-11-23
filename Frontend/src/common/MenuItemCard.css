@@ -12,13 +12,13 @@
 }
 .pos-menu-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(245, 158, 11, 0.65);
+  border-color: color-mix(in srgb, var(--accent-amber) 65%, transparent);
   box-shadow: 0 7px 18px rgba(0, 0, 0, 0.24);
 }
 .pos-menu-card.is-unavailable { opacity: 0.58; cursor: not-allowed; border-color: rgba(239, 68, 68, 0.25); box-shadow: none; }
 .pos-menu-card.is-unavailable:hover { transform: none; border-color: rgba(239, 68, 68, 0.35); box-shadow: none; }
 .pos-menu-card.is-unavailable:hover .pos-menu-card-image img { transform: none; }
-.pos-menu-card.has-qty { border: 1.5px solid var(--accent-amber); box-shadow: 0 5px 16px rgba(245, 158, 11, 0.18); }
+.pos-menu-card.has-qty { border: 1.5px solid var(--accent-amber); box-shadow: 0 5px 16px color-mix(in srgb, var(--accent-amber) 18%, transparent); }
 .pos-menu-card-image {
   position: relative;
   flex: 0 0 92px;
@@ -110,8 +110,8 @@
   padding: .25rem .45rem;
   border: 0;
   border-radius: 7px;
-  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-  box-shadow: 0 2px 6px rgba(245, 158, 11, .28);
+  background: linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent-amber) 28%, transparent);
   color: #fff;
   font-size: .72rem;
   font-weight: 800;
@@ -146,7 +146,7 @@
 .pos-menu-chef {
   position: absolute; top: 5px; right: 5px; z-index: 2;
   display: flex; max-width: calc(100% - 10px); align-items: center; justify-content: center;
-  padding: 3px; border-radius: 4px; background: linear-gradient(135deg, #f59e0b, #ea580c);
+  padding: 3px; border-radius: 4px; background: linear-gradient(135deg, var(--accent-amber), var(--accent-saffron));
   box-shadow: 0 2px 5px rgba(0,0,0,.35); color: #fff;
 }
 .pos-menu-time {

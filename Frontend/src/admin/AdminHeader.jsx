@@ -238,30 +238,30 @@ export function AdminHeader({
             100% { transform: translateX(-4%) scaleY(1); opacity: 0.55; }
           }
           @keyframes culinaryFloatA {
-            0% { transform: translateY(0px) rotate(0deg); opacity: 0.50; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35)); }
-            50% { transform: translateY(-8px) rotate(4deg); opacity: 0.85; filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.65)); }
-            100% { transform: translateY(0px) rotate(0deg); opacity: 0.50; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35)); }
+            0% { transform: translateY(0px) rotate(0deg); opacity: 0.50; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-amber) 35%, transparent)); }
+            50% { transform: translateY(-8px) rotate(4deg); opacity: 0.85; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent-amber) 65%, transparent)); }
+            100% { transform: translateY(0px) rotate(0deg); opacity: 0.50; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-amber) 35%, transparent)); }
           }
           @keyframes culinaryFloatB {
-            0% { transform: translateY(0px) rotate(0deg); opacity: 0.45; filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.35)); }
-            50% { transform: translateY(-9px) rotate(-4deg); opacity: 0.80; filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.65)); }
-            100% { transform: translateY(0px) rotate(0deg); opacity: 0.45; filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.35)); }
+            0% { transform: translateY(0px) rotate(0deg); opacity: 0.45; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-amber-light) 35%, transparent)); }
+            50% { transform: translateY(-9px) rotate(-4deg); opacity: 0.80; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent-amber-light) 65%, transparent)); }
+            100% { transform: translateY(0px) rotate(0deg); opacity: 0.45; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-amber-light) 35%, transparent)); }
           }
           @keyframes steamWispRiseA {
             0% { transform: translateY(4px) scale(0.9); opacity: 0; }
-            25% { opacity: 0.70; filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6)); }
-            65% { opacity: 0.50; filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.4)); }
+            25% { opacity: 0.70; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-amber-light) 60%, transparent)); }
+            65% { opacity: 0.50; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent-amber-light) 40%, transparent)); }
             100% { transform: translateY(-16px) scale(1.2); opacity: 0; }
           }
           @keyframes steamWispRiseB {
             0% { transform: translateY(4px) scale(0.85); opacity: 0; }
-            25% { opacity: 0.65; filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6)); }
-            65% { opacity: 0.45; filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.4)); }
+            25% { opacity: 0.65; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-amber) 60%, transparent)); }
+            65% { opacity: 0.45; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent-amber) 40%, transparent)); }
             100% { transform: translateY(-18px) scale(1.25); opacity: 0; }
           }
           @keyframes culinarySparkle {
-            0%, 100% { transform: scale(0.75); opacity: 0.35; filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.5)); }
-            50% { transform: scale(1.35); opacity: 0.95; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)); }
+            0%, 100% { transform: scale(0.75); opacity: 0.35; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent-amber-light) 50%, transparent)); }
+            50% { transform: scale(1.35); opacity: 0.95; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent-amber-light) 90%, transparent)); }
           }
         `}</style>
 
@@ -273,7 +273,7 @@ export function AdminHeader({
             height: "120%",
             left: "10%",
             top: "-10%",
-            background: "radial-gradient(ellipse at center, rgba(245, 158, 11, 0.22) 0%, rgba(234, 88, 12, 0.08) 50%, transparent 75%)",
+            background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--accent-amber) 22%, transparent) 0%, color-mix(in srgb, var(--accent-saffron) 8%, transparent) 50%, transparent 75%)",
             filter: "blur(20px)",
             animation: "culinaryAmbientFlow 14s ease-in-out infinite",
           }}
@@ -285,7 +285,7 @@ export function AdminHeader({
             height: "120%",
             right: "8%",
             bottom: "-10%",
-            background: "radial-gradient(ellipse at center, rgba(251, 191, 36, 0.20) 0%, rgba(245, 158, 11, 0.07) 55%, transparent 80%)",
+            background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--accent-amber-light) 20%, transparent) 0%, color-mix(in srgb, var(--accent-amber) 7%, transparent) 55%, transparent 80%)",
             filter: "blur(22px)",
             animation: "culinaryAmbientFlow 18s ease-in-out infinite reverse",
           }}
@@ -297,7 +297,7 @@ export function AdminHeader({
             position: "absolute",
             left: "17%",
             top: "22px",
-            color: "#fbbf24",
+            color: "var(--accent-amber-light)",
             animation: "culinaryFloatA 12s ease-in-out infinite",
           }}
         >
@@ -329,7 +329,7 @@ export function AdminHeader({
             position: "absolute",
             left: "32%",
             top: "24px",
-            color: "#f59e0b",
+            color: "var(--accent-amber)",
             animation: "culinaryFloatB 11s ease-in-out infinite 1.5s",
           }}
         >
@@ -347,7 +347,7 @@ export function AdminHeader({
             position: "absolute",
             left: "48%",
             top: "22px",
-            color: "#fbbf24",
+            color: "var(--accent-amber-light)",
             animation: "culinaryFloatA 13s ease-in-out infinite 0.7s",
           }}
         >
@@ -363,7 +363,7 @@ export function AdminHeader({
             position: "absolute",
             left: "63%",
             top: "25px",
-            color: "#f59e0b",
+            color: "var(--accent-amber)",
             animation: "culinaryFloatB 10.5s ease-in-out infinite 2s",
           }}
         >
@@ -394,7 +394,7 @@ export function AdminHeader({
             position: "absolute",
             left: "77%",
             top: "23px",
-            color: "#fbbf24",
+            color: "var(--accent-amber-light)",
             animation: "culinaryFloatA 14s ease-in-out infinite 2.5s",
           }}
         >
@@ -409,19 +409,19 @@ export function AdminHeader({
         <div style={{ position: "absolute", left: "10%", top: "32px", color: "#fde047", animation: "culinarySparkle 3.5s ease-in-out infinite" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
-        <div style={{ position: "absolute", left: "26%", top: "16px", color: "#fbbf24", animation: "culinarySparkle 4.2s ease-in-out infinite 1s" }}>
+        <div style={{ position: "absolute", left: "26%", top: "16px", color: "var(--accent-amber-light)", animation: "culinarySparkle 4.2s ease-in-out infinite 1s" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
         <div style={{ position: "absolute", left: "41%", top: "36px", color: "#fde047", animation: "culinarySparkle 3.8s ease-in-out infinite 1.7s" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
-        <div style={{ position: "absolute", left: "56%", top: "14px", color: "#fbbf24", animation: "culinarySparkle 4.6s ease-in-out infinite 0.5s" }}>
+        <div style={{ position: "absolute", left: "56%", top: "14px", color: "var(--accent-amber-light)", animation: "culinarySparkle 4.6s ease-in-out infinite 0.5s" }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
         <div style={{ position: "absolute", left: "71%", top: "34px", color: "#fde047", animation: "culinarySparkle 3.9s ease-in-out infinite 2.2s" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
-        <div style={{ position: "absolute", left: "85%", top: "18px", color: "#fbbf24", animation: "culinarySparkle 4.1s ease-in-out infinite 1.2s" }}>
+        <div style={{ position: "absolute", left: "85%", top: "18px", color: "var(--accent-amber-light)", animation: "culinarySparkle 4.1s ease-in-out infinite 1.2s" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
       </div>
@@ -499,12 +499,12 @@ export function AdminHeader({
               transition: "all 0.18s ease",
               background:
                 activeMode === "dine"
-                  ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                  ? "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))"
                   : "transparent",
               color: activeMode === "dine" ? "#ffffff" : "var(--text-muted)",
               boxShadow:
                 activeMode === "dine"
-                  ? "0 2px 10px rgba(245, 158, 11, 0.4)"
+                  ? "0 2px 10px color-mix(in srgb, var(--accent-amber) 40%, transparent)"
                   : "none",
             }}
           >
@@ -529,12 +529,12 @@ export function AdminHeader({
               transition: "all 0.18s ease",
               background:
                 activeMode === "bar"
-                  ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                  ? "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))"
                   : "transparent",
               color: activeMode === "bar" ? "#ffffff" : "var(--text-muted)",
               boxShadow:
                 activeMode === "bar"
-                  ? "0 2px 10px rgba(245, 158, 11, 0.4)"
+                  ? "0 2px 10px color-mix(in srgb, var(--accent-amber) 40%, transparent)"
                   : "none",
             }}
           >
@@ -577,7 +577,7 @@ export function AdminHeader({
             boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
           }}
         >
-          <Calendar size={14} color="#f59e0b" style={{ flexShrink: 0 }} />
+          <Calendar size={14} color="var(--accent-amber)" style={{ flexShrink: 0 }} />
           <span style={{ color: "var(--text-main)", fontWeight: 700 }}>
             {formattedDate}
           </span>
@@ -648,7 +648,7 @@ export function AdminHeader({
                 background: "var(--bg-secondary)",
                 border: "1px solid var(--border-card)",
                 borderRadius: "14px",
-                boxShadow: "0 20px 50px rgba(0,0,0,0.7), 0 0 20px rgba(245, 158, 11, 0.2)",
+                boxShadow: "0 20px 50px rgba(0,0,0,0.7), 0 0 20px color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                 zIndex: 9999999,
                 display: "flex",
                 flexDirection: "column",
@@ -667,16 +667,16 @@ export function AdminHeader({
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <ChefHat size={15} color="#f59e0b" />
+                  <ChefHat size={15} color="var(--accent-amber)" />
                   <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--text-main)" }}>
                     Kitchen Live Alerts
                   </span>
                   {unreadCount > 0 && (
                     <span
                       style={{
-                        background: "rgba(245, 158, 11, 0.2)",
+                        background: "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
                         color: "var(--accent-amber-light)",
-                        border: "1px solid rgba(245, 158, 11, 0.4)",
+                        border: "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)",
                         padding: "1px 6px",
                         borderRadius: "10px",
                         fontSize: "0.66rem",
@@ -747,8 +747,8 @@ export function AdminHeader({
                         style={{
                           padding: "0.65rem 0.75rem",
                           borderRadius: "8px",
-                          background: isUnread ? "rgba(245, 158, 11, 0.08)" : "var(--bg-tertiary)",
-                          border: isUnread ? "1px solid rgba(245, 158, 11, 0.3)" : "1px solid var(--border-subtle)",
+                          background: isUnread ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)" : "var(--bg-tertiary)",
+                          border: isUnread ? "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)" : "1px solid var(--border-subtle)",
                           marginBottom: "0.45rem",
                           display: "flex",
                           flexDirection: "column",
@@ -767,7 +767,7 @@ export function AdminHeader({
                                   width: "6px",
                                   height: "6px",
                                   borderRadius: "50%",
-                                  background: "#f59e0b",
+                                  background: "var(--accent-amber)",
                                   display: "inline-block",
                                 }}
                               />
@@ -802,7 +802,7 @@ export function AdminHeader({
               right: "24px",
               zIndex: 99999,
               background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-              border: "1.5px solid #f59e0b",
+              border: "1.5px solid var(--accent-amber)",
               borderRadius: "12px",
               padding: "0.75rem 1rem",
               boxShadow: "0 8px 25px rgba(0,0,0,0.5)",
@@ -819,8 +819,8 @@ export function AdminHeader({
                 width: "32px",
                 height: "32px",
                 borderRadius: "8px",
-                background: "rgba(245, 158, 11, 0.2)",
-                color: "#f59e0b",
+                background: "color-mix(in srgb, var(--accent-amber) 20%, transparent)",
+                color: "var(--accent-amber)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -830,7 +830,7 @@ export function AdminHeader({
               <ChefHat size={18} />
             </div>
             <div>
-              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#f59e0b" }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "var(--accent-amber)" }}>
                 {activeToast.title || "Kitchen Update"}
               </div>
               <div style={{ fontSize: "0.75rem", color: "#cbd5e1", marginTop: "2px" }}>

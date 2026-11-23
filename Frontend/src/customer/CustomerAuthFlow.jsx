@@ -800,7 +800,7 @@ export function CustomerAuthFlow({
                         :{" "}
                         <span
                           style={{
-                            color: "#ea580c",
+                            color: "var(--accent-saffron)",
                             fontWeight: 700,
                             letterSpacing: "1px",
                           }}
@@ -853,7 +853,7 @@ export function CustomerAuthFlow({
                   <div className="customer-auth-resend-row">
                     Didn't receive the OTP?{" "}
                     {resendTimer > 0 ? (
-                      <span style={{ color: "#ea580c", fontWeight: 700 }}>
+                      <span style={{ color: "var(--accent-saffron)", fontWeight: 700 }}>
                         Resend OTP (00:
                         {resendTimer < 10 ? `0${resendTimer}` : resendTimer})
                       </span>

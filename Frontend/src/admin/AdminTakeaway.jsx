@@ -608,9 +608,9 @@ export function AdminTakeaway({
               borderRadius: "9999px",
               fontSize: "0.78rem",
               fontWeight: 600,
-              background: "rgba(245, 158, 11, 0.12)",
-              color: "#d97706",
-              border: "1px solid rgba(245, 158, 11, 0.28)",
+              background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+              color: "var(--accent-amber)",
+              border: "1px solid color-mix(in srgb, var(--accent-amber) 28%, transparent)",
               whiteSpace: "nowrap",
             }}
           >
@@ -734,12 +734,12 @@ export function AdminTakeaway({
               width: "48px",
               height: "48px",
               borderRadius: "12px",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              boxShadow: "0 4px 12px rgba(234, 88, 12, 0.3)",
+              boxShadow: "0 4px 12px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
               flexShrink: 0,
             }}
           >
@@ -794,7 +794,7 @@ export function AdminTakeaway({
                 transition: "all 0.15s ease",
               }}
             >
-              <Calendar size={15} color="#ea580c" />
+              <Calendar size={15} color="var(--accent-saffron)" />
               <span>{dateRangeLabel}</span>
               <ChevronDown size={14} style={{ opacity: 0.6 }} />
             </button>
@@ -837,8 +837,8 @@ export function AdminTakeaway({
                       padding: "0.55rem 0.85rem",
                       borderRadius: "6px",
                       border: "none",
-                      background: dateFilter === preset.value ? "rgba(234, 88, 12, 0.12)" : "transparent",
-                      color: dateFilter === preset.value ? "#ea580c" : "var(--text-main)",
+                      background: dateFilter === preset.value ? "color-mix(in srgb, var(--accent-saffron) 12%, transparent)" : "transparent",
+                      color: dateFilter === preset.value ? "var(--accent-saffron)" : "var(--text-main)",
                       fontSize: "0.82rem",
                       fontWeight: dateFilter === preset.value ? 600 : 400,
                       cursor: "pointer",
@@ -855,8 +855,8 @@ export function AdminTakeaway({
                     padding: "0.55rem 0.85rem",
                     borderRadius: "6px",
                     border: "none",
-                    background: customDateRangeOpen || dateFilter === "custom" ? "rgba(234, 88, 12, 0.12)" : "transparent",
-                    color: customDateRangeOpen || dateFilter === "custom" ? "#ea580c" : "var(--text-main)",
+                    background: customDateRangeOpen || dateFilter === "custom" ? "color-mix(in srgb, var(--accent-saffron) 12%, transparent)" : "transparent",
+                    color: customDateRangeOpen || dateFilter === "custom" ? "var(--accent-saffron)" : "var(--text-main)",
                     fontSize: "0.82rem",
                     fontWeight: customDateRangeOpen || dateFilter === "custom" ? 600 : 400,
                     cursor: "pointer",
@@ -933,7 +933,7 @@ export function AdminTakeaway({
                         padding: "0.5rem 0.75rem",
                         border: "none",
                         borderRadius: "6px",
-                        background: "#ea580c",
+                        background: "var(--accent-saffron)",
                         color: "#fff",
                         fontSize: "0.8rem",
                         fontWeight: 600,
@@ -961,12 +961,12 @@ export function AdminTakeaway({
               padding: "0 1.25rem",
               borderRadius: "10px",
               border: "none",
-              background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
               color: "#fff",
               fontSize: "0.88rem",
               fontWeight: 600,
               cursor: "pointer",
-              boxShadow: "0 3px 10px rgba(234, 88, 12, 0.35)",
+              boxShadow: "0 3px 10px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
               transition: "transform 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
@@ -1005,11 +1005,11 @@ export function AdminTakeaway({
               width: "40px",
               height: "40px",
               borderRadius: "50%",
-              background: "rgba(249, 115, 22, 0.12)",
+              background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#ea580c",
+              color: "var(--accent-saffron)",
               flexShrink: 0,
             }}
           >
@@ -1117,11 +1117,11 @@ export function AdminTakeaway({
               width: "40px",
               height: "40px",
               borderRadius: "50%",
-              background: "rgba(245, 158, 11, 0.12)",
+              background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#d97706",
+              color: "var(--accent-amber)",
               flexShrink: 0,
             }}
           >
@@ -1143,7 +1143,7 @@ export function AdminTakeaway({
                 fontSize: "1.35rem",
                 fontWeight: 800,
                 marginTop: "0.1rem",
-                color: "#d97706",
+                color: "var(--accent-amber)",
                 whiteSpace: "nowrap",
                 letterSpacing: "-0.02em",
                 lineHeight: 1.1,
@@ -1232,8 +1232,8 @@ export function AdminTakeaway({
           const isActive = activeTabStatus.toLowerCase() === tab.key.toLowerCase();
           const Icon = tab.icon;
           const tabColor = {
-            all: { text: "#ea580c", background: "rgba(234, 88, 12, 0.1)", border: "rgba(234, 88, 12, 0.3)" },
-            pending: { text: "#b45309", background: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.35)" },
+            all: { text: "var(--accent-saffron)", background: "color-mix(in srgb, var(--accent-saffron) 10%, transparent)", border: "color-mix(in srgb, var(--accent-saffron) 30%, transparent)" },
+            pending: { text: "var(--accent-amber)", background: "color-mix(in srgb, var(--accent-amber) 10%, transparent)", border: "color-mix(in srgb, var(--accent-amber) 35%, transparent)" },
             preparing: { text: "#2563eb", background: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.3)" },
             ready: { text: "#9333ea", background: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.3)" },
             completed: { text: "#16a34a", background: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.3)" },
@@ -1494,7 +1494,7 @@ export function AdminTakeaway({
                         transition: "background 0.15s ease",
                         cursor: "pointer",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(249, 115, 22, 0.03)")}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 3%, transparent)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
                       <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
@@ -1510,8 +1510,8 @@ export function AdminTakeaway({
                               width: "24px",
                               height: "24px",
                               borderRadius: "50%",
-                              background: "rgba(249, 115, 22, 0.12)",
-                              color: "#f97316",
+                              background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+                              color: "var(--accent-amber)",
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -1640,8 +1640,8 @@ export function AdminTakeaway({
                                 height: "32px",
                                 borderRadius: "8px",
                                 border: "1px solid var(--border-card)",
-                                background: actionMenuOrderId === order.id ? "rgba(234, 88, 12, 0.12)" : "transparent",
-                                color: actionMenuOrderId === order.id ? "#ea580c" : "var(--text-main)",
+                                background: actionMenuOrderId === order.id ? "color-mix(in srgb, var(--accent-saffron) 12%, transparent)" : "transparent",
+                                color: actionMenuOrderId === order.id ? "var(--accent-saffron)" : "var(--text-main)",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -1854,7 +1854,7 @@ export function AdminTakeaway({
                       borderRadius: "8px",
                       border: isSelected ? "none" : "1px solid var(--border-card)",
                       background: isSelected
-                        ? "linear-gradient(135deg, #f97316 0%, #ea580c 100%)"
+                        ? "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)"
                         : "var(--bg-card)",
                       color: isSelected ? "#fff" : "var(--text-main)",
                       fontWeight: isSelected ? 700 : 500,
@@ -1863,7 +1863,7 @@ export function AdminTakeaway({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: isSelected ? "0 2px 6px rgba(234, 88, 12, 0.3)" : "none",
+                      boxShadow: isSelected ? "0 2px 6px color-mix(in srgb, var(--accent-saffron) 30%, transparent)" : "none",
                     }}
                   >
                     {pageItem}
@@ -1940,8 +1940,8 @@ export function AdminTakeaway({
                     width: "40px",
                     height: "40px",
                     borderRadius: "10px",
-                    background: "rgba(234, 88, 12, 0.12)",
-                    color: "#ea580c",
+                    background: "color-mix(in srgb, var(--accent-saffron) 12%, transparent)",
+                    color: "var(--accent-saffron)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -2056,7 +2056,7 @@ export function AdminTakeaway({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          background: inCart > 0 ? "rgba(234, 88, 12, 0.06)" : "var(--bg-main)",
+                          background: inCart > 0 ? "color-mix(in srgb, var(--accent-saffron) 6%, transparent)" : "var(--bg-main)",
                         }}
                       >
                         <div>
@@ -2100,7 +2100,7 @@ export function AdminTakeaway({
                                 height: "26px",
                                 borderRadius: "6px",
                                 border: "none",
-                                background: "#ea580c",
+                                background: "var(--accent-saffron)",
                                 color: "#fff",
                                 cursor: "pointer",
                                 display: "flex",
@@ -2119,9 +2119,9 @@ export function AdminTakeaway({
                             style={{
                               padding: "0.35rem 0.75rem",
                               borderRadius: "6px",
-                              border: "1px solid rgba(234, 88, 12, 0.4)",
-                              background: "rgba(234, 88, 12, 0.1)",
-                              color: "#ea580c",
+                              border: "1px solid color-mix(in srgb, var(--accent-saffron) 40%, transparent)",
+                              background: "color-mix(in srgb, var(--accent-saffron) 10%, transparent)",
+                              color: "var(--accent-saffron)",
                               fontSize: "0.78rem",
                               fontWeight: 600,
                               cursor: "pointer",
@@ -2324,12 +2324,12 @@ export function AdminTakeaway({
                   padding: "0.6rem 1.45rem",
                   borderRadius: "8px",
                   border: "none",
-                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   color: "#fff",
                   fontSize: "0.84rem",
                   fontWeight: 600,
                   cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.3)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
                 }}
               >
                 Create Takeaway Order
@@ -2401,9 +2401,9 @@ export function AdminTakeaway({
                     gap: "0.4rem",
                     padding: "0.42rem 0.85rem",
                     borderRadius: "8px",
-                    border: "1px solid #ea580c",
-                    background: "rgba(234, 88, 12, 0.08)",
-                    color: "#ea580c",
+                    border: "1px solid var(--accent-saffron)",
+                    background: "color-mix(in srgb, var(--accent-saffron) 8%, transparent)",
+                    color: "var(--accent-saffron)",
                     fontSize: "0.8rem",
                     fontWeight: 700,
                     cursor: "pointer",
@@ -2680,12 +2680,12 @@ export function AdminTakeaway({
                   padding: "0.6rem 1.5rem",
                   borderRadius: "8px",
                   border: "none",
-                  background: "#ea580c",
+                  background: "var(--accent-saffron)",
                   color: "#fff",
                   fontSize: "0.84rem",
                   fontWeight: 700,
                   cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.3)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-saffron) 30%, transparent)",
                 }}
               >
                 Close

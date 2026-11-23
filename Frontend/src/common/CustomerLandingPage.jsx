@@ -1525,17 +1525,17 @@ export function CustomerLandingPage({
                 <div
                   className="takeaway-header-center-pill"
                   style={{
-                    background: "rgba(245, 158, 11, 0.14)",
-                    color: "var(--accent-amber-light, #fbbf24)",
-                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    background: "color-mix(in srgb, var(--accent-amber) 14%, transparent)",
+                    color: "var(--accent-amber-light, var(--accent-amber-light))",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                   }}
                 >
-                  <Utensils size={14} color="#f59e0b" />
+                  <Utensils size={14} color="var(--accent-amber)" />
                   <span>{tableParam ? `Table ${tableParam} Menu` : "Digital Dining Menu"}</span>
                 </div>
               ) : (
                 <div className="takeaway-header-center-pill">
-                  <ShoppingBag size={15} color="#f59e0b" />
+                  <ShoppingBag size={15} color="var(--accent-amber)" />
                   <span>Takeaway Only</span>
                 </div>
               )
@@ -1586,7 +1586,7 @@ export function CustomerLandingPage({
                       >
                         <div className="takeaway-notif-header">
                           <div className="takeaway-notif-header-title">
-                            <Bell size={14} color="#f59e0b" />
+                            <Bell size={14} color="var(--accent-amber)" />
                             <span>Kitchen Status Updates</span>
                             {unreadCount > 0 && (
                               <span className="takeaway-notif-count-tag">
@@ -1674,7 +1674,7 @@ export function CustomerLandingPage({
                                                 width: "5px",
                                                 height: "5px",
                                                 borderRadius: "50%",
-                                                background: "#f59e0b",
+                                                background: "var(--accent-amber)",
                                                 display: "inline-block",
                                               }}
                                             />
@@ -1764,13 +1764,13 @@ export function CustomerLandingPage({
                   gap: "6px",
                   padding: "6px 14px",
                   borderRadius: "8px",
-                  background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
+                  background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                   color: "#ffffff",
                   fontWeight: 700,
                   fontSize: "0.82rem",
                   border: "none",
                   cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(234, 88, 12, 0.35)",
+                  boxShadow: "0 2px 8px color-mix(in srgb, var(--accent-saffron) 35%, transparent)",
                 }}
                 title="Staff Portal (POS / Admin / KOT)"
               >
@@ -2046,7 +2046,7 @@ export function CustomerLandingPage({
                 <div className="pos-takeaway-status-tag">
                   <span className="pos-status-indicator" style={{ background: "#10b981" }} />
                   <strong>{tableParam ? `Table: ${tableParam}` : (liveRestaurantName || restaurantName || "The Rustic Spin")}</strong>
-                  <span className="pos-tag-label" style={{ background: "#ea580c", color: "#ffffff", fontWeight: 800 }}>
+                  <span className="pos-tag-label" style={{ background: "var(--accent-saffron)", color: "#ffffff", fontWeight: 800 }}>
                     {tableParam ? "TABLE MENU" : "DIGITAL DINING MENU"}
                   </span>
                 </div>
@@ -2201,7 +2201,7 @@ export function CustomerLandingPage({
                         )
                       }
                     >
-                      <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={13} fill="var(--accent-amber)" color="var(--accent-amber)" />
                       <span>Specials</span>
                     </button>
                   </div>
@@ -2313,8 +2313,8 @@ export function CustomerLandingPage({
                               {item.isChefSpecial && (
                                 <Star
                                   size={13}
-                                  fill="#f59e0b"
-                                  color="#f59e0b"
+                                  fill="var(--accent-amber)"
+                                  color="var(--accent-amber)"
                                   title="Chef special"
                                   aria-label="Chef special"
                                 />
@@ -2342,7 +2342,7 @@ export function CustomerLandingPage({
 
                           {/* Footer Actions */}
                           <div className="pos-takeaway-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: isDineInMenu ? "flex-start" : "space-between" }}>
-                            <span className="font-mono pos-takeaway-card-price" style={{ fontSize: isDineInMenu ? "1.08rem" : undefined, fontWeight: isDineInMenu ? 800 : undefined, color: isDineInMenu ? "#ea580c" : undefined }}>
+                            <span className="font-mono pos-takeaway-card-price" style={{ fontSize: isDineInMenu ? "1.08rem" : undefined, fontWeight: isDineInMenu ? 800 : undefined, color: isDineInMenu ? "var(--accent-saffron)" : undefined }}>
                               {formatPrice(item.price)}
                             </span>
 
@@ -2587,14 +2587,14 @@ export function CustomerLandingPage({
               <div className="customer-layout-main">
                 <div className="customer-card-box">
                   <div className="customer-card-header">
-                    <MapPin size={20} color="#ea580c" />
+                    <MapPin size={20} color="var(--accent-saffron)" />
                     <h2>Checkout</h2>
                   </div>
 
                   {/* Section 1: Pickup Details */}
                   <div className="customer-form-section">
                     <div className="customer-form-section-title">
-                      <MapPin size={17} color="#ea580c" />
+                      <MapPin size={17} color="var(--accent-saffron)" />
                       <span>Pickup Details</span>
                     </div>
 
@@ -2602,7 +2602,7 @@ export function CustomerLandingPage({
                       <div className="customer-field-group">
                         <label>
                           Pickup Date{" "}
-                          <span style={{ color: "#ea580c" }}>*</span>
+                          <span style={{ color: "var(--accent-saffron)" }}>*</span>
                         </label>
                         <div className="customer-field-control">
                           <CalendarDays size={16} />
@@ -2618,7 +2618,7 @@ export function CustomerLandingPage({
                       <div className="customer-field-group">
                         <label>
                           Pickup Time{" "}
-                          <span style={{ color: "#ea580c" }}>*</span>
+                          <span style={{ color: "var(--accent-saffron)" }}>*</span>
                         </label>
                         <div className="customer-field-control">
                           <Clock3 size={16} />
@@ -2651,14 +2651,14 @@ export function CustomerLandingPage({
                     }}
                   >
                     <div className="customer-form-section-title">
-                      <UserRound size={17} color="#ea580c" />
+                      <UserRound size={17} color="var(--accent-saffron)" />
                       <span>Your Details</span>
                     </div>
 
                     <div className="customer-checkout-grid">
                       <div className="customer-field-group">
                         <label>
-                          Full Name <span style={{ color: "#ea580c" }}>*</span>
+                          Full Name <span style={{ color: "var(--accent-saffron)" }}>*</span>
                         </label>
                         <div className="customer-field-control">
                           <UserRound size={16} />
@@ -2678,7 +2678,7 @@ export function CustomerLandingPage({
                       <div className="customer-field-group">
                         <label>
                           Mobile Number{" "}
-                          <span style={{ color: "#ea580c" }}>*</span>
+                          <span style={{ color: "var(--accent-saffron)" }}>*</span>
                         </label>
                         <div className="customer-field-control">
                           <Phone size={16} />
@@ -2800,7 +2800,7 @@ export function CustomerLandingPage({
               <div className="customer-layout-main">
                 <div className="customer-card-box">
                   <div className="customer-card-header">
-                    <Receipt size={17} color="#ea580c" />
+                    <Receipt size={17} color="var(--accent-saffron)" />
                     <h2>Select Payment Method</h2>
                   </div>
 
@@ -2860,7 +2860,7 @@ export function CustomerLandingPage({
                   ) : (
                     <div className="customer-cash-tender-notice is-upi">
                       <div className="customer-cash-tender-header">
-                        <Smartphone size={14} color="#ea580c" />
+                        <Smartphone size={14} color="var(--accent-saffron)" />
                         <span>
                           UPI Fast Pay:{" "}
                           <strong>{formatPrice(totalAmount)}</strong>
@@ -2986,7 +2986,7 @@ export function CustomerLandingPage({
                 {paymentMethod === "cash" ? (
                   <Receipt size={26} color="#059669" />
                 ) : (
-                  <CreditCard size={26} color="#ea580c" />
+                  <CreditCard size={26} color="var(--accent-saffron)" />
                 )}
               </div>
 
@@ -3064,7 +3064,7 @@ export function CustomerLandingPage({
               <div className="customer-confirmed-details-box">
                 <div className="customer-confirmed-detail-item">
                   <div className="customer-conf-icon">
-                    <ShoppingBag size={20} color="#ea580c" />
+                    <ShoppingBag size={20} color="var(--accent-saffron)" />
                   </div>
                   <div>
                     <small>Order ID</small>
@@ -3074,7 +3074,7 @@ export function CustomerLandingPage({
 
                 <div className="customer-confirmed-detail-item">
                   <div className="customer-conf-icon">
-                    <CalendarDays size={20} color="#ea580c" />
+                    <CalendarDays size={20} color="var(--accent-saffron)" />
                   </div>
                   <div>
                     <small>Pickup Date</small>
@@ -3084,7 +3084,7 @@ export function CustomerLandingPage({
 
                 <div className="customer-confirmed-detail-item">
                   <div className="customer-conf-icon">
-                    <Clock3 size={20} color="#ea580c" />
+                    <Clock3 size={20} color="var(--accent-saffron)" />
                   </div>
                   <div>
                     <small>Pickup Time</small>
@@ -3134,7 +3134,7 @@ export function CustomerLandingPage({
               <div className="customer-layout-main">
                 <div className="customer-card-box">
                   <div className="customer-card-header">
-                    <ShoppingBag size={20} color="#ea580c" />
+                    <ShoppingBag size={20} color="var(--accent-saffron)" />
                     <div>
                       <h2>Track Your Takeaway Order</h2>
                       <span className="customer-tracking-orderid">
@@ -3296,7 +3296,7 @@ export function CustomerLandingPage({
                         }}
                       >
                         <span>Total Paid</span>
-                        <span style={{ color: "#ea580c" }}>
+                        <span style={{ color: "var(--accent-saffron)" }}>
                           {formatPrice(placedOrder.totalAmount)}
                         </span>
                       </div>
@@ -3332,13 +3332,13 @@ export function CustomerLandingPage({
 
               <div className="customer-ready-info-strip">
                 <div className="customer-ready-info-item">
-                  <Clock3 size={17} color="#ea580c" />
+                  <Clock3 size={17} color="var(--accent-saffron)" />
                   <span>
                     Pickup Time: <strong>{placedOrder.pickupTime}</strong>
                   </span>
                 </div>
                 <div className="customer-ready-info-item">
-                  <MapPin size={17} color="#ea580c" />
+                  <MapPin size={17} color="var(--accent-saffron)" />
                   <span>The Rustic Spin, Main Road, Hyderabad</span>
                 </div>
               </div>
@@ -3591,7 +3591,7 @@ export function CustomerLandingPage({
                   width: "48px",
                   height: "48px",
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -3615,7 +3615,7 @@ export function CustomerLandingPage({
                 <div style={{ fontSize: "13px", color: "#6f6158" }}>
                   {customerUser?.phone || ""}
                 </div>
-                <div style={{ fontSize: "12px", color: "#ea580c" }}>
+                <div style={{ fontSize: "12px", color: "var(--accent-saffron)" }}>
                   {customerUser?.email || "priya@example.com"}
                 </div>
               </div>
@@ -3737,7 +3737,7 @@ export function CustomerLandingPage({
                 style={{
                   flex: 1,
                   height: "42px",
-                  background: "linear-gradient(135deg, #f97316, #ea580c)",
+                  background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))",
                   color: "#fff",
                   border: "none",
                   borderRadius: "8px",

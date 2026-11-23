@@ -343,7 +343,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           width: '100%',
           maxWidth: printFormat === 'a4' ? '760px' : '410px',
           borderRadius: '14px',
-          boxShadow: '0 25px 65px rgba(0,0,0,0.85), 0 0 35px rgba(234, 88, 12, 0.25)',
+          boxShadow: '0 25px 65px rgba(0,0,0,0.85), 0 0 35px color-mix(in srgb, var(--accent-saffron) 25%, transparent)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -364,7 +364,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           borderBottom: '1px solid #1e293b'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Printer size={17} color="#f59e0b" />
+            <Printer size={17} color="var(--accent-amber)" />
             <span style={{ fontSize: '0.88rem', fontWeight: 800, letterSpacing: '-0.01em' }}>Invoice & Bill Print</span>
           </div>
 
@@ -383,7 +383,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                background: printFormat === 'thermal' ? '#f59e0b' : 'transparent',
+                background: printFormat === 'thermal' ? 'var(--accent-amber)' : 'transparent',
                 color: printFormat === 'thermal' ? '#000000' : '#cbd5e1',
                 transition: 'all 0.15s'
               }}
@@ -406,7 +406,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                background: printFormat === 'a4' ? '#f59e0b' : 'transparent',
+                background: printFormat === 'a4' ? 'var(--accent-amber)' : 'transparent',
                 color: printFormat === 'a4' ? '#000000' : '#cbd5e1',
                 transition: 'all 0.15s'
               }}
@@ -496,7 +496,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : (
-                  <Utensils size={28} color="#ea580c" />
+                  <Utensils size={28} color="var(--accent-saffron)" />
                 )}
               </div>
 
@@ -777,7 +777,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   height: '68px',
                   borderRadius: '50%',
                   border: '2.5px solid #fdba74',
-                  boxShadow: '0 4px 14px rgba(234, 88, 12, 0.18)',
+                  boxShadow: '0 4px 14px color-mix(in srgb, var(--accent-saffron) 18%, transparent)',
                   overflow: 'hidden',
                   display: 'flex',
                   alignItems: 'center',
@@ -792,7 +792,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   ) : (
-                    <Utensils size={32} color="#ea580c" />
+                    <Utensils size={32} color="var(--accent-saffron)" />
                   )}
                 </div>
 
@@ -809,20 +809,20 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   }}>
                     {restaurantName}
                   </h1>
-                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ea580c', margin: '2px 0 4px' }}>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--accent-saffron)', margin: '2px 0 4px' }}>
                     {restaurantTagline}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.72rem', color: '#475569' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <MapPin size={12} color="#ea580c" />
+                      <MapPin size={12} color="var(--accent-saffron)" />
                       <span>{restaurantAddress}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Phone size={12} color="#ea580c" />
+                      <Phone size={12} color="var(--accent-saffron)" />
                       <span>{restaurantPhone}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Mail size={12} color="#ea580c" />
+                      <Mail size={12} color="var(--accent-saffron)" />
                       <span>{restaurantEmail}</span>
                     </div>
                   </div>
@@ -851,7 +851,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             </div>
 
             {/* Solid Orange Divider Line (Matches Image 3) */}
-            <div style={{ height: '2.5px', background: '#ea580c', margin: '0.85rem 0 1rem', borderRadius: '2px' }} />
+            <div style={{ height: '2.5px', background: 'var(--accent-saffron)', margin: '0.85rem 0 1rem', borderRadius: '2px' }} />
 
             {/* Two Information Cards (Side-by-Side Grid matching Image 3) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.15rem' }}>
@@ -927,7 +927,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               overflow: 'hidden'
             }}>
               <thead>
-                <tr style={{ background: '#ea580c', color: '#ffffff' }}>
+                <tr style={{ background: 'var(--accent-saffron)', color: '#ffffff' }}>
                   <th style={{ padding: '8px 10px', width: '48px', textAlign: 'center', fontWeight: 800, fontSize: '0.78rem' }}>S.No</th>
                   <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, fontSize: '0.78rem' }}>Item</th>
                   <th style={{ padding: '8px 10px', width: '70px', textAlign: 'center', fontWeight: 800, fontSize: '0.78rem' }}>Qty</th>
@@ -956,14 +956,14 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   width: '125px',
                   height: '125px',
                   borderRadius: '50%',
-                  border: '3px solid rgba(234, 88, 12, 0.2)',
-                  background: 'rgba(234, 88, 12, 0.04)',
+                  border: '3px solid color-mix(in srgb, var(--accent-saffron) 20%, transparent)',
+                  background: 'color-mix(in srgb, var(--accent-saffron) 4%, transparent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: 'inset 0 0 16px rgba(234, 88, 12, 0.06)'
+                  boxShadow: 'inset 0 0 16px color-mix(in srgb, var(--accent-saffron) 6%, transparent)'
                 }}>
-                  <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+                  <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="var(--accent-saffron)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
                     <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
                     <line x1="6" y1="17" x2="18" y2="17"/>
                   </svg>
@@ -1013,7 +1013,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   borderTop: '1px solid #fdba74'
                 }}>
                   <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>Total Payable</span>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#c2410c' }}>₹{grandTotal.toFixed(2)}</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--accent-amber)' }}>₹{grandTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -1074,7 +1074,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   fontSize: '2rem',
                   fontFamily: "'Caveat', 'Dancing Script', 'Brush Script MT', cursive, serif",
                   fontWeight: 700,
-                  color: '#ea580c',
+                  color: 'var(--accent-saffron)',
                   lineHeight: 1.1
                 }}>
                   Thank You!
@@ -1088,7 +1088,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
             {/* Decorative Orange Wave / Gradient Bottom Accent (Matches Image 3) */}
             <div style={{
               height: '14px',
-              background: 'linear-gradient(90deg, #ea580c 0%, #f97316 50%, #fb923c 100%)',
+              background: 'linear-gradient(90deg, var(--accent-saffron) 0%, var(--accent-amber) 50%, #fb923c 100%)',
               borderRadius: '0 0 8px 8px',
               marginTop: '0.9rem'
             }} />
@@ -1131,13 +1131,13 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               gap: '0.45rem',
               padding: '0.52rem',
               borderRadius: '6px',
-              background: '#f59e0b',
+              background: 'var(--accent-amber)',
               color: '#000000',
               fontWeight: 800,
               fontSize: '0.82rem',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
+              boxShadow: '0 2px 8px color-mix(in srgb, var(--accent-amber) 40%, transparent)'
             }}
           >
             <Printer size={15} />

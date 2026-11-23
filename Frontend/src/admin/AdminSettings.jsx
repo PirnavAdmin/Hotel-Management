@@ -14,12 +14,13 @@ import {
   X,
   Package,
   Wine,
-  Utensils,
   Lock,
+  Copy,
 } from "lucide-react";
 import { UpiOtpVerificationModal } from "../common/UpiOtpVerificationModal";
 import { getUsers } from "../utils/auth";
 import { processLogoImage, detectImageBgColor } from "../utils/logoHelper";
+import { applyAccent, getSavedAccent, hexToHsl, hexToHsv, hsvToHex } from "../utils/accentColor";
 
 const DEFAULT_PAYMENT_QRS = [
   {
@@ -114,7 +115,6 @@ const getInitialSettings = (initialSettings) => {
 
 export function AdminSettings({
   currentTheme = "royal-saffron",
-  onChangeTheme,
   initialSettings,
   onSaveSettings,
   showBarHeaderToggle,
@@ -122,6 +122,33 @@ export function AdminSettings({
   currentAdminSession = null,
 }) {
   const isLight = currentTheme === "light-bistro";
+  const [selectedAccent, setSelectedAccent] = useState(getSavedAccent);
+  const [hexInput, setHexInput] = useState(getSavedAccent);
+  const [hue, setHue] = useState(() => hexToHsl(getSavedAccent()).h);
+  const [isAccentSaved, setIsAccentSaved] = useState(true);
+  const colorAreaRef = useRef(null);
+  const selectedRgb = selectedAccent.match(/[\da-f]{2}/gi).map((channel) => parseInt(channel, 16));
+
+  const previewAccent = (hex) => {
+    const normalized = /^#[\da-f]{6}$/i.test(hex) ? hex.toLowerCase() : null;
+    if (!normalized) return;
+    setSelectedAccent(normalized);
+    setHexInput(normalized);
+    setHue(hexToHsl(normalized).h);
+    // The picker is the global source of truth: update CSS variables and
+    // persistence as soon as a complete colour is selected.
+    applyAccent(normalized);
+    setIsAccentSaved(true);
+  };
+
+  const pickColorAtPoint = (clientX, clientY) => {
+    const bounds = colorAreaRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const saturation = Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100));
+    const value = Math.max(0, Math.min(100, (1 - (clientY - bounds.top) / bounds.height) * 100));
+    previewAccent(hsvToHex(hue, saturation, value));
+  };
+
   const [settings, setSettings] = useState(() => getInitialSettings(initialSettings));
   const [lastSavedSettings, setLastSavedSettings] = useState(() => getInitialSettings(initialSettings));
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -657,11 +684,11 @@ export function AdminSettings({
                 width: "44px",
                 height: "44px",
                 borderRadius: "12px",
-                background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                background: "var(--primary-gradient)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                boxShadow: "0 4px 14px var(--accent-amber-glow)",
               }}
             >
               <Settings size={22} color="#ffffff" />
@@ -715,8 +742,8 @@ export function AdminSettings({
               </div>
             )}
             <button
-              type="button"
-              onClick={handleSave}
+              type="submit"
+              form="restaurant-settings-form"
               disabled={!isDirty || isSaving}
               style={{
                 display: "inline-flex",
@@ -727,14 +754,14 @@ export function AdminSettings({
                 background: savedSuccess
                   ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
                   : isDirty && !isSaving
-                  ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                  ? "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)"
                   : "rgba(var(--surface-rgb),0.06)",
                 color: savedSuccess || (isDirty && !isSaving) ? "#ffffff" : "#64748b",
-                border: isDirty && !isSaving ? "1px solid rgba(245, 158, 11, 0.5)" : "1px solid rgba(255, 255, 255, 0.08)",
+                border: isDirty && !isSaving ? "1px solid color-mix(in srgb, var(--accent-amber) 50%, transparent)" : "1px solid rgba(255, 255, 255, 0.08)",
                 fontWeight: 800,
                 fontSize: "0.86rem",
                 cursor: !isDirty || isSaving ? "not-allowed" : "pointer",
-                boxShadow: isDirty && !isSaving ? "0 4px 16px rgba(245, 158, 11, 0.45)" : "none",
+                boxShadow: isDirty && !isSaving ? "0 4px 16px color-mix(in srgb, var(--accent-amber) 45%, transparent)" : "none",
                 opacity: !isDirty && !savedSuccess && !isSaving ? 0.6 : 1,
                 transition: "all 0.2s ease",
               }}
@@ -761,9 +788,103 @@ export function AdminSettings({
 
         {/* Configuration Form */}
         <form
+          id="restaurant-settings-form"
           onSubmit={handleSave}
           style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
         >
+          <section
+            aria-labelledby="appearance-theme-title"
+            style={{
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "14px",
+              padding: "1.25rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.45rem" }}>
+              <Palette size={18} color="var(--accent-amber)" />
+              <h3 id="appearance-theme-title" style={{ fontSize: "0.98rem", fontWeight: 700, color: "var(--text-main)", margin: 0 }}>
+                Appearance &amp; Theme
+              </h3>
+            </div>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: "0 0 1rem" }}>
+              Choose any accent color. The application updates and saves it immediately, independently of Light or Dark mode.
+            </p>
+            <div className="accent-picker-layout">
+              <div className="accent-picker-controls">
+                <div
+                  ref={colorAreaRef}
+                  className="accent-picker-saturation"
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Color saturation and brightness"
+                  aria-valuetext={selectedAccent}
+                  style={{ "--picker-hue": `hsl(${hue} 100% 50%)` }}
+                  onPointerDown={(event) => {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    pickColorAtPoint(event.clientX, event.clientY);
+                  }}
+                  onPointerMove={(event) => {
+                    if (event.buttons === 1) pickColorAtPoint(event.clientX, event.clientY);
+                  }}
+                  onKeyDown={(event) => {
+                    const step = event.shiftKey ? 10 : 2;
+                    const hsv = hexToHsv(selectedAccent);
+                    let saturation = hsv.s;
+                    let brightness = hsv.v;
+                    if (event.key === "ArrowLeft") saturation -= step;
+                    else if (event.key === "ArrowRight") saturation += step;
+                    else if (event.key === "ArrowUp") brightness += step;
+                    else if (event.key === "ArrowDown") brightness -= step;
+                    else return;
+                    event.preventDefault();
+                    previewAccent(hsvToHex(hue, Math.max(0, Math.min(100, saturation)), Math.max(0, Math.min(100, brightness))));
+                  }}
+                >
+                  <span className="accent-picker-handle" style={{ left: `${hexToHsv(selectedAccent).s}%`, top: `${100 - hexToHsv(selectedAccent).v}%` }} />
+                </div>
+                <label className="accent-picker-hue-label">
+                  <span>Hue</span>
+                  <input aria-label="Hue" type="range" min="0" max="359" value={hue} onChange={(event) => {
+                    const nextHue = Number(event.target.value);
+                    const hsv = hexToHsv(selectedAccent);
+                    setHue(nextHue);
+                    previewAccent(hsvToHex(nextHue, hsv.s, hsv.v));
+                  }} />
+                </label>
+              </div>
+              <div className="accent-picker-preview">
+                <div className="accent-picker-preview-color" style={{ background: selectedAccent }} aria-label={`Selected color ${selectedAccent}`} />
+                <label className="accent-picker-value-field">
+                  <span>HEX</span>
+                  <input value={hexInput} maxLength={7} spellCheck="false" aria-label="HEX color value" onChange={(event) => {
+                    let value = event.target.value;
+                    if (!value.startsWith("#")) value = `#${value}`;
+                    if (/^#[\da-f]{0,6}$/i.test(value)) {
+                      setHexInput(value.toLowerCase());
+                      if (/^#[\da-f]{6}$/i.test(value)) previewAccent(value);
+                    }
+                  }} />
+                </label>
+                <button type="button" className="accent-picker-copy" aria-label="Copy HEX color" title="Copy HEX" onClick={() => navigator.clipboard?.writeText(selectedAccent)}><Copy size={16} /></button>
+                <div className="accent-picker-rgb">RGB <strong>{selectedRgb.join(", ")}</strong></div>
+                <label className="accent-picker-native" title="Choose any color">
+                  <input type="color" aria-label="Choose any color" value={selectedAccent} onChange={(event) => previewAccent(event.target.value)} />
+                  <span>Open color picker</span>
+                </label>
+                <div className="accent-picker-actions">
+                  <button type="button" onClick={() => {
+                    const reset = applyAccent("var(--accent-amber)");
+                    setSelectedAccent(reset);
+                    setHexInput(reset);
+                    setHue(hexToHsl(reset).h);
+                    setIsAccentSaved(true);
+                  }}>Reset</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* Section 1: Business Identity */}
           <div
             style={{
@@ -781,7 +902,7 @@ export function AdminSettings({
                 marginBottom: "1rem",
               }}
             >
-              <Store size={18} color="#f59e0b" />
+              <Store size={18} color="var(--accent-amber)" />
               <h3
                 style={{
                   fontSize: "0.98rem",
@@ -1068,15 +1189,15 @@ export function AdminSettings({
                       gap: "0.45rem",
                       padding: "0.58rem 1.15rem",
                       borderRadius: "8px",
-                      border: isDirty && !isSaving ? "1px solid rgba(245, 158, 11, 0.6)" : "1px solid var(--border-card)",
+                      border: isDirty && !isSaving ? "1px solid color-mix(in srgb, var(--accent-amber) 60%, transparent)" : "1px solid var(--border-card)",
                       color: isDirty && !isSaving ? "#ffffff" : "var(--text-dim)",
                       background: isDirty && !isSaving
-                        ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                        ? "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)"
                         : "var(--bg-secondary)",
                       fontSize: "0.8rem",
                       fontWeight: 800,
                       cursor: !isDirty || isSaving ? "not-allowed" : "pointer",
-                      boxShadow: isDirty && !isSaving ? "0 4px 14px rgba(245, 158, 11, 0.45)" : "none",
+                      boxShadow: isDirty && !isSaving ? "0 4px 14px color-mix(in srgb, var(--accent-amber) 45%, transparent)" : "none",
                       transition: "all 0.2s ease",
                     }}
                   >
@@ -1232,7 +1353,7 @@ export function AdminSettings({
                       serviceChargeEnabled: e.target.checked,
                     })
                   }
-                  style={{ accentColor: "#f59e0b" }}
+                  style={{ accentColor: "var(--accent-amber)" }}
                 />
                 Enable service charge option on orders
               </label>
@@ -1323,7 +1444,7 @@ export function AdminSettings({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <QrCode size={18} color="#f59e0b" />
+                <QrCode size={18} color="var(--accent-amber)" />
                 <div>
                   <h3
                     style={{
@@ -1368,9 +1489,9 @@ export function AdminSettings({
                   style={{
                     fontSize: "0.72rem",
                     fontWeight: 700,
-                    color: "#f59e0b",
-                    background: "rgba(245, 158, 11, 0.12)",
-                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    color: "var(--accent-amber)",
+                    background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
                     padding: "3px 10px",
                     borderRadius: "20px",
                   }}
@@ -1408,15 +1529,15 @@ export function AdminSettings({
                     }
                     style={{
                       background: isSelected
-                        ? "linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, var(--bg-card) 100%)"
+                        ? "linear-gradient(145deg, color-mix(in srgb, var(--accent-amber) 12%, transparent) 0%, var(--bg-card) 100%)"
                         : "var(--bg-secondary)",
                       border: isSelected
-                        ? "2px solid #f59e0b"
+                        ? "2px solid var(--accent-amber)"
                         : hasImage
                         ? "1px solid rgba(var(--surface-rgb),0.14)"
                         : "1px dashed rgba(var(--surface-rgb),0.18)",
                       boxShadow: isSelected
-                        ? "0 0 20px rgba(245, 158, 11, 0.28), 0 4px 14px rgba(0, 0, 0, 0.5)"
+                        ? "0 0 20px color-mix(in srgb, var(--accent-amber) 28%, transparent), 0 4px 14px rgba(0, 0, 0, 0.5)"
                         : "0 2px 8px rgba(0, 0, 0, 0.2)",
                       borderRadius: "14px",
                       padding: "1.05rem",
@@ -1430,7 +1551,7 @@ export function AdminSettings({
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && hasImage) {
-                        e.currentTarget.style.borderColor = "rgba(245, 158, 11, 0.6)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 60%, transparent)";
                         e.currentTarget.style.transform = "translateY(-2px)";
                       }
                     }}
@@ -1545,7 +1666,7 @@ export function AdminSettings({
                           width: "100%",
                           background: "var(--bg-tertiary)",
                           border: isSelected
-                            ? "1px solid rgba(245, 158, 11, 0.4)"
+                            ? "1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent)"
                             : "1px solid var(--border-card)",
                           borderRadius: "8px",
                           padding: "0.55rem 0.75rem",
@@ -1655,10 +1776,10 @@ export function AdminSettings({
                         style={{
                           flex: 1,
                           background: qr.image
-                            ? "rgba(245, 158, 11, 0.14)"
-                            : "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                            ? "color-mix(in srgb, var(--accent-amber) 14%, transparent)"
+                            : "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
                           border: qr.image
-                            ? "1px solid rgba(245, 158, 11, 0.35)"
+                            ? "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)"
                             : "none",
                           borderRadius: "8px",
                           padding: "0.55rem 0.75rem",
@@ -1841,7 +1962,7 @@ export function AdminSettings({
                       onChange={(e) =>
                         setSettings({ ...settings, [key]: e.target.checked })
                       }
-                      style={{ accentColor: "#f59e0b" }}
+                      style={{ accentColor: "var(--accent-amber)" }}
                     />
                     {label}
                   </label>
@@ -1867,7 +1988,7 @@ export function AdminSettings({
                 marginBottom: "1rem",
               }}
             >
-              <Package size={18} color="#f59e0b" />
+              <Package size={18} color="var(--accent-amber)" />
               <h3
                 style={{
                   fontSize: "0.98rem",
@@ -1898,7 +2019,7 @@ export function AdminSettings({
                     lowStockAlertsEnabled: e.target.checked,
                   })
                 }
-                style={{ accentColor: "#f59e0b" }}
+                style={{ accentColor: "var(--accent-amber)" }}
               />
               Show low-stock alert in Inventory when items reach their
               individual thresholds
@@ -1935,9 +2056,9 @@ export function AdminSettings({
                   height: "42px",
                   borderRadius: "10px",
                   background: isBarToggleOn
-                    ? "rgba(245, 158, 11, 0.15)"
+                    ? "color-mix(in srgb, var(--accent-amber) 15%, transparent)"
                     : "var(--bg-tertiary)",
-                  color: isBarToggleOn ? "#ea580c" : "var(--text-muted)",
+                  color: isBarToggleOn ? "var(--accent-saffron)" : "var(--text-muted)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -2004,7 +2125,7 @@ export function AdminSettings({
                 style={{
                   fontSize: "0.82rem",
                   fontWeight: 700,
-                  color: isBarToggleOn ? "#ea580c" : "var(--text-muted)",
+                  color: isBarToggleOn ? "var(--accent-saffron)" : "var(--text-muted)",
                 }}
               >
                 {isBarToggleOn ? "On" : "Off"}
@@ -2019,14 +2140,14 @@ export function AdminSettings({
                   height: "30px",
                   borderRadius: "30px",
                   background: isBarToggleOn
-                    ? "linear-gradient(135deg, #f59e0b, #ea580c)"
+                    ? "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))"
                     : "var(--border-subtle)",
                   border: "none",
                   cursor: "pointer",
                   position: "relative",
                   transition: "background 0.25s ease, box-shadow 0.25s ease",
                   boxShadow: isBarToggleOn
-                    ? "0 2px 10px rgba(234, 88, 12, 0.4)"
+                    ? "0 2px 10px color-mix(in srgb, var(--accent-saffron) 40%, transparent)"
                     : "inset 0 1px 3px rgba(0,0,0,0.2)",
                   padding: 0,
                   flexShrink: 0,
@@ -2049,91 +2170,18 @@ export function AdminSettings({
             </div>
           </div>
 
-          {/* Submit Action */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              gap: "1rem",
-              paddingTop: "0.5rem",
-              flexWrap: "wrap",
-            }}
-          >
-
-
-
-            {saveError && (
-              <div
-                role="alert"
-                style={{
-                  color: "var(--danger)",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                }}
-              >
-                {saveError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={!isDirty || isSaving}
+          {saveError && (
+            <div
+              role="alert"
               style={{
-                background: savedSuccess
-                  ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-                  : isDirty && !isSaving
-                  ? "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
-                  : "rgba(var(--surface-rgb),0.05)",
-                color: savedSuccess || (isDirty && !isSaving) ? "#ffffff" : "#64748b",
-                border: savedSuccess
-                  ? "1px solid rgba(16, 185, 129, 0.6)"
-                  : isDirty && !isSaving
-                  ? "1px solid rgba(245, 158, 11, 0.5)"
-                  : "1px solid rgba(var(--surface-rgb),0.08)",
-                borderRadius: "10px",
-                padding: "0.72rem 1.85rem",
-                fontSize: "0.88rem",
+                color: "var(--danger)",
+                fontSize: "0.82rem",
                 fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: "0.55rem",
-                cursor: !isDirty || isSaving ? "not-allowed" : "pointer",
-                boxShadow: savedSuccess
-                  ? "0 4px 16px rgba(16, 185, 129, 0.35)"
-                  : isDirty && !isSaving
-                  ? "0 4px 18px rgba(245, 158, 11, 0.45)"
-                  : "none",
-                opacity: !isDirty && !savedSuccess && !isSaving ? 0.6 : 1,
-                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
-              title={
-                !isDirty && !savedSuccess
-                  ? "No changes to save"
-                  : "Click to save all configuration changes"
-              }
             >
-              {isSaving ? (
-                <>
-                  <RotateCcw
-                    size={16}
-                    style={{ animation: "spin 1s linear infinite" }}
-                  />
-                  <span>Saving...</span>
-                </>
-              ) : savedSuccess ? (
-                <>
-                  <CheckCircle2 size={16} strokeWidth={2.5} />
-                  <span>Saved!</span>
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  <span>Save Configuration</span>
-                </>
-              )}
-            </button>
-          </div>
+              {saveError}
+            </div>
+          )}
         </form>
       </div>
       {/* High-Security OTP Verification Modal for Changing UPI Stream */}
