@@ -1896,6 +1896,21 @@ export function TableDetailView({
   const [tableStatusFilter, setTableStatusFilter] = useState("all"); // 'all' | 'vacant' | 'occupied' | 'billed'
   const [isMobileOrderSlipOpen, setIsMobileOrderSlipOpen] = useState(false);
   const [isSendingKot, setIsSendingKot] = useState(false);
+  // Order Presentation Mode: "sidebar" (Option 1: Spacious 2-stage sidebar) | "floating" (Option 2: Full menu + floating bottom bar)
+  const [orderSlipViewMode, setOrderSlipViewMode] = useState(() => {
+    try {
+      return localStorage.getItem("pos_order_slip_view_mode") || "sidebar";
+    } catch {
+      return "sidebar";
+    }
+  });
+  const handleToggleOrderSlipViewMode = (mode) => {
+    setOrderSlipViewMode(mode);
+    try {
+      localStorage.setItem("pos_order_slip_view_mode", mode);
+    } catch {}
+  };
+  const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false);
 
   const handleTriggerSendKot = async () => {
     if (isSendingKot || safeItems.length === 0) return;
@@ -1997,6 +2012,9 @@ export function TableDetailView({
     );
   };
 
+  const unsentItems = useMemo(() => safeItems.filter((i) => !isItemSentToKot(i)), [safeItems]);
+  const sentItems = useMemo(() => safeItems.filter((i) => isItemSentToKot(i)), [safeItems]);
+
   const isItemCookedReady = (item) => {
     if (!item) return false;
     return (
@@ -2092,6 +2110,385 @@ export function TableDetailView({
 
   const handleRemoveItemFromModal = (itemId) => {
     onRemoveItemFromTable(targetTableId, itemId);
+  };
+
+  const renderItemCard = (item, index, isUnsent) => {
+    const itemStatus = String(item?.kotStatus || "").toLowerCase();
+    const isReady = itemStatus === "ready" || itemStatus === "served" || itemStatus === "completed";
+    const isCooking = itemStatus === "cooking" || itemStatus === "mixing";
+    const isSent = isItemSentToKot(item);
+    const itemKey = `${item?.id || index}_${item?.uniqueCartKey || index}`;
+
+    return (
+      <div
+        key={itemKey}
+        style={{
+          background: isUnsent ? "rgba(245, 158, 11, 0.06)" : "var(--bg-tertiary)",
+          borderRadius: "8px",
+          padding: "0.55rem 0.7rem",
+          border: isUnsent ? "1px solid rgba(245, 158, 11, 0.35)" : "1px solid var(--border-subtle)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.35rem",
+          transition: "all 0.15s ease",
+        }}
+      >
+        {/* Top Row: Name + Badges + Item Total */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "0.5rem",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+              <span
+                style={{
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  color: "var(--text-main)",
+                  lineHeight: 1.3,
+                  wordBreak: "break-word",
+                }}
+              >
+                {item.name}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.58rem",
+                  fontWeight: 800,
+                  padding: "1px 5px",
+                  borderRadius: "999px",
+                  background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
+                  color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
+                  border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {isBarMenuItem(item) ? "Bar" : "Kitchen"}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                marginTop: "3px",
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-dim)",
+                }}
+              >
+                {formatCurrency(item.price)} × {item.quantity}
+              </span>
+              {isReady ? (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 800,
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: "rgba(16, 185, 129, 0.15)",
+                    color: "#10b981",
+                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                  }}
+                >
+                  ✓ Ready
+                </span>
+              ) : isCooking ? (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 800,
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: "rgba(234, 88, 12, 0.15)",
+                    color: "#ea580c",
+                    border: "1px solid rgba(234, 88, 12, 0.35)",
+                  }}
+                >
+                  🔥 Cooking
+                </span>
+              ) : isSent ? (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 800,
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: "rgba(245, 158, 11, 0.15)",
+                    color: "#f59e0b",
+                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                  }}
+                >
+                  📥 {isBarMenuItem(item) ? "BOT Sent" : "KOT Sent"}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontSize: "0.62rem",
+                    fontWeight: 800,
+                    padding: "1px 6px",
+                    borderRadius: "4px",
+                    background: "rgba(245, 158, 11, 0.22)",
+                    color: "var(--accent-amber-light)",
+                    border: "1px solid rgba(245, 158, 11, 0.5)",
+                  }}
+                >
+                  🟡 New (Unsent)
+                </span>
+              )}
+            </div>
+          </div>
+          <span
+            className="font-mono"
+            style={{
+              fontSize: "0.92rem",
+              fontWeight: 800,
+              color: "var(--accent-amber-light)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {formatCurrency(item.price * item.quantity)}
+          </span>
+        </div>
+
+        {/* Stepper & Note & Delete */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: "0.2rem",
+            paddingTop: "0.35rem",
+            borderTop: "1px solid var(--neutral-border)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              background: "var(--bg-secondary)",
+              borderRadius: "6px",
+              padding: "2px 6px",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <button
+              onClick={() => {
+                sounds.playRemoveItem();
+                onUpdateItemQuantity(
+                  targetTableId,
+                  item.id,
+                  item.quantity - 1,
+                );
+              }}
+              style={{
+                background: "transparent",
+                color: "var(--text-muted)",
+                width: "22px",
+                height: "22px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                cursor: "pointer",
+              }}
+              title="Decrease quantity"
+            >
+              <Minus size={13} />
+            </button>
+
+            <span
+              className="font-mono"
+              style={{
+                fontWeight: 800,
+                fontSize: "0.86rem",
+                minWidth: "20px",
+                textAlign: "center",
+                color: "var(--text-main)",
+              }}
+            >
+              {item.quantity}
+            </span>
+
+            <button
+              onClick={() => {
+                sounds.playAddItem();
+                onUpdateItemQuantity(
+                  targetTableId,
+                  item.id,
+                  item.quantity + 1,
+                );
+              }}
+              style={{
+                background: "transparent",
+                color: "var(--accent-amber-light)",
+                width: "22px",
+                height: "22px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                cursor: "pointer",
+              }}
+              title="Increase quantity"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+            }}
+          >
+            <button
+              onClick={() => {
+                if (editingNoteItemId === item.id) {
+                  if (!tempNote.trim() && item.notes) {
+                    onUpdateItemNotes(targetTableId, item.id, "");
+                  }
+                  setEditingNoteItemId(null);
+                  setTempNote("");
+                } else {
+                  setEditingNoteItemId(item.id);
+                  setTempNote(item.notes || "");
+                }
+              }}
+              style={{
+                fontSize: "0.72rem",
+                color: item.notes
+                  ? "var(--accent-amber-light)"
+                  : "var(--text-dim)",
+                background: "transparent",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              <FileText size={12} />
+              <span>
+                {item.notes ? `"${item.notes}"` : "+ Note"}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                sounds.playRemoveItem();
+                onRemoveItemFromTable(targetTableId, item.id);
+              }}
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                color: "#ef4444",
+                border: "1px solid rgba(239, 68, 68, 0.25)",
+                borderRadius: "5px",
+                padding: "3px 6px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+              title="Remove item"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Inline Note Editor */}
+        {editingNoteItemId === item.id && (
+          <div
+            style={{
+              display: "flex",
+              gap: "0.3rem",
+              marginTop: "0.3rem",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="e.g. Extra spicy, less oil, no onion..."
+              value={tempNote}
+              onChange={(e) => setTempNote(e.target.value)}
+              autoFocus
+              style={{
+                flex: 1,
+                background: "var(--bg-primary)",
+                border: "1px solid var(--accent-amber)",
+                borderRadius: "5px",
+                color: "var(--text-main)",
+                padding: "0.26rem 0.5rem",
+                fontSize: "0.74rem",
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveNote(item.id);
+                if (e.key === "Escape") {
+                  if (!tempNote.trim() && item.notes) {
+                    onUpdateItemNotes(targetTableId, item.id, "");
+                  }
+                  setEditingNoteItemId(null);
+                  setTempNote("");
+                }
+              }}
+            />
+            <button
+              onClick={() => handleSaveNote(item.id)}
+              style={{
+                background: "var(--accent-amber)",
+                color: "#000000",
+                border: "none",
+                padding: "0 0.55rem",
+                borderRadius: "5px",
+                fontSize: "0.72rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!tempNote.trim() && item.notes) {
+                  onUpdateItemNotes(targetTableId, item.id, "");
+                }
+                setEditingNoteItemId(null);
+                setTempNote("");
+              }}
+              style={{
+                background: "var(--surface-tint)",
+                color: "var(--text-dim)",
+                border: "1px solid rgba(var(--surface-rgb),0.1)",
+                padding: "0 0.4rem",
+                borderRadius: "5px",
+                fontSize: "0.72rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+              title="Cancel"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -2510,6 +2907,66 @@ export function TableDetailView({
 
         {/* Right Table Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {/* Order Presentation Mode Switcher (Option 1: Spacious Sidebar vs Option 2: Full Menu + Floating Bar) */}
+          {safeItems.length > 0 && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "8px",
+                padding: "2px",
+                gap: "2px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => handleToggleOrderSlipViewMode("sidebar")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  padding: "0.3rem 0.65rem",
+                  borderRadius: "6px",
+                  background: orderSlipViewMode === "sidebar" ? "var(--accent-amber)" : "transparent",
+                  color: orderSlipViewMode === "sidebar" ? "#000000" : "var(--text-muted)",
+                  border: "none",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                title="Option 1: Spacious 2-Stage Side Panel"
+              >
+                <span>📑</span>
+                <span>Side Panel</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleOrderSlipViewMode("floating")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  padding: "0.3rem 0.65rem",
+                  borderRadius: "6px",
+                  background: orderSlipViewMode === "floating" ? "var(--accent-amber)" : "transparent",
+                  color: orderSlipViewMode === "floating" ? "#000000" : "var(--text-muted)",
+                  border: "none",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                title="Option 2: Full-screen Menu with Floating Bottom Bar"
+              >
+                <span>🚀</span>
+                <span>Floating Bar</span>
+              </button>
+            </div>
+          )}
+
           {/* Cart Icon in vacant place */}
           {safeItems.length > 0 && (
             <div
@@ -3780,12 +4237,14 @@ export function TableDetailView({
           )}
         </div>
 
-        {/* Right Side: Order Slip (Only shown when items exist) */}
-        {safeItems.length > 0 && (
+        {/* Right Side: Order Slip (Option 1: Spacious 2-stage sidebar, only shown when items exist and mode is sidebar) */}
+        {safeItems.length > 0 && orderSlipViewMode === "sidebar" && (
           <div
             className="pos-order-slip-desktop"
             style={{
-              width: "285px",
+              width: "365px",
+              minWidth: "350px",
+              maxWidth: "400px",
               background: "var(--bg-secondary)",
               display: "flex",
               flexDirection: "column",
@@ -3798,7 +4257,7 @@ export function TableDetailView({
               flexShrink: 0,
             }}
           >
-            {/* Order Header — Compact */}
+            {/* Order Header — Compact with Mode Switcher */}
             <div
               style={{
                 padding: "0.55rem 0.85rem",
@@ -3821,7 +4280,7 @@ export function TableDetailView({
                   <Receipt size={14} color="var(--accent-amber)" />
                   <h3
                     style={{
-                      fontSize: "0.85rem",
+                      fontSize: "0.88rem",
                       fontWeight: 800,
                       color: "var(--text-main)",
                     }}
@@ -3841,6 +4300,11 @@ export function TableDetailView({
                   }}
                 >
                   <span>{safeItems.length} items</span>
+                  {unsentItems.length > 0 && (
+                    <span style={{ color: "var(--accent-amber-light)", fontWeight: 700 }}>
+                      ({unsentItems.length} to send)
+                    </span>
+                  )}
                   <span>•</span>
                   <span
                     style={{
@@ -3858,292 +4322,248 @@ export function TableDetailView({
                   </span>
                 </div>
               </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <div
+                  style={{
+                    background: "rgba(245, 158, 11, 0.18)",
+                    color: "var(--accent-amber-light)",
+                    padding: "0.18rem 0.5rem",
+                    borderRadius: "5px",
+                    fontSize: "0.68rem",
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  #{targetTableId}0{safeItems.length}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleOrderSlipViewMode("floating")}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--text-muted)",
+                    padding: "0.2rem 0.45rem",
+                    borderRadius: "5px",
+                    fontSize: "0.66rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "3px",
+                  }}
+                  title="Switch to Option 2: Full Menu + Floating Bottom Bar"
+                >
+                  <span>🚀</span>
+                  <span>Float</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Customer Capture (Collapsible to save vertical height) */}
+            <div
+              style={{
+                padding: "0.35rem 0.65rem",
+                background: "rgba(255, 255, 255, 0.02)",
+                borderBottom: "1px solid var(--border-subtle)",
+                flexShrink: 0,
+              }}
+            >
               <div
                 style={{
-                  background: "rgba(245, 158, 11, 0.18)",
-                  color: "var(--accent-amber-light)",
-                  padding: "0.18rem 0.5rem",
-                  borderRadius: "5px",
-                  fontSize: "0.68rem",
-                  fontWeight: 700,
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  userSelect: "none",
                 }}
+                onClick={() => setIsCustomerDetailsOpen((prev) => !prev)}
               >
-                #{targetTableId}0{safeItems.length}
-              </div>
-            </div>
-
-            {/* Quick Customer Capture (Phone & Name with auto-fill & loyalty recognition) */}
-            <div
-              style={{
-                padding: "0.4rem 0.6rem",
-                background: "rgba(255, 255, 255, 0.025)",
-                borderBottom: "1px solid var(--border-subtle)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.3rem",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
-                  <User size={12} color="var(--accent-amber)" /> Customer Details
-                </span>
-                {custTier && (
-                  <span style={{
-                    fontSize: "0.62rem",
-                    fontWeight: 800,
-                    padding: "1px 6px",
-                    borderRadius: "4px",
-                    background: custTier === "VIP" ? "rgba(168, 85, 247, 0.2)" : "rgba(34, 197, 94, 0.2)",
-                    color: custTier === "VIP" ? "#c084fc" : "#4ade80",
-                    border: custTier === "VIP" ? "1px solid rgba(168, 85, 247, 0.4)" : "1px solid rgba(34, 197, 94, 0.4)",
-                  }}>
-                    {custTier} Diner {custVisits > 1 ? `(${custVisits} visits)` : ""}
+                <div style={{ display: "flex", alignItems: "center", gap: "5px", minWidth: 0 }}>
+                  <User size={12} color="var(--accent-amber)" />
+                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {custName || custPhone ? `${custName || "Customer"} (${custPhone || "No Phone"})` : "Customer Details"}
                   </span>
-                )}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.3fr", gap: "0.35rem" }}>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <Phone size={11} style={{ position: "absolute", left: "6px", color: "var(--text-muted)", pointerEvents: "none" }} />
-                  <input
-                    type="tel"
-                    placeholder="Phone No."
-                    value={custPhone}
-                    onChange={(e) => handleCustomerPhoneChange(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "4px 4px 4px 22px",
-                      fontSize: "0.72rem",
-                      background: "var(--bg-primary)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: "5px",
-                      color: "var(--text-main)",
-                      outline: "none",
-                    }}
-                  />
+                  {custTier && (
+                    <span style={{
+                      fontSize: "0.58rem",
+                      fontWeight: 800,
+                      padding: "1px 5px",
+                      borderRadius: "4px",
+                      background: custTier === "VIP" ? "rgba(168, 85, 247, 0.2)" : "rgba(34, 197, 94, 0.2)",
+                      color: custTier === "VIP" ? "#c084fc" : "#4ade80",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {custTier}
+                    </span>
+                  )}
                 </div>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                  <User size={11} style={{ position: "absolute", left: "6px", color: "var(--text-muted)", pointerEvents: "none" }} />
-                  <input
-                    type="text"
-                    placeholder="Customer Name"
-                    value={custName}
-                    onChange={(e) => handleCustomerNameChange(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "4px 4px 4px 22px",
-                      fontSize: "0.72rem",
-                      background: "var(--bg-primary)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: "5px",
-                      color: "var(--text-main)",
-                      outline: "none",
-                    }}
-                  />
-                </div>
+                <span style={{ fontSize: "0.66rem", color: "var(--accent-amber-light)", fontWeight: 700, flexShrink: 0 }}>
+                  {isCustomerDetailsOpen ? "▲ Hide" : custName || custPhone ? "✎ Edit" : "▼ + Add"}
+                </span>
               </div>
+              {isCustomerDetailsOpen && (
+                <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.3fr", gap: "0.35rem", marginTop: "0.35rem" }}>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <Phone size={11} style={{ position: "absolute", left: "6px", color: "var(--text-muted)", pointerEvents: "none" }} />
+                    <input
+                      type="tel"
+                      placeholder="Phone No."
+                      value={custPhone}
+                      onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "4px 4px 4px 22px",
+                        fontSize: "0.72rem",
+                        background: "var(--bg-primary)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "5px",
+                        color: "var(--text-main)",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <User size={11} style={{ position: "absolute", left: "6px", color: "var(--text-muted)", pointerEvents: "none" }} />
+                    <input
+                      type="text"
+                      placeholder="Customer Name"
+                      value={custName}
+                      onChange={(e) => handleCustomerNameChange(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "4px 4px 4px 22px",
+                        fontSize: "0.72rem",
+                        background: "var(--bg-primary)",
+                        border: "1px solid var(--border-subtle)",
+                        borderRadius: "5px",
+                        color: "var(--text-main)",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Ordered Items List */}
+            {/* Ordered Items List (Stage 1: Current Selection vs Stage 2: Kitchen Confirmed) */}
             <div
               style={{
-                flex: "1 1 0",
-                minHeight: "70px",
-                maxHeight: "none",
+                flex: "1 1 auto",
+                minHeight: "120px",
                 overflowY: "auto",
-                padding: "0.35rem 0.55rem",
+                padding: "0.45rem 0.65rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.3rem",
+                gap: "0.45rem",
               }}
             >
-              {/* Live Kitchen Status Banner */}
-              {safeItems.length > 0 &&
-                (() => {
-                  if (hasUnsentItems) {
-                    return (
-                      <div
-                        style={{
-                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(234, 88, 12, 0.08))",
-                          border: "1px dashed var(--accent-amber)",
-                          borderRadius: "6px",
-                          padding: "0.35rem 0.55rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: "0.4rem",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", minWidth: 0 }}>
-                          <span style={{ fontSize: "0.9rem" }}>📝</span>
-                          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--accent-amber-light)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Order Not Sent to Kitchen
-                          </span>
-                        </div>
-                        <span
-                          style={{
-                            background: "rgba(245, 158, 11, 0.2)",
-                            color: "var(--accent-amber-light)",
-                            border: "1px solid rgba(245, 158, 11, 0.4)",
-                            fontSize: "0.62rem",
-                            fontWeight: 800,
-                            padding: "1px 5px",
-                            borderRadius: "6px",
-                            whiteSpace: "nowrap",
-                            flexShrink: 0,
-                          }}
-                        >
-                          KOT REQ
-                        </span>
-                      </div>
-                    );
-                  }
+              {/* STAGE 1: Current Selection (Newly added items waiting to be sent to kitchen) */}
+              {unsentItems.length > 0 && (
+                <div style={{ marginBottom: "0.35rem" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0.35rem 0.6rem",
+                      background: "rgba(245, 158, 11, 0.12)",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(245, 158, 11, 0.35)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                      <span style={{ fontSize: "0.8rem" }}>🟡</span>
+                      <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--accent-amber-light)" }}>
+                        Current Selection ({unsentItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} to send)
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.6rem",
+                        fontWeight: 800,
+                        background: "var(--accent-amber)",
+                        color: "#000000",
+                        padding: "1px 6px",
+                        borderRadius: "4px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Unsent
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {unsentItems.map((item, idx) => renderItemCard(item, idx, true))}
+                  </div>
 
-                  const allReady = allCookingReady;
-                  const hasCooking = safeItems.some(
-                    (i) => i.kotStatus === "cooking",
-                  );
-                  const hasReady = safeItems.some(
-                    (i) => i.kotStatus === "ready",
-                  );
-                  const readyCount = safeItems.filter(
-                    (i) => i.kotStatus === "ready" || i.kotStatus === "served",
-                  ).length;
+                  {/* Direct Quick Action to send current selection */}
+                  <button
+                    type="button"
+                    onClick={handleTriggerSendKot}
+                    disabled={isSendingKot}
+                    style={{
+                      marginTop: "0.45rem",
+                      background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "0.52rem 0.85rem",
+                      fontSize: "0.82rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.45rem",
+                      width: "100%",
+                      boxShadow: "0 4px 14px rgba(234, 88, 12, 0.35)",
+                    }}
+                  >
+                    <ChefHat size={14} color="#ffffff" />
+                    <span>{isSendingKot ? "Sending..." : `${dispatchButtonLabel} (${unsentItems.length} new items)`}</span>
+                  </button>
+                </div>
+              )}
 
-                  if (allReady) {
-                    return (
-                      <div
-                        style={{
-                          background: "linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.12))",
-                          border: "1.5px solid #10b981",
-                          borderRadius: "8px",
-                          padding: "0.65rem 0.85rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          boxShadow: "0 0 16px rgba(16, 185, 129, 0.25)",
-                          animation: "pulseGlow 2.5s infinite",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.5rem",
-                          }}
-                        >
-                          <span style={{ fontSize: "1.2rem" }}>🔔</span>
-                          <div>
-                            <div
-                              style={{
-                                fontSize: "0.78rem",
-                                fontWeight: 900,
-                                color: "#065F46",
-                                letterSpacing: "0.02em",
-                              }}
-                            >
-                              FOOD IS READY TO SERVE!
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "0.68rem",
-                                color: "#047857",
-                                fontWeight: 600,
-                              }}
-                            >
-                              All dishes cooked & ready. Settle & checkout is enabled!
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          style={{
-                            background: "#10b981",
-                            color: "#064E3B",
-                            fontSize: "0.65rem",
-                            fontWeight: 900,
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                          }}
-                        >
-                          READY TO SETTLE
-                        </span>
-                      </div>
-                    );
-                  }
+              {/* STAGE 2: Kitchen Confirmed Order (Already sent to kitchen, cooking / ready) */}
+              {sentItems.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0.35rem 0.6rem",
+                      background: "rgba(16, 185, 129, 0.08)",
+                      borderRadius: "6px",
+                      border: "1px solid rgba(16, 185, 129, 0.25)",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                      <span style={{ fontSize: "0.8rem" }}>🟢</span>
+                      <span style={{ fontSize: "0.74rem", fontWeight: 800, color: "#10b981" }}>
+                        Kitchen Confirmed Order ({sentItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} items)
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "0.6rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      Active in Kitchen
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {sentItems.map((item, idx) => renderItemCard(item, idx, false))}
+                  </div>
+                </div>
+              )}
 
-                  if (hasCooking) {
-                    return (
-                      <div style={{
-                        background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(245, 158, 11, 0.1))',
-                        border: '1.5px solid #ea580c',
-                        borderRadius: '8px',
-                        padding: '0.45rem 0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        <span style={{ fontSize: '1.2rem' }}>🔥</span>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: "0.78rem",
-                              fontWeight: 900,
-                              color: "var(--accent-amber-light)",
-                              letterSpacing: "0.02em",
-                            }}
-                          >
-                            {readyCount > 0
-                              ? `CHEF IS COOKING (${readyCount}/${safeItems.length} PREPARED)`
-                              : "CHEF IS COOKING ORDER"}
-                          </div>
-                          <div style={{ fontSize: '0.68rem', color: 'var(--accent-amber-light)', fontWeight: 600 }}>
-                            {readyCount > 0 ? `${readyCount} dish(es) ready to serve • Remaining dishes cooking` : 'Kitchen started preparing dishes'}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (hasReady) {
-                    return (
-                      <div
-                        style={{
-                          background: "rgba(16, 185, 129, 0.12)",
-                          border: "1px solid rgba(16, 185, 129, 0.4)",
-                          borderRadius: "8px",
-                          padding: "0.55rem 0.8rem",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        <span style={{ fontSize: "1.1rem" }}>🔔</span>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: "0.76rem",
-                              fontWeight: 800,
-                              color: "var(--success)",
-                            }}
-                          >
-                            Some Dishes Prepared ({readyCount}/
-                            {safeItems.length})
-                          </div>
-                          <div
-                            style={{ fontSize: "0.66rem", color: "var(--success)" }}
-                          >
-                            Partial items are ready to serve to guests
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return null;
-                })()}
-
-              {safeItems.length === 0 ? (
+              {safeItems.length === 0 && (
                 <div
                   style={{
                     textAlign: "center",
@@ -4166,386 +4586,9 @@ export function TableDetailView({
                     No dishes added yet to {table.name}
                   </p>
                   <p style={{ fontSize: "0.78rem", maxWidth: "240px" }}>
-                    Tap any Biryani or starter from the menu on the left to add
-                    items to this table.
+                    Tap any item from the menu on the left to add items to this table.
                   </p>
                 </div>
-              ) : (
-                safeItems.map((item, index) => (
-                  <div
-                    key={safeItemKeys[index]}
-                    style={{
-                      background: "var(--bg-tertiary)",
-                      borderRadius: "6px",
-                      padding: "0.45rem 0.6rem",
-                      border: "1px solid var(--border-subtle)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.3rem",
-                    }}
-                  >
-                    {/* Top Row: Name + Total Price */}
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: "0.4rem",
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
-                          <div
-                            style={{
-                              fontSize: "0.78rem",
-                              fontWeight: 700,
-                              color: "var(--text-main)",
-                              lineHeight: 1.3,
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {item.name}
-                          </div>
-                          <span
-                            style={{
-                              fontSize: "0.56rem",
-                              fontWeight: 800,
-                              padding: "1px 5px",
-                              borderRadius: "999px",
-                              background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
-                              color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
-                              border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {isBarMenuItem(item) ? "Bar" : "Kitchen"}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.3rem",
-                            marginTop: "2px",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <span
-                            className="font-mono"
-                            style={{
-                              fontSize: "0.68rem",
-                              color: "var(--text-dim)",
-                            }}
-                          >
-                            {formatCurrency(item.price)} × {item.quantity}
-                          </span>
-                          {(() => {
-                            const itemStatus = String(item.kotStatus || "").toLowerCase();
-                            const isReady = itemStatus === "ready" || itemStatus === "served" || itemStatus === "completed";
-                            const isCooking = itemStatus === "cooking" || itemStatus === "mixing";
-                            const isSent = isItemSentToKot(item);
-
-                            if (isReady) {
-                              return (
-                                <span
-                                  style={{
-                                    fontSize: "0.6rem",
-                                    fontWeight: 800,
-                                    padding: "1px 5px",
-                                    borderRadius: "3px",
-                                    background: "rgba(16, 185, 129, 0.15)",
-                                    color: "#10b981",
-                                    border: "1px solid rgba(16, 185, 129, 0.35)",
-                                  }}
-                                >
-                                  ✓ Ready
-                                </span>
-                              );
-                            }
-
-                            if (isCooking) {
-                              return (
-                                <span
-                                  style={{
-                                    fontSize: "0.6rem",
-                                    fontWeight: 800,
-                                    padding: "1px 5px",
-                                    borderRadius: "3px",
-                                    background: "rgba(234, 88, 12, 0.15)",
-                                    color: "#ea580c",
-                                    border: "1px solid rgba(234, 88, 12, 0.35)",
-                                  }}
-                                >
-                                  🔥 Cooking
-                                </span>
-                              );
-                            }
-
-                            if (isSent) {
-                              return (
-                                <span
-                                  style={{
-                                    fontSize: "0.6rem",
-                                    fontWeight: 800,
-                                    padding: "1px 5px",
-                                    borderRadius: "3px",
-                                    background: "rgba(245, 158, 11, 0.15)",
-                                    color: "#f59e0b",
-                                    border: "1px solid rgba(245, 158, 11, 0.35)",
-                                  }}
-                                >
-                                  📥 {isBarMenuItem(item) ? "BOT Sent" : "KOT Sent"}
-                                </span>
-                              );
-                            }
-
-                            return (
-                              <span
-                                style={{
-                                  fontSize: "0.6rem",
-                                  fontWeight: 800,
-                                  padding: "1px 5px",
-                                  borderRadius: "3px",
-                                  background: "rgba(148, 163, 184, 0.12)",
-                                  color: "#94a3b8",
-                                  border: "1px solid rgba(148, 163, 184, 0.25)",
-                                }}
-                              >
-                                📝 Unsent
-                              </span>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                      <span
-                        className="font-mono"
-                        style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 800,
-                          color: "var(--accent-amber-light)",
-                          whiteSpace: "nowrap",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {formatCurrency(item.price * item.quantity)}
-                      </span>
-                    </div>
-
-                    {/* Quantity Stepper & Notes */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        marginTop: "0.2rem",
-                        paddingTop: "0.4rem",
-                        borderTop: "1px solid var(--neutral-border)",
-                      }}
-                    >
-                      {/* Stepper */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.3rem",
-                          background: "var(--bg-secondary)",
-                          borderRadius: "4px",
-                          padding: "2px 4px",
-                        }}
-                      >
-                        <button
-                          onClick={() => {
-                            sounds.playRemoveItem();
-                            onUpdateItemQuantity(
-                              targetTableId,
-                              item.id,
-                              item.quantity - 1,
-                            );
-                          }}
-                          style={{
-                            background: "transparent",
-                            color: "var(--text-muted)",
-                            width: "20px",
-                            height: "20px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Minus size={12} />
-                        </button>
-
-                        <span
-                          className="font-mono"
-                          style={{
-                            fontWeight: 700,
-                            fontSize: "0.84rem",
-                            minWidth: "18px",
-                            textAlign: "center",
-                          }}
-                        >
-                          {item.quantity}
-                        </span>
-
-                        <button
-                          onClick={() => {
-                            sounds.playAddItem();
-                            onUpdateItemQuantity(
-                              targetTableId,
-                              item.id,
-                              item.quantity + 1,
-                            );
-                          }}
-                          style={{
-                            background: "transparent",
-                            color: "var(--accent-amber-light)",
-                            width: "20px",
-                            height: "20px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Plus size={12} />
-                        </button>
-                      </div>
-
-                      {/* Notes Trigger & Delete */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.4rem",
-                        }}
-                      >
-                        <button
-                          onClick={() => {
-                            if (editingNoteItemId === item.id) {
-                              // If closed again with empty input, clear the note
-                              if (!tempNote.trim() && item.notes) {
-                                onUpdateItemNotes(targetTableId, item.id, "");
-                              }
-                              setEditingNoteItemId(null);
-                              setTempNote("");
-                            } else {
-                              setEditingNoteItemId(item.id);
-                              setTempNote(item.notes || "");
-                            }
-                          }}
-                          style={{
-                            fontSize: "0.72rem",
-                            color: item.notes
-                              ? "var(--accent-amber-light)"
-                              : "var(--text-dim)",
-                            background: "transparent",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.25rem",
-                            textDecoration: "underline",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <FileText size={11} />
-                          <span>
-                            {item.notes ? `"${item.notes}"` : "+ Note"}
-                          </span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            sounds.playRemoveItem();
-                            onRemoveItemFromTable(targetTableId, item.id);
-                          }}
-                          style={{
-                            background: "transparent",
-                            color: "var(--text-dim)",
-                            padding: "2px",
-                          }}
-                          title="Remove item"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Inline Note Editor */}
-                    {editingNoteItemId === item.id && (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "0.3rem",
-                          marginTop: "0.3rem",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="e.g. Extra salan, spicy, no coriander..."
-                          value={tempNote}
-                          onChange={(e) => setTempNote(e.target.value)}
-                          autoFocus
-                          style={{
-                            flex: 1,
-                            background: "var(--bg-primary)",
-                            border: "1px solid var(--accent-amber)",
-                            borderRadius: "4px",
-                            color: "var(--text-main)",
-                            padding: "0.25rem 0.5rem",
-                            fontSize: "0.74rem",
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveNote(item.id);
-                            if (e.key === "Escape") {
-                              if (!tempNote.trim() && item.notes) {
-                                onUpdateItemNotes(table.id, item.id, "");
-                              }
-                              setEditingNoteItemId(null);
-                              setTempNote("");
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => handleSaveNote(item.id)}
-                          style={{
-                            background: "var(--accent-amber)",
-                            color: "#000000",
-                            padding: "0 0.5rem",
-                            borderRadius: "4px",
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Save
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!tempNote.trim() && item.notes) {
-                              onUpdateItemNotes(table.id, item.id, "");
-                            }
-                            setEditingNoteItemId(null);
-                            setTempNote("");
-                          }}
-                          style={{
-                            background: "var(--surface-tint)",
-                            color: "var(--text-dim)",
-                            border: "1px solid rgba(var(--surface-rgb),0.1)",
-                            padding: "0 0.4rem",
-                            borderRadius: "4px",
-                            fontSize: "0.72rem",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                          }}
-                          title="Cancel"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))
               )}
             </div>
 
@@ -4900,8 +4943,152 @@ export function TableDetailView({
         )}
       </div>
 
-      {/* Mobile Floating Cart Trigger (Sticky at bottom on phones) */}
-      {safeItems.length > 0 && !isMobileOrderSlipOpen && (
+      {/* Option 2: Desktop Floating Order Bar (When Floating Bar Mode is Active) */}
+      {safeItems.length > 0 && orderSlipViewMode === "floating" && !isMobileOrderSlipOpen && (
+        <div
+          className="pos-desktop-floating-bar"
+          style={{
+            position: "fixed",
+            bottom: "16px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "calc(100% - 32px)",
+            maxWidth: "960px",
+            background: "linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%)",
+            backdropFilter: "blur(14px)",
+            border: "1.5px solid rgba(245, 158, 11, 0.6)",
+            borderRadius: "14px",
+            padding: "0.65rem 1.15rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.65), 0 0 24px rgba(245, 158, 11, 0.18)",
+            zIndex: 100,
+          }}
+        >
+          {/* Left: Table & Items Overview */}
+          <div
+            onClick={() => setIsMobileOrderSlipOpen(true)}
+            style={{ display: "flex", alignItems: "center", gap: "0.85rem", cursor: "pointer", flex: 1, minWidth: 0 }}
+          >
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, #f59e0b, #ea580c)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                flexShrink: 0,
+              }}
+            >
+              <Receipt size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "#ffffff" }}>
+                  {table.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 800,
+                    background: "rgba(245, 158, 11, 0.2)",
+                    color: "var(--accent-amber-light)",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    padding: "1px 7px",
+                    borderRadius: "999px",
+                  }}
+                >
+                  {safeItems.reduce((acc, i) => acc + (i.quantity || 1), 0)} Items
+                  {unsentItems.length > 0 ? ` (${unsentItems.length} New)` : ""}
+                </span>
+              </div>
+              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                Subtotal: {formatCurrency(subtotal)} • Total Bill:{" "}
+                <strong style={{ color: "var(--accent-amber-light)", fontSize: "0.88rem" }}>
+                  {formatCurrency(grandTotal)}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+            {hasUnsentItems && (
+              <button
+                type="button"
+                onClick={handleTriggerSendKot}
+                disabled={isSendingKot}
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.48rem 0.95rem",
+                  fontSize: "0.78rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  boxShadow: "0 4px 14px rgba(234, 88, 12, 0.35)",
+                }}
+              >
+                <span>🚀</span>
+                <span>{dispatchButtonLabel} ({unsentItems.length})</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsMobileOrderSlipOpen(true)}
+              style={{
+                background: "var(--bg-tertiary)",
+                color: "var(--text-main)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "8px",
+                padding: "0.48rem 0.95rem",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              <span>📋</span>
+              <span>View Bill & Actions ›</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleToggleOrderSlipViewMode("sidebar")}
+              style={{
+                background: "transparent",
+                color: "var(--text-muted)",
+                border: "1px dashed var(--border-subtle)",
+                borderRadius: "8px",
+                padding: "0.48rem 0.7rem",
+                fontSize: "0.72rem",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
+              title="Switch back to Side Panel view (Option 1)"
+            >
+              <span>📑 Side Panel</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Floating Cart Trigger (Sticky at bottom on phones only when sidebar mode) */}
+      {safeItems.length > 0 && orderSlipViewMode !== "floating" && !isMobileOrderSlipOpen && (
         <div
           className="pos-mobile-cart-bar"
           onClick={() => setIsMobileOrderSlipOpen(true)}
@@ -4953,14 +5140,14 @@ export function TableDetailView({
         </div>
       )}
 
-      {/* Mobile Slide-Up Order Slip Modal Drawer */}
+      {/* Slide-Up / Centered Order Slip Modal Drawer */}
       {isMobileOrderSlipOpen && (
         <div
           style={{
             position: "fixed",
             inset: 0,
             background: "var(--modal-overlay)",
-            backdropFilter: "blur(4px)",
+            backdropFilter: "blur(5px)",
             zIndex: 1000,
             display: "flex",
             flexDirection: "column",
@@ -4976,7 +5163,10 @@ export function TableDetailView({
               borderTop: "2px solid var(--accent-amber)",
               borderTopLeftRadius: "16px",
               borderTopRightRadius: "16px",
-              maxHeight: "85vh",
+              maxHeight: "88vh",
+              width: "100%",
+              maxWidth: "560px",
+              margin: "0 auto",
               display: "flex",
               flexDirection: "column",
               boxShadow: "0 -8px 32px rgba(0,0,0,0.6)",
@@ -5007,7 +5197,7 @@ export function TableDetailView({
                 <span
                   style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}
                 >
-                  {safeItems.length} items ordered
+                  {safeItems.length} items ordered {unsentItems.length > 0 ? `(${unsentItems.length} to send)` : ""}
                 </span>
               </div>
               <button
@@ -5027,7 +5217,7 @@ export function TableDetailView({
               </button>
             </div>
 
-            {/* Quick Customer Capture (Mobile Drawer) */}
+            {/* Quick Customer Capture (Drawer) */}
             <div
               style={{
                 padding: "0.5rem 0.75rem",
@@ -5098,7 +5288,7 @@ export function TableDetailView({
               </div>
             </div>
 
-            {/* Scrollable Items List */}
+            {/* Scrollable Items List (2-Stage: Unsent vs Kitchen Confirmed) */}
             <div
               style={{
                 flex: 1,
@@ -5106,123 +5296,27 @@ export function TableDetailView({
                 padding: "0.75rem 1rem",
                 display: "flex",
                 flexDirection: "column",
-                gap: "0.5rem",
-                maxHeight: "40vh",
+                gap: "0.6rem",
+                maxHeight: "45vh",
               }}
             >
-              {safeItems.map((item, index) => (
-                <div
-                  key={safeItemKeys[index]}
-                  style={{
-                    background: "var(--bg-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "8px",
-                    padding: "0.55rem 0.75rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
-                      <div
-                        style={{
-                          fontSize: "0.84rem",
-                          fontWeight: 700,
-                          color: "var(--text-main)",
-                        }}
-                      >
-                        {item.name}
-                      </div>
-                      <span
-                        style={{
-                          fontSize: "0.58rem",
-                          fontWeight: 800,
-                          padding: "1px 6px",
-                          borderRadius: "999px",
-                          background: isBarMenuItem(item) ? "rgba(59, 130, 246, 0.14)" : "rgba(245, 158, 11, 0.14)",
-                          color: isBarMenuItem(item) ? "#60a5fa" : "var(--accent-amber-light)",
-                          border: `1px solid ${isBarMenuItem(item) ? "rgba(59, 130, 246, 0.35)" : "rgba(245, 158, 11, 0.35)"}`,
-                        }}
-                      >
-                        {isBarMenuItem(item) ? "Bar" : "Kitchen"}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "0.74rem",
-                        color: "var(--accent-amber-light)",
-                      }}
-                    >
-                      {formatCurrency(item.price)} × {item.quantity} ={" "}
-                      {formatCurrency(item.price * item.quantity)}
-                    </div>
+              {unsentItems.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                  <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "var(--accent-amber-light)", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>🟡 Current Selection ({unsentItems.length} items to send)</span>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.4rem",
-                    }}
-                  >
-                    <button
-                      onClick={() =>
-                        onUpdateItemQuantity(
-                          targetTableId,
-                          item.id,
-                          item.quantity - 1,
-                        )
-                      }
-                      style={{
-                        width: "26px",
-                        height: "26px",
-                        borderRadius: "6px",
-                        background: "var(--surface-tint)",
-                        color: "var(--text-main)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.9rem",
-                        fontWeight: 800,
-                      }}
-                    >
-                      -
-                    </button>
-                    <span
-                      style={{
-                        fontWeight: 800,
-                        minWidth: "18px",
-                        textAlign: "center",
-                      }}
-                    >
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() =>
-                        onUpdateItemQuantity(
-                          targetTableId,
-                          item.id,
-                          item.quantity + 1,
-                        )
-                      }
-                      style={{
-                        width: "26px",
-                        height: "26px",
-                        borderRadius: "6px",
-                        background: "var(--accent-amber)",
-                        color: "#000000",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.9rem",
-                        fontWeight: 800,
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
+                  {unsentItems.map((item, idx) => renderItemCard(item, idx, true))}
                 </div>
-              ))}
+              )}
+
+              {sentItems.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginTop: unsentItems.length > 0 ? "0.4rem" : 0 }}>
+                  <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#10b981", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>🟢 Kitchen Confirmed Order ({sentItems.length} items)</span>
+                  </div>
+                  {sentItems.map((item, idx) => renderItemCard(item, idx, false))}
+                </div>
+              )}
             </div>
 
             {/* Financial Summary & Actions */}
