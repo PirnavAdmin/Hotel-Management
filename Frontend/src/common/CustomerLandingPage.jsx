@@ -26,6 +26,7 @@ import {
   Wallet,
   Smartphone,
   Check,
+  CheckCheck,
   Bell,
   BellRing,
   MapPin,
@@ -175,6 +176,8 @@ export function CustomerLandingPage({
   onAdminLogin,
   kitchenNotifications = [],
   onClearNotifications,
+  onMarkAllRead,
+  onMarkNotificationRead,
 }) {
   const getStoredSettings = () => {
     try {
@@ -398,6 +401,8 @@ export function CustomerLandingPage({
   const effectiveNotifications = Array.isArray(kitchenNotifications)
     ? kitchenNotifications
     : [];
+  const unreadNotifications = effectiveNotifications.filter((n) => !n.read);
+  const unreadCount = unreadNotifications.length;
   const handleClearAllNotifs = () => {
     onClearNotifications?.();
     setIsNotifOpen(false);
@@ -1547,15 +1552,15 @@ export function CustomerLandingPage({
                   <div className="takeaway-header-notif-wrap" ref={notifRef}>
                     <button
                       type="button"
-                      className={`takeaway-header-notif-btn ${effectiveNotifications.length > 0 ? "has-alerts" : ""}`}
-                      aria-label={`Kitchen status updates${effectiveNotifications.length ? `, ${effectiveNotifications.length} updates` : ""}`}
+                      className={`takeaway-header-notif-btn ${unreadCount > 0 ? "has-alerts" : ""}`}
+                      aria-label={`Kitchen status updates${unreadCount ? `, ${unreadCount} new updates` : ""}`}
                       aria-expanded={isNotifOpen}
                       aria-haspopup="true"
                       title="Kitchen Cooking Status Updates"
                       onClick={() => setIsNotifOpen((open) => !open)}
                     >
                       {Array.isArray(effectiveNotifications) &&
-                      effectiveNotifications.some(
+                      unreadNotifications.some(
                         (n) => n.type === "cooking_completed",
                       ) ? (
                         <BellRing
@@ -1565,14 +1570,11 @@ export function CustomerLandingPage({
                       ) : (
                         <Bell size={16} />
                       )}
-                      {Array.isArray(effectiveNotifications) &&
-                        effectiveNotifications.length > 0 && (
-                          <span className="takeaway-notif-badge">
-                            {effectiveNotifications.length > 9
-                              ? "9+"
-                              : effectiveNotifications.length}
-                          </span>
-                        )}
+                      {unreadCount > 0 && (
+                        <span className="takeaway-notif-badge">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
                     </button>
 
                     {/* Notifications Dropdown Panel */}
@@ -1586,23 +1588,41 @@ export function CustomerLandingPage({
                           <div className="takeaway-notif-header-title">
                             <Bell size={14} color="#f59e0b" />
                             <span>Kitchen Status Updates</span>
-                            {effectiveNotifications.length > 0 && (
+                            {unreadCount > 0 && (
                               <span className="takeaway-notif-count-tag">
-                                {effectiveNotifications.length}
+                                {unreadCount} new
                               </span>
                             )}
                           </div>
-                          {effectiveNotifications.length > 0 && (
-                            <button
-                              type="button"
-                              className="takeaway-notif-clear-btn"
-                              title="Clear all updates"
-                              onClick={handleClearAllNotifs}
-                            >
-                              <Trash2 size={12} />
-                              <span>Clear</span>
-                            </button>
-                          )}
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            {unreadCount > 0 && onMarkAllRead && (
+                              <button
+                                type="button"
+                                className="takeaway-notif-clear-btn"
+                                style={{
+                                  background: "rgba(16, 185, 129, 0.12)",
+                                  borderColor: "rgba(16, 185, 129, 0.35)",
+                                  color: "var(--success, #10b981)",
+                                }}
+                                title="Mark all updates as read"
+                                onClick={() => onMarkAllRead()}
+                              >
+                                <CheckCheck size={12} />
+                                <span>Mark Read</span>
+                              </button>
+                            )}
+                            {effectiveNotifications.length > 0 && (
+                              <button
+                                type="button"
+                                className="takeaway-notif-clear-btn"
+                                title="Clear all updates"
+                                onClick={handleClearAllNotifs}
+                              >
+                                <Trash2 size={12} />
+                                <span>Clear</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {effectiveNotifications.length === 0 ? (
@@ -1624,10 +1644,17 @@ export function CustomerLandingPage({
                               (notification, index) => {
                                 const isCompleted =
                                   notification.type === "cooking_completed";
+                                const isUnread = !notification.read;
                                 return (
                                   <div
                                     key={notification.id || index}
                                     className={`takeaway-notif-item ${isCompleted ? "is-ready" : ""}`}
+                                    style={{
+                                      opacity: isUnread ? 1 : 0.65,
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => onMarkNotificationRead?.(notification.id)}
+                                    title={isUnread ? "Click to mark as read" : undefined}
                                   >
                                     <div
                                       className={`takeaway-notif-icon-circle ${isCompleted ? "is-ready" : ""}`}
@@ -1640,9 +1667,22 @@ export function CustomerLandingPage({
                                     </div>
                                     <div className="takeaway-notif-item-body">
                                       <div className="takeaway-notif-item-top">
-                                        <strong>
-                                          {getCleanAlertTitle(notification)}
-                                        </strong>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                          {isUnread && (
+                                            <span
+                                              style={{
+                                                width: "5px",
+                                                height: "5px",
+                                                borderRadius: "50%",
+                                                background: "#f59e0b",
+                                                display: "inline-block",
+                                              }}
+                                            />
+                                          )}
+                                          <strong>
+                                            {getCleanAlertTitle(notification)}
+                                          </strong>
+                                        </div>
                                         <span>
                                           {getCleanAlertTimestamp(notification)}
                                         </span>

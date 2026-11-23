@@ -266,6 +266,7 @@ export function AdminSettings({
           updatedAt: new Date().toISOString(),
           isUserConfigured: true,
         };
+        setLastSavedSettings(next);
         // Auto-save immediately to server so all desktops / devices get the change globally
         if (onSaveSettings) {
           onSaveSettings(next).catch((err) => {
@@ -306,6 +307,10 @@ export function AdminSettings({
           localSaved = JSON.parse(localStorage.getItem("gourmet_pos_settings_v1") || "{}");
         } catch {}
 
+        const localTime = localSaved.updatedAt ? new Date(localSaved.updatedAt).getTime() : 0;
+        const initialTime = initialSettings.updatedAt ? new Date(initialSettings.updatedAt).getTime() : 0;
+        const isLocalNewer = localSaved.isUserConfigured && localTime > 0 && localTime >= initialTime;
+
         const sourceQrs =
           (Array.isArray(localSaved.paymentQrs) && localSaved.paymentQrs.length > 0 && localSaved.paymentQrs) ||
           (Array.isArray(initialSettings.paymentQrs) && initialSettings.paymentQrs.length > 0 && initialSettings.paymentQrs) ||
@@ -333,13 +338,23 @@ export function AdminSettings({
         const nextSettings = {
           ...prev,
           ...localSaved,
-          ...initialSettings, // Server data is authoritative for global sync across desktops
-          tagline:
-            initialSettings.tagline !== undefined && initialSettings.tagline !== ""
-              ? initialSettings.tagline
-              : (localSaved.tagline || prev.tagline || ""),
-          logo: initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "/restaurant-logo.png",
-          restaurantLogo: initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "/restaurant-logo.png",
+          ...initialSettings,
+          restaurantName: isLocalNewer && localSaved.restaurantName
+            ? localSaved.restaurantName
+            : (initialSettings.restaurantName && !/bhanu|avsr/i.test(initialSettings.restaurantName)
+                ? initialSettings.restaurantName
+                : localSaved.restaurantName || "The Rustic Spin"),
+          tagline: isLocalNewer && localSaved.tagline !== undefined
+            ? localSaved.tagline
+            : (initialSettings.tagline !== undefined && initialSettings.tagline !== ""
+                ? initialSettings.tagline
+                : (localSaved.tagline || prev.tagline || "")),
+          logo: isLocalNewer && localSaved.logo !== undefined
+            ? localSaved.logo
+            : (initialSettings.logo || initialSettings.restaurantLogo || localSaved.logo || prev.logo || "/restaurant-logo.png"),
+          restaurantLogo: isLocalNewer && (localSaved.restaurantLogo !== undefined || localSaved.logo !== undefined)
+            ? (localSaved.restaurantLogo || localSaved.logo)
+            : (initialSettings.restaurantLogo || initialSettings.logo || localSaved.restaurantLogo || prev.restaurantLogo || "/restaurant-logo.png"),
           logoBg: initialSettings.logoBg || localSaved.logoBg || prev.logoBg || "",
           selectedQrId: selectedId,
           paymentQrs: qrs,
@@ -355,7 +370,7 @@ export function AdminSettings({
         return nextSettings;
       });
     }
-  }, [initialSettings, lastSavedSettings]);
+  }, [initialSettings]);
 
   const fileInputRef0 = useRef(null);
   const fileInputRef1 = useRef(null);
@@ -552,7 +567,7 @@ export function AdminSettings({
     setIsSaving(true);
     setSaveError("");
 
-    const resolvedLogo = settings.logo || settings.restaurantLogo || "/restaurant-logo.png";
+    const resolvedLogo = settings.logo !== undefined ? settings.logo : (settings.restaurantLogo || "");
     const settingsToSave = {
       ...settings,
       logo: resolvedLogo,
@@ -583,18 +598,27 @@ export function AdminSettings({
     } catch {}
 
     // 2. Server save (authoritative global sync)
+    let saveFailed = false;
     if (onSaveSettings) {
       try {
-        await onSaveSettings(settingsToSave);
+        const syncRes = await onSaveSettings(settingsToSave);
+        if (syncRes && syncRes.success === false) {
+          saveFailed = true;
+          setSaveError(syncRes.error || "Failed to sync settings to server.");
+        }
       } catch (syncErr) {
         console.warn("Server sync error:", syncErr);
+        saveFailed = true;
+        setSaveError(syncErr?.message || "Server connection error while saving.");
       }
     }
 
     setLastSavedSettings(settingsToSave);
     setSettings(settingsToSave);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    if (!saveFailed) {
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    }
     setIsSaving(false);
   };
 
@@ -999,7 +1023,9 @@ export function AdminSettings({
                             restaurantLogo: "",
                             logoBg: "",
                             updatedAt: new Date().toISOString(),
+                            isUserConfigured: true,
                           };
+                          setLastSavedSettings(next);
                           if (onSaveSettings) {
                             onSaveSettings(next).catch((err) => {
                               console.warn("Auto-save remove logo warning:", err);

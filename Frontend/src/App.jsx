@@ -684,30 +684,38 @@ export function App() {
       const serverName = cleanServer.restaurantName || cleanServer.name || "";
       const serverTagline = cleanServer.tagline;
 
-      // Server data is authoritative for restaurant branding and payment QRs
+      const serverTime = cleanServer.updatedAt ? new Date(cleanServer.updatedAt).getTime() : 0;
+      const localTime = local.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+      const isLocalNewer = local.isUserConfigured && localTime > 0 && localTime >= serverTime;
+
+      // If local settings have more recent user changes, preserve them; otherwise accept server updates
       const resolvedLogo =
-        serverLogo ||
-        local.logo ||
-        local.restaurantLogo ||
-        DEFAULT_RESTAURANT_LOGO;
+        isLocalNewer && (local.logo !== undefined || local.restaurantLogo !== undefined)
+          ? (local.logo || local.restaurantLogo || "")
+          : (serverLogo || local.logo || local.restaurantLogo || DEFAULT_RESTAURANT_LOGO);
+
       const merged = {
         ...local,
         ...cleanServer,
         restaurantName:
-          serverName && !/bhanu|avsr/i.test(serverName)
-            ? serverName
-            : local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName)
+          isLocalNewer && local.restaurantName
             ? local.restaurantName
-            : "The Rustic Spin",
+            : (serverName && !/bhanu|avsr/i.test(serverName)
+                ? serverName
+                : local.restaurantName && !/bhanu|avsr/i.test(local.restaurantName)
+                ? local.restaurantName
+                : "The Rustic Spin"),
         tagline:
-          serverTagline !== undefined && serverTagline !== ""
-            ? serverTagline
-            : local.tagline && !/bhanu/i.test(local.tagline)
+          isLocalNewer && local.tagline !== undefined
             ? local.tagline
-            : "Restaurant Management and Fine Dining",
+            : (serverTagline !== undefined && serverTagline !== ""
+                ? serverTagline
+                : local.tagline && !/bhanu/i.test(local.tagline)
+                ? local.tagline
+                : "Restaurant Management and Fine Dining"),
         logo: resolvedLogo,
         restaurantLogo: resolvedLogo,
-        logoBg: cleanServer.logoBg || local.logoBg || "",
+        logoBg: isLocalNewer && local.logoBg !== undefined ? local.logoBg : (cleanServer.logoBg || local.logoBg || ""),
         paymentQrs: cleanServer.paymentQrs || local.paymentQrs || [],
         selectedQrId: cleanServer.selectedQrId || local.selectedQrId || "qr-1",
       };
@@ -1563,9 +1571,36 @@ export function App() {
 
   const handleClearNotifications = () => {
     setKitchenNotifications([]);
+    setActiveKitchenAlert(null);
     try {
-      localStorage.removeItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS);
+      localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, "[]");
+      localStorage.removeItem(STORAGE_KEY_LATEST_ALERT);
     } catch {}
+    window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-cleared"));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleMarkAllNotificationsRead = () => {
+    setKitchenNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    window.dispatchEvent(new CustomEvent("avsr-kitchen-notifications-read-all"));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleMarkNotificationRead = (notifId) => {
+    setKitchenNotifications((prev) => {
+      const updated = prev.map((n) => String(n.id) === String(notifId) ? { ...n, read: true } : n);
+      try {
+        localStorage.setItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    window.dispatchEvent(new Event("storage"));
   };
 
   // BroadcastChannel helper for cross-tab instantaneous sync
@@ -2249,6 +2284,11 @@ export function App() {
         } catch {}
       } else if (e.key === STORAGE_KEY_THEME) {
         setTheme(normalizeTheme(e.newValue));
+      } else if (e.key === STORAGE_KEY_KITCHEN_NOTIFICATIONS) {
+        try {
+          const parsed = e.newValue ? JSON.parse(e.newValue) : [];
+          setKitchenNotifications(Array.isArray(parsed) ? parsed.map(sanitizeKitchenAlert) : []);
+        } catch {}
       } else if (e.key === STORAGE_KEY_LATEST_ALERT) {
         try {
           const alert = sanitizeKitchenAlert(JSON.parse(e.newValue));
@@ -2368,10 +2408,31 @@ export function App() {
           }
         }
       } catch {}
+
+      try {
+        const rawNotifs = localStorage.getItem(STORAGE_KEY_KITCHEN_NOTIFICATIONS);
+        if (rawNotifs) {
+          const parsed = JSON.parse(rawNotifs);
+          if (Array.isArray(parsed)) {
+            setKitchenNotifications(parsed.map(sanitizeKitchenAlert));
+          }
+        }
+      } catch {}
+    };
+
+    const handleNotifsCleared = () => {
+      setKitchenNotifications([]);
+      setActiveKitchenAlert(null);
+    };
+
+    const handleNotifsReadAll = () => {
+      setKitchenNotifications((prev) => (Array.isArray(prev) ? prev.map((n) => ({ ...n, read: true })) : []));
     };
 
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("focus", syncAllFromStorage);
+    window.addEventListener("avsr-kitchen-notifications-cleared", handleNotifsCleared);
+    window.addEventListener("avsr-kitchen-notifications-read-all", handleNotifsReadAll);
     const handleVisibility = () => {
       if (document.visibilityState === "visible") syncAllFromStorage();
     };
@@ -2380,6 +2441,8 @@ export function App() {
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("focus", syncAllFromStorage);
+      window.removeEventListener("avsr-kitchen-notifications-cleared", handleNotifsCleared);
+      window.removeEventListener("avsr-kitchen-notifications-read-all", handleNotifsReadAll);
       document.removeEventListener("visibilitychange", handleVisibility);
       if (syncChannel) syncChannel.close();
       unsubscribeSse();
@@ -4968,6 +5031,8 @@ export function App() {
             onLogout={handlePosLogout}
             kitchenNotifications={kitchenNotifications}
             onClearNotifications={handleClearNotifications}
+            onMarkAllRead={handleMarkAllNotificationsRead}
+            onMarkNotificationRead={handleMarkNotificationRead}
             onSelectTable={(tblId) => {
               setSelectedTableId(tblId);
               setActiveView("order");
@@ -5002,6 +5067,8 @@ export function App() {
             onAdminLogin={handleHotelLogin}
             kitchenNotifications={kitchenNotifications}
             onClearNotifications={handleClearNotifications}
+            onMarkAllRead={handleMarkAllNotificationsRead}
+            onMarkNotificationRead={handleMarkNotificationRead}
           />
         )}
 
