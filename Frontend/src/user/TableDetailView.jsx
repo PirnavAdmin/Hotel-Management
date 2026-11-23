@@ -4302,9 +4302,11 @@ export function TableDetailView({
             {/* Ordered Items List (Stage 1: Current Selection vs Stage 2: Kitchen Confirmed) */}
             <div
               style={{
-                flex: "1 1 auto",
-                minHeight: "120px",
+                flex: "1 1 0%",
+                minHeight: 0,
+                maxHeight: "none",
                 overflowY: "auto",
+                overflowX: "hidden",
                 padding: "0.45rem 0.65rem",
                 display: "flex",
                 flexDirection: "column",
