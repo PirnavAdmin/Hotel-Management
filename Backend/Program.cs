@@ -338,6 +338,7 @@ builder.Services.AddScoped<TableService>();
 builder.Services.AddScoped<LoginManagementService>();
 builder.Services.AddScoped<KotService>();
 builder.Services.AddScoped<RestaurantSettingsService>();
+builder.Services.AddScoped<RestaurantThemeColorService>();
 builder.Services.AddScoped<BarService>();
 builder.Services.AddScoped<TakeawayService>();
 builder.Services.AddScoped<ReservationService>();

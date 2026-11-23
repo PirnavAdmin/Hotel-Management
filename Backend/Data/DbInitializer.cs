@@ -542,6 +542,17 @@ public static class DbInitializer
                 SELECT 1, 'AVSR FOOD COURT', 'Restaurant Management & Fine Dining', '+91 98450 12345', 'Main Road, Near Tech Park, Hyderabad, India', '36AABCA1234F1Z5', 5.00, 5.00, 1, 'nearest', '₹', 'Welcome to AVSR Food Court!', 'Thank you for dining with us. Visit again!', 'royal-saffron'
                 FROM DUAL
                 WHERE NOT EXISTS (SELECT 1 FROM `restaurant_settings` WHERE `id` = 1);");
+            SafeExecuteSql(conn, @"
+                CREATE TABLE IF NOT EXISTS `restaurant_theme_settings` (
+                    `restaurant_id` BIGINT NOT NULL,
+                    `accent_color` VARCHAR(7) NOT NULL DEFAULT '#f59e0b',
+                    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                    `updated_by` BIGINT NOT NULL,
+                    PRIMARY KEY (`restaurant_id`),
+                    KEY `ix_restaurant_theme_settings_updated_by` (`updated_by`),
+                    CONSTRAINT `ck_restaurant_theme_settings_hex` CHECK (`accent_color` REGEXP '^#[0-9A-Fa-f]{6}$')
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET collation_connection = utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, @"
@@ -2075,6 +2086,7 @@ public static class DbInitializer
             {
                 conn.Open();
             }
+
 
             SafeExecuteSql(conn, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;");
             SafeExecuteSql(conn, "SET collation_connection = utf8mb4_unicode_ci;");
