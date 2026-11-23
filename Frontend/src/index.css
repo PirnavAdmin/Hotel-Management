@@ -1078,7 +1078,7 @@ textarea {
 }
 .menu-items-table thead tr {
   display: grid;
-  grid-template-columns: minmax(240px, 1.8fr) minmax(110px, 0.7fr) minmax(95px, 0.6fr) minmax(100px, 0.65fr) minmax(250px, 1.45fr);
+  grid-template-columns: minmax(220px, 1.8fr) minmax(120px, 0.8fr) minmax(90px, 0.55fr) minmax(105px, 0.65fr) minmax(115px, 0.75fr) minmax(145px, 0.95fr);
   align-items: center;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border-subtle);
@@ -1097,6 +1097,15 @@ textarea {
   font-weight: inherit;
   color: inherit;
   text-align: left;
+  white-space: nowrap;
+}
+.menu-items-table thead th:nth-child(3),
+.menu-items-table thead th:nth-child(5),
+.menu-items-table thead th:nth-child(6) {
+  text-align: center;
+}
+.menu-items-table thead th:nth-child(4) {
+  text-align: right;
 }
 .menu-items-table thead th:last-child {
   text-align: center;
@@ -1107,7 +1116,7 @@ textarea {
 }
 .menu-items-table tbody tr.menu-admin-item-row {
   display: grid;
-  grid-template-columns: minmax(240px, 1.8fr) minmax(110px, 0.7fr) minmax(95px, 0.6fr) minmax(100px, 0.65fr) minmax(250px, 1.45fr);
+  grid-template-columns: minmax(220px, 1.8fr) minmax(120px, 0.8fr) minmax(90px, 0.55fr) minmax(105px, 0.65fr) minmax(115px, 0.75fr) minmax(145px, 0.95fr);
   align-items: center;
   overflow: hidden;
   border: 1px solid var(--border-subtle) !important;
@@ -1142,15 +1151,28 @@ textarea {
   color: var(--text-main);
   font-weight: 650;
   text-transform: capitalize;
+  white-space: nowrap;
+}
+.menu-admin-item-row > td[data-label="Dietary"] {
+  justify-content: center;
 }
 .menu-admin-item-row > td[data-label="Price"] {
   color: var(--accent-amber-light);
   font-size: 0.98rem !important;
   font-weight: 800;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.menu-admin-item-row > td[data-label="Availability"] {
+  justify-content: center;
+}
+.menu-admin-item-row > td[data-label="Actions"] {
+  justify-content: center;
 }
 .menu-admin-item-row > td[data-label="Actions"] > div {
   display: flex !important;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 0.4rem !important;
 }
 .menu-admin-item-row > td[data-label="Actions"] button {
