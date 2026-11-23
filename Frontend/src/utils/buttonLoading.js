@@ -1,5 +1,10 @@
 const ACTION_SELECTOR = "button, [role=\"button\"]";
-const EXISTING_LOADING_INDICATOR = ".app-loading-spinner, .takeaway-spinner, .auth-spinner, .animate-spin, .spin, [data-loading-indicator]";
+const EXISTING_LOADING_INDICATOR = ".app-loading-spinner, .takeaway-spinner, .auth-spinner, .animate-spin, .spin, [data-loading-indicator], [class*='spinner'], [class*='spin'], [class*='loader'], svg[style*='animation']";
+
+function hasExistingLoadingIndicator(button, injectedSpinner = null) {
+  return Array.from(button.querySelectorAll(EXISTING_LOADING_INDICATOR))
+    .some((indicator) => indicator !== injectedSpinner);
+}
 
 function makeSpinner() {
   const spinner = document.createElement("span");
@@ -28,13 +33,30 @@ export function installButtonLoading() {
           wasBusy: button.getAttribute("aria-busy"),
           spinner: null,
           pendingSpinner: null,
+          spinnerObserver: null,
         };
         states.set(button, state);
         state.pendingSpinner = window.requestAnimationFrame(() => {
           state.pendingSpinner = null;
           if (!button.isConnected || states.get(button) !== state || state.count === 0) return;
-          if (!button.querySelector(EXISTING_LOADING_INDICATOR)) {
+          if (!hasExistingLoadingIndicator(button)) {
             state.spinner = makeSpinner();
+            // React may commit its own conditional loading icon just after the
+            // request event. Remove our fallback as soon as that happens.
+            state.spinnerObserver = new MutationObserver(() => {
+              if (state.spinner && hasExistingLoadingIndicator(button, state.spinner)) {
+                state.spinner.remove();
+                state.spinner = null;
+                state.spinnerObserver?.disconnect();
+                state.spinnerObserver = null;
+              }
+            });
+            state.spinnerObserver.observe(button, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ["class", "style", "data-loading-indicator"],
+            });
             button.insertBefore(state.spinner, button.firstChild);
           }
         });
@@ -53,6 +75,8 @@ export function installButtonLoading() {
       window.cancelAnimationFrame(state.pendingSpinner);
       state.pendingSpinner = null;
     }
+    state.spinnerObserver?.disconnect();
+    state.spinnerObserver = null;
     state.spinner?.remove();
     button.disabled = state.wasDisabled;
     if (state.wasBusy === null) button.removeAttribute("aria-busy");
