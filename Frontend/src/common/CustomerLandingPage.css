@@ -3167,6 +3167,8 @@
   flex: 1 1 240px;
   min-width: 0;
   max-width: 440px;
+  height: auto;
+  min-height: auto;
 }
 
 .pos-search-icon {
@@ -4540,6 +4542,7 @@
 .is-dine-in-digital-menu .pos-takeaway-workspace {
   display: flex !important;
   flex-direction: column !important;
+  justify-content: flex-start !important;
   max-width: 1300px !important;
   margin: 0 auto !important;
   width: 100% !important;
@@ -4553,6 +4556,27 @@
   padding: 0.5rem 1.25rem 4rem !important;
   overflow: visible !important;
   box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-controls-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.65rem !important;
+  background: var(--bg-secondary, #131c2e) !important;
+  border-bottom: 1px solid var(--border-card, #1e293b) !important;
+  flex-shrink: 0 !important;
+  min-height: auto !important;
+  height: auto !important;
+  padding: 0.65rem 1rem !important;
+}
+
+.is-dine-in-digital-menu .pos-search-box {
+  height: auto !important;
+  min-height: auto !important;
 }
 
 .is-dine-in-digital-menu .pos-takeaway-category-strip {
@@ -4577,7 +4601,7 @@
   padding: 0.25rem 0 3rem !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .is-dine-in-digital-menu .pos-takeaway-center {
     padding: 0.25rem 0.75rem 4rem !important;
   }
@@ -4588,8 +4612,19 @@
   .is-dine-in-digital-menu .pos-takeaway-controls-bar {
     flex-direction: column !important;
     align-items: stretch !important;
+    justify-content: flex-start !important;
     gap: 0.65rem !important;
-    padding: 0.75rem !important;
+    padding: 0.65rem 0.75rem !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+  .is-dine-in-digital-menu .pos-search-box {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    margin: 0 !important;
   }
   .is-dine-in-digital-menu .pos-station-group,
   .is-dine-in-digital-menu .pos-category-select-wrapper {
@@ -4598,10 +4633,13 @@
   .is-dine-in-digital-menu .pos-dietary-group {
     justify-content: center !important;
     width: 100% !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
   }
   .is-dine-in-digital-menu .pos-dietary-btn {
     flex: 1 !important;
     justify-content: center !important;
+    min-height: 36px !important;
   }
   .is-dine-in-digital-menu .pos-takeaway-card {
     display: flex !important;
