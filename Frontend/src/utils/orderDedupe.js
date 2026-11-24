@@ -486,5 +486,49 @@ export function dedupeOrders(orders = []) {
     identities.forEach((identity) => indexByIdentity.set(identity, existingIndex));
   }
 
+  assignDailyInvoiceNumbers(result);
   return sortOrdersBySettlementTime(result);
+}
+
+/**
+ * Assign sequential daily invoice numbers (INV-001, INV-002, ...) grouped strictly per business day.
+ * Ensures every day resets to 1, eliminating continuous numbering across dates.
+ */
+export function assignDailyInvoiceNumbers(orders = []) {
+  if (!Array.isArray(orders) || orders.length === 0) return [];
+
+  const ordersByDate = new Map();
+  orders.forEach((order) => {
+    const dKey = dateKey(order) || "unknown_date";
+    if (!ordersByDate.has(dKey)) {
+      ordersByDate.set(dKey, []);
+    }
+    ordersByDate.get(dKey).push(order);
+  });
+
+  ordersByDate.forEach((dayOrders) => {
+    // Sort chronologically (earliest settlement / creation time first)
+    dayOrders.sort((a, b) => {
+      const timeDiff = getOrderTimestamp(a) - getOrderTimestamp(b);
+      if (timeDiff !== 0) return timeDiff;
+      const idA = parseInt(String(a?.id || a?.orderId || a?.invoiceNo || "").replace(/\D/g, ""), 10) || 0;
+      const idB = parseInt(String(b?.id || b?.orderId || b?.invoiceNo || "").replace(/\D/g, ""), 10) || 0;
+      return idA - idB;
+    });
+
+    dayOrders.forEach((order, idx) => {
+      const dailySeq = idx + 1;
+      const dailyInvNo = `INV-${String(dailySeq).padStart(3, "0")}`;
+
+      // Preserve original / server invoice number if different for searchability
+      if (!order.serverInvoiceNo && order.invoiceNo && order.invoiceNo !== dailyInvNo) {
+        order.serverInvoiceNo = order.invoiceNo;
+      }
+      order.invoiceNo = dailyInvNo;
+      order.invoiceNumber = dailyInvNo;
+      order.dailyInvoiceIndex = dailySeq;
+    });
+  });
+
+  return orders;
 }

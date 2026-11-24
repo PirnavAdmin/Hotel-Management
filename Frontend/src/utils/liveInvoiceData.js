@@ -1,6 +1,7 @@
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
 import {
+  assignDailyInvoiceNumbers,
   dedupeOrders,
   formatInvoiceNumber,
   isSettledInvoiceRecord,
@@ -9,6 +10,7 @@ import {
   sortOrdersBySettlementTime,
 } from "./orderDedupe";
 import { sanitizeDishName } from "./sanitizeDishName";
+import { getBusinessDayKey, getTodayDateString } from "./invoiceCounter";
 const valueFrom = (object, ...keys) => {
   for (const key of keys) {
     const value = object?.[key];
@@ -273,7 +275,7 @@ async function loadInvoiceManagementRecords() {
   }
 
   const records = sortInvoicesByCreationTime(
-    invoices.map((invoice) => normalizeInvoiceRecord(invoice)),
+    assignDailyInvoiceNumbers(invoices.map((invoice) => normalizeInvoiceRecord(invoice))),
   );
   return { records, error: "" };
 }
@@ -313,23 +315,37 @@ async function loadLiveInvoiceRecords() {
     (record) => !["void", "cancelled"].includes(String(record.status || record.Status || "").toLowerCase()),
   );
 
-  // Keep global invoice counter monotonically increasing beyond all historical invoices
+  // Ensure daily invoice counter matches today's settled orders count, and clean up obsolete global monotonic key
   try {
-    let maxNum = 0;
-    cleanRecords.forEach((r) => {
-      const invStr = r.invoiceNo || r.invoiceNumber || "";
-      const m = String(invStr).match(/INV-(\d+)/i);
-      if (m && m[1]) {
-        const n = parseInt(m[1], 10);
-        if (!isNaN(n) && n > maxNum && n < 100000) maxNum = n;
-      }
-      const oid = parseInt(String(r.id ?? r.orderId ?? "").replace(/\D/g, ""), 10);
-      if (!isNaN(oid) && oid > maxNum && oid < 100000) maxNum = oid;
-    });
-    if (maxNum > 0 && typeof localStorage !== "undefined") {
-      const current = parseInt(localStorage.getItem("avsr_highest_invoice_serial") || "0", 10);
-      if (maxNum > current) {
-        localStorage.setItem("avsr_highest_invoice_serial", String(maxNum));
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem("avsr_highest_invoice_serial");
+      const todayKey = getBusinessDayKey(new Date());
+      const todayDateStr = getTodayDateString();
+      const dateKeySafe = String(todayDateStr || "").trim().replace(/\s+/g, "_");
+      const storageCounterKey = `avsr_daily_inv_cnt_${dateKeySafe}`;
+
+      // Count settled orders strictly for today
+      let todayCount = 0;
+      let todayHighest = 0;
+      cleanRecords.forEach((r) => {
+        const orderKey = getBusinessDayKey(r.settledDate || r.date || r.settledAt || r.createdAt || r.orderTimestamp);
+        if (orderKey === todayKey) {
+          todayCount++;
+          const invStr = r.invoiceNo || r.invoiceNumber || "";
+          const m = String(invStr).match(/INV-(\d+)/i);
+          if (m && m[1]) {
+            const n = parseInt(m[1], 10);
+            if (!isNaN(n) && n > todayHighest && n <= todayCount) {
+              todayHighest = n;
+            }
+          }
+        }
+      });
+
+      const effectiveToday = Math.max(todayCount, todayHighest);
+      const currentSaved = parseInt(localStorage.getItem(storageCounterKey) || "0", 10);
+      if (effectiveToday > 0 && (currentSaved < effectiveToday || currentSaved > effectiveToday + 5)) {
+        localStorage.setItem(storageCounterKey, String(effectiveToday));
       }
     }
   } catch {}

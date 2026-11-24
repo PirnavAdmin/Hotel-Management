@@ -288,6 +288,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
         (o.tableName || '').toLowerCase().includes(search) ||
         formatInvoiceNumber(o).toLowerCase().includes(search) ||
         (o.invoiceNo || '').toLowerCase().includes(search) ||
+        (o.serverInvoiceNo || '').toLowerCase().includes(search) ||
         (o.server || '').toLowerCase().includes(search) ||
         (o.paymentMethod || '').toLowerCase().includes(search) ||
         (o.date || '').toLowerCase().includes(search)
