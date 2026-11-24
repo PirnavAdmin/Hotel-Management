@@ -331,8 +331,6 @@ export function AdminSidebar({
           flex: 1,
           minHeight: 0,
           overflowY: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
           marginTop: "0.85rem",
           display: "flex",
           flexDirection: "column",

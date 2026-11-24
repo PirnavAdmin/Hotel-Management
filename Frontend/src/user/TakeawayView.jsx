@@ -517,7 +517,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
     (selectedOrderStatus.toLowerCase() === "settled" ? "Paid" : "Not provided");
 
   return (
-    <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", minHeight: "calc(100vh - 130px)", boxSizing: "border-box", width: "100%", minWidth: 0 }}>
+    <section className="takeaway-section" style={{ padding: "1.25rem 2rem", color: "var(--text-main)", boxSizing: "border-box", width: "100%", minWidth: 0 }}>
 
       <nav className="takeaway-view-tabs" aria-label="Takeaway POS screens">
         <button

@@ -2545,7 +2545,6 @@ export function AdminPortal({
               flex: 1,
               overflowY: "auto",
               overflowX: "hidden",
-              scrollbarWidth: "auto",
               overscrollBehaviorY: "contain",
               padding:
                 portalMode === "bar" || activeTab === "logins"

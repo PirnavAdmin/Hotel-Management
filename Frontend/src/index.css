@@ -74,6 +74,61 @@ body[data-theme="royal-saffron"] {
 
 :root {
   --accent-rgb: 245, 158, 11;
+  --app-scrollbar-size: 4px;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: #a33a36;
+  --app-scrollbar-thumb-hover: #842b28;
+}
+
+/* Fixed-color scrollbars for every element that already scrolls. */
+* {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: var(--app-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--app-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Navigation sidebars keep native scrolling while hiding scrollbar chrome. */
+.admin-sidebar,
+.admin-sidebar .no-scrollbar,
+.pos-takeaway-sidebar,
+.pos-categories-sidebar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-sidebar::-webkit-scrollbar,
+.admin-sidebar .no-scrollbar::-webkit-scrollbar,
+.pos-takeaway-sidebar::-webkit-scrollbar,
+.pos-categories-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 :root[data-accent],
@@ -318,30 +373,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-amber);
-}
-
 .no-scrollbar,
 .no-scrollbar * {
-  scrollbar-width: auto;
+  scrollbar-width: thin;
 }
 .no-scrollbar::-webkit-scrollbar,
 .no-scrollbar *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 .clean-date-input::-webkit-calendar-picker-indicator {

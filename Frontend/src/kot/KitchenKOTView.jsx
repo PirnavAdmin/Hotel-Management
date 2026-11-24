@@ -1531,11 +1531,6 @@ export function KitchenKOTView({
             background: var(--bg-primary);
             padding: 3px 0;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-          }
-
-          .kot-status-sticky::-webkit-scrollbar {
-            display: none;
           }
 
           .kot-status-filter {
