@@ -1207,15 +1207,9 @@ textarea {
 @media (max-width: 560px) { .kds-order-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .kds-main-header { box-sizing: border-box; }
-.kds-main-header-brand { flex: 1 1 560px; min-width: 0; }
+.kds-main-header-brand { flex: 0 0 auto; min-width: 0; }
 .kds-main-header-title-line { min-width: 0; }
 .kds-main-header { position: relative; }
-.kds-station-toggle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
 .kds-station-toggle {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1226,6 +1220,7 @@ textarea {
   border-radius: 8px;
   background: var(--bg-secondary);
   white-space: nowrap;
+  margin-inline: auto;
 }
 .kds-station-toggle > button {
   display: inline-flex;
