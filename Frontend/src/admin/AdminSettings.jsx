@@ -129,14 +129,17 @@ export function AdminSettings({
   const [hue, setHue] = useState(() => hexToHsl(getSavedAccent()).h);
   const savedAccentRef = useRef(savedAccent);
   const colorAreaRef = useRef(null);
+  const isDraggingRef = useRef(false);
   const selectedRgb = selectedAccent.match(/[\da-f]{2}/gi).map((channel) => parseInt(channel, 16));
 
-  const previewAccent = (hex) => {
+  const previewAccent = (hex, updateHue = true) => {
     const normalized = /^#[\da-f]{6}$/i.test(hex) ? hex.toLowerCase() : null;
     if (!normalized) return;
     setSelectedAccent(normalized);
     setHexInput(normalized);
-    setHue(hexToHsl(normalized).h);
+    if (updateHue) {
+      setHue(hexToHsl(normalized).h);
+    }
     // Preview globally at once; the restaurant-wide value is committed by the
     // existing Save Changes action so other devices update after persistence.
     applyAccent(normalized, { persist: false });
@@ -157,12 +160,12 @@ export function AdminSettings({
     return () => window.removeEventListener("accent-synchronized", handleSynchronizedAccent);
   }, []);
 
-  const pickColorAtPoint = (clientX, clientY) => {
+  const pickColorAtPoint = (clientX, clientY, updateHue = false) => {
     const bounds = colorAreaRef.current?.getBoundingClientRect();
-    if (!bounds) return;
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
     const saturation = Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100));
     const value = Math.max(0, Math.min(100, (1 - (clientY - bounds.top) / bounds.height) * 100));
-    previewAccent(hsvToHex(hue, saturation, value));
+    previewAccent(hsvToHex(hue, saturation, value), updateHue);
   };
 
   const [settings, setSettings] = useState(() => getInitialSettings(initialSettings));
@@ -654,6 +657,11 @@ export function AdminSettings({
         if (!themeResponse?.success || !/^#[\da-f]{6}$/i.test(String(savedHex || ""))) {
           saveFailed = true;
           setSaveError(themeResponse?.error || themeResponse?.data?.message || "Unable to save the restaurant theme color.");
+          // Revert preview on failure
+          applyAccent(savedAccentRef.current, { persist: false });
+          setSelectedAccent(savedAccentRef.current);
+          setHexInput(savedAccentRef.current);
+          setHue(hexToHsl(savedAccentRef.current).h);
         } else {
           const normalized = applyAccent(savedHex);
           savedAccentRef.current = normalized;
@@ -665,6 +673,11 @@ export function AdminSettings({
       } catch (themeError) {
         saveFailed = true;
         setSaveError(themeError?.message || "Unable to save the restaurant theme color.");
+        // Revert preview on error
+        applyAccent(savedAccentRef.current, { persist: false });
+        setSelectedAccent(savedAccentRef.current);
+        setHexInput(savedAccentRef.current);
+        setHue(hexToHsl(savedAccentRef.current).h);
       }
     }
 
@@ -683,9 +696,9 @@ export function AdminSettings({
       }
     }
 
-    setLastSavedSettings(settingsToSave);
-    setSettings(settingsToSave);
     if (!saveFailed) {
+      setLastSavedSettings(settingsToSave);
+      setSettings(settingsToSave);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     }
@@ -864,11 +877,35 @@ export function AdminSettings({
                   aria-valuetext={selectedAccent}
                   style={{ "--picker-hue": `hsl(${hue} 100% 50%)` }}
                   onPointerDown={(event) => {
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                    pickColorAtPoint(event.clientX, event.clientY);
+                    try {
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                    } catch {}
+                    isDraggingRef.current = true;
+                    pickColorAtPoint(event.clientX, event.clientY, false);
                   }}
                   onPointerMove={(event) => {
-                    if (event.buttons === 1) pickColorAtPoint(event.clientX, event.clientY);
+                    if (isDraggingRef.current && (event.buttons === 1 || event.pressure > 0)) {
+                      pickColorAtPoint(event.clientX, event.clientY, false);
+                    }
+                  }}
+                  onPointerUp={(event) => {
+                    isDraggingRef.current = false;
+                    try {
+                      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                      }
+                    } catch {}
+                  }}
+                  onPointerCancel={(event) => {
+                    isDraggingRef.current = false;
+                    try {
+                      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                      }
+                    } catch {}
+                  }}
+                  onLostPointerCapture={() => {
+                    isDraggingRef.current = false;
                   }}
                   onKeyDown={(event) => {
                     const step = event.shiftKey ? 10 : 2;

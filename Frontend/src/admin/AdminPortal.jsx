@@ -1433,10 +1433,12 @@ export function AdminPortal({
 
     // 2. Broadcast via /api/sync
     try {
+      const syncToken = localStorage.getItem("avsr_jwt_token") || localStorage.getItem("token");
       await fetch(`${API_SYNC_BASE}/api/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(syncToken ? { Authorization: `Bearer ${syncToken}` } : {}),
         },
         body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: stampedSettings }),
       });
