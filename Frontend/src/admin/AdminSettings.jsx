@@ -618,6 +618,7 @@ export function AdminSettings({
       ...settings,
       logo: resolvedLogo,
       restaurantLogo: resolvedLogo,
+      accentColor: selectedAccent,
       updatedAt: new Date().toISOString(),
       isUserConfigured: true,
     };
@@ -655,13 +656,10 @@ export function AdminSettings({
         const themeBody = themeResponse?.data?.data ?? themeResponse?.data?.Data ?? themeResponse?.data;
         const savedHex = themeBody?.accentColor ?? themeBody?.AccentColor ?? selectedAccent;
         if (!themeResponse?.success || !/^#[\da-f]{6}$/i.test(String(savedHex || ""))) {
+          // If dedicated theme endpoint returned a failure, do not falsely report success.
+          // Keep user's chosen color in the preview picker rather than reverting to black.
           saveFailed = true;
-          setSaveError(themeResponse?.error || themeResponse?.data?.message || "Unable to save the restaurant theme color.");
-          // Revert preview on failure
-          applyAccent(savedAccentRef.current, { persist: false });
-          setSelectedAccent(savedAccentRef.current);
-          setHexInput(savedAccentRef.current);
-          setHue(hexToHsl(savedAccentRef.current).h);
+          setSaveError(themeResponse?.error || "Theme color could not be saved to server.");
         } else {
           const normalized = applyAccent(savedHex);
           savedAccentRef.current = normalized;
@@ -672,12 +670,7 @@ export function AdminSettings({
         }
       } catch (themeError) {
         saveFailed = true;
-        setSaveError(themeError?.message || "Unable to save the restaurant theme color.");
-        // Revert preview on error
-        applyAccent(savedAccentRef.current, { persist: false });
-        setSelectedAccent(savedAccentRef.current);
-        setHexInput(savedAccentRef.current);
-        setHue(hexToHsl(savedAccentRef.current).h);
+        setSaveError(themeError?.message || "Server error while saving theme color.");
       }
     }
 

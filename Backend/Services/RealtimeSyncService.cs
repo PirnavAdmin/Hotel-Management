@@ -128,7 +128,7 @@ public class RealtimeSyncService : IRealtimeSyncService
         // 2. Dispatch to SSE Subscribers
         try
         {
-            await _sseBroadcaster.BroadcastAsync(evt.EventType, evt);
+            await _sseBroadcaster.BroadcastAsync(evt.EventType, evt, evt.BranchId);
 
             // Also broadcast under legacy SSE events if applicable
             await DispatchLegacySseAsync(evt);
@@ -141,6 +141,14 @@ public class RealtimeSyncService : IRealtimeSyncService
 
     private async Task DispatchToSignalRAsync(RealtimeEvent evt, EventScope scope, string? targetRoleOrStation)
     {
+        // Branch isolation: If the event scope requires a branch, verify branch presence
+        if ((scope == EventScope.Restaurant || scope == EventScope.Station || scope == EventScope.Role || scope == EventScope.All) &&
+            (!evt.BranchId.HasValue || evt.BranchId.Value <= 0))
+        {
+            _logger.LogWarning("[RealtimeSync] Dropping unscoped broadcast for event {EventType} (Scope: {Scope}) to prevent cross-branch leakage.", evt.EventType, scope);
+            return;
+        }
+
         // Target selection
         IClientProxy targetClients;
         string? restaurantGroup = null;
@@ -148,8 +156,8 @@ public class RealtimeSyncService : IRealtimeSyncService
 
         switch (scope)
         {
-            case EventScope.Restaurant when evt.BranchId.HasValue && evt.BranchId.Value > 0:
-                restaurantGroup = $"restaurant_{evt.BranchId.Value}";
+            case EventScope.Restaurant:
+                restaurantGroup = $"restaurant_{evt.BranchId!.Value}";
                 targetClients = _hubContext.Clients.Group(restaurantGroup);
                 trackedRestaurantConnections = _connections.Values.Count(connection => connection.BranchId == evt.BranchId.Value);
                 if (string.Equals(evt.EventType, "restaurantSetting:updated", StringComparison.OrdinalIgnoreCase))
@@ -166,19 +174,13 @@ public class RealtimeSyncService : IRealtimeSyncService
                 break;
 
             case EventScope.Station when !string.IsNullOrWhiteSpace(targetRoleOrStation):
-                if (evt.BranchId.HasValue && evt.BranchId.Value > 0)
-                {
-                    // Station scoped strictly to the restaurant branch
-                    targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId.Value}_{targetRoleOrStation.Trim().ToLowerInvariant()}");
-                }
-                else
-                {
-                    targetClients = _hubContext.Clients.Group(targetRoleOrStation.Trim().ToLowerInvariant());
-                }
+                // Station scoped strictly to the restaurant branch
+                targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId!.Value}_{targetRoleOrStation.Trim().ToLowerInvariant()}");
                 break;
 
             case EventScope.Role when !string.IsNullOrWhiteSpace(targetRoleOrStation):
-                targetClients = _hubContext.Clients.Group($"role_{targetRoleOrStation.Trim().ToLowerInvariant()}");
+                // Role scoped strictly to the restaurant branch
+                targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId!.Value}_role_{targetRoleOrStation.Trim().ToLowerInvariant()}");
                 break;
 
             case EventScope.User when !string.IsNullOrWhiteSpace(targetRoleOrStation):
@@ -187,14 +189,7 @@ public class RealtimeSyncService : IRealtimeSyncService
 
             case EventScope.All:
             default:
-                if (evt.BranchId.HasValue && evt.BranchId.Value > 0)
-                {
-                    targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId.Value}");
-                }
-                else
-                {
-                    targetClients = _hubContext.Clients.All;
-                }
+                targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId!.Value}");
                 break;
         }
 
@@ -307,21 +302,21 @@ public class RealtimeSyncService : IRealtimeSyncService
                 case "table:created":
                 case "table:deleted":
                 case "table:statuschanged":
-                    await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", evt.Data ?? evt);
+                    await _sseBroadcaster.BroadcastAsync("SYNC_TABLES", evt.Data ?? evt, evt.BranchId);
                     break;
 
                 case "tablelock:acquired":
                 case "tablelock:released":
-                    await _sseBroadcaster.BroadcastAsync("SYNC_TABLE_LOCKS", evt.Data ?? evt);
+                    await _sseBroadcaster.BroadcastAsync("SYNC_TABLE_LOCKS", evt.Data ?? evt, evt.BranchId);
                     break;
 
                 case "kot:created":
-                    await _sseBroadcaster.BroadcastAsync("KOT_CREATED", evt.Data ?? evt);
+                    await _sseBroadcaster.BroadcastAsync("KOT_CREATED", evt.Data ?? evt, evt.BranchId);
                     break;
 
                 case "kot:updated":
                 case "kot:statuschanged":
-                    await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", evt.Data ?? evt);
+                    await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", evt.Data ?? evt, evt.BranchId);
                     break;
             }
         }

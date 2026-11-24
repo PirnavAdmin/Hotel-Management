@@ -93,7 +93,9 @@ let sessionLifecycle = Promise.resolve();
 let pendingStop = null;
 
 const getEventUrl = () => {
-  return `${API_BASE_URL}/api/events`;
+  const token = activeToken || (typeof localStorage !== "undefined" ? localStorage.getItem("avsr_jwt_token") || localStorage.getItem("token") : "");
+  const query = token ? `?access_token=${encodeURIComponent(token)}` : "";
+  return `${API_BASE_URL}/api/events${query}`;
 };
 
 const getHubUrl = () => {

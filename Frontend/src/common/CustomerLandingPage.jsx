@@ -197,7 +197,7 @@ export function CustomerLandingPage({
   };
   const getStoredLogo = () => {
     const s = getStoredSettings();
-    return s.logo || s.restaurantLogo || defaultRestaurantLogo;
+    return s.logo || s.restaurantLogo || "/restaurant-logo.png" || defaultRestaurantLogo;
   };
   const getStoredName = () => getStoredSettings().restaurantName || "The Rustic Spin";
 
@@ -1516,10 +1516,11 @@ export function CustomerLandingPage({
                     className="customer-brand-logo"
                     src={liveLogo}
                     alt={liveRestaurantName || "Logo"}
-                    onError={() => {
-                      if (liveLogo !== defaultRestaurantLogo) {
-                        setLiveLogo(defaultRestaurantLogo);
+                    onError={(e) => {
+                      if (liveLogo !== "/restaurant-logo.png" && liveLogo !== defaultRestaurantLogo) {
+                        setLiveLogo("/restaurant-logo.png");
                       } else {
+                        if (e?.currentTarget) e.currentTarget.style.display = "none";
                         setLogoLoadFailed(true);
                       }
                     }}

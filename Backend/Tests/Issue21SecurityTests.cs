@@ -7,12 +7,15 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using HMS.Controllers;
 using HMS.Data;
+using HMS.DTOs;
 using HMS.Hubs;
 using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -320,6 +323,170 @@ public static class Issue21SecurityTests
             if (!missedLegit.Success) throw new Exception("Cashier calling GetMissedEvents for assigned Branch 1 failed.");
         });
 
+        // Test 8: Unscoped RealtimeSync broadcasts are strictly dropped
+        await RunTest("8. RealtimeSyncService strictly drops unscoped events rather than falling back to global groups", async () =>
+        {
+            using var harness = new PosHubTestHarness();
+            await harness.SeedAsync();
+
+            harness.HubContext.GroupDeliveries.Clear();
+
+            // Attempt to publish station event without BranchId
+            await harness.SyncService.PublishAsync(new RealtimeEvent
+            {
+                EventType = "kot:created",
+                Module = "Kitchen",
+                Action = "created",
+                BranchId = null, // Missing branch!
+                Data = new { test = true }
+            }, EventScope.Station, "kitchen");
+
+            // Verify no messages were sent to global station or all
+            var sentToStation = harness.HubContext.GroupDeliveries.ContainsKey("kitchen") || harness.HubContext.GroupDeliveries.ContainsKey("all");
+            if (sentToStation) throw new Exception("Unscoped station event was broadcast globally instead of being dropped.");
+
+            // Attempt to publish All event without BranchId
+            harness.HubContext.GroupDeliveries.Clear();
+            await harness.SyncService.PublishAsync(new RealtimeEvent
+            {
+                EventType = "order:updated",
+                Module = "Orders",
+                Action = "updated",
+                BranchId = 0, // Invalid branch!
+                Data = new { test = true }
+            }, EventScope.All);
+
+            var sentToAll = harness.HubContext.GroupDeliveries.ContainsKey("all");
+            if (sentToAll) throw new Exception("Unscoped All event was broadcast to Clients.All instead of being dropped.");
+        });
+
+        // Test 9: SSE broadcaster enforces branch isolation
+        await RunTest("9. SSE Broadcaster isolates events strictly by authorized branch", async () =>
+        {
+            var logger = NullLogger<SseBroadcaster>.Instance;
+            var sse = new SseBroadcaster(logger);
+
+            using var cts1 = new CancellationTokenSource();
+            using var cts2 = new CancellationTokenSource();
+
+            var branch1Stream = sse.SubscribeAsync(cts1.Token, authorizedBranchId: 1).GetAsyncEnumerator(cts1.Token);
+            var branch2Stream = sse.SubscribeAsync(cts2.Token, authorizedBranchId: 2).GetAsyncEnumerator(cts2.Token);
+
+            // Read greetings
+            await branch1Stream.MoveNextAsync();
+            await branch2Stream.MoveNextAsync();
+
+            // Broadcast event strictly to Branch 2
+            await sse.BroadcastAsync("order:created", new { orderId = 99 }, branchId: 2);
+
+            // Branch 2 must receive it
+            var b2HasEvent = await branch2Stream.MoveNextAsync();
+            if (!b2HasEvent || !branch2Stream.Current.Contains("orderId\":99"))
+            {
+                throw new Exception("Branch 2 SSE client did not receive Branch 2 event.");
+            }
+
+            // Branch 1 client must NOT receive Branch 2 event
+            cts1.Cancel(); // Should cancel without receiving Branch 2 message
+        });
+
+        // Test 10: KotController database branch resolution & cross-branch prevention
+        await RunTest("10. KotController enforces database table branch resolution and prevents cross-branch creation", async () =>
+        {
+            using var harness = new PosHubTestHarness();
+            await harness.SeedAsync();
+
+            var kotService = new KotService(harness.Sp);
+            var kotController = new KotController(
+                kotService,
+                harness.HubContext,
+                new TestSseBroadcaster(),
+                harness.SyncService,
+                harness.Db);
+
+            // User from Branch 1 attempts to create KOT on Table 20 (which belongs to Branch 2)
+            var cashier = harness.Branch1Cashier;
+            var claims = new List<Claim>
+            {
+                new("userId", cashier.UserId.ToString()),
+                new(ClaimTypes.NameIdentifier, cashier.UserId.ToString()),
+                new(ClaimTypes.Role, "Cashier"),
+                new("roleName", "Cashier"),
+                new("branchId", "1")
+            };
+            kotController.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"))
+                }
+            };
+
+            var crossResult = await kotController.CreateKotOrder(new CreateKotOrderDto
+            {
+                TableId = 20, // Belongs to Branch 2 in seed!
+                Items = new List<CreateKotOrderItemDto>
+                {
+                    new() { DishName = "Cross Branch Item", Quantity = 1 }
+                }
+            });
+
+            if (crossResult is not ObjectResult objRes || objRes.StatusCode != 403)
+            {
+                throw new Exception($"Cross-branch KOT creation on Branch 2 table was not rejected with 403. Result: {crossResult?.GetType().Name}");
+            }
+
+            // User from Branch 1 creates KOT on Table 10 (which belongs to Branch 1) - succeeds
+            var legitResult = await kotController.CreateKotOrder(new CreateKotOrderDto
+            {
+                TableId = 10, // Belongs to Branch 1 in seed!
+                Items = new List<CreateKotOrderItemDto>
+                {
+                    new() { DishName = "Legit Branch 1 Item", Quantity = 1 }
+                }
+            });
+
+            if (legitResult is not CreatedAtActionResult)
+            {
+                throw new Exception($"Legitimate Branch 1 KOT creation failed: {legitResult?.GetType().Name}");
+            }
+        });
+
+        // Test 11: KotController rejects unauthenticated operations
+        await RunTest("11. KotController rejects unauthenticated user operations", async () =>
+        {
+            using var harness = new PosHubTestHarness();
+            await harness.SeedAsync();
+
+            var kotService = new KotService(harness.Sp);
+            var kotController = new KotController(
+                kotService,
+                harness.HubContext,
+                new TestSseBroadcaster(),
+                harness.SyncService,
+                harness.Db);
+
+            // User with NO claims / unauthenticated
+            kotController.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity())
+                }
+            };
+
+            var unauthResult = await kotController.CreateKotOrder(new CreateKotOrderDto
+            {
+                TableId = 10,
+                Items = new List<CreateKotOrderItemDto> { new() { DishName = "Test", Quantity = 1 } }
+            });
+
+            if (unauthResult is not ObjectResult objRes || objRes.StatusCode != 403)
+            {
+                throw new Exception("Unauthenticated KOT creation was not rejected with 403.");
+            }
+        });
+
         Console.WriteLine("=======================================================================");
         Console.ForegroundColor = failed == 0 ? ConsoleColor.Green : ConsoleColor.Red;
         Console.WriteLine($"  TEST RUN COMPLETED: {passed} PASSED, {failed} FAILED");
@@ -618,9 +785,9 @@ public class TestHttpContextFeature : Microsoft.AspNetCore.Http.Connections.Feat
 public class TestSseBroadcaster : ISseBroadcaster
 {
     public int ActiveClientCount => 0;
-    public Task BroadcastAsync(string eventType, object? payload) => Task.CompletedTask;
-    public Task BroadcastRawAsync(string rawMessage) => Task.CompletedTask;
-    public async IAsyncEnumerable<string> SubscribeAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public Task BroadcastAsync(string eventType, object? payload, long? branchId = null) => Task.CompletedTask;
+    public Task BroadcastRawAsync(string rawMessage, long? branchId = null) => Task.CompletedTask;
+    public async IAsyncEnumerable<string> SubscribeAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default, long? authorizedBranchId = null)
     {
         await Task.CompletedTask;
         yield break;

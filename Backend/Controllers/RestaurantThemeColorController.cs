@@ -131,18 +131,25 @@ public sealed class RestaurantThemeColorController : ControllerBase
                 updatedBy = saved.UpdatedBy
             };
 
-            await _realtimeSync.PublishAsync(new RealtimeEvent
+            try
             {
-                EventType = "restaurantSetting:updated",
-                Module = "Settings",
-                Action = "updated",
-                BranchId = restaurantId,
-                RecordId = restaurantId.ToString(),
-                TriggeredBy = adminId.ToString(),
-                Data = eventData
-            }, EventScope.Restaurant);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "restaurantSetting:updated",
+                    Module = "Settings",
+                    Action = "updated",
+                    BranchId = restaurantId,
+                    RecordId = restaurantId.ToString(),
+                    TriggeredBy = adminId.ToString(),
+                    Data = eventData
+                }, EventScope.Restaurant);
 
-            _logger.LogInformation("Theme event dispatch requested. RestaurantId={RestaurantId}, AccentColor={AccentColor}", restaurantId, saved.AccentColor);
+                _logger.LogInformation("Theme event dispatch requested. RestaurantId={RestaurantId}, AccentColor={AccentColor}", restaurantId, saved.AccentColor);
+            }
+            catch (Exception syncEx)
+            {
+                _logger.LogWarning(syncEx, "Non-blocking error publishing realtime theme update event.");
+            }
 
             return Ok(new
             {

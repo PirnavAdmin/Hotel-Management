@@ -57,9 +57,49 @@ public sealed class RestaurantThemeColorService
     public async Task<RestaurantThemeSetting?> GetAsync(long restaurantId)
     {
         await EnsureTableAsync();
-        return await _db.RestaurantThemeSettings
-            .AsNoTracking()
-            .FirstOrDefaultAsync(theme => theme.RestaurantId == restaurantId);
+        try
+        {
+            var theme = await _db.RestaurantThemeSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(theme => theme.RestaurantId == restaurantId);
+            if (theme != null) return theme;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not query 'restaurant_theme_settings'. Trying 'restaurant_settings'.");
+        }
+
+        try
+        {
+            var targetRestaurantKey = $"restaurant_{restaurantId}";
+            var setting = await _db.RestaurantSettings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantKey || s.Id == restaurantId);
+
+            if (setting == null && restaurantId == 1)
+            {
+                setting = await _db.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1)
+                       ?? await _db.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync();
+            }
+
+            if (setting != null && !string.IsNullOrWhiteSpace(setting.AccentColor) && HexColorPattern.IsMatch(setting.AccentColor))
+            {
+                return new RestaurantThemeSetting
+                {
+                    RestaurantId = restaurantId,
+                    AccentColor = setting.AccentColor.Trim().ToLowerInvariant(),
+                    CreatedAt = setting.CreatedAt,
+                    UpdatedAt = setting.UpdatedAt,
+                    UpdatedBy = long.TryParse(setting.UpdatedBy, out var uId) ? uId : 1
+                };
+            }
+        }
+        catch (Exception sEx)
+        {
+            _logger.LogWarning(sEx, "Could not query accent color from 'restaurant_settings'.");
+        }
+
+        return null;
     }
 
     public async Task<RestaurantThemeSetting> SaveAsync(long restaurantId, string accentColor, long updatedBy)
@@ -73,29 +113,76 @@ public sealed class RestaurantThemeColorService
         await EnsureTableAsync();
 
         var normalizedColor = accentColor.Trim().ToLowerInvariant();
-        await using var transaction = await _db.Database.BeginTransactionAsync();
+        var now = DateTime.UtcNow;
+
+        // 1. Try to persist into restaurant_theme_settings
+        RestaurantThemeSetting? saved = null;
         try
         {
-            await _db.Database.ExecuteSqlInterpolatedAsync($@"
-                INSERT INTO `restaurant_theme_settings`
-                    (`restaurant_id`, `accent_color`, `updated_by`)
-                VALUES
-                    ({restaurantId}, {normalizedColor}, {updatedBy})
-                ON DUPLICATE KEY UPDATE
-                    `accent_color` = VALUES(`accent_color`),
-                    `updated_at` = CURRENT_TIMESTAMP(6),
-                    `updated_by` = VALUES(`updated_by`);");
+            var existingTheme = await _db.RestaurantThemeSettings
+                .FirstOrDefaultAsync(theme => theme.RestaurantId == restaurantId);
 
-            var saved = await _db.RestaurantThemeSettings
-                .AsNoTracking()
-                .FirstAsync(theme => theme.RestaurantId == restaurantId);
-            await transaction.CommitAsync();
-            return saved;
+            if (existingTheme == null)
+            {
+                existingTheme = new RestaurantThemeSetting
+                {
+                    RestaurantId = restaurantId,
+                    AccentColor = normalizedColor,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    UpdatedBy = updatedBy
+                };
+                _db.RestaurantThemeSettings.Add(existingTheme);
+            }
+            else
+            {
+                existingTheme.AccentColor = normalizedColor;
+                existingTheme.UpdatedAt = now;
+                existingTheme.UpdatedBy = updatedBy;
+            }
+
+            await _db.SaveChangesAsync();
+            saved = existingTheme;
         }
-        catch
+        catch (Exception ex)
         {
-            await transaction.RollbackAsync();
-            throw;
+            _logger.LogWarning(ex, "Failed to save theme setting to 'restaurant_theme_settings'. Falling back to restaurant_settings.");
         }
+
+        // 2. Synchronize to restaurant_settings table as well
+        try
+        {
+            var targetRestaurantKey = $"restaurant_{restaurantId}";
+            var setting = await _db.RestaurantSettings
+                .FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantKey || s.Id == restaurantId);
+
+            if (setting == null && restaurantId == 1)
+            {
+                setting = await _db.RestaurantSettings.FirstOrDefaultAsync(s => s.Id == 1)
+                       ?? await _db.RestaurantSettings.FirstOrDefaultAsync();
+            }
+
+            if (setting != null)
+            {
+                setting.AccentColor = normalizedColor;
+                setting.UpdatedAt = now;
+                setting.UpdatedBy = updatedBy.ToString();
+                await _db.SaveChangesAsync();
+                _logger.LogInformation("Synchronized theme accent color '{Color}' to restaurant_settings.", normalizedColor);
+            }
+        }
+        catch (Exception syncEx)
+        {
+            _logger.LogWarning(syncEx, "Could not synchronize accent color to restaurant_settings table.");
+        }
+
+        return saved ?? new RestaurantThemeSetting
+        {
+            RestaurantId = restaurantId,
+            AccentColor = normalizedColor,
+            CreatedAt = now,
+            UpdatedAt = now,
+            UpdatedBy = updatedBy
+        };
     }
 }

@@ -194,7 +194,7 @@ builder.Services
                 }
 
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/hubs") || path.StartsWithSegments("/api/events") || path.StartsWithSegments("/api/v1/events")))
                 {
                     context.Token = accessToken;
                 }
