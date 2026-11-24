@@ -14,6 +14,7 @@ import {
   TransferTableModal,
   PastOrdersModal,
   TakeawayOrderFlowView,
+  SelfServiceView,
 } from "./user";
 import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
 import { TableReservationFlow } from "./reservation";
@@ -5078,7 +5079,7 @@ export function App() {
         {isLandingRoute && (
           <CustomerLandingPage
             restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
-            restaurantLogo={restaurantSettings.logo || ""}
+            restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
             menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
             menuLoading={sharedRecordLoad.menu === "loading"}
             menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
@@ -5255,6 +5256,50 @@ export function App() {
                     setIsSettlementOpen(true);
                   }}
                 />
+              )}
+              {activeView === "self-service" && (
+                <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", width: "100%" }}>
+                  <SelfServiceView
+                    menuItems={menuItems}
+                    menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                    restaurantSettings={restaurantSettings}
+                    onShowReceipt={(receipt, orderId) => {
+                      const receiptItems = Array.isArray(receipt?.items) ? receipt.items.map((item) => ({
+                        ...item,
+                        name: item.name || item.dishName || "",
+                        quantity: Number(item.quantity ?? item.qty) || 0,
+                        price: Number(item.price ?? item.unitPrice) || 0,
+                      })) : [];
+                      setReprintReceiptData({
+                        id: orderId,
+                        name: "Self Service",
+                        tableName: "Self Service",
+                        section: "Self Service Kiosk",
+                        server: "Self Service Kiosk",
+                        guests: 1,
+                        items: receiptItems,
+                        subtotal: receipt?.subtotal,
+                        taxAmount: receipt?.taxAmount,
+                        serviceCharge: 0,
+                        serviceChargeAmount: 0,
+                        tipAmount: 0,
+                        grandTotal: receipt?.grandTotal,
+                        paymentMethod: receipt?.paymentMethod || "UPI",
+                        invoiceNo: receipt?.invoiceNo || receipt?.orderNumber || "",
+                        orderNumber: receipt?.orderNumber || receipt?.invoiceNo || "",
+                        date: receipt?.date,
+                        orderType: "SelfService",
+                        isSelfService: true,
+                      });
+                      setIsReceiptOpen(true);
+                    }}
+                    onOrderPlaced={() => {
+                      if (typeof handleSyncSettledOrders === "function") {
+                        handleSyncSettledOrders();
+                      }
+                    }}
+                  />
+                </div>
               )}
               {activeView === "order" && (
                 <div style={{ flex: 1, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", width: "100%" }}>

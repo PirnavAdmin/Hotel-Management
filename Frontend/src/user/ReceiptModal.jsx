@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
 import { getTodayDateString } from '../utils/invoiceCounter';
-import { formatInvoiceNumber } from '../utils/orderDedupe';
+import { formatInvoiceNumber, isSelfServiceOrder } from '../utils/orderDedupe';
 import { printSurface } from '../utils/printSurface';
 
 /**
@@ -274,17 +274,27 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     1;
 
   // Order Type categorization
-  const isTakeaway = Boolean(
+  const isSelfService = Boolean(
+    isSelfServiceOrder(table) ||
+    String(displayTableName).toLowerCase().includes('self service') ||
+    String(displayTableName).toLowerCase().includes('selfservice') ||
+    String(displaySection).toLowerCase().includes('self service') ||
+    table.orderType?.toLowerCase?.().includes('selfservice') ||
+    table.orderType?.toLowerCase?.().includes('self service')
+  );
+  const isTakeaway = !isSelfService && Boolean(
     String(displayTableName).toLowerCase().includes('takeaway') ||
     String(displaySection).toLowerCase().includes('takeaway') ||
     table.orderType?.toLowerCase?.().includes('takeaway')
   );
-  const isReservation = Boolean(
+  const isReservation = !isSelfService && Boolean(
     String(displayTableName).toLowerCase().includes('reservation') ||
     table.orderType?.toLowerCase?.().includes('reservation') ||
     table.reservationDate
   );
-  const orderTypeLabel = isTakeaway
+  const orderTypeLabel = isSelfService
+    ? "SELF SERVICE"
+    : isTakeaway
     ? "Takeaway"
     : isReservation
     ? "Table Reservation"

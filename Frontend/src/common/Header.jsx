@@ -22,6 +22,7 @@ import {
   CheckCheck,
   ChevronRight,
   Sparkles,
+  Smartphone,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ProfileDropdown } from './ProfileDropdown';
@@ -111,6 +112,16 @@ export function Header({
 
   const [time, setTime] = useState(new Date());
   const [serviceMode, setServiceMode] = useState("dine-in");
+
+  useEffect(() => {
+    if (activeView === "takeaway") {
+      setServiceMode("takeaway");
+    } else if (activeView === "self-service") {
+      setServiceMode("self-service");
+    } else if (activeView === "tables" || activeView === "order") {
+      setServiceMode("dine-in");
+    }
+  }, [activeView]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [dropdownCoords, setDropdownCoords] = useState(null);
   const notifRef = useRef(null);
@@ -435,6 +446,33 @@ export function Header({
             <span>Takeaway</span>
           </button>
 
+          <button
+            type="button"
+            aria-pressed={serviceMode === "self-service" && isUserRoute}
+            onClick={() => {
+              setServiceMode("self-service");
+              setActiveView("self-service");
+              navigate("/");
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              padding: "0.45rem 0.85rem",
+              borderRadius: "var(--radius-sm)",
+              fontSize: "0.82rem",
+              fontWeight: isUserRoute && serviceMode === "self-service" ? 800 : 600,
+              background: isUserRoute && serviceMode === "self-service" ? "var(--accent-amber)" : "transparent",
+              color: isUserRoute && serviceMode === "self-service" ? "#000000" : "var(--text-muted)",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Switch to Self Service ordering"
+          >
+            <Smartphone size={15} />
+            <span>Self Service</span>
+          </button>
 
           {/* Invoices History Button */}
           <button

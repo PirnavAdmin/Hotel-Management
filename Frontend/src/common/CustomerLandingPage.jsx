@@ -194,10 +194,14 @@ export function CustomerLandingPage({
       return {};
     }
   };
-  const getStoredLogo = () => getStoredSettings().logo || "/restaurant-logo.png";
+  const getStoredLogo = () => {
+    const s = getStoredSettings();
+    return s.logo || s.restaurantLogo || "/restaurant-logo.png";
+  };
   const getStoredName = () => getStoredSettings().restaurantName || "The Rustic Spin";
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
     const sName = getStoredName();
     if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(sName)) return sName.trim();
@@ -207,6 +211,7 @@ export function CustomerLandingPage({
 
   useEffect(() => {
     setLiveLogo(restaurantLogo || getStoredLogo());
+    setLogoLoadFailed(false);
     if (restaurantName && restaurantName.trim().toLowerCase() !== "restaurant") {
       setLiveRestaurantName(restaurantName.trim());
     }
@@ -220,7 +225,10 @@ export function CustomerLandingPage({
         const fresh = res?.data || res?.settings;
         if (fresh && active) {
           const l = fresh.logo || fresh.restaurantLogo;
-          if (l) setLiveLogo(l);
+          if (l) {
+            setLiveLogo(l);
+            setLogoLoadFailed(false);
+          }
           if (fresh.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(fresh.restaurantName)) {
             setLiveRestaurantName(fresh.restaurantName.trim());
           }
@@ -233,8 +241,13 @@ export function CustomerLandingPage({
     const handleSettingsUpdate = (e) => {
       const fresh = e?.detail || getStoredSettings();
       const l = fresh?.logo || fresh?.restaurantLogo;
-      if (l) setLiveLogo(l);
-      else setLiveLogo(getStoredLogo() || restaurantLogo);
+      if (l) {
+        setLiveLogo(l);
+        setLogoLoadFailed(false);
+      } else {
+        setLiveLogo(getStoredLogo() || restaurantLogo);
+        setLogoLoadFailed(false);
+      }
 
       if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(fresh.restaurantName)) {
         setLiveRestaurantName(fresh.restaurantName.trim());
@@ -1496,12 +1509,21 @@ export function CustomerLandingPage({
                 if (!isDineInMenu) navigateScreen("home");
               }}
             >
-              {liveLogo ? (
-                <img
-                  className="customer-brand-logo"
-                  src={liveLogo}
-                  alt=""
-                />
+              {liveLogo && !logoLoadFailed ? (
+                <div className="customer-brand-logo-wrap">
+                  <img
+                    className="customer-brand-logo"
+                    src={liveLogo}
+                    alt={liveRestaurantName || "Logo"}
+                    onError={() => {
+                      if (liveLogo !== "/restaurant-logo.png") {
+                        setLiveLogo("/restaurant-logo.png");
+                      } else {
+                        setLogoLoadFailed(true);
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <span className="customer-brand-mark">
                   <ChefHat size={25} />

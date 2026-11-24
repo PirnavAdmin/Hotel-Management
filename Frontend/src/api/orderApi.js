@@ -39,6 +39,18 @@ export async function apiCreatePaidTakeawayOrder(orderData) {
   return await apiClient("/api/v1/orders", { method: "POST", remoteOnly: true, body: JSON.stringify(orderData) });
 }
 
+export async function apiCreatePaidSelfServiceOrder(orderData) {
+  return await apiClient("/api/v1/orders", {
+    method: "POST",
+    remoteOnly: true,
+    body: JSON.stringify({
+      ...orderData,
+      orderType: "SelfService",
+      tableName: orderData?.tableName || "Self Service",
+    }),
+  });
+}
+
 async function dispatchKot(endpoint, options = {}) {
   const result = await apiClient(endpoint, options);
   if (!result?.success) {

@@ -5,7 +5,13 @@ import {
   Clock, ChevronLeft, ChevronRight, Layers, Filter, CheckCircle2, RotateCcw, RefreshCw 
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatCurrency';
-import { dedupeOrders, formatInvoiceNumber, sortOrdersBySettlementTime, parseOrderToYMD } from '../utils/orderDedupe';
+import {
+  dedupeOrders,
+  formatInvoiceNumber,
+  sortOrdersBySettlementTime,
+  parseOrderToYMD,
+  isSelfServiceOrder,
+} from '../utils/orderDedupe';
 import { requestLiveInvoiceRecords } from '../utils/liveInvoiceData';
 const TODAY_DATE_STR = new Date().toLocaleDateString('en-IN', {
   day: '2-digit',
@@ -288,6 +294,7 @@ export function PastOrdersModal({ onClose, onReprintReceipt, onRefresh }) {
         (o.tableName || '').toLowerCase().includes(search) ||
         formatInvoiceNumber(o).toLowerCase().includes(search) ||
         (o.invoiceNo || '').toLowerCase().includes(search) ||
+        (o.serverInvoiceNo || '').toLowerCase().includes(search) ||
         (o.server || '').toLowerCase().includes(search) ||
         (o.paymentMethod || '').toLowerCase().includes(search) ||
         (o.date || '').toLowerCase().includes(search)
@@ -1372,7 +1379,7 @@ function OrderCard({ order, onReprintReceipt }) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
           <span style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.86rem' }}>
-            {order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "Table unavailable")}
+            {isSelfServiceOrder(order) ? "📱 Self Service" : order.tableName || (order.tableId != null ? `Table ${order.tableId}` : "Table unavailable")}
           </span>
           <span className="font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-amber-light)', fontWeight: 800 }}>
             {formatInvoiceNumber(order)}
