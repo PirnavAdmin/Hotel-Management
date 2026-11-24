@@ -30,16 +30,17 @@ if (string.IsNullOrWhiteSpace(configuredUrls))
 // ============================================================
 
 var configuredConnectionString =
+    Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ??
     builder.Configuration
         .GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(configuredConnectionString))
 {
     throw new InvalidOperationException(
-        "DefaultConnection is missing from appsettings.json.");
+        "DefaultConnection is missing from configuration.");
 }
 
-// Resilient credentials resolver (supports multi-developer environments)
+// Resilient credentials resolver (supports multi-developer environments via environment variables)
 string connectionString = configuredConnectionString;
 try
 {
@@ -48,15 +49,11 @@ try
 }
 catch (MySqlConnector.MySqlException ex)
 {
-    Console.WriteLine($"[Database] Configured credentials failed ({ex.Message}). Attempting fallback credentials...");
-    var fallbackCandidates = new[]
-    {
-        "Server=localhost;Port=3306;Database=hoteldb;User=hoteldbuser;Password=Pirnav@2026;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=Mamatha@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=vikas;Password=Mamatha@123;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=root;CharSet=utf8mb4;",
-        "Server=localhost;Port=3306;Database=hotel_management_db_test;User=root;Password=;CharSet=utf8mb4;"
-    };
+    Console.WriteLine($"[Database] Configured credentials failed ({ex.Message}). Checking fallback credentials from environment...");
+    var envFallbacks = Environment.GetEnvironmentVariable("DB_FALLBACK_CONNECTION_STRINGS");
+    var fallbackCandidates = !string.IsNullOrWhiteSpace(envFallbacks)
+        ? envFallbacks.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        : Array.Empty<string>();
 
     bool resolved = false;
     foreach (var candidate in fallbackCandidates)
@@ -67,7 +64,7 @@ catch (MySqlConnector.MySqlException ex)
             candidateConn.Open();
             connectionString = candidate;
             resolved = true;
-            Console.WriteLine($"[Database] Successfully connected with fallback credentials for user: {new MySqlConnector.MySqlConnectionStringBuilder(candidate).UserID}");
+            Console.WriteLine("[Database] Successfully connected with fallback credentials from environment.");
             break;
         }
         catch
@@ -78,7 +75,7 @@ catch (MySqlConnector.MySqlException ex)
 
     if (!resolved)
     {
-        Console.Error.WriteLine("[Database] Failed to connect with any fallback credentials.");
+        Console.Error.WriteLine("[Database] Failed to connect to MySQL database.");
     }
 }
 
@@ -102,18 +99,21 @@ builder.Services.AddDbContext<AppDbContext>(
 // ============================================================
 
 var jwtKey =
+    Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ??
     builder.Configuration["Jwt:Key"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException(
-        "Jwt:Key is missing from appsettings.json.");
+        "Jwt:Key is missing from configuration.");
 }
 
 var jwtIssuer =
+    Environment.GetEnvironmentVariable("JWT_ISSUER") ??
     builder.Configuration["Jwt:Issuer"];
 
 var jwtAudience =
+    Environment.GetEnvironmentVariable("JWT_AUDIENCE") ??
     builder.Configuration["Jwt:Audience"];
 
 builder.Services
@@ -157,6 +157,18 @@ builder.Services
 
                 if (!string.IsNullOrEmpty(rawToken) && rawToken.StartsWith("mock-jwt-token", StringComparison.OrdinalIgnoreCase))
                 {
+                    // Mock JWT is strictly disabled by default and completely prohibited in production.
+                    // It can only be enabled if IsDevelopment is true AND Authentication:AllowMockJwtInDevelopment is explicitly true.
+                    var allowMockJwt = builder.Environment.IsDevelopment() &&
+                                       !builder.Environment.IsProduction() &&
+                                       builder.Configuration.GetValue<bool>("Authentication:AllowMockJwtInDevelopment", false);
+
+                    if (!allowMockJwt)
+                    {
+                        context.Fail("Mock JWT authentication bypass is prohibited in this environment.");
+                        return Task.CompletedTask;
+                    }
+
                     var claims = new[]
                     {
                         new Claim(ClaimTypes.NameIdentifier, "1"),
@@ -329,7 +341,28 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<SpService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<AuthRateLimiter>();
-builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection(SmtpSettings.SectionName));
+builder.Services.Configure<SmtpSettings>(options =>
+{
+    builder.Configuration.GetSection(SmtpSettings.SectionName).Bind(options);
+
+    var envHost = Environment.GetEnvironmentVariable("SMTP_HOST");
+    if (!string.IsNullOrWhiteSpace(envHost)) options.Host = envHost;
+
+    var envPort = Environment.GetEnvironmentVariable("SMTP_PORT");
+    if (int.TryParse(envPort, out int port)) options.Port = port;
+
+    var envUser = Environment.GetEnvironmentVariable("SMTP_USERNAME");
+    if (!string.IsNullOrWhiteSpace(envUser)) options.Username = envUser;
+
+    var envPass = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
+    if (!string.IsNullOrWhiteSpace(envPass)) options.Password = envPass;
+
+    var envFromEmail = Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL");
+    if (!string.IsNullOrWhiteSpace(envFromEmail)) options.FromEmail = envFromEmail;
+
+    var envFromName = Environment.GetEnvironmentVariable("SMTP_FROM_NAME");
+    if (!string.IsNullOrWhiteSpace(envFromName)) options.FromName = envFromName;
+});
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<ICustomerNotificationService, CustomerNotificationService>();
 builder.Services.AddScoped<CustomerAuthService>();

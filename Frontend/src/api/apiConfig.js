@@ -6,12 +6,15 @@ function getResolvedApiBase() {
       return "";
     }
   }
-  const envVal = (import.meta.env.VITE_API_BASE_URL || "")
+  const envVal = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_UR || "")
     .trim()
     .replace(/^["']|["']$/g, "")
     .replace(/\/$/, "");
   if (!envVal) {
-    throw new Error("VITE_API_BASE_URL must be configured before starting the frontend.");
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      return "http://localhost:5018";
+    }
+    return "";
   }
   return envVal;
 }
@@ -30,11 +33,17 @@ const DEFAULT_HEADERS = {
 const inFlightGetRequests = new Map();
 
 async function performApiRequest(endpoint, options = {}) {
-  const { remoteOnly = false, baseUrl, skipDefaultAuth = false, ...requestOptions } = options;
+  const { remoteOnly = false, baseUrl, skipDefaultAuth = false, timeoutMs = 15000, ...requestOptions } = options;
   const requestBase = String(baseUrl || "").trim().replace(/\/$/, "");
   const url = requestBase
     ? `${requestBase}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
     : apiUrl(endpoint);
+
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  let timeoutId = null;
+  if (controller && !requestOptions.signal) {
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  }
 
   try {
     const token =
@@ -51,13 +60,16 @@ async function performApiRequest(endpoint, options = {}) {
     const config = {
       ...requestOptions,
       headers,
+      signal: requestOptions.signal || controller?.signal,
     };
 
     let res;
     res = await fetch(url, config);
 
-    if (res.status === 401 || res.status === 403) {
-      // Handle unauthorized (optional: dispatch event or clear storage)
+    if (res.status === 401) {
+      if (typeof window !== "undefined" && token) {
+        window.dispatchEvent(new CustomEvent("avsr-auth-expired", { detail: { endpoint } }));
+      }
     }
 
     if (!res.ok) {
@@ -147,7 +159,27 @@ async function performApiRequest(endpoint, options = {}) {
       };
     }
   } catch (err) {
-    return { success: false, error: err.message || "Network error occurred" };
+    const isTimeout = err.name === "AbortError";
+    const isOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+    const isFailedToFetch = String(err.message || "").toLowerCase().includes("failed to fetch") ||
+                            String(err.message || "").toLowerCase().includes("networkerror") ||
+                            String(err.message || "").toLowerCase().includes("econnrefused");
+    let displayMsg = err.message || "Network error occurred";
+    if (isTimeout) {
+      displayMsg = "API request timed out (15s). The backend server took too long to respond.";
+    } else if (isOffline) {
+      displayMsg = "You are currently offline. Please check your internet connection.";
+    } else if (isFailedToFetch) {
+      displayMsg = `Cannot connect to the backend server at ${url}. Please verify the backend is running.`;
+    }
+    return {
+      success: false,
+      error: displayMsg,
+      isNetworkError: isFailedToFetch || isOffline,
+      isTimeout,
+    };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 

@@ -1522,9 +1522,30 @@ export function TableView({
             borderRadius: "8px",
             background: "rgba(239, 68, 68, 0.08)",
             color: "var(--danger)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.75rem",
           }}
         >
-          Live tables and active orders could not be verified. {loadError}
+          <span>Live tables and active orders could not be verified: {loadError}</span>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: "4px 10px",
+              background: "var(--danger)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Retry
+          </button>
         </div>
       )}
 

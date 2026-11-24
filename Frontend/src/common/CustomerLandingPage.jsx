@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import defaultRestaurantLogo from "../assets/restaurant-logo.png";
 import {
   ArrowLeft,
   ArrowRight,
@@ -196,7 +197,7 @@ export function CustomerLandingPage({
   };
   const getStoredLogo = () => {
     const s = getStoredSettings();
-    return s.logo || s.restaurantLogo || "/restaurant-logo.png";
+    return s.logo || s.restaurantLogo || defaultRestaurantLogo;
   };
   const getStoredName = () => getStoredSettings().restaurantName || "The Rustic Spin";
 
@@ -1516,8 +1517,8 @@ export function CustomerLandingPage({
                     src={liveLogo}
                     alt={liveRestaurantName || "Logo"}
                     onError={() => {
-                      if (liveLogo !== "/restaurant-logo.png") {
-                        setLiveLogo("/restaurant-logo.png");
+                      if (liveLogo !== defaultRestaurantLogo) {
+                        setLiveLogo(defaultRestaurantLogo);
                       } else {
                         setLogoLoadFailed(true);
                       }
@@ -2134,21 +2135,23 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
-                  {/* Station Toggle */}
-                  <div className="pos-station-group">
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("kitchen");
-                        if (selectedCategory === "beverages")
-                          setSelectedCategory("all");
-                      }}
-                    >
-                      <ChefHat size={14} />
-                      <span>Kitchen / Food</span>
-                    </button>
-                  </div>
+                  {/* Station Toggle (Takeaway/POS staff only) */}
+                  {!isDineInMenu && (
+                    <div className="pos-station-group">
+                      <button
+                        type="button"
+                        className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
+                        onClick={() => {
+                          setOrderMode("kitchen");
+                          if (selectedCategory === "beverages")
+                            setSelectedCategory("all");
+                        }}
+                      >
+                        <ChefHat size={14} />
+                        <span>Kitchen / Food</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Search Input */}
                   <div className="pos-search-box">
@@ -2171,22 +2174,24 @@ export function CustomerLandingPage({
                     )}
                   </div>
 
-                  {/* Categories Filter Dropdown (Matches Template Controls) */}
-                  <div className="pos-category-select-wrapper">
-                    <Utensils size={14} className="pos-category-select-icon" />
-                    <select
-                      className="pos-category-select"
-                      value={activeCategoryId}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      aria-label="Filter by category"
-                    >
-                      {takeawayCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Categories Filter Dropdown (Takeaway only - Dine-In has dedicated quick category strip) */}
+                  {!isDineInMenu && (
+                    <div className="pos-category-select-wrapper">
+                      <Utensils size={14} className="pos-category-select-icon" />
+                      <select
+                        className="pos-category-select"
+                        value={activeCategoryId}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        aria-label="Filter by category"
+                      >
+                        {takeawayCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Dietary Filter Buttons: Veg, Non-Veg, Specials */}
                   <div className="pos-dietary-group">
