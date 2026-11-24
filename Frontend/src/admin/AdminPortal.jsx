@@ -63,6 +63,7 @@ import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminTakeaway } from "./AdminTakeaway";
+import { AdminSelfService } from "./AdminSelfService";
 import { AdminInventory, isBarInventoryItem, INITIAL_KITCHEN_INVENTORY } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
@@ -3597,6 +3598,15 @@ export function AdminPortal({
                     restaurantSettings={restaurantSettings}
                     restaurantLogo={restaurantLogo}
                     currentSession={currentSession}
+                  />
+                )}
+
+                {/* ================= TAB: SELF SERVICE ORDERS ================= */}
+                {activeTab === "self_service" && (
+                  <AdminSelfService
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                    restaurantLogo={restaurantLogo}
                   />
                 )}
 

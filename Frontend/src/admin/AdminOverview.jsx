@@ -26,7 +26,15 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
-import { dedupeOrders, formatInvoiceNumber, getOrderTimestamp, parseOrderToYMD } from "../utils/orderDedupe";
+import {
+  dedupeOrders,
+  formatInvoiceNumber,
+  getOrderTimestamp,
+  parseOrderToYMD,
+  isSelfServiceOrder,
+  isTakeawayOrder,
+  isDineInOrder,
+} from "../utils/orderDedupe";
 import { compareTablesNaturally } from "../utils/tableSortHelper";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
@@ -227,6 +235,23 @@ export function AdminOverview({
       return mode.includes("upi") || mode.includes("qr") || mode.includes("online");
     })
     .reduce((sum, o) => sum + getOrderAmount(o), 0);
+
+  // ── All-time Order Distribution & Revenue Breakdown ──
+  const totalDineInOrders = cleanOrders.filter(isDineInOrder).length;
+  const totalTakeawayOrders = cleanOrders.filter(isTakeawayOrder).length;
+  const totalSelfServiceOrders = cleanOrders.filter(isSelfServiceOrder).length;
+  const allTotalRevenue = cleanOrders.reduce((sum, o) => sum + getOrderAmount(o), 0);
+  const selfServiceRevenue = cleanOrders
+    .filter(isSelfServiceOrder)
+    .reduce((sum, o) => sum + getOrderAmount(o), 0);
+  const paidOrdersCount = cleanOrders.filter((o) => {
+    const raw = String(o.paymentStatus || o.status || "").toLowerCase();
+    return raw.includes("paid") || raw.includes("settled") || raw.includes("completed");
+  }).length;
+  const pendingPaymentsCount = cleanOrders.filter((o) => {
+    const raw = String(o.paymentStatus || o.status || "").toLowerCase();
+    return raw.includes("pending") || raw.includes("unpaid");
+  }).length;
 
   const isTableOccupied = (tbl) => {
     if (!tbl) return false;
@@ -450,6 +475,184 @@ export function AdminOverview({
             <Receipt size={14} color="#3b82f6" />
             <span>Invoices</span>
           </button>
+        </div>
+      </div>
+
+      {/* ── Order Channels & Settlement Overview (Dine In, Takeaway, Self Service, Revenue, Paid, Pending) ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          gap: "0.65rem",
+          width: "100%",
+        }}
+      >
+        {/* 1. Total Dine In Orders */}
+        <div
+          onClick={() => onNavigateTab("tables")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Tables & Dine In"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Total Dine In Orders
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--text-main)", marginTop: "2px" }}>
+            {totalDineInOrders}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            Dining floor orders
+          </div>
+        </div>
+
+        {/* 2. Total Takeaway Orders */}
+        <div
+          onClick={() => onNavigateTab("takeaway")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Takeaway Orders"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Total Takeaway Orders
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--accent-amber)", marginTop: "2px" }}>
+            {totalTakeawayOrders}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            Parcel & takeaway
+          </div>
+        </div>
+
+        {/* 3. Total Self Service Orders */}
+        <div
+          onClick={() => onNavigateTab("self_service")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Self Service Orders"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Total Self Service Orders
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--info, #38bdf8)", marginTop: "2px" }}>
+            {totalSelfServiceOrders}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            Contactless kiosk
+          </div>
+        </div>
+
+        {/* 4. Total Revenue */}
+        <div
+          onClick={() => onNavigateTab("invoices")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Invoices & Total Revenue"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Total Revenue
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--accent-amber-light)", marginTop: "2px" }}>
+            {formatCurrency(allTotalRevenue)}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            Gross settlements
+          </div>
+        </div>
+
+        {/* 5. Self Service Revenue */}
+        <div
+          onClick={() => onNavigateTab("self_service")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Self Service Kiosk revenue"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Self Service Revenue
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--info, #38bdf8)", marginTop: "2px" }}>
+            {formatCurrency(selfServiceRevenue)}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            Kiosk sales
+          </div>
+        </div>
+
+        {/* 6. Paid Orders */}
+        <div
+          onClick={() => onNavigateTab("invoices")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Paid Invoices"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Paid Orders
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--success)", marginTop: "2px" }}>
+            {paidOrdersCount}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            Fully collected
+          </div>
+        </div>
+
+        {/* 7. Pending Payments */}
+        <div
+          onClick={() => onNavigateTab("invoices")}
+          style={{
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "10px",
+            padding: "0.65rem 0.85rem",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          title="Click to view Pending Payments"
+        >
+          <div style={{ fontSize: "0.68rem", fontWeight: 750, color: "var(--text-muted)", textTransform: "uppercase" }}>
+            Pending Payments
+          </div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 850, color: pendingPaymentsCount > 0 ? "var(--danger)" : "var(--text-muted)", marginTop: "2px" }}>
+            {pendingPaymentsCount}
+          </div>
+          <div style={{ fontSize: "0.64rem", color: "var(--text-dim)", marginTop: "1px" }}>
+            {pendingPaymentsCount === 0 ? "All settled" : "Awaiting settlement"}
+          </div>
         </div>
       </div>
 

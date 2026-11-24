@@ -6,4 +6,5 @@ export { TransferTableModal } from './TransferTableModal';
 export { PastOrdersModal } from './PastOrdersModal';
 export { ItemDetailModal } from './ItemDetailModal';
 export { TakeawayOrderFlowView } from './TakeawayOrderFlowView';
+export { SelfServiceView } from './SelfServiceView';
 

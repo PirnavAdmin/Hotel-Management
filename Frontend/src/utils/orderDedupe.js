@@ -459,6 +459,7 @@ export function dedupeOrders(orders = []) {
       "date", "settledDate",
       "tableName", "TableName",
       "server", "serverName", "ServerName",
+      "orderType", "OrderType", "isSelfService", "isTakeaway"
     ];
     fieldsToPreserve.forEach((f) => {
       const val = order[f] || existing[f];
@@ -532,3 +533,35 @@ export function assignDailyInvoiceNumbers(orders = []) {
 
   return orders;
 }
+
+/**
+ * Standardized order type classification helpers used across POS, Invoices, and Admin.
+ */
+export const isSelfServiceOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase().replace(/[\s_-]/g, "");
+  if (orderType === "selfservice") return true;
+  const tableName = String(order.tableName ?? order.TableName ?? order.table ?? "").trim().toLowerCase();
+  if (tableName.includes("self service") || tableName.includes("selfservice") || tableName.includes("kiosk")) return true;
+  const tableId = String(order.tableId ?? order.TableId ?? "").trim().toUpperCase();
+  if (tableId === "SELF_SERVICE" || tableId === "SELFSERVICE" || tableId === "KIOSK") return true;
+  return Boolean(order.isSelfService);
+};
+
+export const isTakeawayOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  if (isSelfServiceOrder(order)) return false;
+  const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase();
+  if (orderType === "takeaway" || orderType === "parcel") return true;
+  const tableName = String(order.tableName ?? order.TableName ?? order.table ?? "").trim().toLowerCase();
+  if (tableName.includes("takeaway") || tableName.includes("parcel")) return true;
+  const tableId = String(order.tableId ?? order.TableId ?? "").trim().toUpperCase();
+  if (tableId === "TAKEAWAY" || tableId === "PARCEL") return true;
+  return Boolean(order.isTakeaway);
+};
+
+export const isDineInOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  return !isTakeawayOrder(order) && !isSelfServiceOrder(order);
+};
+

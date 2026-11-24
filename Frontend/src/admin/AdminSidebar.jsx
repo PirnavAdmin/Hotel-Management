@@ -20,6 +20,7 @@ import {
   Sparkles,
   ReceiptText,
   Clock,
+  Smartphone,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -42,6 +43,7 @@ export function AdminSidebar({
   onLogout,
   menuCount = 0,
   takeawayCount = 0,
+  selfServiceCount = 0,
   tablesCount = 0,
   staffCount = 0,
   activeKOTCount = 0,
@@ -139,6 +141,12 @@ export function AdminSidebar({
           label: "Takeaway Orders",
           icon: ShoppingBag,
           badge: takeawayCount > 0 ? takeawayCount : null,
+        },
+        {
+          id: "self_service",
+          label: "Self Service Orders",
+          icon: Smartphone,
+          badge: selfServiceCount > 0 ? selfServiceCount : null,
         },
         {
           id: "reservations",
