@@ -5,12 +5,20 @@ using HMS.Data;
 using HMS.Middleware;
 using HMS.Models;
 using HMS.Services;
+using HMS.Tests;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
+if (args.Length > 0 && args.Contains("--run-issue21-tests"))
+{
+    var exitCode = await Issue21SecurityTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

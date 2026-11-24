@@ -58,6 +58,9 @@ public class Order
     // restaurant_orders.updated_by
     public long? UpdatedBy { get; set; }
 
+    // restaurant_orders.branch_id
+    public long? BranchId { get; set; }
+
     // restaurant_orders.customer_id
     public long? CustomerId { get; set; }
 
