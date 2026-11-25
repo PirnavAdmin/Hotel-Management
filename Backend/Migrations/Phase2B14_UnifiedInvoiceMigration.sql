@@ -75,33 +75,44 @@ DROP PROCEDURE IF EXISTS sp_phase2b14_add_invoice_columns;
 -- STEP 3: Backfill Metadata From Existing Orders (Non-Destructive)
 -- ----------------------------------------------------------------------------
 UPDATE invoices i
-INNER JOIN orders o ON o.id = i.order_id
+INNER JOIN orders o ON o.order_id = i.order_id
+LEFT JOIN customers c ON c.customer_id = o.customer_id
 SET
     i.order_number = COALESCE(i.order_number, o.order_number),
-    i.branch_id = COALESCE(i.branch_id, o.branch_id, NULLIF(o.outlet_id, 0), 1),
+    i.branch_id = COALESCE(i.branch_id, o.branch_id, 1),
     i.order_type = COALESCE(i.order_type, o.order_type),
-    i.customer_name = COALESCE(i.customer_name, o.customer_name),
-    i.customer_phone = COALESCE(i.customer_phone, o.customer_phone),
+    i.customer_name = COALESCE(i.customer_name, c.full_name),
+    i.customer_phone = COALESCE(i.customer_phone, c.phone),
     i.service_charge_amount = CASE
         WHEN LOWER(COALESCE(o.order_type, '')) = 'selfservice' THEN 0.00
-        WHEN i.service_charge_amount = 0 THEN COALESCE(o.service_charge, 0.00)
+        WHEN i.service_charge_amount = 0 THEN COALESCE(o.service_charge_amt, 0.00)
         ELSE i.service_charge_amount
     END,
     i.cgst_amount = CASE WHEN i.cgst_amount = 0 AND i.tax_amount > 0 THEN ROUND(i.tax_amount / 2, 2) ELSE i.cgst_amount END,
-    i.sgst_amount = CASE WHEN i.sgst_amount = 0 AND i.tax_amount > 0 THEN i.tax_amount - ROUND(i.tax_amount / 2, 2) ELSE i.sgst_amount END,
-    i.payment_status = COALESCE(i.payment_status, CASE UPPER(COALESCE(i.status, 'UNPAID'))
-        WHEN 'PAID' THEN 'Paid'
-        WHEN 'PARTIAL' THEN 'Partial'
-        WHEN 'VOID' THEN 'Void'
-        WHEN 'REFUNDED' THEN 'Refunded'
-        ELSE 'Unpaid'
-    END);
+    i.sgst_amount = CASE WHEN i.sgst_amount = 0 AND i.tax_amount > 0 THEN i.tax_amount - ROUND(i.tax_amount / 2, 2) ELSE i.sgst_amount END;
 
 -- ----------------------------------------------------------------------------
 -- STEP 4: Create Unique Indexes (Run ONLY if STEP 1 returned 0 duplicates)
 -- ----------------------------------------------------------------------------
-CREATE UNIQUE INDEX ix_invoices_order_id ON invoices (order_id);
-CREATE UNIQUE INDEX ix_invoices_invoice_number ON invoices (invoice_number);
+DROP PROCEDURE IF EXISTS sp_phase2b14_add_unique_indexes;
+DELIMITER $$
+CREATE PROCEDURE sp_phase2b14_add_unique_indexes()
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND INDEX_NAME = 'ix_invoices_order_id') THEN
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'order_id' AND NON_UNIQUE = 0) THEN
+            CREATE UNIQUE INDEX ix_invoices_order_id ON invoices (order_id);
+        END IF;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND INDEX_NAME = 'ix_invoices_invoice_number') THEN
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'invoice_number' AND NON_UNIQUE = 0) THEN
+            CREATE UNIQUE INDEX ix_invoices_invoice_number ON invoices (invoice_number);
+        END IF;
+    END IF;
+END$$
+DELIMITER ;
+
+CALL sp_phase2b14_add_unique_indexes();
+DROP PROCEDURE IF EXISTS sp_phase2b14_add_unique_indexes;
 
 -- ----------------------------------------------------------------------------
 -- STEP 5: Post-Migration Verification
