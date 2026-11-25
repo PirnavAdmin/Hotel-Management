@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import defaultRestaurantLogo from "../assets/restaurant-logo.png";
 import {
   ArrowLeft,
   ArrowRight,
@@ -194,10 +195,14 @@ export function CustomerLandingPage({
       return {};
     }
   };
-  const getStoredLogo = () => getStoredSettings().logo || "/restaurant-logo.png";
+  const getStoredLogo = () => {
+    const s = getStoredSettings();
+    return s.logo || s.restaurantLogo || defaultRestaurantLogo;
+  };
   const getStoredName = () => getStoredSettings().restaurantName || "The Rustic Spin";
 
   const [liveLogo, setLiveLogo] = useState(() => restaurantLogo || getStoredLogo());
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   const [liveRestaurantName, setLiveRestaurantName] = useState(() => {
     const sName = getStoredName();
     if (sName && sName.trim() && sName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(sName)) return sName.trim();
@@ -207,6 +212,7 @@ export function CustomerLandingPage({
 
   useEffect(() => {
     setLiveLogo(restaurantLogo || getStoredLogo());
+    setLogoLoadFailed(false);
     if (restaurantName && restaurantName.trim().toLowerCase() !== "restaurant") {
       setLiveRestaurantName(restaurantName.trim());
     }
@@ -220,7 +226,10 @@ export function CustomerLandingPage({
         const fresh = res?.data || res?.settings;
         if (fresh && active) {
           const l = fresh.logo || fresh.restaurantLogo;
-          if (l) setLiveLogo(l);
+          if (l) {
+            setLiveLogo(l);
+            setLogoLoadFailed(false);
+          }
           if (fresh.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(fresh.restaurantName)) {
             setLiveRestaurantName(fresh.restaurantName.trim());
           }
@@ -233,8 +242,13 @@ export function CustomerLandingPage({
     const handleSettingsUpdate = (e) => {
       const fresh = e?.detail || getStoredSettings();
       const l = fresh?.logo || fresh?.restaurantLogo;
-      if (l) setLiveLogo(l);
-      else setLiveLogo(getStoredLogo() || restaurantLogo);
+      if (l) {
+        setLiveLogo(l);
+        setLogoLoadFailed(false);
+      } else {
+        setLiveLogo(getStoredLogo() || restaurantLogo);
+        setLogoLoadFailed(false);
+      }
 
       if (fresh?.restaurantName && fresh.restaurantName.trim().toLowerCase() !== "restaurant" && !/bhanu|avsr/i.test(fresh.restaurantName)) {
         setLiveRestaurantName(fresh.restaurantName.trim());
@@ -1496,12 +1510,21 @@ export function CustomerLandingPage({
                 if (!isDineInMenu) navigateScreen("home");
               }}
             >
-              {liveLogo ? (
-                <img
-                  className="customer-brand-logo"
-                  src={liveLogo}
-                  alt=""
-                />
+              {liveLogo && !logoLoadFailed ? (
+                <div className="customer-brand-logo-wrap">
+                  <img
+                    className="customer-brand-logo"
+                    src={liveLogo}
+                    alt={liveRestaurantName || "Logo"}
+                    onError={() => {
+                      if (liveLogo !== defaultRestaurantLogo) {
+                        setLiveLogo(defaultRestaurantLogo);
+                      } else {
+                        setLogoLoadFailed(true);
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <span className="customer-brand-mark">
                   <ChefHat size={25} />
@@ -2112,21 +2135,23 @@ export function CustomerLandingPage({
               <div className="pos-takeaway-center">
                 {/* Catalog Controls Bar */}
                 <div className="pos-takeaway-controls-bar">
-                  {/* Station Toggle */}
-                  <div className="pos-station-group">
-                    <button
-                      type="button"
-                      className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
-                      onClick={() => {
-                        setOrderMode("kitchen");
-                        if (selectedCategory === "beverages")
-                          setSelectedCategory("all");
-                      }}
-                    >
-                      <ChefHat size={14} />
-                      <span>Kitchen / Food</span>
-                    </button>
-                  </div>
+                  {/* Station Toggle (Takeaway/POS staff only) */}
+                  {!isDineInMenu && (
+                    <div className="pos-station-group">
+                      <button
+                        type="button"
+                        className={`pos-station-btn ${orderMode === "kitchen" ? "is-active" : ""}`}
+                        onClick={() => {
+                          setOrderMode("kitchen");
+                          if (selectedCategory === "beverages")
+                            setSelectedCategory("all");
+                        }}
+                      >
+                        <ChefHat size={14} />
+                        <span>Kitchen / Food</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Search Input */}
                   <div className="pos-search-box">
@@ -2149,22 +2174,24 @@ export function CustomerLandingPage({
                     )}
                   </div>
 
-                  {/* Categories Filter Dropdown (Matches Template Controls) */}
-                  <div className="pos-category-select-wrapper">
-                    <Utensils size={14} className="pos-category-select-icon" />
-                    <select
-                      className="pos-category-select"
-                      value={activeCategoryId}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      aria-label="Filter by category"
-                    >
-                      {takeawayCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Categories Filter Dropdown (Takeaway only - Dine-In has dedicated quick category strip) */}
+                  {!isDineInMenu && (
+                    <div className="pos-category-select-wrapper">
+                      <Utensils size={14} className="pos-category-select-icon" />
+                      <select
+                        className="pos-category-select"
+                        value={activeCategoryId}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        aria-label="Filter by category"
+                      >
+                        {takeawayCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Dietary Filter Buttons: Veg, Non-Veg, Specials */}
                   <div className="pos-dietary-group">

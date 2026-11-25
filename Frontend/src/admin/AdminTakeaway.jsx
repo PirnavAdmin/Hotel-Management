@@ -1416,51 +1416,51 @@ export function AdminTakeaway({
           <table
             style={{
               width: "100%",
-              tableLayout: "fixed",
+              minWidth: "1180px",
               borderCollapse: "separate",
               borderSpacing: 0,
               textAlign: "left",
-              fontSize: "0.73rem",
+              fontSize: "0.78rem",
             }}
           >
             <colgroup>
-              <col style={{ width: "3.5%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "15.5%" }} />
-              <col style={{ width: "9%" }} />
+              <col style={{ width: "48px" }} />
+              <col style={{ width: "165px" }} />
+              <col style={{ width: "185px" }} />
+              <col style={{ width: "165px" }} />
+              <col style={{ width: "105px" }} />
+              <col style={{ width: "120px" }} />
+              <col style={{ width: "135px" }} />
+              <col style={{ width: "185px" }} />
+              <col style={{ width: "115px" }} />
             </colgroup>
             <thead>
               <tr>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
                   #
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
                   ORDER ID
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
                   CUSTOMER
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
                   PHONE
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", textAlign: "center", whiteSpace: "nowrap" }}>
                   ITEMS
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", textAlign: "right", whiteSpace: "nowrap" }}>
                   AMOUNT
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", textAlign: "center", whiteSpace: "nowrap" }}>
                   STATUS
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
                   ORDER TIME
                 </th>
-                <th style={{ padding: "0.48rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", textAlign: "right", whiteSpace: "nowrap" }}>
+                <th style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em", textAlign: "right", whiteSpace: "nowrap" }}>
                   ACTIONS
                 </th>
               </tr>
@@ -1497,25 +1497,25 @@ export function AdminTakeaway({
                       onMouseEnter={(e) => (e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 3%, transparent)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {rowNumber}
                       </td>
-                      <td style={{ padding: "0.44rem 0.5rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {formatOrderNumber(order.orderNumber || order.id)}
                       </td>
-                      <td style={{ padding: "0.44rem 0.5rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
                           <span
                             style={{
-                              width: "24px",
-                              height: "24px",
+                              width: "26px",
+                              height: "26px",
                               borderRadius: "50%",
                               background: "color-mix(in srgb, var(--accent-amber) 12%, transparent)",
                               color: "var(--accent-amber)",
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "0.72rem",
+                              fontSize: "0.74rem",
                               fontWeight: 800,
                               flexShrink: 0,
                             }}
@@ -1527,19 +1527,19 @@ export function AdminTakeaway({
                           </span>
                         </div>
                       </td>
-                      <td style={{ padding: "0.44rem 0.5rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.38rem", color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                          <Phone size={12} color="var(--accent-amber)" style={{ opacity: 0.85, flexShrink: 0 }} />
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.82rem" }}>
+                          <Phone size={13} color="var(--accent-amber)" style={{ opacity: 0.85, flexShrink: 0 }} />
                           <span>{order.phone || "+91 98450 12345"}</span>
                         </div>
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", textAlign: "center", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         <span
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            padding: "0.25rem 0.45rem",
+                            padding: "0.25rem 0.55rem",
                             borderRadius: "6px",
                             fontSize: "0.76rem",
                             fontWeight: 600,
@@ -1552,17 +1552,17 @@ export function AdminTakeaway({
                           {order.itemsCount} Items
                         </span>
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", fontWeight: 700, color: "var(--text-main)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         ₹ {getTakeawayOrderTotal(order).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", textAlign: "center", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {renderStatusBadge(order.status)}
                       </td>
-                      <td style={{ padding: "0.44rem 0.45rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.76rem", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <td style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", color: "var(--text-muted)", fontSize: "0.76rem", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                         {order.orderTime}
                       </td>
-                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.45rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ padding: "0.65rem 0.85rem", borderBottom: "1px solid var(--border-card)", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "0.35rem" }}>
                           {/* View bill & print invoice */}
                           <button
                             type="button"

@@ -63,6 +63,7 @@ import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
 import { AdminOverview } from "./AdminOverview";
 import { AdminTakeaway } from "./AdminTakeaway";
+import { AdminSelfService } from "./AdminSelfService";
 import { AdminInventory, isBarInventoryItem, INITIAL_KITCHEN_INVENTORY } from "./AdminInventory";
 import { AdminInvoices } from "./AdminInvoices";
 import { AdminReports } from "./AdminReports";
@@ -1432,10 +1433,12 @@ export function AdminPortal({
 
     // 2. Broadcast via /api/sync
     try {
+      const syncToken = localStorage.getItem("avsr_jwt_token") || localStorage.getItem("token");
       await fetch(`${API_SYNC_BASE}/api/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(syncToken ? { Authorization: `Bearer ${syncToken}` } : {}),
         },
         body: JSON.stringify({ [RESTAURANT_SETTINGS_KEY]: stampedSettings }),
       });
@@ -2545,7 +2548,6 @@ export function AdminPortal({
               flex: 1,
               overflowY: "auto",
               overflowX: "hidden",
-              scrollbarWidth: "auto",
               overscrollBehaviorY: "contain",
               padding:
                 portalMode === "bar" || activeTab === "logins"
@@ -2897,7 +2899,7 @@ export function AdminPortal({
                             <th
                               style={{
                                 padding: "0.6rem 0.85rem",
-                                width: "44%",
+                                width: "36%",
                               }}
                             >
                               Dish Name
@@ -2906,6 +2908,7 @@ export function AdminPortal({
                               style={{
                                 padding: "0.6rem 0.85rem",
                                 width: "14%",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               Category
@@ -2913,7 +2916,9 @@ export function AdminPortal({
                             <th
                               style={{
                                 padding: "0.6rem 0.85rem",
-                                width: "14%",
+                                width: "10%",
+                                textAlign: "center",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               Dietary
@@ -2922,6 +2927,8 @@ export function AdminPortal({
                               style={{
                                 padding: "0.6rem 0.85rem",
                                 width: "12%",
+                                textAlign: "right",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               Price (₹)
@@ -2929,8 +2936,19 @@ export function AdminPortal({
                             <th
                               style={{
                                 padding: "0.6rem 0.85rem",
-                                width: "16%",
+                                width: "13%",
                                 textAlign: "center",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              Availability
+                            </th>
+                            <th
+                              style={{
+                                padding: "0.6rem 0.85rem",
+                                width: "15%",
+                                textAlign: "center",
+                                whiteSpace: "nowrap",
                               }}
                             >
                               Actions
@@ -2939,11 +2957,11 @@ export function AdminPortal({
                         </thead>
                         <tbody>
                           {sharedRecordLoad?.menu === "loading" && menuItems.length === 0 ? (
-                            <tr><td colSpan={5}><SkeletonTable rows={6} columns={5} /></td></tr>
+                            <tr><td colSpan={6}><SkeletonTable rows={6} columns={6} /></td></tr>
                           ) : paginatedItems.length === 0 ? (
                             <tr>
                               <td
-                                colSpan={5}
+                                colSpan={6}
                                 style={{
                                   padding: "2rem",
                                   textAlign: "center",
@@ -3183,9 +3201,76 @@ export function AdminPortal({
                                       color: "var(--accent-amber-light)",
                                       fontSize: "0.92rem",
                                       whiteSpace: "nowrap",
+                                      textAlign: "right",
                                     }}
                                   >
                                     ₹{Number(item.price).toFixed(2)}
+                                  </td>
+                                  <td
+                                    data-label="Availability"
+                                    style={{
+                                      padding: "0.6rem 0.85rem",
+                                      textAlign: "center",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    <button
+                                      onClick={() =>
+                                        onSetMenuAvailability?.(
+                                          item.id ?? item.menuItemId,
+                                          !isAvail,
+                                        )
+                                      }
+                                      title={
+                                        isAvail
+                                          ? "Mark unavailable"
+                                          : "Make available"
+                                      }
+                                      style={{
+                                        border:
+                                          !isAvail
+                                            ? "1px solid rgba(239, 68, 68, 0.45)"
+                                            : "1px solid rgba(16, 185, 129, 0.45)",
+                                        background:
+                                          !isAvail
+                                            ? "rgba(239, 68, 68, 0.12)"
+                                            : "rgba(16, 185, 129, 0.12)",
+                                        color:
+                                          !isAvail
+                                            ? "#ef4444"
+                                            : "#10b981",
+                                        borderRadius: "6px",
+                                        padding: "4px 9px",
+                                        fontSize: "0.74rem",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        transition: "all 0.15s ease",
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.background =
+                                          !isAvail
+                                            ? "rgba(239, 68, 68, 0.22)"
+                                            : "rgba(16, 185, 129, 0.22)";
+                                        e.currentTarget.style.borderColor =
+                                          !isAvail
+                                            ? "rgba(239, 68, 68, 0.7)"
+                                            : "rgba(16, 185, 129, 0.7)";
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.background =
+                                          !isAvail
+                                            ? "rgba(239, 68, 68, 0.12)"
+                                            : "rgba(16, 185, 129, 0.12)";
+                                        e.currentTarget.style.borderColor =
+                                          !isAvail
+                                            ? "rgba(239, 68, 68, 0.45)"
+                                            : "rgba(16, 185, 129, 0.45)";
+                                      }}
+                                    >
+                                      {!isAvail
+                                        ? "Unavailable"
+                                        : "Available"}
+                                    </button>
                                   </td>
                                   <td
                                     data-label="Actions"
@@ -3203,63 +3288,6 @@ export function AdminPortal({
                                         gap: "0.45rem",
                                       }}
                                     >
-                                      <button
-                                        onClick={() =>
-                                          onSetMenuAvailability?.(
-                                            item.id ?? item.menuItemId,
-                                            !isAvail,
-                                          )
-                                        }
-                                        title={
-                                          isAvail
-                                            ? "Mark unavailable"
-                                            : "Make available"
-                                        }
-                                        style={{
-                                          border:
-                                            !isAvail
-                                              ? "1px solid rgba(239, 68, 68, 0.45)"
-                                              : "1px solid rgba(16, 185, 129, 0.45)",
-                                          background:
-                                            !isAvail
-                                              ? "rgba(239, 68, 68, 0.12)"
-                                              : "rgba(16, 185, 129, 0.12)",
-                                          color:
-                                            !isAvail
-                                              ? "#ef4444"
-                                              : "#10b981",
-                                          borderRadius: "6px",
-                                          padding: "4px 9px",
-                                          fontSize: "0.74rem",
-                                          fontWeight: 700,
-                                          cursor: "pointer",
-                                          transition: "all 0.15s ease",
-                                        }}
-                                        onMouseEnter={(e) => {
-                                          e.currentTarget.style.background =
-                                            !isAvail
-                                              ? "rgba(239, 68, 68, 0.22)"
-                                              : "rgba(16, 185, 129, 0.22)";
-                                          e.currentTarget.style.borderColor =
-                                            !isAvail
-                                              ? "rgba(239, 68, 68, 0.7)"
-                                              : "rgba(16, 185, 129, 0.7)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                          e.currentTarget.style.background =
-                                            !isAvail
-                                              ? "rgba(239, 68, 68, 0.12)"
-                                              : "rgba(16, 185, 129, 0.12)";
-                                          e.currentTarget.style.borderColor =
-                                            !isAvail
-                                              ? "rgba(239, 68, 68, 0.45)"
-                                              : "rgba(16, 185, 129, 0.45)";
-                                        }}
-                                      >
-                                        {!isAvail
-                                          ? "Unavailable"
-                                          : "Available"}
-                                      </button>
                                       <button
                                         onClick={() =>
                                           handleOpenItemModal(item)
@@ -3571,6 +3599,15 @@ export function AdminPortal({
                     restaurantSettings={restaurantSettings}
                     restaurantLogo={restaurantLogo}
                     currentSession={currentSession}
+                  />
+                )}
+
+                {/* ================= TAB: SELF SERVICE ORDERS ================= */}
+                {activeTab === "self_service" && (
+                  <AdminSelfService
+                    restaurantName={restaurantName}
+                    restaurantSettings={restaurantSettings}
+                    restaurantLogo={restaurantLogo}
                   />
                 )}
 

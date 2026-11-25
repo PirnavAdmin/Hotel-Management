@@ -1702,6 +1702,7 @@ import {
   Clock,
   Calendar,
   Users,
+  ArrowRightLeft,
   Sparkles,
   FileText,
   Utensils,

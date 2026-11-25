@@ -56,19 +56,25 @@
   gap: 13px;
   min-width: 0;
 }
-.customer-brand-logo,
+.customer-brand-logo-wrap,
 .customer-brand-mark {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 52px;
   height: 52px;
   flex: 0 0 52px;
-  place-items: center;
   overflow: hidden;
   border: 2px solid rgba(255, 181, 64, 0.85);
   border-radius: 50%;
   background: #ffffff;
   color: #a94700;
+}
+.customer-brand-logo {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  display: block;
 }
 .customer-brand strong {
   display: block;
@@ -1133,11 +1139,11 @@
   scrollbar-width: thin;
 }
 .customer-category-pills-row::-webkit-scrollbar {
-  height: 5px;
+  height: 4px;
 }
 .customer-category-pills-row::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  background: var(--app-scrollbar-thumb);
+  border-radius: 999px;
 }
 
 .customer-cat-pill {
@@ -2356,6 +2362,7 @@
     padding: 10px 16px;
     background: #1c1713;
   }
+  .customer-brand-logo-wrap,
   .customer-brand-logo,
   .customer-brand-mark {
     width: 44px;
@@ -3160,6 +3167,8 @@
   flex: 1 1 240px;
   min-width: 0;
   max-width: 440px;
+  height: auto;
+  min-height: auto;
 }
 
 .pos-search-icon {
@@ -3261,8 +3270,8 @@
 }
 
 .pos-takeaway-category-strip::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--accent-amber) 35%, transparent);
-  border-radius: 4px;
+  background: var(--app-scrollbar-thumb);
+  border-radius: 999px;
 }
 
 .pos-category-strip-btn {
@@ -4533,33 +4542,86 @@
 .is-dine-in-digital-menu .pos-takeaway-workspace {
   display: flex !important;
   flex-direction: column !important;
+  justify-content: flex-start !important;
   max-width: 1300px !important;
   margin: 0 auto !important;
   width: 100% !important;
-  flex: 1 1 auto !important;
+  flex: 0 0 auto !important;
   overflow: visible !important;
 }
 
 .is-dine-in-digital-menu .pos-takeaway-center {
   width: 100% !important;
   max-width: 100% !important;
-  padding: 0.5rem 1.25rem 4rem !important;
+  padding: 0.5rem 1rem 3rem !important;
   overflow: visible !important;
   box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+
+.is-dine-in-digital-menu .pos-takeaway-controls-bar {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  background: var(--bg-secondary, #131c2e) !important;
+  border: 1px solid var(--border-card, #1e293b) !important;
+  border-radius: 8px !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 0.65rem 1rem !important;
+  margin: 0 0 0.5rem 0 !important;
+}
+
+.is-dine-in-digital-menu .pos-station-group,
+.is-dine-in-digital-menu .pos-category-select-wrapper {
+  display: none !important;
+}
+
+.is-dine-in-digital-menu .pos-search-box {
+  flex: 1 1 auto !important;
+  max-width: 480px !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+}
+
+.is-dine-in-digital-menu .pos-search-box input {
+  height: 38px !important;
+  font-size: 0.85rem !important;
+}
+
+.is-dine-in-digital-menu .pos-dietary-group {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.is-dine-in-digital-menu .pos-dietary-btn {
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 0.85rem !important;
 }
 
 .is-dine-in-digital-menu .pos-takeaway-category-strip {
   display: flex !important;
   gap: 0.55rem !important;
   overflow-x: auto !important;
-  padding: 0.65rem 0.25rem 0.85rem !important;
-  margin-bottom: 0.85rem !important;
+  padding: 0.4rem 0.25rem 0.55rem !important;
+  margin-bottom: 0.65rem !important;
+  flex: 0 0 auto !important;
   scrollbar-width: none !important;
   -webkit-overflow-scrolling: touch !important;
-}
-
-.is-dine-in-digital-menu .pos-takeaway-category-strip::-webkit-scrollbar {
-  display: none !important;
 }
 
 .is-dine-in-digital-menu .pos-takeaway-grid {
@@ -4568,11 +4630,13 @@
   gap: 1.15rem !important;
   overflow: visible !important;
   padding: 0.25rem 0 3rem !important;
+  flex: 0 0 auto !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .is-dine-in-digital-menu .pos-takeaway-center {
-    padding: 0.25rem 0.75rem 4rem !important;
+    padding: 0.25rem 0.65rem 3rem !important;
+    flex: 0 0 auto !important;
   }
   .is-dine-in-digital-menu .pos-takeaway-grid {
     grid-template-columns: 1fr !important;
@@ -4581,8 +4645,21 @@
   .is-dine-in-digital-menu .pos-takeaway-controls-bar {
     flex-direction: column !important;
     align-items: stretch !important;
+    justify-content: flex-start !important;
     gap: 0.65rem !important;
-    padding: 0.75rem !important;
+    padding: 0.65rem 0.75rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    margin-bottom: 0.35rem !important;
+  }
+  .is-dine-in-digital-menu .pos-search-box {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
   }
   .is-dine-in-digital-menu .pos-station-group,
   .is-dine-in-digital-menu .pos-category-select-wrapper {
@@ -4591,10 +4668,16 @@
   .is-dine-in-digital-menu .pos-dietary-group {
     justify-content: center !important;
     width: 100% !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    gap: 0.4rem !important;
   }
   .is-dine-in-digital-menu .pos-dietary-btn {
-    flex: 1 !important;
+    flex: 1 1 0 !important;
     justify-content: center !important;
+    min-height: 36px !important;
+    height: 36px !important;
   }
   .is-dine-in-digital-menu .pos-takeaway-card {
     display: flex !important;

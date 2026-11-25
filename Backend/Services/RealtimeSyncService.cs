@@ -148,7 +148,7 @@ public class RealtimeSyncService : IRealtimeSyncService
 
         switch (scope)
         {
-            case EventScope.Restaurant when evt.BranchId.HasValue:
+            case EventScope.Restaurant when evt.BranchId.HasValue && evt.BranchId.Value > 0:
                 restaurantGroup = $"restaurant_{evt.BranchId.Value}";
                 targetClients = _hubContext.Clients.Group(restaurantGroup);
                 trackedRestaurantConnections = _connections.Values.Count(connection => connection.BranchId == evt.BranchId.Value);
@@ -165,12 +165,20 @@ public class RealtimeSyncService : IRealtimeSyncService
                 }
                 break;
 
-            case EventScope.Role when !string.IsNullOrWhiteSpace(targetRoleOrStation):
-                targetClients = _hubContext.Clients.Group($"role_{targetRoleOrStation.Trim().ToLowerInvariant()}");
+            case EventScope.Station when !string.IsNullOrWhiteSpace(targetRoleOrStation):
+                if (evt.BranchId.HasValue && evt.BranchId.Value > 0)
+                {
+                    // Station scoped strictly to the restaurant branch
+                    targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId.Value}_{targetRoleOrStation.Trim().ToLowerInvariant()}");
+                }
+                else
+                {
+                    targetClients = _hubContext.Clients.Group(targetRoleOrStation.Trim().ToLowerInvariant());
+                }
                 break;
 
-            case EventScope.Station when !string.IsNullOrWhiteSpace(targetRoleOrStation):
-                targetClients = _hubContext.Clients.Group(targetRoleOrStation.Trim().ToLowerInvariant());
+            case EventScope.Role when !string.IsNullOrWhiteSpace(targetRoleOrStation):
+                targetClients = _hubContext.Clients.Group($"role_{targetRoleOrStation.Trim().ToLowerInvariant()}");
                 break;
 
             case EventScope.User when !string.IsNullOrWhiteSpace(targetRoleOrStation):
@@ -179,7 +187,14 @@ public class RealtimeSyncService : IRealtimeSyncService
 
             case EventScope.All:
             default:
-                targetClients = _hubContext.Clients.All;
+                if (evt.BranchId.HasValue && evt.BranchId.Value > 0)
+                {
+                    targetClients = _hubContext.Clients.Group($"restaurant_{evt.BranchId.Value}");
+                }
+                else
+                {
+                    targetClients = _hubContext.Clients.All;
+                }
                 break;
         }
 
@@ -213,55 +228,66 @@ public class RealtimeSyncService : IRealtimeSyncService
     {
         try
         {
+            // CRITICAL BRANCH ISOLATION:
+            // Legacy SignalR methods must NEVER be broadcast to Clients.All across multiple branches.
+            // If the event has a valid BranchId, route strictly to that branch's restaurant group.
+            if (!evt.BranchId.HasValue || evt.BranchId.Value <= 0)
+            {
+                _logger.LogWarning("[RealtimeSync] Dropping un-scoped legacy SignalR broadcast for event {EventType} to prevent cross-branch leakage.", evt.EventType);
+                return;
+            }
+
+            var branchGroup = $"restaurant_{evt.BranchId.Value}";
+            var branchTarget = _hubContext.Clients.Group(branchGroup);
+
             switch (evt.EventType.ToLowerInvariant())
             {
                 case "order:created":
                 case "order:updated":
                 case "order:statuschanged":
-                    await _hubContext.Clients.Group("floor").SendAsync("OrderUpdated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("OrderUpdated", evt.Data ?? evt);
                     break;
 
                 case "order:tabletransferred":
                 case "table:updated":
                 case "table:statuschanged":
-                    await _hubContext.Clients.All.SendAsync("TableStatusUpdated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("TableStatusUpdated", evt.Data ?? evt);
                     break;
 
                 case "kot:created":
-                    await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", evt.Data ?? evt);
-                    await _hubContext.Clients.All.SendAsync("KotOrderCreated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("ReceiveNewKOT", evt.Data ?? evt);
+                    await branchTarget.SendAsync("KotOrderCreated", evt.Data ?? evt);
                     break;
 
                 case "kot:updated":
                 case "kot:statuschanged":
-                    await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", evt.Data ?? evt);
-                    await _hubContext.Clients.All.SendAsync("KotOrderUpdated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("KotOrderUpdated", evt.Data ?? evt);
                     break;
 
                 case "kot:cancelled":
-                    await _hubContext.Clients.All.SendAsync("KotOrderCancelled", evt.Data ?? evt);
+                    await branchTarget.SendAsync("KotOrderCancelled", evt.Data ?? evt);
                     break;
 
                 case "bot:created":
-                    await _hubContext.Clients.Group("bar").SendAsync("ReceiveNewBOT", evt.Data ?? evt);
-                    await _hubContext.Clients.All.SendAsync("ReceiveBarKotCreated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("ReceiveNewBOT", evt.Data ?? evt);
+                    await branchTarget.SendAsync("ReceiveBarKotCreated", evt.Data ?? evt);
                     break;
 
                 case "takeaway:created":
-                    await _hubContext.Clients.Group("floor").SendAsync("TakeawayOrderCreated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("TakeawayOrderCreated", evt.Data ?? evt);
                     break;
 
                 case "takeaway:statuschanged":
-                    await _hubContext.Clients.Group("floor").SendAsync("TakeawayStatusUpdated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("TakeawayStatusUpdated", evt.Data ?? evt);
                     break;
 
                 case "takeaway:cancelled":
-                    await _hubContext.Clients.Group("floor").SendAsync("TakeawayOrderCancelled", evt.Data ?? evt);
+                    await branchTarget.SendAsync("TakeawayOrderCancelled", evt.Data ?? evt);
                     break;
 
                 case "tablelock:acquired":
                 case "tablelock:released":
-                    await _hubContext.Clients.All.SendAsync("TableLockUpdated", evt.Data ?? evt);
+                    await branchTarget.SendAsync("TableLockUpdated", evt.Data ?? evt);
                     break;
             }
         }

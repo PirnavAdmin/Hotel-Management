@@ -136,7 +136,33 @@ export function RealTimeProvider({ children }) {
       {token && status.state !== "connected" && (
         <div className={`realtime-connection-indicator is-${status.state}`} role="status" aria-live="polite">
           <span className="realtime-connection-dot" aria-hidden="true" />
-          <span>{status.state === "reconnecting" ? "Reconnecting..." : "Offline"}</span>
+          <span>
+            {status.state === "reconnecting"
+              ? "Reconnecting..."
+              : status.state === "offline"
+                ? "Backend Offline"
+                : "Disconnected"}
+          </span>
+          {status.state === "offline" && (
+            <button
+              type="button"
+              onClick={() => {
+                startRealtimeSession(token, role);
+              }}
+              style={{
+                marginLeft: "8px",
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                borderRadius: "3px",
+                color: "#fff",
+                padding: "2px 6px",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+              }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
     </RealTimeContext.Provider>

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using HMS.DTOs;
 using HMS.Hubs;
 using HMS.Models;
@@ -27,6 +28,16 @@ public class KotController : ControllerBase
         _hubContext = hubContext;
         _sseBroadcaster = sseBroadcaster;
         _realtimeSync = realtimeSync;
+    }
+
+    private long ResolveBranchId(long? tableId = null)
+    {
+        string? branchClaim = User?.FindFirstValue("branchId");
+        if (long.TryParse(branchClaim, out var bId) && bId > 0)
+        {
+            return bId;
+        }
+        return 1;
     }
 
     // ============================================================
@@ -100,11 +111,13 @@ public class KotController : ControllerBase
     public async Task<IActionResult> CreateKotOrder([FromBody] CreateKotOrderDto dto)
     {
         var created = await _kotService.CreateKotOrderAsync(dto);
+        var branchId = ResolveBranchId(created.TableId);
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("ReceiveNewKOT", created);
-            await _hubContext.Clients.All.SendAsync("KotOrderCreated", created);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("ReceiveNewKOT", created);
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotOrderCreated", created);
             await _sseBroadcaster.BroadcastAsync("KOT_CREATED", created);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
@@ -112,7 +125,7 @@ public class KotController : ControllerBase
                 EventType = "kot:created",
                 Module = "Kitchen",
                 Action = "created",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = created.OrderId.ToString(),
                 Data = created
             }, EventScope.Station, "kitchen");
@@ -139,11 +152,12 @@ public class KotController : ControllerBase
         {
             return NotFound(new { success = false, message = $"KOT order with ID {id} not found." });
         }
+        var branchId = ResolveBranchId(updated.TableId);
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", updated);
-            await _hubContext.Clients.All.SendAsync("KotOrderUpdated", updated);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotOrderUpdated", updated);
             await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", updated);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
@@ -151,7 +165,7 @@ public class KotController : ControllerBase
                 EventType = "kot:statusChanged",
                 Module = "Kitchen",
                 Action = "statusChanged",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = updated.OrderId.ToString(),
                 Data = updated
             }, EventScope.Station, "kitchen");
@@ -177,11 +191,12 @@ public class KotController : ControllerBase
         {
             return NotFound(new { success = false, message = $"KOT order with ID {id} not found." });
         }
+        var branchId = ResolveBranchId(updated.TableId);
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotOrderUpdated", updated);
-            await _hubContext.Clients.All.SendAsync("KotOrderUpdated", updated);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotOrderUpdated", updated);
             await _sseBroadcaster.BroadcastAsync("KOT_STATUS_UPDATED", updated);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
@@ -189,7 +204,7 @@ public class KotController : ControllerBase
                 EventType = "kot:statusChanged",
                 Module = "Kitchen",
                 Action = "statusChanged",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = updated.OrderId.ToString(),
                 Data = updated
             }, EventScope.Station, "kitchen");
@@ -210,6 +225,9 @@ public class KotController : ControllerBase
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> DeleteKotOrder(long id)
     {
+        var existing = await _kotService.GetKotOrderByIdAsync(id);
+        var branchId = ResolveBranchId(existing?.TableId);
+
         var result = await _kotService.DeleteKotOrderAsync(id);
         if (!result)
         {
@@ -218,14 +236,15 @@ public class KotController : ControllerBase
 
         try
         {
-            await _hubContext.Clients.All.SendAsync("KotOrderCancelled", new { orderId = id });
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotOrderCancelled", new { orderId = id });
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
                 EventType = "kot:cancelled",
                 Module = "Kitchen",
                 Action = "cancelled",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = id.ToString(),
                 Data = new { orderId = id }
             }, EventScope.Station, "kitchen");
@@ -276,18 +295,20 @@ public class KotController : ControllerBase
     public async Task<IActionResult> AddKotOrderItem(long orderId, [FromBody] CreateKotOrderItemDto dto)
     {
         var createdItem = await _kotService.AddKotOrderItemAsync(orderId, dto);
+        var existing = await _kotService.GetKotOrderByIdAsync(orderId);
+        var branchId = ResolveBranchId(existing?.TableId);
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotItemAdded", createdItem);
-            await _hubContext.Clients.All.SendAsync("KotItemAdded", createdItem);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotItemAdded", createdItem);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
                 EventType = "kot:itemAdded",
                 Module = "Kitchen",
                 Action = "itemAdded",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = createdItem.OrderItemId.ToString(),
                 Data = createdItem
             }, EventScope.Station, "kitchen");
@@ -320,18 +341,20 @@ public class KotController : ControllerBase
         };
 
         var createdItem = await _kotService.AddKotOrderItemAsync(dto.OrderId, itemDto);
+        var existing = await _kotService.GetKotOrderByIdAsync(dto.OrderId);
+        var branchId = ResolveBranchId(existing?.TableId);
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotItemAdded", createdItem);
-            await _hubContext.Clients.All.SendAsync("KotItemAdded", createdItem);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotItemAdded", createdItem);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
                 EventType = "kot:itemAdded",
                 Module = "Kitchen",
                 Action = "itemAdded",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = createdItem.OrderItemId.ToString(),
                 Data = createdItem
             }, EventScope.Station, "kitchen");
@@ -359,11 +382,12 @@ public class KotController : ControllerBase
         {
             return NotFound(new { success = false, message = $"KOT item with ID {itemId} not found." });
         }
+        var branchId = ResolveBranchId();
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
-            await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotItemUpdated", updated);
             await _sseBroadcaster.BroadcastAsync("KOT_ITEM_UPDATED", updated);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
@@ -371,7 +395,7 @@ public class KotController : ControllerBase
                 EventType = "kot:itemUpdated",
                 Module = "Kitchen",
                 Action = "itemUpdated",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = updated.OrderItemId.ToString(),
                 Data = updated
             }, EventScope.Station, "kitchen");
@@ -398,11 +422,12 @@ public class KotController : ControllerBase
         {
             return NotFound(new { success = false, message = "KOT item not found." });
         }
+        var branchId = ResolveBranchId();
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotItemUpdated", updated);
-            await _hubContext.Clients.All.SendAsync("KotItemUpdated", updated);
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotItemUpdated", updated);
             await _sseBroadcaster.BroadcastAsync("KOT_ITEM_UPDATED", updated);
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
@@ -410,7 +435,7 @@ public class KotController : ControllerBase
                 EventType = "kot:itemUpdated",
                 Module = "Kitchen",
                 Action = "itemUpdated",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = updated.OrderItemId.ToString(),
                 Data = updated
             }, EventScope.Station, "kitchen");
@@ -436,18 +461,19 @@ public class KotController : ControllerBase
         {
             return NotFound(new { success = false, message = $"KOT item with ID {itemId} not found." });
         }
+        var branchId = ResolveBranchId();
 
         try
         {
-            await _hubContext.Clients.Group("kitchen").SendAsync("KotItemDeleted", new { itemId, orderId });
-            await _hubContext.Clients.All.SendAsync("KotItemDeleted", new { itemId, orderId });
+            var branchGroup = $"restaurant_{branchId}";
+            await _hubContext.Clients.Group(branchGroup).SendAsync("KotItemDeleted", new { itemId, orderId });
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
                 EventType = "kot:itemDeleted",
                 Module = "Kitchen",
                 Action = "itemDeleted",
-                BranchId = 1,
+                BranchId = branchId,
                 RecordId = itemId.ToString(),
                 Data = new { itemId, orderId }
             }, EventScope.Station, "kitchen");

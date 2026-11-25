@@ -74,6 +74,61 @@ body[data-theme="royal-saffron"] {
 
 :root {
   --accent-rgb: 245, 158, 11;
+  --app-scrollbar-size: 4px;
+  --app-scrollbar-track: transparent;
+  --app-scrollbar-thumb: #a33a36;
+  --app-scrollbar-thumb-hover: #842b28;
+}
+
+/* Fixed-color scrollbars for every element that already scrolls. */
+* {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: var(--app-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--app-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Navigation sidebars keep native scrolling while hiding scrollbar chrome. */
+.admin-sidebar,
+.admin-sidebar .no-scrollbar,
+.pos-takeaway-sidebar,
+.pos-categories-sidebar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-sidebar::-webkit-scrollbar,
+.admin-sidebar .no-scrollbar::-webkit-scrollbar,
+.pos-takeaway-sidebar::-webkit-scrollbar,
+.pos-categories-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 :root[data-accent],
@@ -139,7 +194,7 @@ body[data-theme="light-bistro"] {
   --accent-purple:#7e22ce;
   --surface-tint:rgba(23,32,51,.035);
   --surface-tint-hover:rgba(23,32,51,.07);
-  --neutral-border:#e1e7f0;
+  --neutral-border:#cbd5e1;
   --modal-overlay:rgba(23,32,51,.35);
   --input-bg:#fff;
   --table-header-bg:#f1f5f9;
@@ -154,11 +209,11 @@ body[data-theme="light-bistro"] {
   --bg-glass: rgba(255, 255, 255, 0.92);
   --bg-main: #ffffff;
   --bg-modal: #ffffff;
-  --border-modal: #cbd5e1;
+  --border-modal: #94a3b8;
 
-  --border-subtle: #e2e8f0;
+  --border-subtle: #cbd5e1;
   --border-card: #cbd5e1;
-  --border-focus: rgba(245, 158, 11, 0.6);
+  --border-focus: rgba(245, 158, 11, 0.7);
 
   --text-main: #0f172a;
   --text-primary: #0f172a;
@@ -213,6 +268,46 @@ body[data-theme="light-bistro"] {
 [data-theme="light-bistro"] .pos-mobile-cart-bar .pos-mobile-cart-action * {
   background: #ffffff !important;
   color: #0f172a !important;
+}
+
+/* Crisp, high-contrast borders across panels, tables, and inputs in light theme */
+[data-theme="light-bistro"] .admin-sidebar {
+  border-right: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light-bistro"] .admin-header {
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light-bistro"] .menu-items-table thead tr {
+  border: 1px solid #cbd5e1 !important;
+  background: #f1f5f9 !important;
+}
+
+[data-theme="light-bistro"] .menu-items-table tbody tr.menu-admin-item-row {
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light-bistro"] .menu-items-table tbody tr.menu-admin-item-row:hover {
+  border-color: var(--accent-amber) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light-bistro"] .menu-items-list {
+  border: 1px solid #cbd5e1 !important;
+}
+
+[data-theme="light-bistro"] .searchable-select-trigger,
+[data-theme="light-bistro"] .menu-filter-field select,
+[data-theme="light-bistro"] .menu-filter-field input {
+  border: 1px solid #cbd5e1 !important;
+  background-color: #ffffff !important;
+}
+
+[data-theme="light-bistro"] .floor-table-grid,
+[data-theme="light-bistro"] .floor-table-row {
+  border: 1px solid #cbd5e1 !important;
 }
 
 [data-theme="light-bistro"] input,
@@ -278,30 +373,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-amber);
-}
-
 .no-scrollbar,
 .no-scrollbar * {
-  scrollbar-width: auto;
+  scrollbar-width: thin;
 }
 .no-scrollbar::-webkit-scrollbar,
 .no-scrollbar *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 .clean-date-input::-webkit-calendar-picker-indicator {
@@ -1033,7 +1112,42 @@ textarea {
   border-spacing: 0;
 }
 .menu-items-table thead {
-  display: none;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.menu-items-table thead tr {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.8fr) minmax(120px, 0.8fr) minmax(90px, 0.55fr) minmax(105px, 0.65fr) minmax(115px, 0.75fr) minmax(145px, 0.95fr);
+  align-items: center;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.menu-items-table thead th {
+  padding: 0 0.4rem;
+  border: none;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+.menu-items-table thead th:nth-child(3),
+.menu-items-table thead th:nth-child(5),
+.menu-items-table thead th:nth-child(6) {
+  text-align: center;
+}
+.menu-items-table thead th:nth-child(4) {
+  text-align: right;
+}
+.menu-items-table thead th:last-child {
+  text-align: center;
 }
 .menu-items-table tbody {
   display: grid;
@@ -1041,7 +1155,7 @@ textarea {
 }
 .menu-items-table tbody tr.menu-admin-item-row {
   display: grid;
-  grid-template-columns: minmax(240px, 1.8fr) minmax(110px, 0.7fr) minmax(95px, 0.6fr) minmax(100px, 0.65fr) minmax(250px, 1.45fr);
+  grid-template-columns: minmax(220px, 1.8fr) minmax(120px, 0.8fr) minmax(90px, 0.55fr) minmax(105px, 0.65fr) minmax(115px, 0.75fr) minmax(145px, 0.95fr);
   align-items: center;
   overflow: hidden;
   border: 1px solid var(--border-subtle) !important;
@@ -1076,15 +1190,28 @@ textarea {
   color: var(--text-main);
   font-weight: 650;
   text-transform: capitalize;
+  white-space: nowrap;
+}
+.menu-admin-item-row > td[data-label="Dietary"] {
+  justify-content: center;
 }
 .menu-admin-item-row > td[data-label="Price"] {
   color: var(--accent-amber-light);
   font-size: 0.98rem !important;
   font-weight: 800;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.menu-admin-item-row > td[data-label="Availability"] {
+  justify-content: center;
+}
+.menu-admin-item-row > td[data-label="Actions"] {
+  justify-content: center;
 }
 .menu-admin-item-row > td[data-label="Actions"] > div {
   display: flex !important;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 0.4rem !important;
 }
 .menu-admin-item-row > td[data-label="Actions"] button {
@@ -1119,15 +1246,9 @@ textarea {
 @media (max-width: 560px) { .kds-order-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .kds-main-header { box-sizing: border-box; }
-.kds-main-header-brand { flex: 1 1 560px; min-width: 0; }
+.kds-main-header-brand { flex: 0 0 auto; min-width: 0; }
 .kds-main-header-title-line { min-width: 0; }
 .kds-main-header { position: relative; }
-.kds-station-toggle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
 .kds-station-toggle {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1138,6 +1259,7 @@ textarea {
   border-radius: 8px;
   background: var(--bg-secondary);
   white-space: nowrap;
+  margin-inline: auto;
 }
 .kds-station-toggle > button {
   display: inline-flex;
@@ -1188,6 +1310,9 @@ textarea {
   display: block;
 }
 @media (max-width: 1000px) {
+  .menu-items-table thead {
+    display: none;
+  }
   .menu-items-table tbody tr.menu-admin-item-row {
     grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(80px, 0.65fr));
   }

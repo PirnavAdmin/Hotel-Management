@@ -22,6 +22,8 @@ public class AppDbContext : DbContext
 
     public DbSet<RestaurantTable> RestaurantTables { get; set; }
 
+    public DbSet<Branch> Branches { get; set; }
+
     public DbSet<KotOrder> KotOrders { get; set; }
 
     public DbSet<KotOrderItem> KotOrderItems { get; set; }
@@ -409,6 +411,25 @@ public class AppDbContext : DbContext
             entity.Property(o => o.CancelledAt).HasColumnName("cancelled_at");
             entity.Property(o => o.CancelledBy).HasColumnName("cancelled_by");
             entity.Property(o => o.CancelledByName).HasColumnName("cancelled_by_name").HasMaxLength(120);
+            entity.Property(o => o.BranchId).HasColumnName("branch_id");
+        });
+
+        modelBuilder.Entity<Branch>(entity =>
+        {
+            entity.ToTable("branches");
+            entity.HasKey(b => b.BranchId);
+            entity.Property(b => b.BranchId).HasColumnName("branch_id").ValueGeneratedOnAdd();
+            entity.Property(b => b.BranchName).HasColumnName("branch_name").HasMaxLength(150).IsRequired();
+            entity.Property(b => b.Address).HasColumnName("address").HasMaxLength(255);
+            entity.Property(b => b.City).HasColumnName("city").HasMaxLength(80);
+            entity.Property(b => b.State).HasColumnName("state").HasMaxLength(80);
+            entity.Property(b => b.Pincode).HasColumnName("pincode").HasMaxLength(10);
+            entity.Property(b => b.Phone).HasColumnName("phone").HasMaxLength(20);
+            entity.Property(b => b.Email).HasColumnName("email").HasMaxLength(120);
+            entity.Property(b => b.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+            entity.Property(b => b.DeletedAt).HasColumnName("deleted_at");
+            entity.Property(b => b.CreatedAt).HasColumnName("created_at");
+            entity.Property(b => b.UpdatedAt).HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<OrderItem>(entity =>

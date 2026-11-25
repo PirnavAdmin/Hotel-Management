@@ -2266,8 +2266,6 @@ export function AdminReports({
               padding: '4px',
               marginBottom: '1rem',
               overflowX: 'auto',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
               scrollBehavior: 'smooth',
               WebkitOverflowScrolling: 'touch',
             }}
@@ -3056,7 +3054,6 @@ export function AdminReports({
                       overflowY: 'auto',
                       overflowX: 'hidden',
                       scrollbarWidth: 'thin',
-                      scrollbarColor: 'rgba(16, 185, 129, 0.4) rgba(0, 0, 0, 0.2)',
                     }}
                   >
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
@@ -3245,7 +3242,6 @@ export function AdminReports({
                       overflowY: 'auto',
                       overflowX: 'hidden',
                       scrollbarWidth: 'thin',
-                      scrollbarColor: 'rgba(239, 68, 68, 0.4) rgba(0, 0, 0, 0.2)',
                     }}
                   >
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>

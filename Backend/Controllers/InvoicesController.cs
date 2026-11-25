@@ -13,11 +13,16 @@ using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/v1/invoices")]
 [Tags("Invoices", "Admin")]
 public class InvoicesController : ControllerBase
 {
+    private const string InvoiceBillingRoles = "Admin,Super Admin,SuperAdmin,Manager,Branch Manager,Cashier,POS Cashier,User POS";
+    private const string InvoiceInquiryRoles = "Admin,Super Admin,SuperAdmin,Manager,Branch Manager,Cashier,POS Cashier,User POS,Waiter";
+    private const string InvoiceAdminOnlyRoles = "Admin,Super Admin,SuperAdmin,Manager,Branch Manager";
+
     private readonly AppDbContext _context;
     private readonly SpService _spService;
     private readonly ReportingExportService _reportingExportService;
@@ -41,7 +46,7 @@ public class InvoicesController : ControllerBase
         _logger = logger;
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpGet]
     public async Task<IActionResult> GetInvoices([FromQuery] string? status)
     {
@@ -101,7 +106,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetInvoiceById(long id)
     {
@@ -125,7 +130,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpPost]
     public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceRequest request)
     {
@@ -191,7 +196,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpPost("{id:long}/payments")]
     public async Task<IActionResult> RecordPayment(long id, [FromBody] RecordPaymentRequest request)
     {
@@ -300,7 +305,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceInquiryRoles)]
     [HttpGet("by-order/{orderId:long}")]
     public async Task<IActionResult> GetInvoiceByOrderId(long orderId)
     {
@@ -372,7 +377,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceInquiryRoles)]
     [HttpGet("{id:long}/receipt")]
     public async Task<IActionResult> GetInvoiceReceipt(long id)
     {
@@ -400,7 +405,7 @@ public class InvoicesController : ControllerBase
         });
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpGet("{id:long}/payment-summary")]
     public async Task<IActionResult> GetPaymentSummary(long id)
     {
@@ -422,7 +427,7 @@ public class InvoicesController : ControllerBase
         });
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpGet("{id:long}/payments")]
     public async Task<IActionResult> GetPayments(long id)
     {
@@ -441,7 +446,7 @@ public class InvoicesController : ControllerBase
         });
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpPost("{id:long}/settle")]
     public async Task<IActionResult> SettleBill(long id)
     {
@@ -515,7 +520,7 @@ public class InvoicesController : ControllerBase
         });
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceAdminOnlyRoles)]
     [HttpPut("{id:long}")]
     public async Task<IActionResult> UpdateInvoice(long id, [FromBody] UpdateInvoiceRequest request)
     {
@@ -573,7 +578,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceAdminOnlyRoles)]
     [HttpPatch("{id:long}/status")]
     public async Task<IActionResult> UpdateInvoiceStatus(long id, [FromBody] UpdateInvoiceStatusRequest request)
     {
@@ -617,7 +622,7 @@ public class InvoicesController : ControllerBase
         }
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceBillingRoles)]
     [HttpGet("{id:long}/pdf")]
     public async Task<IActionResult> DownloadInvoicePdf(long id)
     {
@@ -665,7 +670,7 @@ public class InvoicesController : ControllerBase
         return File(bytes, "text/plain", $"Invoice-{invoice.InvoiceNumber}.txt");
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceAdminOnlyRoles)]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteInvoice(string id)
     {
@@ -870,7 +875,7 @@ public class InvoicesController : ControllerBase
     /// Exports Customer Billing Invoices as CSV or XLSX.
     /// Supports ?fromDate=...&toDate=...&status=...&department=...&format=csv|xlsx.
     /// </summary>
-    [AllowAnonymous]
+    [Authorize(Roles = InvoiceAdminOnlyRoles)]
     [HttpGet("export")]
     public async Task<IActionResult> ExportInvoices(
         [FromQuery] DateTime? fromDate,

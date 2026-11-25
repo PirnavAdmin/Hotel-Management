@@ -17,6 +17,8 @@ import {
   RefreshCw,
   ShoppingBag,
   Utensils,
+  Printer,
+  Download,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ReceiptModal } from "../user/ReceiptModal";
@@ -27,6 +29,9 @@ import {
   normalizePaymentMethod,
   parseOrderToYMD,
   sortInvoicesByCreationTime,
+  isSelfServiceOrder,
+  isTakeawayOrder,
+  isDineInOrder,
 } from "../utils/orderDedupe";
 import {
   requestInvoiceManagementRecords,
@@ -96,17 +101,6 @@ const getInvoicePaymentModes = (order) => {
   if (paymentModes.length) return paymentModes;
   const mode = getInvoicePaymentMode(order);
   return mode === "unknown" ? [] : [mode];
-};
-
-const isTakeawayOrder = (order) => {
-  if (!order || typeof order !== "object") return false;
-  const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase();
-  if (orderType === "takeaway" || orderType === "parcel") return true;
-  const tableName = String(order.tableName ?? order.TableName ?? order.table ?? "").trim().toLowerCase();
-  if (tableName.includes("takeaway") || tableName.includes("parcel")) return true;
-  const tableId = String(order.tableId ?? order.TableId ?? "").trim().toUpperCase();
-  if (tableId === "TAKEAWAY" || tableId === "PARCEL") return true;
-  return Boolean(order.isTakeaway);
 };
 
 const invoiceDisplayDate = (order) => {
@@ -337,7 +331,8 @@ export function AdminInvoices({
     const matchesOrderType =
       orderTypeFilter === "all" ||
       (orderTypeFilter === "takeaway" && isTakeawayOrder(order)) ||
-      (orderTypeFilter === "dine_in" && !isTakeawayOrder(order));
+      (orderTypeFilter === "dine_in" && isDineInOrder(order)) ||
+      (orderTypeFilter === "self_service" && isSelfServiceOrder(order));
 
     const matchesPayment =
       paymentFilter === "all" ||
@@ -427,6 +422,10 @@ export function AdminInvoices({
     .filter(isTakeawayOrder)
     .reduce((sum, o) => sum + getOrderRevenue(o), 0);
 
+  const selfServiceTotal = filteredOrders
+    .filter(isSelfServiceOrder)
+    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
+
   const totalOrdersCount = baseFilteredOrders.length;
 
   const cashOrdersCount = filteredOrders.filter(
@@ -438,11 +437,12 @@ export function AdminInvoices({
   ).length;
 
   const takeawayOrdersCount = filteredOrders.filter(isTakeawayOrder).length;
+  const selfServiceOrdersCount = filteredOrders.filter(isSelfServiceOrder).length;
+  const dineInOrdersCount = filteredOrders.filter(isDineInOrder).length;
 
   const availableTakeawayOrdersCount = baseFilteredOrders.filter(isTakeawayOrder).length;
-  const availableDineInOrdersCount = baseFilteredOrders.filter(
-    (o) => !isTakeawayOrder(o),
-  ).length;
+  const availableSelfServiceOrdersCount = baseFilteredOrders.filter(isSelfServiceOrder).length;
+  const availableDineInOrdersCount = baseFilteredOrders.filter(isDineInOrder).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -1045,6 +1045,176 @@ export function AdminInvoices({
               <ShoppingBag size={18} color="var(--accent-amber)" />
             </div>
           </div>
+
+          {/* Card 6: Self Service Revenue */}
+          <div
+            onClick={() => {
+              setOrderTypeFilter(orderTypeFilter === "self_service" ? "all" : "self_service");
+              setCurrentPage(1);
+            }}
+            style={{
+              background:
+                orderTypeFilter === "self_service"
+                  ? "color-mix(in srgb, var(--info, #38bdf8) 12%, transparent)"
+                  : "var(--bg-tertiary)",
+              border:
+                orderTypeFilter === "self_service"
+                  ? "1px solid var(--info, #38bdf8)"
+                  : "1px solid var(--border-subtle)",
+              borderRadius: "12px",
+              padding: "0.85rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              boxShadow:
+                orderTypeFilter === "self_service"
+                  ? "0 2px 10px color-mix(in srgb, var(--info, #38bdf8) 22%, transparent)"
+                  : "none",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "var(--info, #38bdf8)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor =
+                orderTypeFilter === "self_service" ? "var(--info, #38bdf8)" : "var(--border-subtle)";
+            }}
+            title="Click to filter by Self Service kiosk invoices"
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-muted)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                Self Service Collected
+              </div>
+              <div
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  color: "var(--info, #38bdf8)",
+                  marginTop: "2px",
+                  lineHeight: 1.2,
+                }}
+              >
+                {formatCurrency(selfServiceTotal)}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  color: "var(--text-dim)",
+                  marginTop: "3px",
+                }}
+              >
+                {selfServiceOrdersCount}{" "}
+                {selfServiceOrdersCount === 1 ? "self service bill" : "self service bills"}
+              </div>
+            </div>
+            <div
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "10px",
+                background: "color-mix(in srgb, var(--info, #38bdf8) 15%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--info, #38bdf8) 30%, transparent)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Smartphone size={18} color="var(--info, #38bdf8)" />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bill Category Filter Tabs: Dine In | Takeaway | Self Service ── */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.55rem",
+            marginBottom: "1rem",
+            flexWrap: "wrap",
+            background: "var(--bg-secondary)",
+            padding: "0.55rem 0.85rem",
+            borderRadius: "12px",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.74rem",
+              fontWeight: 800,
+              color: "var(--text-muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              marginRight: "4px",
+            }}
+          >
+            Bill Categories:
+          </span>
+          {[
+            { id: "all", label: "All Bills", count: baseFilteredOrders.length },
+            { id: "dine_in", label: "🍽️ Dine In Bills", count: availableDineInOrdersCount },
+            { id: "takeaway", label: "🛍️ Takeaway Bills", count: availableTakeawayOrdersCount },
+            { id: "self_service", label: "📱 Self Service Bills", count: availableSelfServiceOrdersCount },
+          ].map((tab) => {
+            const active = orderTypeFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setOrderTypeFilter(tab.id);
+                  setCurrentPage(1);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.42rem 0.9rem",
+                  borderRadius: "8px",
+                  fontSize: "0.78rem",
+                  fontWeight: 750,
+                  border: active
+                    ? "1.5px solid var(--accent-amber)"
+                    : "1px solid var(--border-subtle)",
+                  background: active
+                    ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)"
+                    : "var(--bg-tertiary)",
+                  color: active ? "var(--accent-amber-light)" : "var(--text-muted)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  boxShadow: active
+                    ? "0 2px 8px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
+                    : "none",
+                }}
+              >
+                <span>{tab.label}</span>
+                <span
+                  style={{
+                    fontSize: "0.68rem",
+                    padding: "1px 6px",
+                    borderRadius: "10px",
+                    background: active ? "var(--accent-amber)" : "rgba(255, 255, 255, 0.08)",
+                    color: active ? "#000000" : "var(--text-muted)",
+                    fontWeight: 800,
+                  }}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Invoice date & dining type filters */}
@@ -1091,9 +1261,10 @@ export function AdminInvoices({
                 fontWeight: 700,
               }}
             >
-              <option value="all">All Types (Dine-In & Takeaway)</option>
+              <option value="all">All Categories ({baseFilteredOrders.length})</option>
               <option value="dine_in">🍽️ Dine-In ({availableDineInOrdersCount})</option>
               <option value="takeaway">🛍️ Takeaway ({availableTakeawayOrdersCount})</option>
+              <option value="self_service">📱 Self Service ({availableSelfServiceOrdersCount})</option>
             </SearchableSelect>
           </div>
           {dateFilter === "daily" && (
@@ -1282,7 +1453,7 @@ export function AdminInvoices({
                 >
                   Order / Invoice No {sortField === "invoiceNo" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
                 </th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Table &amp; Waiter</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Order Type &amp; Table</th>
                 <th
                   onClick={() => handleSort("date")}
                   style={{
@@ -1297,7 +1468,8 @@ export function AdminInvoices({
                   Date &amp; Time {sortField === "date" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
                 </th>
                 <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Items Summary</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Mode</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Method</th>
+                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Status</th>
                 <th
                   onClick={() => handleSort("amount")}
                   style={{
@@ -1325,11 +1497,15 @@ export function AdminInvoices({
                   ? paymentModes.map((mode) => mode.toUpperCase()).join(" + ")
                   : paymentMethod ? String(paymentMethod).trim() : "—";
                 const pMode = paymentModes[0] || (paymentMethod ? normalizePaymentMethod(paymentMethod) : "unknown");
-                const orderId = order.orderId ?? order.OrderId ?? order.id ?? order.Id;
+                const orderId = order.orderNumber ?? order.orderId ?? order.OrderId ?? order.id ?? order.Id;
+                const isSelf = isSelfServiceOrder(order);
+                const isTake = isTakeawayOrder(order);
                 const itemCount = (order.items || []).reduce(
                   (sum, i) => sum + Number(i.quantity || 1),
                   0,
                 );
+                const rawStatus = String(order.paymentStatus || order.status || "Paid").toLowerCase();
+                const isPaid = rawStatus.includes("paid") || rawStatus.includes("settled") || rawStatus.includes("completed");
 
                 return (
                   <tr
@@ -1346,7 +1522,7 @@ export function AdminInvoices({
                       (e.currentTarget.style.background = "transparent")
                     }
                   >
-                    {/* Invoice No */}
+                    {/* Invoice No & Order ID */}
                     <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
                       <span
                         style={{
@@ -1363,19 +1539,55 @@ export function AdminInvoices({
                       </div>
                     </td>
 
-                    {/* Table & Server */}
+                    {/* Order Type & Table */}
                     <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
-                      <div style={{ fontWeight: 700, color: "var(--text-main)" }}>
-                        {order.tableName || (order.tableId != null ? "Table " + order.tableId : "—")}
-                      </div>
+                      {isSelf ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            background: "rgba(56, 189, 248, 0.15)",
+                            border: "1px solid rgba(56, 189, 248, 0.35)",
+                            color: "var(--info)",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          <Smartphone size={10} /> Self Service
+                        </span>
+                      ) : isTake ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            padding: "2px 8px",
+                            borderRadius: "12px",
+                            background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
+                            border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
+                            color: "var(--accent-amber-light)",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                          }}
+                        >
+                          <ShoppingBag size={10} /> Takeaway
+                        </span>
+                      ) : (
+                        <div style={{ fontWeight: 750, color: "var(--text-main)" }}>
+                          {order.tableName || (order.tableId != null ? "Table " + order.tableId : "Dine-In")}
+                        </div>
+                      )}
                       <div
                         style={{
                           fontSize: "0.68rem",
                           color: "var(--text-muted)",
-                          marginTop: "1px",
+                          marginTop: "2px",
                         }}
                       >
-                        Waiter: {order.server || "—"}
+                        {isSelf ? "Self Service Kiosk" : `Waiter: ${order.server || "Staff"}`}
                       </div>
                     </td>
 
@@ -1432,7 +1644,7 @@ export function AdminInvoices({
                           <Smartphone size={10} />
                           {paymentLabel}
                         </span>
-                      )  : (
+                      ) : (
                         <span
                           style={{
                             background: pMode === "card" ? "rgba(99, 102, 241, 0.12)" : "rgba(16, 185, 129, 0.12)",
@@ -1453,6 +1665,24 @@ export function AdminInvoices({
                       )}
                     </td>
 
+                    {/* Payment Status */}
+                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
+                      <span
+                        style={{
+                          background: isPaid ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                          border: isPaid ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(239, 68, 68, 0.35)",
+                          color: isPaid ? "var(--success)" : "var(--danger)",
+                          borderRadius: "20px",
+                          padding: "2px 8px",
+                          fontSize: "0.68rem",
+                          fontWeight: 800,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {isPaid ? "Paid" : "Pending"}
+                      </span>
+                    </td>
+
                     {/* Grand Total */}
                     <td
                       style={{
@@ -1466,50 +1696,93 @@ export function AdminInvoices({
                       {formatCurrency(order.grandTotal ?? order.totalAmount ?? order.total ?? 0)}
                     </td>
 
-                    {/* Action */}
+                    {/* Action Buttons: View, Print, Download */}
                     <td style={{ padding: "0.5rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
                       <div style={{ display: "inline-flex", justifyContent: "center", gap: "0.3rem" }}>
                         <button
                           onClick={() => setSelectedReceipt(order)}
+                          title="View Invoice Details"
                           style={{
                             background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
                             border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                             color: "var(--accent-amber-light)",
                             borderRadius: "6px",
-                            padding: "4px 8px",
+                            padding: "4px 7px",
                             fontSize: "0.7rem",
                             fontWeight: 700,
                             cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "4px",
+                            gap: "3px",
                           }}
                         >
                           <Eye size={11} />
                           <span>View</span>
                         </button>
                         <button
-                          onClick={() => openDiscountEditor(order)}
-                          disabled={!onUpdateInvoiceDiscount || (!order.id && !order.invoiceNo)}
-                          title="Edit bill discount"
+                          onClick={() => setSelectedReceipt(order)}
+                          title="Print Receipt"
                           style={{
-                            background: "rgba(59, 130, 246, 0.08)",
-                            border: "1px solid rgba(59, 130, 246, 0.35)",
-                            color: "var(--info)",
+                            background: "rgba(16, 185, 129, 0.08)",
+                            border: "1px solid rgba(16, 185, 129, 0.35)",
+                            color: "var(--success)",
                             borderRadius: "6px",
-                            padding: "4px 8px",
+                            padding: "4px 7px",
                             fontSize: "0.7rem",
                             fontWeight: 700,
-                            cursor: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? "pointer" : "not-allowed",
-                            opacity: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? 1 : 0.5,
+                            cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "4px",
+                            gap: "3px",
                           }}
                         >
-                          <Pencil size={11} />
-                          <span>Edit</span>
+                          <Printer size={11} />
+                          <span>Print</span>
                         </button>
+                        <button
+                          onClick={() => setSelectedReceipt(order)}
+                          title="Download Receipt PDF"
+                          style={{
+                            background: "rgba(99, 102, 241, 0.08)",
+                            border: "1px solid rgba(99, 102, 241, 0.35)",
+                            color: "var(--accent-indigo)",
+                            borderRadius: "6px",
+                            padding: "4px 7px",
+                            fontSize: "0.7rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                          }}
+                        >
+                          <Download size={11} />
+                          <span>PDF</span>
+                        </button>
+                        {!isSelf && (
+                          <button
+                            onClick={() => openDiscountEditor(order)}
+                            disabled={!onUpdateInvoiceDiscount || (!order.id && !order.invoiceNo)}
+                            title="Edit bill discount"
+                            style={{
+                              background: "rgba(59, 130, 246, 0.08)",
+                              border: "1px solid rgba(59, 130, 246, 0.35)",
+                              color: "var(--info)",
+                              borderRadius: "6px",
+                              padding: "4px 7px",
+                              fontSize: "0.7rem",
+                              fontWeight: 700,
+                              cursor: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? "pointer" : "not-allowed",
+                              opacity: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? 1 : 0.5,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                            }}
+                          >
+                            <Pencil size={11} />
+                            <span>Edit</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1518,7 +1791,7 @@ export function AdminInvoices({
               {paginatedOrders.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     style={{
                       padding: "2rem 1rem",
                       color: "var(--text-dim)",

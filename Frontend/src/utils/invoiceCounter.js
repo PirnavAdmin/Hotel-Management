@@ -48,37 +48,10 @@ export function getBusinessDayKey(dateInput = new Date()) {
   }
 }
 
-function getGlobalHighestInvoiceSerial() {
-  let highest = 0;
-  if (typeof localStorage === 'undefined') return 0;
-  try {
-    const recorded = parseInt(localStorage.getItem('avsr_highest_invoice_serial') || '0', 10);
-    if (!isNaN(recorded) && recorded > highest) highest = recorded;
-
-    const raw = localStorage.getItem(LEGACY_STORAGE_ORDERS);
-    if (raw) {
-      const orders = JSON.parse(raw);
-      if (Array.isArray(orders)) {
-        orders.forEach((o) => {
-          const inv = o.invoiceNo || o.invoiceNumber || o.InvoiceNo || o.InvoiceNumber;
-          if (inv) {
-            const m = String(inv).match(/INV-(\d+)/i);
-            if (m && m[1]) {
-              const n = parseInt(m[1], 10);
-              if (!isNaN(n) && n > highest && n < 100000) highest = n;
-            }
-          }
-          const oid = parseInt(String(o.id ?? o.orderId ?? "").replace(/\D/g, ""), 10);
-          if (!isNaN(oid) && oid > highest && oid < 100000) highest = oid;
-        });
-      }
-    }
-  } catch {}
-  return highest;
-}
-
 /**
- * Scans past orders from localStorage to find the highest serial invoice number for a given date.
+ * Scans past orders from localStorage to find the highest serial invoice number strictly for a given date.
+ * If legacy continuous numbering is detected that exceeds the day's actual order count,
+ * it caps the highest serial to the actual settled orders count for that day.
  */
 function getHighestSerialFromExistingOrders(targetDateStr) {
   let highest = 0;
@@ -90,6 +63,7 @@ function getHighestSerialFromExistingOrders(targetDateStr) {
     if (!Array.isArray(orders)) return 0;
 
     const targetKey = getBusinessDayKey(targetDateStr);
+    let matchingOrdersCount = 0;
 
     orders.forEach(o => {
       const status = String(o.status || o.Status || "").toLowerCase();
@@ -98,16 +72,26 @@ function getHighestSerialFromExistingOrders(targetDateStr) {
       const orderKey = getBusinessDayKey(o.settledDate || o.date || o.settledAt || o.createdAt || o.orderTimestamp);
       const isDateMatch = (o.date === targetDateStr) || (o.settledDate === targetDateStr) || (orderKey === targetKey);
 
-      if (isDateMatch && o.invoiceNo) {
-        const match = String(o.invoiceNo).match(/INV-(\d+)/i);
-        if (match && match[1]) {
-          const num = parseInt(match[1], 10);
-          if (!isNaN(num) && num > highest && num < 100000) {
-            highest = num;
+      if (isDateMatch) {
+        matchingOrdersCount++;
+        const inv = o.invoiceNo || o.invoiceNumber || o.InvoiceNo || o.InvoiceNumber;
+        if (inv) {
+          const match = String(inv).match(/INV-(\d+)/i);
+          if (match && match[1]) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > highest && num < 100000) {
+              highest = num;
+            }
           }
         }
       }
     });
+
+    // If existing invoices had legacy continuous numbers that exceeded the actual order count for this day,
+    // cap the highest serial to the count of actual settled orders for this date.
+    if (highest > matchingOrdersCount) {
+      highest = matchingOrdersCount;
+    }
   } catch {}
   return highest;
 }
@@ -138,18 +122,24 @@ export function getNextInvoiceNumber(targetDateStr) {
     let currentCounter = 0;
 
     if (typeof localStorage !== 'undefined') {
-      // 1. Check if we have a recorded counter for this day
+      // Purge obsolete global monotonic key so it never pollutes daily resets
+      localStorage.removeItem('avsr_highest_invoice_serial');
+
+      // 1. Cross-check against actual past orders strictly for this day
+      const existingHighest = getHighestSerialFromExistingOrders(today);
+
+      // 2. Check if we have a recorded counter for this day
       const savedCount = localStorage.getItem(storageCounterKey);
       if (savedCount && !isNaN(parseInt(savedCount, 10))) {
-        currentCounter = parseInt(savedCount, 10);
-      }
-
-      // 2. Cross-check against actual past orders for this day (in case of sync or reset)
-      const existingHighest = getHighestSerialFromExistingOrders(today);
-      const globalHighest = getGlobalHighestInvoiceSerial();
-      const highestKnown = Math.max(existingHighest, globalHighest);
-      if (highestKnown > currentCounter) {
-        currentCounter = highestKnown;
+        const parsed = parseInt(savedCount, 10);
+        // If saved count was inflated by legacy continuous numbering, cap it to existing orders
+        if (existingHighest > 0 && parsed > existingHighest + 5) {
+          currentCounter = existingHighest;
+        } else {
+          currentCounter = Math.max(parsed, existingHighest);
+        }
+      } else {
+        currentCounter = existingHighest;
       }
     }
 
@@ -159,7 +149,7 @@ export function getNextInvoiceNumber(targetDateStr) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(LAST_DATE_KEY, today);
       localStorage.setItem(storageCounterKey, nextCounter.toString());
-      localStorage.setItem('avsr_highest_invoice_serial', nextCounter.toString());
+      localStorage.removeItem('avsr_highest_invoice_serial');
     }
 
     // Broadcast update across LAN / other terminals
@@ -201,15 +191,17 @@ export function peekNextInvoiceNumber(targetDateStr) {
 
     let currentCounter = 0;
     if (typeof localStorage !== 'undefined') {
+      const existingHighest = getHighestSerialFromExistingOrders(today);
       const savedCount = localStorage.getItem(storageCounterKey);
       if (savedCount && !isNaN(parseInt(savedCount, 10))) {
-        currentCounter = parseInt(savedCount, 10);
-      }
-      const existingHighest = getHighestSerialFromExistingOrders(today);
-      const globalHighest = getGlobalHighestInvoiceSerial();
-      const highestKnown = Math.max(existingHighest, globalHighest);
-      if (highestKnown > currentCounter) {
-        currentCounter = highestKnown;
+        const parsed = parseInt(savedCount, 10);
+        if (existingHighest > 0 && parsed > existingHighest + 5) {
+          currentCounter = existingHighest;
+        } else {
+          currentCounter = Math.max(parsed, existingHighest);
+        }
+      } else {
+        currentCounter = existingHighest;
       }
     }
     const nextCounter = currentCounter + 1;

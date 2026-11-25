@@ -101,17 +101,38 @@ const getHubUrl = () => {
 };
 
 function notifyStatus() {
+  const isConnected = hubStatus === "connected" || sseStatus === "connected";
+  let state = "disconnected";
+  if (isConnected) {
+    state = "connected";
+  } else if (sessionActive) {
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline || retryAttempt >= 4) {
+      state = "offline";
+    } else if (hubStatus === "reconnecting" || sseStatus === "reconnecting" || hubStatus === "connecting") {
+      state = "reconnecting";
+    }
+  }
+
   const status = {
     hub: hubStatus,
     sse: sseStatus,
-    connected: hubStatus === "connected" || sseStatus === "connected",
-    state: hubStatus === "connected" || sseStatus === "connected"
-      ? "connected"
-      : sessionActive && (hubStatus === "reconnecting" || sseStatus === "reconnecting" || hubStatus === "connecting")
-        ? "reconnecting"
-        : "disconnected",
+    connected: isConnected,
+    state,
+    retryAttempt,
   };
   statusListeners.forEach((listener) => listener(status));
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    if (sessionActive) {
+      retryAttempt = 0;
+      hubStatus = "connecting";
+      notifyStatus();
+      startHub(generation);
+    }
+  });
 }
 
 function emitRealtimeEvent(name, payload, source) {

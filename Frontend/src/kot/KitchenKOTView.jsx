@@ -1531,11 +1531,6 @@ export function KitchenKOTView({
             background: var(--bg-primary);
             padding: 3px 0;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-          }
-
-          .kot-status-sticky::-webkit-scrollbar {
-            display: none;
           }
 
           .kot-status-filter {
@@ -1676,36 +1671,6 @@ export function KitchenKOTView({
                   >
                     KITCHEN DISPLAY SYSTEM (KDS)
                   </span>
-                  <div
-                    className="kds-station-toggle"
-                    role="tablist"
-                    aria-label="KOT Station switcher"
-                  >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={currentStation === "kitchen"}
-                      onClick={() => handleStationChange("kitchen")}
-                    >
-                      🍳 Dine-In KOT ({tableTickets.length})
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={currentStation === "takeaway"}
-                      onClick={() => handleStationChange("takeaway")}
-                    >
-                      🥡 Takeaway KOT ({takeawayTickets.length})
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={currentStation === "bar"}
-                      onClick={() => handleStationChange("bar")}
-                    >
-                      🍸 Bar BOT
-                    </button>
-                  </div>
                 </div>
                 <p
                   style={{
@@ -1722,6 +1687,38 @@ export function KitchenKOTView({
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Center: Station Switcher Navigation */}
+          <div
+            className="kds-station-toggle"
+            role="tablist"
+            aria-label="KOT Station switcher"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={currentStation === "kitchen"}
+              onClick={() => handleStationChange("kitchen")}
+            >
+              🍳 Dine-In KOT ({tableTickets.length})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={currentStation === "takeaway"}
+              onClick={() => handleStationChange("takeaway")}
+            >
+              🥡 Takeaway KOT ({takeawayTickets.length})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={currentStation === "bar"}
+              onClick={() => handleStationChange("bar")}
+            >
+              🍸 Bar BOT
+            </button>
           </div>
 
           {/* Right Controls: Date & Time, Theme Toggle, Profile Dropdown (Identical sequence to Admin & POS) */}

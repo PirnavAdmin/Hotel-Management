@@ -459,6 +459,7 @@ export function dedupeOrders(orders = []) {
       "date", "settledDate",
       "tableName", "TableName",
       "server", "serverName", "ServerName",
+      "orderType", "OrderType", "isSelfService", "isTakeaway"
     ];
     fieldsToPreserve.forEach((f) => {
       const val = order[f] || existing[f];
@@ -486,5 +487,81 @@ export function dedupeOrders(orders = []) {
     identities.forEach((identity) => indexByIdentity.set(identity, existingIndex));
   }
 
+  assignDailyInvoiceNumbers(result);
   return sortOrdersBySettlementTime(result);
 }
+
+/**
+ * Assign sequential daily invoice numbers (INV-001, INV-002, ...) grouped strictly per business day.
+ * Ensures every day resets to 1, eliminating continuous numbering across dates.
+ */
+export function assignDailyInvoiceNumbers(orders = []) {
+  if (!Array.isArray(orders) || orders.length === 0) return [];
+
+  const ordersByDate = new Map();
+  orders.forEach((order) => {
+    const dKey = dateKey(order) || "unknown_date";
+    if (!ordersByDate.has(dKey)) {
+      ordersByDate.set(dKey, []);
+    }
+    ordersByDate.get(dKey).push(order);
+  });
+
+  ordersByDate.forEach((dayOrders) => {
+    // Sort chronologically (earliest settlement / creation time first)
+    dayOrders.sort((a, b) => {
+      const timeDiff = getOrderTimestamp(a) - getOrderTimestamp(b);
+      if (timeDiff !== 0) return timeDiff;
+      const idA = parseInt(String(a?.id || a?.orderId || a?.invoiceNo || "").replace(/\D/g, ""), 10) || 0;
+      const idB = parseInt(String(b?.id || b?.orderId || b?.invoiceNo || "").replace(/\D/g, ""), 10) || 0;
+      return idA - idB;
+    });
+
+    dayOrders.forEach((order, idx) => {
+      const dailySeq = idx + 1;
+      const dailyInvNo = `INV-${String(dailySeq).padStart(3, "0")}`;
+
+      // Preserve original / server invoice number if different for searchability
+      if (!order.serverInvoiceNo && order.invoiceNo && order.invoiceNo !== dailyInvNo) {
+        order.serverInvoiceNo = order.invoiceNo;
+      }
+      order.invoiceNo = dailyInvNo;
+      order.invoiceNumber = dailyInvNo;
+      order.dailyInvoiceIndex = dailySeq;
+    });
+  });
+
+  return orders;
+}
+
+/**
+ * Standardized order type classification helpers used across POS, Invoices, and Admin.
+ */
+export const isSelfServiceOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase().replace(/[\s_-]/g, "");
+  if (orderType === "selfservice") return true;
+  const tableName = String(order.tableName ?? order.TableName ?? order.table ?? "").trim().toLowerCase();
+  if (tableName.includes("self service") || tableName.includes("selfservice") || tableName.includes("kiosk")) return true;
+  const tableId = String(order.tableId ?? order.TableId ?? "").trim().toUpperCase();
+  if (tableId === "SELF_SERVICE" || tableId === "SELFSERVICE" || tableId === "KIOSK") return true;
+  return Boolean(order.isSelfService);
+};
+
+export const isTakeawayOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  if (isSelfServiceOrder(order)) return false;
+  const orderType = String(order.orderType ?? order.OrderType ?? "").trim().toLowerCase();
+  if (orderType === "takeaway" || orderType === "parcel") return true;
+  const tableName = String(order.tableName ?? order.TableName ?? order.table ?? "").trim().toLowerCase();
+  if (tableName.includes("takeaway") || tableName.includes("parcel")) return true;
+  const tableId = String(order.tableId ?? order.TableId ?? "").trim().toUpperCase();
+  if (tableId === "TAKEAWAY" || tableId === "PARCEL") return true;
+  return Boolean(order.isTakeaway);
+};
+
+export const isDineInOrder = (order) => {
+  if (!order || typeof order !== "object") return false;
+  return !isTakeawayOrder(order) && !isSelfServiceOrder(order);
+};
+

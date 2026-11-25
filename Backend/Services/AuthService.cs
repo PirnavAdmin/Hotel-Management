@@ -649,7 +649,7 @@ public class AuthService
             new Claim("roleId", user.RoleId.ToString()),
             new Claim("roleName", user.Role?.RoleName ?? string.Empty),
             new Claim("branchId", user.BranchId?.ToString() ?? ""),
-            new Claim("restaurantId", user.BranchId.HasValue ? $"restaurant_{user.BranchId.Value}" : "restaurant_1")
+            new Claim("restaurantId", user.BranchId.HasValue ? $"restaurant_{user.BranchId.Value}" : "")
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));

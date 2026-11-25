@@ -8,12 +8,15 @@ using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/v1/payments")]
-[AllowAnonymous]
 [Tags("Payments")]
 public class PaymentsController : ControllerBase
 {
+    private const string PaymentViewRoles = "Admin,Super Admin,SuperAdmin,Manager,Branch Manager,Cashier,POS Cashier,User POS";
+    private const string PaymentAdminOnlyRoles = "Admin,Super Admin,SuperAdmin,Manager,Branch Manager";
+
     private readonly ReportingExportService _reportingExportService;
     private readonly ExportService _exportService;
     private readonly ILogger<PaymentsController> _logger;
@@ -32,6 +35,7 @@ public class PaymentsController : ControllerBase
     /// Retrieves payment settlement transactions in JSON.
     /// Supports ?fromDate=...&toDate=...&method=CASH|UPI|CARD&department=Dine|Bar.
     /// </summary>
+    [Authorize(Roles = PaymentViewRoles)]
     [HttpGet]
     public async Task<IActionResult> GetPayments(
         [FromQuery] DateTime? fromDate,
@@ -75,6 +79,7 @@ public class PaymentsController : ControllerBase
     /// Exports settlement payments register as CSV or XLSX file.
     /// Supports ?fromDate=...&toDate=...&method=CASH|UPI|CARD&department=Dine|Bar&format=csv|xlsx.
     /// </summary>
+    [Authorize(Roles = PaymentAdminOnlyRoles)]
     [HttpGet("export")]
     public async Task<IActionResult> ExportPayments(
         [FromQuery] DateTime? fromDate,

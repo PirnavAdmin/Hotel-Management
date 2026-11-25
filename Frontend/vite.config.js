@@ -2295,10 +2295,10 @@ function globalSyncPlugin(backendTarget) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, FRONTEND_ROOT, "");
 
-  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? "";
+  const rawApiBase = env.VITE_API_BASE_URL ?? process.env.VITE_API_BASE_URL ?? env.VITE_API_BASE_UR ?? process.env.VITE_API_BASE_UR ?? "";
   const apiBase = String(rawApiBase).trim().replace(/^["']|["']$/g, "").trim().replace(/\/$/, "");
 
-  const backendTarget = apiBase;
+  const backendTarget = apiBase || "http://localhost:5018";
 
   return {
     envDir: FRONTEND_ROOT,
