@@ -73,13 +73,8 @@ public sealed class RestaurantThemeColorService
         await EnsureTableAsync();
 
         var normalizedColor = accentColor.Trim().ToLowerInvariant();
-<<<<<<< HEAD
         var strategy = _db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
-=======
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-        try
->>>>>>> 783d05ccdc2906d03d2e2164ede91008c8e546d1
         {
             await _db.Database.ExecuteSqlInterpolatedAsync($@"
                 INSERT INTO `restaurant_theme_settings`
@@ -91,23 +86,9 @@ public sealed class RestaurantThemeColorService
                     `updated_at` = CURRENT_TIMESTAMP(6),
                     `updated_by` = VALUES(`updated_by`);");
 
-<<<<<<< HEAD
             return await _db.RestaurantThemeSettings
                 .AsNoTracking()
                 .FirstAsync(theme => theme.RestaurantId == restaurantId);
         });
-=======
-            var saved = await _db.RestaurantThemeSettings
-                .AsNoTracking()
-                .FirstAsync(theme => theme.RestaurantId == restaurantId);
-            await transaction.CommitAsync();
-            return saved;
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
->>>>>>> 783d05ccdc2906d03d2e2164ede91008c8e546d1
     }
 }
