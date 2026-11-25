@@ -153,40 +153,19 @@ const saleFingerprint = (order) => {
 };
 
 export function formatInvoiceNumber(orderOrId) {
-  if (!orderOrId) return "INV-001";
+  if (!orderOrId) return "";
   let val = "";
-  let rawId = null;
   if (typeof orderOrId === "object") {
-    val = orderOrId.invoiceNumber || orderOrId.invoiceNo || orderOrId.InvoiceNumber || orderOrId.InvoiceNo || "";
-    rawId = orderOrId.orderId ?? orderOrId.OrderId ?? orderOrId.id ?? orderOrId.Id;
+    val =
+      orderOrId.invoiceNumber ||
+      orderOrId.invoiceNo ||
+      orderOrId.InvoiceNumber ||
+      orderOrId.InvoiceNo ||
+      "";
   } else {
     val = String(orderOrId);
   }
-  val = String(val || "").trim();
-
-  // If already clean INV-001 or INV-118
-  const cleanMatch = val.match(/^INV-(\d{1,6})$/i);
-  if (cleanMatch) {
-    return `INV-${String(parseInt(cleanMatch[1], 10)).padStart(3, "0")}`;
-  }
-
-  // Backend invoices include their issue date and serial in the official number.
-  if (/^INV-\d{8}-\d{1,6}$/i.test(val)) return val.toUpperCase();
-
-  // If rawId is a clean sequential number (e.g. 118, 117, 116, 87, 34)
-  const cleanId = parseInt(String(rawId).replace(/\D/g, ""), 10);
-  if (!isNaN(cleanId) && cleanId > 0 && cleanId < 100000) {
-    return `INV-${String(cleanId).padStart(3, "0")}`;
-  }
-
-  // Trailing digits in invoice string (e.g. INV-20261111-116 -> INV-116)
-  const trailingMatch = val.match(/[-_](\d{1,6})$/);
-  if (trailingMatch) {
-    const num = parseInt(trailingMatch[1], 10);
-    if (!isNaN(num) && num > 0) return `INV-${String(num).padStart(3, "0")}`;
-  }
-
-  return val ? (val.startsWith("INV-") ? val : `INV-${val}`) : "INV-001";
+  return String(val || "").trim();
 }
 
 export const getOrderTimestamp = (order) => {
@@ -481,57 +460,22 @@ export function dedupeOrders(orders = []) {
     }
 
     const finalInvNumber = formatInvoiceNumber(base);
-    base.invoiceNo = finalInvNumber;
-    base.invoiceNumber = finalInvNumber;
+    if (finalInvNumber) {
+      base.invoiceNo = finalInvNumber;
+      base.invoiceNumber = finalInvNumber;
+    }
     result[existingIndex] = base;
     identities.forEach((identity) => indexByIdentity.set(identity, existingIndex));
   }
 
-  assignDailyInvoiceNumbers(result);
   return sortOrdersBySettlementTime(result);
 }
 
 /**
- * Assign sequential daily invoice numbers (INV-001, INV-002, ...) grouped strictly per business day.
- * Ensures every day resets to 1, eliminating continuous numbering across dates.
+ * Legacy helper retained as a no-op so official backend invoice numbers are never overwritten.
  */
 export function assignDailyInvoiceNumbers(orders = []) {
-  if (!Array.isArray(orders) || orders.length === 0) return [];
-
-  const ordersByDate = new Map();
-  orders.forEach((order) => {
-    const dKey = dateKey(order) || "unknown_date";
-    if (!ordersByDate.has(dKey)) {
-      ordersByDate.set(dKey, []);
-    }
-    ordersByDate.get(dKey).push(order);
-  });
-
-  ordersByDate.forEach((dayOrders) => {
-    // Sort chronologically (earliest settlement / creation time first)
-    dayOrders.sort((a, b) => {
-      const timeDiff = getOrderTimestamp(a) - getOrderTimestamp(b);
-      if (timeDiff !== 0) return timeDiff;
-      const idA = parseInt(String(a?.id || a?.orderId || a?.invoiceNo || "").replace(/\D/g, ""), 10) || 0;
-      const idB = parseInt(String(b?.id || b?.orderId || b?.invoiceNo || "").replace(/\D/g, ""), 10) || 0;
-      return idA - idB;
-    });
-
-    dayOrders.forEach((order, idx) => {
-      const dailySeq = idx + 1;
-      const dailyInvNo = `INV-${String(dailySeq).padStart(3, "0")}`;
-
-      // Preserve original / server invoice number if different for searchability
-      if (!order.serverInvoiceNo && order.invoiceNo && order.invoiceNo !== dailyInvNo) {
-        order.serverInvoiceNo = order.invoiceNo;
-      }
-      order.invoiceNo = dailyInvNo;
-      order.invoiceNumber = dailyInvNo;
-      order.dailyInvoiceIndex = dailySeq;
-    });
-  });
-
-  return orders;
+  return Array.isArray(orders) ? orders : [];
 }
 
 /**

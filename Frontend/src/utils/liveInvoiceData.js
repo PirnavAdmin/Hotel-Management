@@ -1,9 +1,7 @@
 import { apiGetInvoices } from "../api/invoiceApi";
 import { apiGetOrderHistory } from "../api/orderApi";
 import {
-  assignDailyInvoiceNumbers,
   dedupeOrders,
-  formatInvoiceNumber,
   isSettledInvoiceRecord,
   isSettledSaleRecord,
   sortInvoicesByCreationTime,
@@ -32,7 +30,7 @@ const normalizeItems = (items) =>
     };
   });
 
-export function extractInvoiceRecords(response) {
+export function extractInvoiceRecords(response, { includeAllStatuses = false } = {}) {
   if (!response?.success || response.data?.success === false) return null;
 
   const payload = response.data ?? response;
@@ -44,7 +42,7 @@ export function extractInvoiceRecords(response) {
   ].find(Array.isArray);
 
   if (!records) return null;
-  return records.filter(isSettledInvoiceRecord);
+  return includeAllStatuses ? records : records.filter(isSettledInvoiceRecord);
 }
 
 export function extractSettledOrderRecords(response) {
@@ -109,15 +107,31 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     : (subtotal > 0 ? (taxableAmount + taxAmount) : 0);
 
   const isSettledOrder = String(valueFrom(order, "status", "Status") || "").toLowerCase() === "settled";
+  const rawBackendStatus = String(valueFrom(invoice, "status", "Status") || "").trim();
+  const normalizedStatus = rawBackendStatus.toLowerCase();
+  const isVoidOrCancelled =
+    normalizedStatus === "void" ||
+    normalizedStatus === "voided" ||
+    normalizedStatus === "cancelled" ||
+    normalizedStatus === "canceled" ||
+    normalizedStatus === "refunded";
+
   const invoicePaidAmount = valueFrom(invoice, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid");
   const rawPaidAmount = Number(
     invoicePaidAmount ??
       valueFrom(order, "paidAmount", "PaidAmount", "amountPaid", "AmountPaid") ??
-      grandTotal,
+      (isSettledOrder ? grandTotal : 0),
   ) || 0;
   const paidAmount = isSettledOrder && rawPaidAmount > grandTotal
     ? grandTotal
     : rawPaidAmount;
+
+  const rawDueAmount = valueFrom(invoice, "dueAmount", "DueAmount");
+  const dueAmount = isVoidOrCancelled
+    ? 0
+    : rawDueAmount !== undefined && rawDueAmount !== null
+      ? Math.max(0, Number(rawDueAmount) || 0)
+      : Math.max(0, grandTotal - paidAmount);
 
   // Invoice creation time is the source of truth for invoice date filters and
   // ordering. Settlement/order timestamps are only a fallback for older local
@@ -138,22 +152,22 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     valueFrom(latestPayment, "paymentMode", "PaymentMode", "mode", "Mode") ??
     valueFrom(invoice, "paymentMethod", "PaymentMethod") ??
     valueFrom(order, "paymentMethod", "PaymentMethod");
-  const normalizedStatus = String(valueFrom(invoice, "status", "Status") || "").toLowerCase();
-  const isVoidInvoice = normalizedStatus === "void" || normalizedStatus === "cancelled";
+  const isVoidInvoice = isVoidOrCancelled;
 
   const rawInvoiceNumber =
     valueFrom(invoice, "invoiceNumber", "InvoiceNumber", "invoiceNo", "InvoiceNo") ??
-    valueFrom(order, "invoiceNo", "InvoiceNo");
+    valueFrom(order, "invoiceNo", "InvoiceNo", "invoiceNumber", "InvoiceNumber");
 
-  const invoiceNumber = rawInvoiceNumber
-    ? String(rawInvoiceNumber).trim()
-    : formatInvoiceNumber({
-        ...order,
-        ...invoice,
-        id: orderId ?? invoiceId,
-        invoiceNo: rawInvoiceNumber,
-        invoiceNumber: rawInvoiceNumber,
-      });
+  // Preserve exact backend invoice number; never fabricate one when absent.
+  const invoiceNumber = rawInvoiceNumber ? String(rawInvoiceNumber).trim() : "";
+  const isOfficialBackendInvoice = Boolean(invoiceId && invoiceNumber);
+  const isLocalLegacyRecord = Boolean(order?.isLocalLegacyRecord && !invoiceId);
+
+  const rawServiceChargeAmount = valueFrom(
+    invoice,
+    "serviceChargeAmount",
+    "ServiceChargeAmount",
+  ) ?? valueFrom(order, "serviceChargeAmount", "ServiceChargeAmount");
 
   return {
     ...order,
@@ -161,9 +175,16 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     id: orderId ?? invoiceId,
     invoiceId,
     orderId,
+    orderNumber: valueFrom(invoice, "orderNumber", "OrderNumber") ?? valueFrom(order, "orderNumber", "OrderNumber"),
+    branchId: valueFrom(invoice, "branchId", "BranchId") ?? valueFrom(order, "branchId", "BranchId"),
+    branchName: valueFrom(invoice, "branchName", "BranchName") ?? valueFrom(order, "branchName", "BranchName"),
+    customerName: valueFrom(invoice, "customerName", "CustomerName") ?? valueFrom(order, "customerName", "CustomerName"),
+    customerPhone: valueFrom(invoice, "customerPhone", "CustomerPhone") ?? valueFrom(order, "customerPhone", "CustomerPhone"),
     invoiceCreatedAt: invoiceCreatedAt ?? createdAt,
     invoiceNo: invoiceNumber,
     invoiceNumber,
+    isOfficialBackendInvoice,
+    isLocalLegacyRecord,
     tableName:
       valueFrom(order, "tableName", "TableName") ??
       valueFrom(invoice, "tableName", "TableName") ??
@@ -183,8 +204,9 @@ export function normalizeInvoiceRecord(invoice, order = null) {
       valueFrom(order, "orderTime", "OrderTime") ??
       valueFrom(latestPayment, "paidAt", "PaidAt") ??
       createdAt,
-    status: isVoidInvoice ? "Void" : "Settled",
-    isPaid: !isVoidInvoice,
+    backendStatus: rawBackendStatus || (isVoidInvoice ? "VOID" : "PAID"),
+    status: rawBackendStatus || (isVoidInvoice ? "Void" : "Settled"),
+    isPaid: !isVoidInvoice && (normalizedStatus === "paid" || (grandTotal > 0 && paidAmount >= grandTotal)),
     subtotal,
     discountAmount,
     discountPercent:
@@ -194,14 +216,45 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     taxableAmount,
     taxAmount,
     serviceCharge:
-      Number(valueFrom(order, "serviceChargePercent", "ServiceChargePercent")) || 0,
+      Number(
+        valueFrom(invoice, "serviceChargePercent", "ServiceChargePercent") ??
+          valueFrom(order, "serviceChargePercent", "ServiceChargePercent") ??
+          valueFrom(order, "serviceCharge", "ServiceCharge"),
+      ) || 0,
+    serviceChargePercent:
+      Number(
+        valueFrom(invoice, "serviceChargePercent", "ServiceChargePercent") ??
+          valueFrom(order, "serviceChargePercent", "ServiceChargePercent"),
+      ) || 0,
     serviceChargeAmount:
-      Number(valueFrom(order, "serviceChargeAmount", "ServiceChargeAmount")) || 0,
+      rawServiceChargeAmount !== undefined && rawServiceChargeAmount !== null
+        ? Number(rawServiceChargeAmount)
+        : null,
+    gstPercent:
+      valueFrom(invoice, "gstPercent", "GstPercent") !== undefined
+        ? Number(valueFrom(invoice, "gstPercent", "GstPercent"))
+        : undefined,
+    cgstAmount:
+      valueFrom(invoice, "cgstAmount", "CgstAmount") !== undefined
+        ? Number(valueFrom(invoice, "cgstAmount", "CgstAmount"))
+        : undefined,
+    sgstAmount:
+      valueFrom(invoice, "sgstAmount", "SgstAmount") !== undefined
+        ? Number(valueFrom(invoice, "sgstAmount", "SgstAmount"))
+        : undefined,
+    roundingAdjustment:
+      valueFrom(invoice, "roundingAdjustment", "RoundingAdjustment") !== undefined
+        ? Number(valueFrom(invoice, "roundingAdjustment", "RoundingAdjustment"))
+        : undefined,
+    paymentStatus:
+      valueFrom(invoice, "paymentStatus", "PaymentStatus") ??
+      valueFrom(order, "paymentStatus", "PaymentStatus"),
     tipAmount:
       Number(valueFrom(order, "tipAmount", "TipAmount")) || 0,
     grandTotal,
     totalAmount: grandTotal,
     paidAmount,
+    dueAmount,
     paymentMethod,
     payments: isSettledOrder ? [] : paymentsNormalized,
     items,
@@ -266,7 +319,7 @@ const requestInvoiceApiRecords = () => {
 
 async function loadInvoiceManagementRecords() {
   const response = await requestInvoiceApiRecords();
-  const invoices = extractInvoiceRecords(response);
+  const invoices = extractInvoiceRecords(response, { includeAllStatuses: true });
   if (!invoices) {
     return {
       records: [],
@@ -275,7 +328,7 @@ async function loadInvoiceManagementRecords() {
   }
 
   const records = sortInvoicesByCreationTime(
-    assignDailyInvoiceNumbers(invoices.map((invoice) => normalizeInvoiceRecord(invoice))),
+    invoices.map((invoice) => normalizeInvoiceRecord(invoice)),
   );
   return { records, error: "" };
 }
@@ -305,7 +358,11 @@ async function loadLiveInvoiceRecords() {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem("gourmet_pos_past_orders_v2_inr") : null;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) localOrders = parsed.filter(isSettledSaleRecord);
+      if (Array.isArray(parsed)) {
+        localOrders = parsed
+          .filter(isSettledSaleRecord)
+          .map((item) => ({ ...item, isLocalLegacyRecord: true, isOfficialBackendInvoice: false }));
+      }
     }
   } catch {}
 

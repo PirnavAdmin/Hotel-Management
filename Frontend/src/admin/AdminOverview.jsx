@@ -79,16 +79,27 @@ export function AdminOverview({
     return Array.isArray(menuItems) ? menuItems : [];
   });
 
-  // Dynamically load orders from localStorage or props with deduplication
+  // Load authoritative backend pastOrders first; tag any legacy localStorage entries clearly
   const [ordersList, setOrdersList] = useState(() => {
+    if (Array.isArray(pastOrders) && pastOrders.length > 0) {
+      return dedupeOrders(pastOrders);
+    }
     try {
       const saved = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return dedupeOrders(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return dedupeOrders(
+            parsed.map((o) => ({
+              ...o,
+              isLocalLegacyRecord: true,
+              isOfficialBackendInvoice: false,
+            }))
+          );
+        }
       }
     } catch {}
-    return Array.isArray(pastOrders) && pastOrders.length > 0 ? dedupeOrders(pastOrders) : [];
+    return [];
   });
   // Track inventory items and low stock
   const [inventoryList, setInventoryList] = useState(() => {
@@ -128,7 +139,12 @@ export function AdminOverview({
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setOrdersList((current) => dedupeOrders([...parsed, ...(Array.isArray(current) ? current : [])]));
+            const taggedLegacy = parsed.map((o) => ({
+              ...o,
+              isLocalLegacyRecord: true,
+              isOfficialBackendInvoice: false,
+            }));
+            setOrdersList((current) => dedupeOrders([...(Array.isArray(current) ? current : []), ...taggedLegacy]));
           }
         }
       } catch {}
@@ -195,7 +211,10 @@ export function AdminOverview({
   const cleanOrders = dedupeOrders([
     ...(Array.isArray(ordersList) ? ordersList : []),
     ...(Array.isArray(pastOrders) ? pastOrders : []),
-  ]);
+  ]).filter((o) => {
+    const s = String(o?.backendStatus ?? o?.status ?? o?.Status ?? o?.paymentStatus ?? "").trim().toLowerCase();
+    return s !== "void" && s !== "voided" && s !== "cancelled" && s !== "canceled" && s !== "refunded";
+  });
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todayUtcYMD = now.toISOString().slice(0, 10);

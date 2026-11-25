@@ -6,8 +6,8 @@ namespace HMS.Services;
 
 public interface ISseBroadcaster
 {
-    Task BroadcastAsync(string eventType, object? payload);
-    Task BroadcastRawAsync(string sseData);
-    IAsyncEnumerable<string> SubscribeAsync(CancellationToken cancellationToken);
+    Task BroadcastAsync(string eventType, object? payload, long? branchId = null);
+    Task BroadcastRawAsync(string sseData, long? branchId = null);
+    IAsyncEnumerable<string> SubscribeAsync(CancellationToken cancellationToken, long? authorizedBranchId = null);
     int ActiveClientCount { get; }
 }

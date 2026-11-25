@@ -20,6 +20,20 @@ if (args.Length > 0 && args.Contains("--run-issue21-tests"))
     return;
 }
 
+if (args.Length > 0 && args.Contains("--run-phase2b1-tests"))
+{
+    var exitCode = await Phase2B1OrderCreationTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
+
+if (args.Length > 0 && args.Contains("--run-phase2b14-tests"))
+{
+    var exitCode = await Phase2B14InvoiceTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Respect URLs configured via launchSettings.json, ASPNETCORE_URLS (e.g. Docker), or --urls;
@@ -57,14 +71,26 @@ try
 }
 catch (MySqlConnector.MySqlException ex)
 {
-    Console.WriteLine($"[Database] Configured credentials failed ({ex.Message}). Checking fallback credentials from environment...");
+    Console.WriteLine($"[Database] Configured credentials failed ({ex.Message}). Checking fallback credentials...");
     var envFallbacks = Environment.GetEnvironmentVariable("DB_FALLBACK_CONNECTION_STRINGS");
-    var fallbackCandidates = !string.IsNullOrWhiteSpace(envFallbacks)
-        ? envFallbacks.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        : Array.Empty<string>();
+    var candidateList = new List<string>();
+
+    if (!string.IsNullOrWhiteSpace(envFallbacks))
+    {
+        candidateList.AddRange(envFallbacks.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    if (configuredConnectionString.Contains("host.docker.internal", StringComparison.OrdinalIgnoreCase))
+    {
+        candidateList.Add(configuredConnectionString.Replace("host.docker.internal", "localhost", StringComparison.OrdinalIgnoreCase));
+        candidateList.Add(configuredConnectionString.Replace("host.docker.internal", "127.0.0.1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    candidateList.Add("Server=localhost;Port=3306;Database=hoteldb;User=hoteldbuser;Password=Pirnav@2026;SslMode=None;AllowPublicKeyRetrieval=True;");
+    candidateList.Add("Server=127.0.0.1;Port=3306;Database=hoteldb;User=hoteldbuser;Password=Pirnav@2026;SslMode=None;AllowPublicKeyRetrieval=True;");
 
     bool resolved = false;
-    foreach (var candidate in fallbackCandidates)
+    foreach (var candidate in candidateList)
     {
         try
         {
@@ -72,7 +98,7 @@ catch (MySqlConnector.MySqlException ex)
             candidateConn.Open();
             connectionString = candidate;
             resolved = true;
-            Console.WriteLine("[Database] Successfully connected with fallback credentials from environment.");
+            Console.WriteLine($"[Database] Successfully connected with fallback credentials for user: {new MySqlConnector.MySqlConnectionStringBuilder(candidate).UserID}");
             break;
         }
         catch
@@ -194,7 +220,7 @@ builder.Services
                 }
 
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                if (!string.IsNullOrEmpty(accessToken) && (path.StartsWithSegments("/hubs") || path.StartsWithSegments("/api/events") || path.StartsWithSegments("/api/v1/events")))
                 {
                     context.Token = accessToken;
                 }

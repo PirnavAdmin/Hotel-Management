@@ -2,6 +2,7 @@ using HMS.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HMS.Data;
@@ -46,18 +47,175 @@ public class InvoicesController : ControllerBase
         _logger = logger;
     }
 
+    private async Task<(bool Allowed, long? BranchId, int StatusCode, string? ErrorMessage)> ResolveAuthorizedBranchFilterAsync(long? requestedBranchId)
+    {
+        if (User?.Identity?.IsAuthenticated != true)
+        {
+            return (false, null, 401, "Authentication is required.");
+        }
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        User? dbUser = null;
+        if (long.TryParse(userIdClaim, out var numericUserId))
+        {
+            dbUser = await _context.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.UserId == numericUserId);
+        }
+
+        var roleName = dbUser?.Role?.RoleName ?? User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? "User";
+        var normalizedRole = roleName.Trim().ToLowerInvariant();
+
+        var branchClaim = User.FindFirstValue("branchId") ?? User.FindFirstValue("BranchId");
+        long? claimBranchId = long.TryParse(branchClaim, out var parsedClaimBranch) && parsedClaimBranch > 0 ? parsedClaimBranch : null;
+        long? userDbBranch = dbUser?.BranchId ?? claimBranchId;
+
+        bool isGlobalAdmin = (normalizedRole == "admin" || normalizedRole == "superadmin" || normalizedRole == "super admin") &&
+                             (!userDbBranch.HasValue || userDbBranch.Value <= 0);
+
+        if (isGlobalAdmin)
+        {
+            return (true, requestedBranchId.HasValue && requestedBranchId.Value > 0 ? requestedBranchId.Value : null, 200, null);
+        }
+
+        if (!userDbBranch.HasValue || userDbBranch.Value <= 0)
+        {
+            return (false, null, 403, "Authenticated user account is not associated with any restaurant branch.");
+        }
+
+        if (requestedBranchId.HasValue && requestedBranchId.Value > 0 && requestedBranchId.Value != userDbBranch.Value)
+        {
+            return (false, null, 403, "Cross-branch access forbidden. Your account is not authorized for this branch.");
+        }
+
+        return (true, userDbBranch.Value, 200, null);
+    }
+
+    private async Task<(bool Allowed, int StatusCode, string? ErrorMessage)> EnsureInvoiceBranchAccessAsync(long? invoiceBranchId, long orderId)
+    {
+        var (allowed, authorizedBranchId, statusCode, errorMessage) = await ResolveAuthorizedBranchFilterAsync(null);
+        if (!allowed)
+        {
+            return (false, statusCode, errorMessage);
+        }
+
+        if (!authorizedBranchId.HasValue)
+        {
+            return (true, 200, null);
+        }
+
+        long? effectiveBranchId = invoiceBranchId;
+        if (!effectiveBranchId.HasValue && orderId > 0)
+        {
+            var ord = await _context.Orders.AsNoTracking()
+                .Where(o => o.Id == orderId)
+                .Select(o => new { o.BranchId, o.OutletId })
+                .FirstOrDefaultAsync();
+            if (ord != null)
+            {
+                effectiveBranchId = ord.BranchId ?? (ord.OutletId > 0 ? ord.OutletId : (long?)null);
+            }
+        }
+
+        if (effectiveBranchId.HasValue && effectiveBranchId.Value != authorizedBranchId.Value)
+        {
+            return (false, 403, "Cross-branch access forbidden. Your account is not authorized for this branch.");
+        }
+
+        return (true, 200, null);
+    }
+
+    private static string NormalizeOrderTypeFilter(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+        return value.Trim().Replace("-", "").Replace("_", "").Replace(" ", "").ToLowerInvariant();
+    }
+
+    private static void NormalizeInvoicePaymentsAndStatus(Invoice inv)
+    {
+        var paymentsList = inv.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
+        decimal totalPaid = paymentsList.Count > 0
+            ? paymentsList.Sum(p => p.Amount)
+            : (inv.PaidAmount > 0 ? inv.PaidAmount : inv.AmountPaid);
+
+        inv.PaidAmount = totalPaid;
+        inv.AmountPaid = totalPaid;
+        inv.Payments = paymentsList;
+        inv.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
+
+        if (!string.Equals(inv.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+        {
+            if (totalPaid >= inv.TotalAmount && inv.TotalAmount > 0)
+            {
+                inv.Status = "PAID";
+            }
+            else if (totalPaid > 0)
+            {
+                inv.Status = "PARTIAL";
+            }
+        }
+
+        inv.PaymentStatus = inv.Status?.ToUpperInvariant() switch
+        {
+            "PAID" => "Paid",
+            "PARTIAL" => "Partial",
+            "VOID" => "Void",
+            "REFUNDED" => "Refunded",
+            _ => "Unpaid"
+        };
+    }
+
     [Authorize(Roles = InvoiceBillingRoles)]
     [HttpGet]
-    public async Task<IActionResult> GetInvoices([FromQuery] string? status)
+    public async Task<IActionResult> GetInvoices(
+        [FromQuery] string? status,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
+        [FromQuery] long? branchId = null,
+        [FromQuery] string? orderType = null,
+        [FromQuery] string? paymentMethod = null,
+        [FromQuery] string? paymentStatus = null,
+        [FromQuery] string? search = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 0)
     {
         try
         {
-            _logger.LogInformation("Fetching invoices with status filter: '{Status}'", status);
+            var (allowed, authorizedBranchId, statusCode, branchError) = await ResolveAuthorizedBranchFilterAsync(branchId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
+            }
+
+            _logger.LogInformation("Fetching invoices with status={Status}, branch={BranchId}, fromDate={FromDate}, toDate={ToDate}",
+                status, authorizedBranchId, fromDate, toDate);
 
             var query = _context.Invoices
                 .AsNoTracking()
                 .Include(i => i.Payments)
                 .AsQueryable();
+
+            if (authorizedBranchId.HasValue)
+            {
+                var targetBranch = authorizedBranchId.Value;
+                query = query.Where(i =>
+                    i.BranchId == targetBranch ||
+                    (i.BranchId == null && _context.Orders.Any(o =>
+                        o.Id == i.OrderId &&
+                        (o.BranchId == targetBranch || (o.BranchId == null && o.OutletId == targetBranch)))));
+            }
+
+            if (fromDate.HasValue)
+            {
+                var start = fromDate.Value.Date;
+                query = query.Where(i => i.CreatedAt >= start);
+            }
+
+            if (toDate.HasValue)
+            {
+                var endExclusive = toDate.Value.TimeOfDay == TimeSpan.Zero
+                    ? toDate.Value.Date.AddDays(1)
+                    : toDate.Value.AddTicks(1);
+                query = query.Where(i => i.CreatedAt < endExclusive);
+            }
 
             if (!string.IsNullOrWhiteSpace(status))
             {
@@ -69,34 +227,65 @@ public class InvoicesController : ControllerBase
 
             foreach (var inv in invoices)
             {
-                var paymentsList = inv.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
-                decimal totalPaid = paymentsList.Count > 0 ? paymentsList.Sum(p => p.Amount) : inv.PaidAmount;
-                inv.PaidAmount = totalPaid;
-                inv.AmountPaid = totalPaid;
-                inv.Payments = paymentsList;
-                inv.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
-
-                if (!string.Equals(inv.Status, "VOID", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (totalPaid >= inv.TotalAmount && inv.TotalAmount > 0)
-                    {
-                        inv.Status = "PAID";
-                    }
-                    else if (totalPaid > 0)
-                    {
-                        inv.Status = "PARTIAL";
-                    }
-                }
+                NormalizeInvoicePaymentsAndStatus(inv);
             }
 
             await EnrichInvoicesAsync(invoices);
+
+            IEnumerable<Invoice> filtered = invoices;
+
+            if (!string.IsNullOrWhiteSpace(paymentStatus))
+            {
+                var targetPayStatus = paymentStatus.Trim();
+                filtered = filtered.Where(i =>
+                    string.Equals(i.PaymentStatus, targetPayStatus, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(i.Status, targetPayStatus, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(orderType))
+            {
+                var normType = NormalizeOrderTypeFilter(orderType);
+                filtered = filtered.Where(i => NormalizeOrderTypeFilter(i.OrderType) == normType);
+            }
+
+            if (!string.IsNullOrWhiteSpace(paymentMethod))
+            {
+                var targetMethod = paymentMethod.Trim();
+                filtered = filtered.Where(i =>
+                    string.Equals(i.PaymentMethod, targetMethod, StringComparison.OrdinalIgnoreCase) ||
+                    (i.Payments != null && i.Payments.Any(p =>
+                        string.Equals(p.PaymentMode, targetMethod, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(p.PaymentMethod, targetMethod, StringComparison.OrdinalIgnoreCase))));
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                filtered = filtered.Where(i =>
+                    (!string.IsNullOrEmpty(i.InvoiceNumber) && i.InvoiceNumber.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(i.OrderNumber) && i.OrderNumber.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(i.TableName) && i.TableName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(i.CustomerName) && i.CustomerName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(i.CustomerPhone) && i.CustomerPhone.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    i.OrderId.ToString().Contains(term, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var resultList = filtered.ToList();
+            var totalCount = resultList.Count;
+
+            if (pageSize > 0)
+            {
+                if (page < 1) page = 1;
+                resultList = resultList.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            }
 
             return Ok(new
             {
                 success = true,
                 message = "Invoices retrieved successfully.",
-                count = invoices.Count,
-                data = invoices
+                count = resultList.Count,
+                totalCount,
+                data = resultList
             });
         }
         catch (Exception ex)
@@ -121,6 +310,12 @@ public class InvoicesController : ControllerBase
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
 
+            var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
+            }
+
             return Ok(new { success = true, data = invoice });
         }
         catch (Exception ex)
@@ -143,25 +338,66 @@ public class InvoicesController : ControllerBase
         {
             _logger.LogInformation("Creating invoice for Order ID {OrderId}", request.OrderId);
 
+            var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == request.OrderId);
+            long? orderBranchId = order != null ? (order.BranchId ?? (order.OutletId > 0 ? order.OutletId : (long?)null)) : null;
+
+            var (allowed, authorizedBranchId, statusCode, branchError) = await ResolveAuthorizedBranchFilterAsync(orderBranchId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
+            }
+
+            var existingInvoice = await _context.Invoices
+                .AsNoTracking()
+                .Include(i => i.Payments)
+                .FirstOrDefaultAsync(i => i.OrderId == request.OrderId);
+            if (existingInvoice != null)
+            {
+                NormalizeInvoicePaymentsAndStatus(existingInvoice);
+                await PopulateInvoiceMetadataAsync(existingInvoice);
+                return Conflict(new
+                {
+                    success = false,
+                    message = $"An invoice already exists for Order ID {request.OrderId}.",
+                    data = existingInvoice
+                });
+            }
+
+            var isSelfService = order != null && string.Equals(order.OrderType, "SelfService", StringComparison.OrdinalIgnoreCase);
             var subtotal = request.Subtotal;
             var taxableAmount = request.TaxableAmount > 0 ? request.TaxableAmount : (subtotal - request.DiscountAmount);
             taxableAmount = Math.Max(0, taxableAmount);
 
             var invoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Random.Shared.Next(1000, 9999)}";
             var taxAmount = request.TaxAmount >= 0 ? request.TaxAmount : (taxableAmount * 0.05m);
-            var totalAmount = Math.Max(0, taxableAmount + taxAmount);
+            var cgstAmount = Math.Round(taxAmount / 2m, 2);
+            var sgstAmount = taxAmount - cgstAmount;
+            var serviceChargeAmount = isSelfService ? 0m : (order?.ServiceCharge ?? 0m);
+            var totalAmount = Math.Max(0, taxableAmount + taxAmount + serviceChargeAmount);
+            var resolvedBranchId = orderBranchId ?? authorizedBranchId ?? 1;
 
             var invoice = new Invoice
             {
                 OrderId = request.OrderId,
+                OrderNumber = order?.OrderNumber,
+                BranchId = resolvedBranchId,
+                OrderType = order?.OrderType,
+                CustomerName = order?.CustomerName,
+                CustomerPhone = order?.CustomerPhone,
                 InvoiceNumber = invoiceNumber,
                 Subtotal = subtotal,
                 TaxableAmount = taxableAmount,
+                GstPercent = order?.TaxPercent ?? 5m,
+                CgstAmount = cgstAmount,
+                SgstAmount = sgstAmount,
                 TaxAmount = taxAmount,
                 DiscountAmount = request.DiscountAmount,
+                ServiceChargePercent = isSelfService ? 0m : (order?.ServiceChargePercent ?? 0m),
+                ServiceChargeAmount = serviceChargeAmount,
                 TotalAmount = totalAmount,
                 PaidAmount = 0.00m,
                 AmountPaid = 0.00m,
+                PaymentStatus = "Unpaid",
                 Status = "UNPAID",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -177,7 +413,7 @@ public class InvoicesController : ControllerBase
                 EventType = "invoice:created",
                 Module = "Invoices",
                 Action = "created",
-                BranchId = 1,
+                BranchId = resolvedBranchId,
                 RecordId = invoice.InvoiceId.ToString(),
                 Data = populated
             });
@@ -217,6 +453,13 @@ public class InvoicesController : ControllerBase
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
+
+            var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
+            }
+
             if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(invoice.Status, "REFUNDED", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(invoice.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
@@ -254,18 +497,20 @@ public class InvoicesController : ControllerBase
             invoice.PaidAmount = totalPaid;
             invoice.AmountPaid = totalPaid;
             invoice.Status = totalPaid >= invoice.TotalAmount ? "PAID" : "PARTIAL";
+            invoice.PaymentStatus = totalPaid >= invoice.TotalAmount ? "Paid" : "Partial";
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
             var updated = await GetInvoiceByIdObject(id);
+            var eventBranchId = updated?.BranchId ?? invoice.BranchId ?? 1;
 
             await _realtimeSync.PublishAsync(new RealtimeEvent
             {
                 EventType = "payment:completed",
                 Module = "Payments",
                 Action = "completed",
-                BranchId = 1,
+                BranchId = eventBranchId,
                 RecordId = payment.PaymentId.ToString(),
                 Data = new
                 {
@@ -286,7 +531,7 @@ public class InvoicesController : ControllerBase
                 EventType = "invoice:updated",
                 Module = "Invoices",
                 Action = "paymentRecorded",
-                BranchId = 1,
+                BranchId = eventBranchId,
                 RecordId = id.ToString(),
                 Data = updated
             });
@@ -332,29 +577,13 @@ public class InvoicesController : ControllerBase
                 });
             }
 
-            // Calculate paid amount and due amount accurately without duplication
-            var paymentsList = invoice.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
-            decimal totalPaid = paymentsList.Count > 0
-                ? paymentsList.Sum(p => p.Amount)
-                : (invoice.PaidAmount > 0 ? invoice.PaidAmount : invoice.AmountPaid);
-
-            invoice.PaidAmount = totalPaid;
-            invoice.AmountPaid = totalPaid;
-            invoice.Payments = paymentsList;
-            invoice.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
-
-            // Preserve and calculate invoice status
-            if (!string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
+            var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+            if (!allowed)
             {
-                if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
-                {
-                    invoice.Status = "PAID";
-                }
-                else if (totalPaid > 0)
-                {
-                    invoice.Status = "PARTIAL";
-                }
+                return StatusCode(statusCode, new { success = false, message = branchError });
             }
+
+            NormalizeInvoicePaymentsAndStatus(invoice);
 
             // Sequentially populate order metadata (table, waiter, items)
             await PopulateInvoiceMetadataAsync(invoice);
@@ -387,6 +616,12 @@ public class InvoicesController : ControllerBase
             return NotFound(new { success = false, message = $"Invoice {id} not found." });
         }
 
+        var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+        if (!allowed)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
         return Ok(new
         {
             success = true,
@@ -414,6 +649,13 @@ public class InvoicesController : ControllerBase
         {
             return NotFound(new { success = false, message = $"Bill {id} not found." });
         }
+
+        var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+        if (!allowed)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
         return Ok(new
         {
             success = true,
@@ -437,6 +679,12 @@ public class InvoicesController : ControllerBase
             return NotFound(new { success = false, message = $"Bill {id} not found." });
         }
 
+        var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+        if (!allowed)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
         return Ok(new
         {
             success = true,
@@ -458,6 +706,13 @@ public class InvoicesController : ControllerBase
         {
             return NotFound(new { success = false, message = $"Bill {id} not found." });
         }
+
+        var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+        if (!allowed)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
         if (string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest(new { success = false, message = "Cannot settle a void invoice." });
@@ -485,19 +740,21 @@ public class InvoicesController : ControllerBase
             invoice.PaidAmount = invoice.TotalAmount;
             invoice.AmountPaid = invoice.TotalAmount;
             invoice.Status = "PAID";
+            invoice.PaymentStatus = "Paid";
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
         }
 
         var updated = await GetInvoiceByIdObject(id);
+        var eventBranchId = updated?.BranchId ?? invoice.BranchId ?? 1;
 
         await _realtimeSync.PublishAsync(new RealtimeEvent
         {
             EventType = "invoice:settled",
             Module = "Invoices",
             Action = "settled",
-            BranchId = 1,
+            BranchId = eventBranchId,
             RecordId = id.ToString(),
             Data = updated
         });
@@ -507,7 +764,7 @@ public class InvoicesController : ControllerBase
             EventType = "payment:completed",
             Module = "Payments",
             Action = "completed",
-            BranchId = 1,
+            BranchId = eventBranchId,
             RecordId = id.ToString(),
             Data = new { invoiceId = id, amount = due, paymentMode = "CASH", status = "PAID" }
         });
@@ -530,6 +787,12 @@ public class InvoicesController : ControllerBase
             if (invoice == null)
             {
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
+            }
+
+            var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
             }
 
             if (request.Subtotal.HasValue) invoice.Subtotal = request.Subtotal.Value;
@@ -559,7 +822,7 @@ public class InvoicesController : ControllerBase
                 EventType = "invoice:updated",
                 Module = "Invoices",
                 Action = "updated",
-                BranchId = 1,
+                BranchId = updated?.BranchId ?? invoice.BranchId ?? 1,
                 RecordId = id.ToString(),
                 Data = updated
             });
@@ -590,8 +853,22 @@ public class InvoicesController : ControllerBase
                 return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
             }
 
+            var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
+            }
+
             var newStatus = string.IsNullOrWhiteSpace(request.Status) ? "PAID" : request.Status.Trim().ToUpper();
             invoice.Status = newStatus;
+            invoice.PaymentStatus = newStatus switch
+            {
+                "PAID" => "Paid",
+                "PARTIAL" => "Partial",
+                "VOID" => "Void",
+                "REFUNDED" => "Refunded",
+                _ => "Unpaid"
+            };
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -603,7 +880,7 @@ public class InvoicesController : ControllerBase
                 EventType = "invoice:statusChanged",
                 Module = "Invoices",
                 Action = "statusChanged",
-                BranchId = 1,
+                BranchId = updated?.BranchId ?? invoice.BranchId ?? 1,
                 RecordId = id.ToString(),
                 Data = updated
             });
@@ -630,6 +907,12 @@ public class InvoicesController : ControllerBase
         if (invoice == null)
         {
             return NotFound(new { success = false, message = $"Invoice with ID {id} not found." });
+        }
+
+        var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+        if (!allowed)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
         }
 
         var sb = new System.Text.StringBuilder();
@@ -689,7 +972,14 @@ public class InvoicesController : ControllerBase
         var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceId == numericId);
         if (invoice != null)
         {
+            var (allowed, statusCode, branchError) = await EnsureInvoiceBranchAccessAsync(invoice.BranchId, invoice.OrderId);
+            if (!allowed)
+            {
+                return StatusCode(statusCode, new { success = false, message = branchError });
+            }
+
             invoice.Status = "VOID";
+            invoice.PaymentStatus = "Void";
             invoice.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -698,7 +988,7 @@ public class InvoicesController : ControllerBase
                 EventType = "invoice:deleted",
                 Module = "Invoices",
                 Action = "deleted",
-                BranchId = 1,
+                BranchId = invoice.BranchId ?? 1,
                 RecordId = numericId.ToString(),
                 Data = new { invoiceId = numericId, status = "VOID" }
             });
@@ -730,7 +1020,19 @@ public class InvoicesController : ControllerBase
             var orders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => orderIds.Contains(o.Id))
-                .Select(o => new { o.Id, o.TableId, o.WaiterId, o.OrderType })
+                .Select(o => new
+                {
+                    o.Id,
+                    o.OrderNumber,
+                    o.BranchId,
+                    o.OutletId,
+                    o.TableId,
+                    o.WaiterId,
+                    o.OrderType,
+                    o.CustomerName,
+                    o.CustomerPhone,
+                    o.ServiceCharge
+                })
                 .ToListAsync();
 
             var tableIds = orders.Where(o => o.TableId.HasValue).Select(o => o.TableId!.Value).Distinct().ToList();
@@ -750,6 +1052,12 @@ public class InvoicesController : ControllerBase
                 var ord = orders.FirstOrDefault(o => o.Id == inv.OrderId);
                 if (ord != null)
                 {
+                    inv.OrderNumber ??= ord.OrderNumber;
+                    inv.OrderType ??= ord.OrderType;
+                    inv.BranchId ??= ord.BranchId ?? (ord.OutletId > 0 ? ord.OutletId : 1);
+                    inv.CustomerName ??= ord.CustomerName;
+                    inv.CustomerPhone ??= ord.CustomerPhone;
+
                     if (ord.TableId.HasValue && tables.TryGetValue(ord.TableId.Value, out var tableName))
                     {
                         inv.TableName = tableName;
@@ -758,11 +1066,31 @@ public class InvoicesController : ControllerBase
                     {
                         inv.TableName = "Takeaway";
                     }
+                    else if (string.Equals(ord.OrderType, "SelfService", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inv.TableName = "Self Service";
+                    }
+
+                    if (string.Equals(ord.OrderType, "SelfService", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inv.ServiceChargeAmount = 0m;
+                        inv.ServiceChargePercent = 0m;
+                    }
+                    else if (inv.ServiceChargeAmount == 0 && ord.ServiceCharge > 0)
+                    {
+                        inv.ServiceChargeAmount = ord.ServiceCharge;
+                    }
 
                     if (ord.WaiterId.HasValue && waiters.TryGetValue(ord.WaiterId.Value, out var waiterName))
                     {
                         inv.ServerName = waiterName;
                     }
+                }
+
+                if (inv.CgstAmount == 0 && inv.SgstAmount == 0 && inv.TaxAmount > 0)
+                {
+                    inv.CgstAmount = Math.Round(inv.TaxAmount / 2m, 2);
+                    inv.SgstAmount = inv.TaxAmount - inv.CgstAmount;
                 }
 
                 inv.Items = items.Where(it => it.OrderId == inv.OrderId).Select(it => new InvoiceItemDto
@@ -789,27 +1117,7 @@ public class InvoicesController : ControllerBase
 
         if (invoice == null) return null;
 
-        var paymentsList = invoice.Payments?.OrderBy(p => p.PaidAt).ToList() ?? new List<InvoicePayment>();
-        decimal totalPaid = paymentsList.Count > 0
-            ? paymentsList.Sum(p => p.Amount)
-            : (invoice.PaidAmount > 0 ? invoice.PaidAmount : invoice.AmountPaid);
-
-        invoice.PaidAmount = totalPaid;
-        invoice.AmountPaid = totalPaid;
-        invoice.Payments = paymentsList;
-        invoice.PaymentMethod = paymentsList.LastOrDefault()?.PaymentMode ?? "CASH";
-
-        if (!string.Equals(invoice.Status, "VOID", StringComparison.OrdinalIgnoreCase))
-        {
-            if (totalPaid >= invoice.TotalAmount && invoice.TotalAmount > 0)
-            {
-                invoice.Status = "PAID";
-            }
-            else if (totalPaid > 0)
-            {
-                invoice.Status = "PARTIAL";
-            }
-        }
+        NormalizeInvoicePaymentsAndStatus(invoice);
 
         await PopulateInvoiceMetadataAsync(invoice);
         return invoice;
@@ -828,6 +1136,12 @@ public class InvoicesController : ControllerBase
 
             if (order != null)
             {
+                invoice.OrderNumber ??= order.OrderNumber;
+                invoice.OrderType ??= order.OrderType;
+                invoice.BranchId ??= order.BranchId ?? (order.OutletId > 0 ? order.OutletId : 1);
+                invoice.CustomerName ??= order.CustomerName;
+                invoice.CustomerPhone ??= order.CustomerPhone;
+
                 if (order.TableId.HasValue)
                 {
                     var table = await _context.DiningTables
@@ -839,6 +1153,20 @@ public class InvoicesController : ControllerBase
                 {
                     invoice.TableName = "Takeaway";
                 }
+                else if (string.Equals(order.OrderType, "SelfService", StringComparison.OrdinalIgnoreCase))
+                {
+                    invoice.TableName = "Self Service";
+                }
+
+                if (string.Equals(order.OrderType, "SelfService", StringComparison.OrdinalIgnoreCase))
+                {
+                    invoice.ServiceChargeAmount = 0m;
+                    invoice.ServiceChargePercent = 0m;
+                }
+                else if (invoice.ServiceChargeAmount == 0 && order.ServiceCharge > 0)
+                {
+                    invoice.ServiceChargeAmount = order.ServiceCharge;
+                }
 
                 if (order.WaiterId.HasValue)
                 {
@@ -847,6 +1175,12 @@ public class InvoicesController : ControllerBase
                         .FirstOrDefaultAsync(s => s.Id == order.WaiterId.Value);
                     invoice.ServerName = waiter?.Name ?? "Staff";
                 }
+            }
+
+            if (invoice.CgstAmount == 0 && invoice.SgstAmount == 0 && invoice.TaxAmount > 0)
+            {
+                invoice.CgstAmount = Math.Round(invoice.TaxAmount / 2m, 2);
+                invoice.SgstAmount = invoice.TaxAmount - invoice.CgstAmount;
             }
 
             // Sequential step 2: Query order items

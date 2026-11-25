@@ -140,6 +140,20 @@ public class RestaurantSettingsService
             {
                 paymentQrsJson = JsonSerializer.Serialize(dto.PaymentQrs);
             }
+
+            // Ensure dto.PaymentQrs is a detached, cloned JsonElement to avoid ObjectDisposedException
+            if (!string.IsNullOrWhiteSpace(paymentQrsJson))
+            {
+                try
+                {
+                    using var detachedDoc = JsonDocument.Parse(paymentQrsJson);
+                    dto.PaymentQrs = detachedDoc.RootElement.Clone();
+                }
+                catch
+                {
+                    dto.PaymentQrs = paymentQrsJson;
+                }
+            }
         }
 
         // 1. Persist directly via EF Core AppDbContext

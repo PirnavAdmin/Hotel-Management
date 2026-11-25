@@ -3164,7 +3164,7 @@
 
 .pos-search-box {
   position: relative;
-  flex: 1 1 240px;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 440px;
   height: auto;
@@ -4565,18 +4565,19 @@
 
 .is-dine-in-digital-menu .pos-takeaway-controls-bar {
   display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 0.75rem !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 0.65rem !important;
   background: var(--bg-secondary, #131c2e) !important;
   border: 1px solid var(--border-card, #1e293b) !important;
   border-radius: 8px !important;
   flex: 0 0 auto !important;
   flex-shrink: 0 !important;
+  flex-grow: 0 !important;
   min-height: 0 !important;
   height: auto !important;
-  padding: 0.65rem 1rem !important;
+  padding: 0.65rem 0.85rem !important;
   margin: 0 0 0.5rem 0 !important;
 }
 
@@ -4586,9 +4587,11 @@
 }
 
 .is-dine-in-digital-menu .pos-search-box {
-  flex: 1 1 auto !important;
-  max-width: 480px !important;
-  width: auto !important;
+  flex: 0 0 auto !important;
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
   height: auto !important;
   min-height: 0 !important;
   margin: 0 !important;
@@ -4605,12 +4608,16 @@
   display: flex !important;
   align-items: center !important;
   gap: 0.5rem !important;
+  width: 100% !important;
+  justify-content: center !important;
 }
 
 .is-dine-in-digital-menu .pos-dietary-btn {
+  flex: 1 1 0 !important;
   min-height: 36px !important;
   height: 36px !important;
   padding: 0 0.85rem !important;
+  justify-content: center !important;
 }
 
 .is-dine-in-digital-menu .pos-takeaway-category-strip {

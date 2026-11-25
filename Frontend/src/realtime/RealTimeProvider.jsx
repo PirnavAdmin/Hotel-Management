@@ -91,7 +91,9 @@ export function RealTimeProvider({ children }) {
       const data = payload?.data ?? payload?.Data ?? payload;
       const tenantId = payload?.branchId ?? payload?.BranchId;
       const dataTenantId = data?.restaurantId ?? data?.RestaurantId;
-      if (tenantId != null && dataTenantId != null && String(tenantId) !== String(dataTenantId)) return;
+      const cleanTenant = String(tenantId || "").replace("restaurant_", "").trim();
+      const cleanDataTenant = String(dataTenantId || "").replace("restaurant_", "").trim();
+      if (cleanTenant && cleanDataTenant && cleanTenant !== cleanDataTenant) return;
       const accent = data?.accentColor ?? data?.AccentColor;
       if (!/^#[\da-f]{6}$/i.test(String(accent || ""))) return;
       console.info("[ThemeSync] restaurantSetting:updated received", {

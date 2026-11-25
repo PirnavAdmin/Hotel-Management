@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -328,15 +329,146 @@ public class StateController : ControllerBase
 
     /// <summary>
     /// Server-Sent Events (SSE) stream endpoint for live real-time POS & Kitchen updates.
+    /// Requires authentication and filters events strictly by the client's authorized branch.
     /// </summary>
     [HttpGet("events")]
     public async Task GetEvents(CancellationToken cancellationToken)
     {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            Response.StatusCode = StatusCodes.Status401Unauthorized;
+            Response.ContentType = "application/json";
+            await Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "Authentication is required to subscribe to real-time events."
+            }), cancellationToken);
+            return;
+        }
+
+        // 1. Resolve user ID from JWT claims
+        var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("userId");
+        if (!long.TryParse(rawUserId, out var userId) || userId <= 0)
+        {
+            Response.StatusCode = StatusCodes.Status401Unauthorized;
+            Response.ContentType = "application/json";
+            await Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "Invalid user identity in token."
+            }), cancellationToken);
+            return;
+        }
+
+        // 2. Load user from database (trusted server-side record)
+        var dbUser = await _context.Users.AsNoTracking()
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+
+        if (dbUser == null || !dbUser.IsActive)
+        {
+            Response.StatusCode = StatusCodes.Status403Forbidden;
+            Response.ContentType = "application/json";
+            await Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "Unauthorized. User account not found or deactivated."
+            }), cancellationToken);
+            return;
+        }
+
+        // 3. Determine role and global admin status
+        var roleName = dbUser.Role?.RoleName ?? User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? "User";
+        var normalizedRole = roleName.Trim().ToLowerInvariant();
+        bool isGlobalAdmin = (normalizedRole == "admin" || normalizedRole == "superadmin" || normalizedRole == "super admin") &&
+                             (!dbUser.BranchId.HasValue || dbUser.BranchId.Value <= 0);
+
+        // 4. Parse client-requested branch from query
+        long requestedBranchId = 0;
+        string? queryBranch = Request.Query["branchId"].ToString();
+        if (string.IsNullOrWhiteSpace(queryBranch))
+        {
+            queryBranch = Request.Query["restaurantId"].ToString();
+        }
+        if (!string.IsNullOrWhiteSpace(queryBranch))
+        {
+            var sanitized = queryBranch.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase).Trim();
+            long.TryParse(sanitized, out requestedBranchId);
+        }
+
+        long authorizedBranchId = 0;
+
+        if (!isGlobalAdmin)
+        {
+            // Non-global staff MUST have an assigned branch in the database
+            if (!dbUser.BranchId.HasValue || dbUser.BranchId.Value <= 0)
+            {
+                Response.StatusCode = StatusCodes.Status403Forbidden;
+                Response.ContentType = "application/json";
+                await Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = "User is not associated with any restaurant branch. Access denied."
+                }), cancellationToken);
+                return;
+            }
+
+            // Cross-branch rejection: non-global staff requesting a different branch is rejected
+            if (requestedBranchId > 0 && requestedBranchId != dbUser.BranchId.Value)
+            {
+                Response.StatusCode = StatusCodes.Status403Forbidden;
+                Response.ContentType = "application/json";
+                await Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = "Cross-branch access forbidden. You are not assigned to the requested branch."
+                }), cancellationToken);
+                return;
+            }
+
+            authorizedBranchId = dbUser.BranchId.Value;
+        }
+        else
+        {
+            // Global Admin must explicitly select a branch; NEVER silently default
+            if (requestedBranchId > 0)
+            {
+                authorizedBranchId = requestedBranchId;
+            }
+            else
+            {
+                Response.StatusCode = StatusCodes.Status400BadRequest;
+                Response.ContentType = "application/json";
+                await Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = "Branch context could not be identified or is missing. Please specify a valid branch ID."
+                }), cancellationToken);
+                return;
+            }
+        }
+
+        // 5. Verify the target branch exists and is active in the database
+        var branch = await _context.Branches.AsNoTracking()
+            .FirstOrDefaultAsync(b => b.BranchId == authorizedBranchId, cancellationToken);
+
+        if (branch == null || !branch.IsActive || branch.DeletedAt != null)
+        {
+            Response.StatusCode = StatusCodes.Status400BadRequest;
+            Response.ContentType = "application/json";
+            await Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = $"Branch {authorizedBranchId} does not exist, is inactive, or has been deleted."
+            }), cancellationToken);
+            return;
+        }
+
         Response.ContentType = "text/event-stream";
         Response.Headers.Append("Cache-Control", "no-cache");
         Response.Headers.Append("Connection", "keep-alive");
 
-        _logger.LogInformation("Client connected to SSE event stream.");
+        _logger.LogInformation("Client {UserId} ({Role}) connected to SSE event stream for Branch {BranchId}.", userId, roleName, authorizedBranchId);
 
         try
         {
@@ -358,7 +490,7 @@ public class StateController : ControllerBase
                 }
             }, linkedCts.Token);
 
-            await foreach (var sseFrame in _sseBroadcaster.SubscribeAsync(cancellationToken))
+            await foreach (var sseFrame in _sseBroadcaster.SubscribeAsync(cancellationToken, authorizedBranchId))
             {
                 await Response.WriteAsync(sseFrame, cancellationToken);
                 await Response.Body.FlushAsync(cancellationToken);
@@ -366,11 +498,11 @@ public class StateController : ControllerBase
         }
         catch (TaskCanceledException)
         {
-            _logger.LogInformation("SSE client disconnected from event stream.");
+            _logger.LogInformation("SSE client {UserId} disconnected from event stream.", userId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in SSE event stream.");
+            _logger.LogError(ex, "Error in SSE event stream for client {UserId}.", userId);
         }
     }
 }

@@ -12,7 +12,8 @@ namespace HMS.Services;
 
 public class SseBroadcaster : ISseBroadcaster
 {
-    private readonly ConcurrentDictionary<Guid, Channel<string>> _clients = new();
+    private record SseClientRegistration(Channel<string> Channel, long? AuthorizedBranchId);
+    private readonly ConcurrentDictionary<Guid, SseClientRegistration> _clients = new();
     private readonly ILogger<SseBroadcaster> _logger;
 
     public SseBroadcaster(ILogger<SseBroadcaster> logger)
@@ -22,7 +23,7 @@ public class SseBroadcaster : ISseBroadcaster
 
     public int ActiveClientCount => _clients.Count;
 
-    public async Task BroadcastAsync(string eventType, object? payload)
+    public async Task BroadcastAsync(string eventType, object? payload, long? branchId = null)
     {
         try
         {
@@ -30,11 +31,12 @@ public class SseBroadcaster : ISseBroadcaster
             {
                 type = eventType,
                 payload = payload,
+                branchId = branchId,
                 timestamp = DateTime.UtcNow
             };
 
             var json = JsonSerializer.Serialize(envelope);
-            await BroadcastRawAsync($"data: {json}\n\n");
+            await BroadcastRawAsync($"data: {json}\n\n", branchId);
         }
         catch (Exception ex)
         {
@@ -42,13 +44,19 @@ public class SseBroadcaster : ISseBroadcaster
         }
     }
 
-    public async Task BroadcastRawAsync(string sseData)
+    public async Task BroadcastRawAsync(string sseData, long? branchId = null)
     {
-        foreach (var (id, channel) in _clients)
+        foreach (var (id, reg) in _clients)
         {
+            // If event has branch scoping, do not send to clients authorized for a different branch
+            if (branchId.HasValue && branchId.Value > 0 && reg.AuthorizedBranchId.HasValue && reg.AuthorizedBranchId.Value != branchId.Value)
+            {
+                continue;
+            }
+
             try
             {
-                await channel.Writer.WriteAsync(sseData);
+                await reg.Channel.Writer.WriteAsync(sseData);
             }
             catch (Exception ex)
             {
@@ -58,7 +66,7 @@ public class SseBroadcaster : ISseBroadcaster
         }
     }
 
-    public async IAsyncEnumerable<string> SubscribeAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<string> SubscribeAsync([EnumeratorCancellation] CancellationToken cancellationToken, long? authorizedBranchId = null)
     {
         var clientId = Guid.NewGuid();
         var channel = Channel.CreateBounded<string>(new BoundedChannelOptions(100)
@@ -66,8 +74,8 @@ public class SseBroadcaster : ISseBroadcaster
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
-        _clients[clientId] = channel;
-        _logger.LogInformation("SSE Client {ClientId} connected. Total active clients: {Count}", clientId, _clients.Count);
+        _clients[clientId] = new SseClientRegistration(channel, authorizedBranchId);
+        _logger.LogInformation("SSE Client {ClientId} connected (AuthorizedBranch: {BranchId}). Total active clients: {Count}", clientId, authorizedBranchId?.ToString() ?? "All", _clients.Count);
 
         try
         {

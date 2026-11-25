@@ -2391,5 +2391,32 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rolldownOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (
+              id.includes("/react/") ||
+              id.includes("\\react\\") ||
+              id.includes("/react-dom/") ||
+              id.includes("\\react-dom\\") ||
+              id.includes("/react-router-dom/") ||
+              id.includes("\\react-router-dom\\") ||
+              id.includes("/react-router/") ||
+              id.includes("\\react-router\\") ||
+              id.includes("/scheduler/") ||
+              id.includes("\\scheduler\\")
+            ) {
+              return "react-vendor";
+            }
+            if (id.includes("@microsoft/signalr")) return "signalr";
+            if (id.includes("lucide-react")) return "icons";
+            if (id.includes("qrcode")) return "qrcode";
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useDialogAccessibility } from '../utils/useDialogAccessibility';
 import { 
   Printer, 
   X, 
@@ -155,6 +156,8 @@ function amountToWords(amount) {
 
 export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} }) {
   const [printFormat, setPrintFormat] = useState('thermal'); // 'thermal' (80mm) or 'a4' (Full Page)
+  const dialogRef = useRef(null);
+  useDialogAccessibility({ isOpen: Boolean(table), onClose, dialogRef });
 
   if (!table) return null;
 
@@ -186,19 +189,19 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   const restaurantPhone =
     restaurantSettings.phone?.trim() ||
     storedSettings.phone?.trim() ||
-    "+91 98450 12345";
+    "";
   const restaurantAddress =
     restaurantSettings.address?.trim() ||
     storedSettings.address?.trim() ||
-    "Main Road, Near Tech Park, Hyderabad, India - 500081";
+    "";
   const restaurantGstin =
     restaurantSettings.gstin?.trim() ||
     storedSettings.gstin?.trim() ||
-    "36AABCA1234F1Z5";
+    "";
   const restaurantEmail =
     restaurantSettings.email?.trim() ||
     storedSettings.email?.trim() ||
-    "info@therusticspin.com";
+    "";
   const restaurantLogo =
     restaurantSettings.logo ||
     restaurantSettings.restaurantLogo ||
@@ -216,49 +219,83 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
   }));
 
   const itemsSubtotal = roundCurrency(items.reduce((sum, item) => sum + (item.price * item.quantity), 0));
-  const subtotal = table.subtotal !== undefined && Number(table.subtotal) > 0
-    ? Number(table.subtotal)
-    : itemsSubtotal;
-  
-  const discountPercent = Number(table.discountPercent) || 0;
-  const discountAmount = table.discountAmount !== undefined && Number(table.discountAmount) > 0
-    ? Number(table.discountAmount)
-    : roundCurrency((subtotal * discountPercent) / 100);
+  const hasExplicitSubtotal =
+    table.subtotal !== undefined && table.subtotal !== null && Number.isFinite(Number(table.subtotal));
+  const subtotal = hasExplicitSubtotal ? Number(table.subtotal) : itemsSubtotal;
 
-  const taxableAmount = roundCurrency(Math.max(0, subtotal - discountAmount));
-  const taxRate = 0.05; // 5% GST
-  
-  const taxAmount = table.taxAmount !== undefined && Number(table.taxAmount) > 0
-    ? Number(table.taxAmount)
-    : roundCurrency(taxableAmount * taxRate);
-  
-  const cgst = roundCurrency(taxAmount / 2);
-  const sgst = roundCurrency(taxAmount / 2);
-  
-  const serviceChargePercent = Number(table.serviceCharge) || 5;
-  const serviceChargeAmount = table.serviceChargeAmount !== undefined && table.serviceChargeAmount !== null && Number.isFinite(Number(table.serviceChargeAmount))
-    ? Number(table.serviceChargeAmount)
-    : (table.serviceCharge ? roundCurrency(taxableAmount * (serviceChargePercent / 100)) : 0);
+  const discountPercent = Number(table.discountPercent) || 0;
+  const hasExplicitDiscount =
+    table.discountAmount !== undefined && table.discountAmount !== null && Number.isFinite(Number(table.discountAmount));
+  const discountAmount = hasExplicitDiscount
+    ? Number(table.discountAmount)
+    : discountPercent > 0
+      ? roundCurrency((subtotal * discountPercent) / 100)
+      : 0;
+
+  const hasExplicitTaxable =
+    table.taxableAmount !== undefined && table.taxableAmount !== null && Number.isFinite(Number(table.taxableAmount));
+  const taxableAmount = hasExplicitTaxable
+    ? Number(table.taxableAmount)
+    : roundCurrency(Math.max(0, subtotal - discountAmount));
+
+  // Backend-authoritative tax: never fabricate a 5% GST fallback when taxAmount is absent.
+  const hasTaxData =
+    table.taxAmount !== undefined && table.taxAmount !== null && Number.isFinite(Number(table.taxAmount));
+  const taxAmount = hasTaxData ? Number(table.taxAmount) : null;
+
+  const hasExplicitCgstSgst =
+    table.cgstAmount !== undefined &&
+    table.cgstAmount !== null &&
+    Number.isFinite(Number(table.cgstAmount)) &&
+    table.sgstAmount !== undefined &&
+    table.sgstAmount !== null &&
+    Number.isFinite(Number(table.sgstAmount));
+  const cgst = hasExplicitCgstSgst
+    ? Number(table.cgstAmount)
+    : hasTaxData
+      ? roundCurrency(taxAmount / 2)
+      : null;
+  const sgst = hasExplicitCgstSgst
+    ? Number(table.sgstAmount)
+    : hasTaxData
+      ? roundCurrency(taxAmount - cgst)
+      : null;
+
+  const serviceChargePercent =
+    table.serviceChargePercent !== undefined && table.serviceChargePercent !== null
+      ? Number(table.serviceChargePercent)
+      : Number(table.serviceCharge) || 0;
+  const hasExplicitServiceCharge =
+    table.serviceChargeAmount !== undefined &&
+    table.serviceChargeAmount !== null &&
+    Number.isFinite(Number(table.serviceChargeAmount));
+  const serviceChargeAmount = hasExplicitServiceCharge ? Number(table.serviceChargeAmount) : 0;
   const tipAmount = Number(table.tipAmount ?? table.TipAmount) || 0;
-  
-  const grandTotal = table.grandTotal !== undefined && Number(table.grandTotal) > 0
-    ? Number(table.grandTotal)
-    : roundCurrency(taxableAmount + taxAmount + serviceChargeAmount + tipAmount);
+
+  const explicitGrandTotal = table.grandTotal ?? table.totalAmount;
+  const hasGrandTotal =
+    explicitGrandTotal !== undefined && explicitGrandTotal !== null && Number.isFinite(Number(explicitGrandTotal));
+  const grandTotal = hasGrandTotal
+    ? Number(explicitGrandTotal)
+    : hasTaxData
+      ? roundCurrency(taxableAmount + taxAmount + serviceChargeAmount + tipAmount)
+      : null;
 
   // Raw and unified Invoice and Order Number
   const invoiceIdentifier = table.invoiceNo || table.invoiceNumber || table.InvoiceNo || table.InvoiceNumber;
-  const rawInvoiceNo = invoiceIdentifier ? formatInvoiceNumber(invoiceIdentifier) : "Invoice unavailable";
+  const rawInvoiceNo =
+    invoiceIdentifier && String(invoiceIdentifier).trim()
+      ? String(invoiceIdentifier).trim()
+      : "Invoice Number Pending";
   const orderIdentifier = table.orderNumber || table.orderId || table.OrderId;
   const orderNumber = orderIdentifier
     ? formatOrderNumber(orderIdentifier)
-    : invoiceIdentifier
-      ? formatOrderNumber(rawInvoiceNo)
-      : "Order unavailable";
+    : "Order unavailable";
 
   // Clean date & time formats
   const thermalDateTime = formatThermalDateTime(table.date || table.createdAt || table.settledAt, table.orderTime);
   const a4DateTime = formatA4DateTime(table.date || table.createdAt || table.settledAt, table.orderTime);
-  const orderTimeDisplay = formatOrderTimeOnly(table.orderTime || table.createdAt || table.time) || "02:17 pm";
+  const orderTimeDisplay = formatOrderTimeOnly(table.orderTime || table.createdAt || table.time) || "—";
 
   // Table & Section display
   const displayTableName = table.name || table.tableName || table.tableNumber || (table.id != null ? `Table ${table.id}` : "Takeaway");
@@ -345,7 +382,12 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
       }}
     >
       <div 
+        ref={dialogRef}
+        tabIndex={-1}
         className="receipt-modal-container"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Invoice and Receipt"
         onClick={(e) => e.stopPropagation()}
         style={{
           background: '#ffffff',
@@ -428,7 +470,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           </div>
 
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close receipt"
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
@@ -680,13 +724,15 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#222222' }}>
-                <span>CGST (2.5%) + SGST (2.5%):</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{cgst.toFixed(2)} + ₹{sgst.toFixed(2)} (₹{taxAmount.toFixed(2)})</span>
+                <span>GST / Tax:</span>
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {hasTaxData ? `₹${cgst.toFixed(2)} + ₹${sgst.toFixed(2)} (₹${taxAmount.toFixed(2)})` : "Unavailable"}
+                </span>
               </div>
 
               {serviceChargeAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#222222' }}>
-                  <span>Service Charge ({serviceChargePercent}%):</span>
+                  <span>Service Charge{serviceChargePercent > 0 ? ` (${serviceChargePercent}%)` : ""}:</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{serviceChargeAmount.toFixed(2)}</span>
                 </div>
               )}
@@ -719,7 +765,7 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   TOTAL PAYABLE:
                 </span>
                 <span style={{ fontSize: '1.25rem', fontWeight: 900, color: '#000000', fontVariantNumeric: 'tabular-nums' }}>
-                  ₹{grandTotal.toFixed(2)}
+                  {grandTotal !== null ? `₹${grandTotal.toFixed(2)}` : "Unavailable"}
                 </span>
               </div>
 
@@ -823,18 +869,24 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                     {restaurantTagline}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.72rem', color: '#475569' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <MapPin size={12} color="var(--accent-saffron)" />
-                      <span>{restaurantAddress}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Phone size={12} color="var(--accent-saffron)" />
-                      <span>{restaurantPhone}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <Mail size={12} color="var(--accent-saffron)" />
-                      <span>{restaurantEmail}</span>
-                    </div>
+                    {restaurantAddress && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <MapPin size={12} color="var(--accent-saffron)" />
+                        <span>{restaurantAddress}</span>
+                      </div>
+                    )}
+                    {restaurantPhone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Phone size={12} color="var(--accent-saffron)" />
+                        <span>{restaurantPhone}</span>
+                      </div>
+                    )}
+                    {restaurantEmail && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Mail size={12} color="var(--accent-saffron)" />
+                        <span>{restaurantEmail}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1000,16 +1052,18 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>CGST (2.5%)</span>
-                  <span style={{ fontWeight: 700, color: '#0f172a' }}>₹{cgst.toFixed(2)}</span>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>CGST</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{cgst !== null ? `₹${cgst.toFixed(2)}` : "Unavailable"}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>SGST (2.5%)</span>
-                  <span style={{ fontWeight: 700, color: '#0f172a' }}>₹{sgst.toFixed(2)}</span>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>SGST</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{sgst !== null ? `₹${sgst.toFixed(2)}` : "Unavailable"}</span>
                 </div>
                 {serviceChargeAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>Service Charge ({serviceChargePercent}%)</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>
+                      Service Charge{serviceChargePercent > 0 ? ` (${serviceChargePercent}%)` : ""}
+                    </span>
                     <span style={{ fontWeight: 700, color: '#0f172a' }}>₹{serviceChargeAmount.toFixed(2)}</span>
                   </div>
                 )}
@@ -1023,7 +1077,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
                   borderTop: '1px solid #fdba74'
                 }}>
                   <span style={{ fontSize: '0.92rem', fontWeight: 900, color: '#0f172a' }}>Total Payable</span>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--accent-amber)' }}>₹{grandTotal.toFixed(2)}</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--accent-amber)' }}>
+                    {grandTotal !== null ? `₹${grandTotal.toFixed(2)}` : "Unavailable"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1114,7 +1170,9 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
           gap: '0.65rem'
         }}>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close receipt"
             style={{
               flex: 1,
               padding: '0.55rem',

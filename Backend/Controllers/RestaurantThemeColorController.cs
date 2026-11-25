@@ -1,12 +1,18 @@
 using System;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using HMS.Data;
 using HMS.DTOs;
+using HMS.Hubs;
 using HMS.Models;
 using HMS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace HMS.Controllers;
@@ -18,47 +24,77 @@ namespace HMS.Controllers;
 [Produces("application/json")]
 public sealed class RestaurantThemeColorController : ControllerBase
 {
+    private static readonly Regex HexColorPattern = new(@"^#[0-9a-fA-F]{6}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private readonly RestaurantThemeColorService _themeService;
     private readonly IRealtimeSyncService _realtimeSync;
+    private readonly IHubContext<PosHub> _hubContext;
+    private readonly ISseBroadcaster _sseBroadcaster;
+    private readonly AppDbContext _db;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<RestaurantThemeColorController> _logger;
 
     public RestaurantThemeColorController(
         RestaurantThemeColorService themeService,
         IRealtimeSyncService realtimeSync,
+        IHubContext<PosHub> hubContext,
+        ISseBroadcaster sseBroadcaster,
+        AppDbContext db,
+        IConfiguration configuration,
         ILogger<RestaurantThemeColorController> logger)
     {
         _themeService = themeService;
         _realtimeSync = realtimeSync;
+        _hubContext = hubContext;
+        _sseBroadcaster = sseBroadcaster;
+        _db = db;
+        _configuration = configuration;
         _logger = logger;
     }
 
     [HttpGet]
     [Authorize]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 401)]
-    [ProducesResponseType(typeof(object), 403)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTheme()
     {
         try
         {
             if (!HasStaffRole())
             {
-                return StatusCode(403, new { success = false, message = "Staff authentication is required." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "Staff authentication is required." });
             }
 
             if (!TryGetRestaurantId(out var restaurantId))
             {
-                return StatusCode(403, new { success = false, message = "The authenticated account has no restaurant/branch context." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "The authenticated account has no restaurant/branch context." });
             }
 
+            var defaultColor = _configuration["ThemeSettings:DefaultAccentColor"]
+                            ?? _configuration["DefaultTheme:AccentColor"]
+                            ?? RestaurantThemeColorService.DefaultAccentColor;
+
             var saved = await _themeService.GetAsync(restaurantId);
+
+            string? resolvedColor = saved?.AccentColor;
+            if (string.IsNullOrWhiteSpace(resolvedColor))
+            {
+                var setting = await _db.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.RestaurantId == restaurantId.ToString() || s.Id == (int)restaurantId);
+                if (!string.IsNullOrWhiteSpace(setting?.AccentColor))
+                {
+                    resolvedColor = setting.AccentColor;
+                }
+            }
+
             return Ok(new
             {
                 success = true,
                 data = new RestaurantThemeColorResponse
                 {
                     RestaurantId = restaurantId,
-                    AccentColor = saved?.AccentColor ?? RestaurantThemeColorService.DefaultAccentColor,
+                    AccentColor = resolvedColor ?? defaultColor,
                     CreatedAt = saved?.CreatedAt,
                     UpdatedAt = saved?.UpdatedAt,
                     UpdatedBy = saved?.UpdatedBy
@@ -79,16 +115,16 @@ public sealed class RestaurantThemeColorController : ControllerBase
 
     [HttpPut]
     [Authorize]
-    [ProducesResponseType(typeof(object), 200)]
-    [ProducesResponseType(typeof(object), 400)]
-    [ProducesResponseType(typeof(object), 401)]
-    [ProducesResponseType(typeof(object), 403)]
-    [ProducesResponseType(typeof(object), 500)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateTheme([FromBody] UpdateRestaurantThemeColorRequest? request)
     {
         try
         {
-            if (!IsAdmin())
+            if (!HasAdminRole())
             {
                 _logger.LogWarning("Unauthorized theme update attempt by user '{User}'.", User.Identity?.Name);
                 return StatusCode(StatusCodes.Status403Forbidden, new
@@ -104,24 +140,41 @@ public sealed class RestaurantThemeColorController : ControllerBase
             }
 
             var accentColor = request.AccentColor.Trim();
-            if (!System.Text.RegularExpressions.Regex.IsMatch(accentColor, "^#[0-9a-fA-F]{6}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+            if (!HexColorPattern.IsMatch(accentColor))
             {
                 return BadRequest(new { success = false, message = "accentColor must be a HEX value in #RRGGBB format." });
             }
 
             if (!TryGetRestaurantId(out var restaurantId))
             {
-                return StatusCode(403, new { success = false, message = "The authenticated account has no restaurant/branch context." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "The authenticated account has no restaurant/branch context." });
             }
 
             if (!TryGetUserId(out var adminId))
             {
-                return StatusCode(403, new { success = false, message = "The authenticated Admin account has no valid user ID." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "The authenticated Admin account has no valid user ID." });
             }
 
             _logger.LogInformation("Admin theme update received. RestaurantId={RestaurantId}, AdminId={AdminId}, AccentColor={AccentColor}", restaurantId, adminId, accentColor);
             var saved = await _themeService.SaveAsync(restaurantId, accentColor, adminId);
             _logger.LogInformation("Theme database transaction committed. RestaurantId={RestaurantId}, AccentColor={AccentColor}", restaurantId, saved.AccentColor);
+
+            // Also keep restaurant_settings table in sync if it exists
+            try
+            {
+                var rSetting = await _db.RestaurantSettings.FirstOrDefaultAsync(s => s.RestaurantId == restaurantId.ToString() || s.Id == (int)restaurantId);
+                if (rSetting != null)
+                {
+                    rSetting.AccentColor = saved.AccentColor;
+                    rSetting.UpdatedBy = adminId.ToString();
+                    rSetting.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to secondary sync theme to restaurant_settings table for restaurant {RestaurantId}", restaurantId);
+            }
 
             var eventData = new
             {
@@ -131,23 +184,30 @@ public sealed class RestaurantThemeColorController : ControllerBase
                 updatedBy = saved.UpdatedBy
             };
 
-            await _realtimeSync.PublishAsync(new RealtimeEvent
+            try
             {
-                EventType = "restaurantSetting:updated",
-                Module = "Settings",
-                Action = "updated",
-                BranchId = restaurantId,
-                RecordId = restaurantId.ToString(),
-                TriggeredBy = adminId.ToString(),
-                Data = eventData
-            }, EventScope.Restaurant);
+                await _realtimeSync.PublishAsync(new RealtimeEvent
+                {
+                    EventType = "restaurantSetting:updated",
+                    Module = "Settings",
+                    Action = "updated",
+                    BranchId = restaurantId,
+                    RecordId = restaurantId.ToString(),
+                    TriggeredBy = adminId.ToString(),
+                    Data = eventData
+                }, EventScope.Restaurant);
 
-            _logger.LogInformation("Theme event dispatch requested. RestaurantId={RestaurantId}, AccentColor={AccentColor}", restaurantId, saved.AccentColor);
+                _logger.LogInformation("Theme event dispatch requested. RestaurantId={RestaurantId}, AccentColor={AccentColor}", restaurantId, saved.AccentColor);
+            }
+            catch (Exception syncEx)
+            {
+                _logger.LogWarning(syncEx, "Non-blocking error publishing realtime theme update event.");
+            }
 
             return Ok(new
             {
                 success = true,
-                message = "Restaurant theme color saved successfully.",
+                message = "Restaurant theme updated successfully",
                 data = new RestaurantThemeColorResponse
                 {
                     RestaurantId = restaurantId,
@@ -170,10 +230,17 @@ public sealed class RestaurantThemeColorController : ControllerBase
         }
     }
 
-    private bool IsAdmin()
+    private bool HasStaffRole()
     {
         var role = User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role");
+        return !string.IsNullOrWhiteSpace(role) && !string.Equals(role, "Customer", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool HasAdminRole()
+    {
+        var role = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("roleName") ?? User.FindFirstValue("role");
         return User.IsInRole("Admin") ||
+               User.IsInRole("admin") ||
                User.IsInRole("SuperAdmin") ||
                User.IsInRole("Super Admin") ||
                string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
@@ -181,31 +248,25 @@ public sealed class RestaurantThemeColorController : ControllerBase
                string.Equals(role, "Super Admin", StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool HasStaffRole()
-    {
-        var role = User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role");
-        return !string.IsNullOrWhiteSpace(role) && !string.Equals(role, "Customer", StringComparison.OrdinalIgnoreCase);
-    }
-
     private bool TryGetRestaurantId(out long restaurantId)
     {
         restaurantId = 0;
-        var claim = User.FindFirstValue("branchId")
-                 ?? User.FindFirstValue("restaurantId")
-                 ?? User.FindFirstValue("branch_id")
+        var claim = User.FindFirstValue("branchId") 
+                 ?? User.FindFirstValue("restaurantId") 
+                 ?? User.FindFirstValue("branch_id") 
                  ?? User.FindFirstValue("restaurant_id");
 
         if (!string.IsNullOrWhiteSpace(claim))
         {
-            var sanitized = claim.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase).Trim();
-            if (long.TryParse(sanitized, out restaurantId) && restaurantId > 0)
+            var cleaned = claim.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase).Trim();
+            if (long.TryParse(cleaned, out restaurantId) && restaurantId > 0)
             {
                 return true;
             }
         }
 
         // For Admin users with default context, resolve to branch 1
-        if (IsAdmin())
+        if (HasAdminRole())
         {
             restaurantId = 1;
             return true;
@@ -217,16 +278,21 @@ public sealed class RestaurantThemeColorController : ControllerBase
     private bool TryGetUserId(out long userId)
     {
         userId = 0;
-        var claim = User.FindFirstValue("userId")
-                 ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
+        var claim = User.FindFirstValue("userId") 
+                 ?? User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                 ?? User.FindFirstValue("id")
                  ?? User.FindFirstValue("sub");
 
-        if (long.TryParse(claim, out userId) && userId > 0)
+        if (!string.IsNullOrWhiteSpace(claim))
         {
-            return true;
+            var cleaned = claim.Replace("user_", "", StringComparison.OrdinalIgnoreCase).Trim();
+            if (long.TryParse(cleaned, out userId) && userId > 0)
+            {
+                return true;
+            }
         }
 
-        if (IsAdmin())
+        if (HasAdminRole())
         {
             userId = 1;
             return true;

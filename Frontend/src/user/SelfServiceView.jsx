@@ -15,24 +15,34 @@ import {
   RotateCcw,
   Sparkles,
   UtensilsCrossed,
-  Printer,
   FileText,
   AlertCircle,
   Clock,
   IndianRupee,
+  Building2,
+  ShieldCheck,
+  Package,
 } from "lucide-react";
 import { formatCurrency } from "../utils/formatCurrency";
+import { calculateOrderFinancials } from "../utils/pricingCalculator";
 import { getMenuItemImage, handleDishImageError } from "../utils/menuImageHelper";
-import { getNextInvoiceNumber, getTodayDateString } from "../utils/invoiceCounter";
-import { apiCreatePaidSelfServiceOrder } from "../api/orderApi";
+import {
+  apiCreateSelfServiceOrder,
+  apiGetSelfServiceOrder,
+  apiInitiateSelfServicePayment,
+} from "../api/orderApi";
+import { parseJwt } from "../utils/auth";
 import QRCode from "../utils/qrCode";
+import { SelfServicePreviewModal } from "./SelfServicePreviewModal";
+import { SelfServiceOrderTracking } from "./SelfServiceOrderTracking";
 import "./SelfServiceView.css";
 
-const GST_RATE = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
-
 export function SelfServiceView({
+  currentSession = null,
   menuItems = [],
   menuLoading = false,
+  menuError = null,
+  onRetryMenu = null,
   restaurantSettings = {},
   onShowReceipt = null,
   onOrderPlaced = null,
@@ -40,14 +50,190 @@ export function SelfServiceView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [dietaryFilter, setDietaryFilter] = useState("all"); // 'all' | 'veg' | 'non-veg' | 'special'
-  const [cart, setCart] = useState([]);
+
+  // Tenant & branch isolation: resolve BOTH restaurant ID and branch ID from authenticated context
+  const cartStorageKey = useMemo(() => {
+    let tokenClaims = null;
+    try {
+      const token = localStorage.getItem("avsr_jwt_token") || localStorage.getItem("token");
+      if (token) tokenClaims = parseJwt(token);
+    } catch {}
+
+    const rawRestId =
+      restaurantSettings?.restaurantId ??
+      restaurantSettings?.RestaurantId ??
+      currentSession?.restaurantId ??
+      currentSession?.restaurant_id ??
+      tokenClaims?.restaurantId ??
+      tokenClaims?.restaurant_id ??
+      "";
+
+    const rawBranchId =
+      restaurantSettings?.branchId ??
+      restaurantSettings?.BranchId ??
+      currentSession?.branchId ??
+      currentSession?.branch_id ??
+      tokenClaims?.branchId ??
+      tokenClaims?.branch_id ??
+      "";
+
+    const cleanRest = String(rawRestId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "_");
+    const cleanBranch = String(rawBranchId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    if (cleanRest && cleanBranch) {
+      return `gourmet_pos_self_service_cart_r_${cleanRest}_b_${cleanBranch}_v1`;
+    }
+    if (cleanBranch) {
+      return `gourmet_pos_self_service_cart_b_${cleanBranch}_v1`;
+    }
+    if (cleanRest) {
+      return `gourmet_pos_self_service_cart_r_${cleanRest}_v1`;
+    }
+
+    // When tenant context is completely missing/unauthenticated, scope to an isolated ephemeral guest key
+    // so it never silently restores or leaks an authenticated restaurant or branch cart.
+    return "gourmet_pos_self_service_cart_guest_unscoped_v1";
+  }, [
+    restaurantSettings?.restaurantId,
+    restaurantSettings?.RestaurantId,
+    restaurantSettings?.branchId,
+    restaurantSettings?.BranchId,
+    currentSession?.restaurantId,
+    currentSession?.restaurant_id,
+    currentSession?.branchId,
+    currentSession?.branch_id,
+  ]);
+
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(cartStorageKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+
+  // Customer contact details & idempotency key for Self Service order
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
+
+  // Order submission, error handling & confirmed order display states (Phase 2B.1)
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [confirmedOrder, setConfirmedOrder] = useState(null);
+
+  // Phase 2B.2 Payment UI States (awaiting authenticated backend payment gateway integration)
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("upi"); // 'upi' | 'cash' | 'card'
-  const [cashTendered, setCashTendered] = useState("");
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentError, setPaymentError] = useState("");
-  const [paymentSuccessOrder, setPaymentSuccessOrder] = useState(null);
-  const [generatedOrderNumber, setGeneratedOrderNumber] = useState("");
+  const [paymentOrder, setPaymentOrder] = useState(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("upi"); // 'upi' | 'cash' | 'card'
+  const [qrDataUrl, setQrDataUrl] = useState("");
+
+  // Phase 2B.3 Invoice & Receipt Preview State (preview only, no official issuance)
+  const [previewOrder, setPreviewOrder] = useState(null);
+
+  // Phase 2B.4 Order Tracking State (authoritative backend-confirmed order only)
+  const [trackingOrder, setTrackingOrder] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState("");
+
+  // Resolved branch context for API scoping
+  const resolvedBranchId = useMemo(() => {
+    let tokenClaims = null;
+    try {
+      const token = localStorage.getItem("avsr_jwt_token") || localStorage.getItem("token");
+      if (token) tokenClaims = parseJwt(token);
+    } catch {}
+    const raw =
+      restaurantSettings?.branchId ??
+      restaurantSettings?.BranchId ??
+      currentSession?.branchId ??
+      currentSession?.branch_id ??
+      tokenClaims?.branchId ??
+      tokenClaims?.branch_id ??
+      null;
+    if (!raw) return null;
+    const sanitized = String(raw).replace("restaurant_", "").trim();
+    const num = Number(sanitized);
+    return Number.isFinite(num) && num > 0 ? num : null;
+  }, [
+    restaurantSettings?.branchId,
+    restaurantSettings?.BranchId,
+    currentSession?.branchId,
+    currentSession?.branch_id,
+  ]);
+
+  // When branch or restaurant context switches, immediately load the active branch's cart
+  useEffect(() => {
+    if (!cartStorageKey) return;
+    try {
+      const saved = sessionStorage.getItem(cartStorageKey);
+      setCart(saved ? JSON.parse(saved) : []);
+    } catch {
+      setCart([]);
+    }
+  }, [cartStorageKey]);
+
+  // Synchronize cart with sessionStorage whenever cart changes for the active branch context
+  useEffect(() => {
+    if (!cartStorageKey) return;
+    try {
+      sessionStorage.setItem(cartStorageKey, JSON.stringify(cart));
+    } catch (err) {
+      console.warn("Failed to persist self service cart to sessionStorage:", err);
+    }
+  }, [cart, cartStorageKey]);
+
+  // Cart Price & Product Integrity: Reconcile cart items against live backend menu
+  // 1. Never trust old/tampered stored prices - always override with current menu price
+  // 2. Safely remove products that were deleted or became unavailable
+  useEffect(() => {
+    if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+
+    setCart((prevCart) => {
+      if (!Array.isArray(prevCart) || prevCart.length === 0) return prevCart;
+
+      let hasModifications = false;
+      const verifiedCart = [];
+
+      for (const item of prevCart) {
+        const liveDish = menuItems.find(
+          (m) => String(m.id || m.menuItemId) === String(item.id || item.menuItemId)
+        );
+
+        // Safe drop if item no longer exists in menu or is marked unavailable
+        const isStillAvailable =
+          liveDish &&
+          liveDish.isAvailable !== false &&
+          liveDish.available !== false &&
+          liveDish.status !== "inactive";
+
+        if (!isStillAvailable) {
+          hasModifications = true;
+          continue;
+        }
+
+        const freshPrice = Number(liveDish.price || liveDish.unitPrice || 0);
+        const freshName = liveDish.name || liveDish.dishName || item.name;
+
+        if (item.price !== freshPrice || item.name !== freshName) {
+          hasModifications = true;
+          verifiedCart.push({
+            ...item,
+            name: freshName,
+            price: freshPrice,
+          });
+        } else {
+          verifiedCart.push(item);
+        }
+      }
+
+      return hasModifications ? verifiedCart : prevCart;
+    });
+  }, [menuItems]);
+
 
   // Categories extraction
   const categories = useMemo(() => {
@@ -64,11 +250,7 @@ export function SelfServiceView({
   // Filtered menu items
   const filteredMenuItems = useMemo(() => {
     return menuItems.filter((item) => {
-      // 1. Availability check (treat items without isAvailable explicit false as available)
-      const isAvail = item.isAvailable !== false && item.available !== false && item.status !== "inactive";
-      if (!isAvail) return false;
-
-      // 2. Category check
+      // 1. Category check
       if (selectedCategory !== "all") {
         const cat = item.category || item.categoryName || item.dishCategory || "";
         if (cat.trim().toLowerCase() !== selectedCategory.toLowerCase()) {
@@ -76,7 +258,7 @@ export function SelfServiceView({
         }
       }
 
-      // 3. Dietary check
+      // 2. Dietary check
       if (dietaryFilter === "veg") {
         const d = String(item.dietary || item.dietaryType || "").toLowerCase();
         if (d !== "veg" && d !== "vegetarian") return false;
@@ -87,7 +269,7 @@ export function SelfServiceView({
         if (!item.isSpecial && !item.special) return false;
       }
 
-      // 4. Search query
+      // 3. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const name = String(item.name || item.dishName || "").toLowerCase();
@@ -102,8 +284,15 @@ export function SelfServiceView({
     });
   }, [menuItems, selectedCategory, dietaryFilter, searchQuery]);
 
-  // Cart operations
+  // Cart operations (modifying cart invalidates pending idempotency key to prevent key reuse on changed carts)
   const addToCart = (item) => {
+    // Prevent adding unavailable items
+    const isAvail = item.isAvailable !== false && item.available !== false && item.status !== "inactive";
+    if (!isAvail) return;
+
+    setIdempotencyKey("");
+    setOrderError("");
+
     setCart((prev) => {
       const itemId = item.id || item.menuItemId || item.backendId;
       const existing = prev.find((i) => (i.id || i.menuItemId) === itemId);
@@ -129,6 +318,9 @@ export function SelfServiceView({
   };
 
   const updateCartQuantity = (itemId, delta) => {
+    setIdempotencyKey("");
+    setOrderError("");
+
     setCart((prev) =>
       prev
         .map((item) => {
@@ -143,171 +335,222 @@ export function SelfServiceView({
   };
 
   const removeFromCart = (itemId) => {
+    setIdempotencyKey("");
+    setOrderError("");
     setCart((prev) => prev.filter((item) => (item.id || item.menuItemId) !== itemId));
   };
 
   const clearCart = () => {
+    setIdempotencyKey("");
+    setOrderError("");
     setCart([]);
-  };
-
-  // Cart financial calculations
-  const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  }, [cart]);
-
-  const taxAmount = useMemo(() => {
-    return Math.round(subtotal * GST_RATE * 100) / 100;
-  }, [subtotal]);
-
-  const discountAmount = 0; // standard 0 discount on self service unless configured
-  const grandTotal = useMemo(() => {
-    return Math.round((subtotal + taxAmount - discountAmount) * 100) / 100;
-  }, [subtotal, taxAmount, discountAmount]);
-
-  const totalItemCount = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0);
-  }, [cart]);
-
-  // Generate order number when opening payment
-  const handleProceedToPayment = () => {
-    if (cart.length === 0) return;
-    const timestampStr = Date.now().toString().slice(-6);
-    const orderNo = `SS-${timestampStr}`;
-    setGeneratedOrderNumber(orderNo);
-    setCashTendered(String(Math.ceil(grandTotal)));
-    setPaymentError("");
-    setIsPaymentOpen(true);
-  };
-
-  // Confirm payment and create invoice
-  const handleConfirmPayment = async () => {
-    if (cart.length === 0) return;
-    setIsProcessingPayment(true);
-    setPaymentError("");
-
-    try {
-      const today = getTodayDateString();
-      const invoiceNo = getNextInvoiceNumber(today);
-      const orderId = `SS-${Date.now()}`;
-      const nowIso = new Date().toISOString();
-
-      const orderPayload = {
-        orderType: "SelfService",
-        tableName: "Self Service",
-        serverName: "Self Service Kiosk",
-        guests: 1,
-        status: "Settled",
-        fulfillmentStatus: "Completed",
-        paymentMethod: paymentMethod.toUpperCase(),
-        paymentStatus: "Paid",
-        invoiceNumber: invoiceNo,
-        invoiceNo: invoiceNo,
-        orderNumber: generatedOrderNumber || orderId,
-        subtotal: subtotal,
-        taxAmount: taxAmount,
-        discountPercent: 0,
-        discountAmount: 0,
-        serviceChargeAmount: 0,
-        grandTotal: grandTotal,
-        date: today,
-        createdAt: nowIso,
-        orderTimestamp: Date.now(),
-        isSelfService: true,
-        items: cart.map((i) => ({
-          menuItemId: Number(i.menuItemId || i.id) || undefined,
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-          notes: "Self Service Order",
-        })),
-        payments: [
-          {
-            paymentMode: paymentMethod.toUpperCase(),
-            amount: grandTotal,
-            status: "Success",
-            createdAt: nowIso,
-          },
-        ],
-      };
-
-      // 1. Call API to persist in backend
-      let returnedId = orderId;
+    if (cartStorageKey) {
       try {
-        const res = await apiCreatePaidSelfServiceOrder(orderPayload);
-        if (res?.success && res.data) {
-          const bData = res.data.data ?? res.data;
-          if (bData?.id || bData?.Id) returnedId = String(bData.id || bData.Id);
-        }
-      } catch (apiErr) {
-        console.warn("SelfService backend API sync note:", apiErr?.message);
-      }
-
-      // 2. Save locally for instant live reflection across all tabs & Admin
-      try {
-        const storedKey = "gourmet_pos_past_orders_v2_inr";
-        const existing = JSON.parse(localStorage.getItem(storedKey) || "[]");
-        const orderRecord = {
-          ...orderPayload,
-          id: returnedId,
-          orderId: returnedId,
-        };
-        const updated = [orderRecord, ...existing];
-        localStorage.setItem(storedKey, JSON.stringify(updated));
-      } catch (storageErr) {
-        console.warn("Storage sync error:", storageErr);
-      }
-
-      // 3. Dispatch real-time events for Admin and Invoice views
-      window.dispatchEvent(new CustomEvent("avsr-orders-updated", { detail: [orderPayload] }));
-      window.dispatchEvent(new CustomEvent("avsr-invoices-updated", { detail: [orderPayload] }));
-
-      // 4. Construct receipt object matching ReceiptModal expectations
-      const receiptData = {
-        id: returnedId,
-        name: "Self Service",
-        tableName: "Self Service",
-        section: "Self Service Kiosk",
-        server: "Self Service Kiosk",
-        guests: 1,
-        items: cart.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-        subtotal: subtotal,
-        taxAmount: taxAmount,
-        serviceCharge: 0,
-        serviceChargeAmount: 0,
-        tipAmount: 0,
-        grandTotal: grandTotal,
-        paymentMethod: paymentMethod.toUpperCase(),
-        invoiceNo: invoiceNo,
-        orderNumber: generatedOrderNumber || orderId,
-        date: today,
-        createdAt: nowIso,
-        orderType: "SelfService",
-        isSelfService: true,
-      };
-
-      setPaymentSuccessOrder(receiptData);
-      setIsPaymentOpen(false);
-      clearCart();
-
-      if (typeof onOrderPlaced === "function") {
-        onOrderPlaced(receiptData);
-      }
-
-      // Automatically trigger Receipt View / Print / PDF modal
-      if (typeof onShowReceipt === "function") {
-        onShowReceipt(receiptData, returnedId);
-      }
-    } catch (err) {
-      console.error("Payment confirmation failed:", err);
-      setPaymentError(err?.message || "Failed to confirm payment. Please try again.");
-    } finally {
-      setIsProcessingPayment(false);
+        sessionStorage.removeItem(cartStorageKey);
+      } catch {}
     }
   };
+
+  // Financial calculation integrated with POS rules and active restaurant settings
+  // Service charge is strictly excluded for Self Service orders.
+  const financials = useMemo(() => {
+    return calculateOrderFinancials(cart, {
+      orderType: "SelfService",
+      foodGstRate: restaurantSettings?.foodGstRate ?? restaurantSettings?.taxRate ?? 5,
+      serviceChargeEnabled: false,
+      serviceChargeRate: 0,
+      roundingMode: restaurantSettings?.roundingMode ?? "nearest",
+      discountPercent: 0,
+      discountAmount: 0,
+      tipAmount: 0,
+    });
+  }, [cart, restaurantSettings]);
+
+  const {
+    subtotal,
+    taxableAmount,
+    foodGstRate,
+    cgstRate,
+    sgstRate,
+    cgstAmount,
+    sgstAmount,
+    taxAmount,
+    serviceChargeEnabled,
+    serviceChargeRate,
+    serviceChargeAmount,
+    discountAmount,
+    discountPercent,
+    unroundedTotal,
+    roundingMode,
+    roundingAdjustment,
+    finalPayable,
+    itemCount: totalItemCount,
+  } = financials;
+  const grandTotal = finalPayable;
+
+  // Proceed Button: Open a new order review with a newly generated idempotency key
+  const handleProceedClick = () => {
+    if (cart.length === 0) return;
+    const newKey = `ss_order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    setIdempotencyKey(newKey);
+    setOrderError("");
+    setIsReviewOpen(true);
+  };
+
+  // Submit Self Service Order to Phase 2B.1 Backend API
+  const handleSubmitSelfServiceOrder = async () => {
+    if (cart.length === 0 || isSubmittingOrder) return;
+
+    setIsSubmittingOrder(true);
+    setOrderError("");
+
+    // Preserve existing idempotency key across retries, or initialize if empty
+    const activeKey = idempotencyKey || `ss_order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    if (!idempotencyKey) {
+      setIdempotencyKey(activeKey);
+    }
+
+    try {
+      const orderPayload = {
+        items: cart.map((item) => ({
+          menuItemId: Number(item.id || item.menuItemId || 0),
+          quantity: Number(item.quantity || 1),
+          notes: item.notes || "Self Service Order",
+        })),
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        specialInstructions: specialInstructions.trim() || undefined,
+        idempotencyKey: activeKey,
+      };
+
+      const res = await apiCreateSelfServiceOrder(orderPayload, resolvedBranchId);
+
+      if (res?.success && res.data) {
+        const orderData = res.data.data ?? res.data;
+        setIsReviewOpen(false);
+        clearCart();
+        setIdempotencyKey("");
+        setCustomerName("");
+        setCustomerPhone("");
+        setSpecialInstructions("");
+        setSelectedPaymentMethod("upi");
+        setConfirmedOrder(orderData);
+        setPaymentOrder(orderData);
+        setIsPaymentOpen(true);
+        if (typeof onOrderPlaced === "function") {
+          onOrderPlaced(orderData);
+        }
+      } else {
+        // Cart is strictly preserved on error
+        setOrderError(res?.error || "Failed to create order. Please verify your connection and try again.");
+      }
+    } catch (err) {
+      // Cart is strictly preserved on network/server failure
+      setOrderError(err?.message || "Cannot connect to the server. Please verify the backend is running and retry.");
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  // Close order confirmation modal and discard its associated order/modal context
+  const handleCloseConfirmedOrder = () => {
+    setConfirmedOrder(null);
+    setIsPaymentOpen(false);
+    setPaymentOrder(null);
+    setPreviewOrder(null);
+    setTrackingOrder(null);
+  };
+
+  // Close payment modal while preserving confirmedOrder summary underneath
+  const handleClosePaymentModal = () => {
+    setIsPaymentOpen(false);
+    setPaymentOrder(null);
+  };
+
+  // Active payable amount & order number from backend-confirmed Phase 2B.1 order
+  const activePayableAmount = useMemo(() => {
+    if (paymentOrder?.financials?.finalPayable != null) {
+      return Number(paymentOrder.financials.finalPayable);
+    }
+    if (paymentOrder?.grandTotal != null) {
+      return Number(paymentOrder.grandTotal);
+    }
+    return Number(finalPayable || 0);
+  }, [paymentOrder, finalPayable]);
+
+  const activeOrderNumber = useMemo(() => {
+    if (paymentOrder?.orderNumber) return paymentOrder.orderNumber;
+    if (confirmedOrder?.orderNumber) return confirmedOrder.orderNumber;
+    return paymentOrder?.orderId ? `ORD-${paymentOrder.orderId}` : "";
+  }, [paymentOrder, confirmedOrder]);
+
+  // Initiate payment with backend when payment modal opens or payment method changes
+  useEffect(() => {
+    const orderId = paymentOrder?.orderId ?? paymentOrder?.id;
+    if (!isPaymentOpen || !orderId) return;
+    let cancelled = false;
+    apiInitiateSelfServicePayment(orderId, selectedPaymentMethod.toUpperCase(), resolvedBranchId)
+      .then((res) => {
+        if (cancelled || !res?.success || !res.data) return;
+        const initData = res.data?.data ?? res.data;
+        if (initData?.qrPayload) {
+          setPaymentOrder((prev) =>
+            prev ? { ...prev, qrPayload: initData.qrPayload, gatewayConfigured: initData.gatewayConfigured } : prev
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isPaymentOpen, paymentOrder?.orderId, selectedPaymentMethod, resolvedBranchId]);
+
+  const handleRefreshTracking = async () => {
+    const orderId = trackingOrder?.orderId ?? trackingOrder?.id;
+    if (!orderId) return;
+    setTrackingLoading(true);
+    setTrackingError("");
+    try {
+      const res = await apiGetSelfServiceOrder(orderId, resolvedBranchId);
+      if (res?.success && res.data) {
+        const fresh = res.data?.data ?? res.data;
+        setTrackingOrder(fresh);
+      } else {
+        setTrackingError(res?.error || "Could not refresh order status from backend.");
+      }
+    } catch (err) {
+      setTrackingError(err?.message || "Could not refresh order status from backend.");
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  // Prepared to render a genuine QR payload received from a future authenticated backend API.
+  // Never generate production payment QR codes from locally configured merchant details.
+  const backendQrPayload = paymentOrder?.qrPayload || paymentOrder?.upiQrPayload || "";
+
+  useEffect(() => {
+    if (!isPaymentOpen || selectedPaymentMethod !== "upi" || !backendQrPayload) {
+      setQrDataUrl("");
+      return;
+    }
+    let isMounted = true;
+    QRCode.toDataURL(backendQrPayload, {
+      width: 260,
+      margin: 2,
+      errorCorrectionLevel: "M",
+    })
+      .then((url) => {
+        if (isMounted) setQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error("Backend UPI QR rendering error:", err);
+        if (isMounted) setQrDataUrl("");
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [isPaymentOpen, selectedPaymentMethod, backendQrPayload]);
 
   const getCartItemQuantity = (itemId) => {
     const found = cart.find((i) => (i.id || i.menuItemId) === itemId);
@@ -343,56 +586,6 @@ export function SelfServiceView({
           </button>
         </div>
       </div>
-
-      {/* 2. Success Banner if an order was just paid */}
-      {paymentSuccessOrder && (
-        <div
-          style={{
-            marginBottom: "1rem",
-            padding: "0.85rem 1.25rem",
-            borderRadius: "10px",
-            background: "rgba(16, 185, 129, 0.12)",
-            border: "1.5px solid var(--success)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-            <CheckCircle2 size={22} color="var(--success)" />
-            <div>
-              <div style={{ fontWeight: 800, color: "var(--text-main)", fontSize: "0.88rem" }}>
-                Order #{paymentSuccessOrder.orderNumber || paymentSuccessOrder.id} successfully paid!
-              </div>
-              <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                Invoice No: <strong style={{ color: "var(--accent-amber)" }}>{paymentSuccessOrder.invoiceNo}</strong> • ORDER TYPE: SELF SERVICE
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            {typeof onShowReceipt === "function" && (
-              <button
-                type="button"
-                className="self-service-nav-pill-btn is-active"
-                onClick={() => onShowReceipt(paymentSuccessOrder, paymentSuccessOrder.id)}
-              >
-                <Printer size={14} />
-                <span>Print / View Invoice</span>
-              </button>
-            )}
-            <button
-              type="button"
-              className="self-service-nav-pill-btn"
-              onClick={() => setPaymentSuccessOrder(null)}
-            >
-              <X size={14} />
-              <span>Dismiss</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 3. Main Two-Column Layout */}
       <div className="self-service-layout">
@@ -469,9 +662,55 @@ export function SelfServiceView({
           </div>
 
           {/* Menu Items Grid */}
-          {menuLoading && menuItems.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
-              Loading Self Service Menu...
+          {menuError ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "3rem 1.5rem",
+                background: "var(--bg-secondary)",
+                borderRadius: "12px",
+                border: "1px dashed var(--danger, #ef4444)",
+                color: "var(--text-muted)",
+              }}
+            >
+              <AlertCircle size={38} color="var(--danger, #ef4444)" style={{ margin: "0 auto 0.75rem" }} />
+              <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-main)" }}>
+                Failed to load menu items
+              </div>
+              <div style={{ fontSize: "0.78rem", marginTop: "4px" }}>
+                {menuError || "An error occurred while fetching the restaurant menu. Please try again."}
+              </div>
+              {typeof onRetryMenu === "function" && (
+                <button
+                  type="button"
+                  className="self-service-nav-pill-btn"
+                  onClick={onRetryMenu}
+                  style={{ marginTop: "1rem" }}
+                >
+                  <RotateCcw size={14} />
+                  <span>Retry Loading</span>
+                </button>
+              )}
+            </div>
+          ) : menuLoading && menuItems.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "3rem 1.5rem", color: "var(--text-muted)" }}>
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  border: "3px solid var(--border-subtle)",
+                  borderTopColor: "var(--accent-amber)",
+                  borderRadius: "50%",
+                  animation: "spin 0.8s linear infinite",
+                  margin: "0 auto 1rem",
+                }}
+              />
+              <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "var(--text-main)" }}>
+                Loading Self Service Menu...
+              </div>
+              <div style={{ fontSize: "0.78rem", marginTop: "4px" }}>
+                Fetching latest dishes and category availability
+              </div>
             </div>
           ) : filteredMenuItems.length === 0 ? (
             <div
@@ -491,6 +730,21 @@ export function SelfServiceView({
               <div style={{ fontSize: "0.78rem", marginTop: "4px" }}>
                 Try adjusting your search query or selecting a different category.
               </div>
+              {(searchQuery || selectedCategory !== "all" || dietaryFilter !== "all") && (
+                <button
+                  type="button"
+                  className="self-service-nav-pill-btn"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("all");
+                    setDietaryFilter("all");
+                  }}
+                  style={{ marginTop: "1rem" }}
+                >
+                  <RotateCcw size={14} />
+                  <span>Reset All Filters</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="self-service-grid">
@@ -498,9 +752,14 @@ export function SelfServiceView({
                 const dishId = dish.id || dish.menuItemId || dish.backendId;
                 const qty = getCartItemQuantity(dishId);
                 const isVeg = String(dish.dietary || dish.dietaryType || "").toLowerCase() === "veg";
+                const isAvailable = dish.isAvailable !== false && dish.available !== false && dish.status !== "inactive";
 
                 return (
-                  <div key={dishId} className="self-service-dish-card">
+                  <div
+                    key={dishId}
+                    className="self-service-dish-card"
+                    style={!isAvailable ? { opacity: 0.65 } : undefined}
+                  >
                     <div className="self-service-dish-img-wrap">
                       <img
                         src={getMenuItemImage(dish)}
@@ -509,12 +768,14 @@ export function SelfServiceView({
                         loading="lazy"
                       />
                       <span className="self-service-dietary-tag">
-                        {isVeg ? (
+                        {!isAvailable ? (
+                          <span style={{ color: "var(--danger, #ef4444)", fontWeight: 800 }}>✕ OUT OF STOCK</span>
+                        ) : isVeg ? (
                           <span style={{ color: "#10b981" }}>● VEG</span>
                         ) : (
                           <span style={{ color: "#ef4444" }}>▲ NON-VEG</span>
                         )}
-                        {(dish.isSpecial || dish.special) && (
+                        {isAvailable && (dish.isSpecial || dish.special) && (
                           <span style={{ color: "var(--accent-amber)", marginLeft: "4px" }}>★ SPECIAL</span>
                         )}
                       </span>
@@ -533,7 +794,23 @@ export function SelfServiceView({
                           {formatCurrency(dish.price || dish.unitPrice || 0)}
                         </div>
 
-                        {qty === 0 ? (
+                        {!isAvailable ? (
+                          <button
+                            type="button"
+                            className="self-service-add-btn"
+                            disabled
+                            style={{
+                              opacity: 0.5,
+                              cursor: "not-allowed",
+                              background: "var(--bg-tertiary)",
+                              color: "var(--text-muted)",
+                              border: "1px solid var(--border-subtle)",
+                            }}
+                            title="This item is currently unavailable"
+                          >
+                            <span>Unavailable</span>
+                          </button>
+                        ) : qty === 0 ? (
                           <button
                             type="button"
                             className="self-service-add-btn"
@@ -668,23 +945,46 @@ export function SelfServiceView({
           {cart.length > 0 && (
             <div className="self-service-pricing-breakdown">
               <div className="self-service-pricing-row">
-                <span>Subtotal ({totalItemCount} items)</span>
+                <span>Subtotal ({totalItemCount} {totalItemCount === 1 ? "item" : "items"})</span>
                 <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="self-service-pricing-row">
-                <span>GST Tax (5%)</span>
-                <span>{formatCurrency(taxAmount)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="self-service-pricing-row" style={{ color: "var(--success)" }}>
-                  <span>Discount</span>
+                  <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}</span>
                   <span>- {formatCurrency(discountAmount)}</span>
                 </div>
               )}
+              <div className="self-service-pricing-row">
+                <span>GST Tax ({foodGstRate}%)</span>
+                <span>{formatCurrency(taxAmount)}</span>
+              </div>
+              <div
+                className="self-service-pricing-row"
+                style={{ fontSize: "0.68rem", color: "var(--text-muted)", paddingLeft: "0.5rem" }}
+              >
+                <span>CGST ({cgstRate}%): {formatCurrency(cgstAmount)}</span>
+                <span>SGST ({sgstRate}%): {formatCurrency(sgstAmount)}</span>
+              </div>
+              {serviceChargeEnabled && serviceChargeAmount > 0 && (
+                <div className="self-service-pricing-row">
+                  <span>Service Charge ({serviceChargeRate}%)</span>
+                  <span>{formatCurrency(serviceChargeAmount)}</span>
+                </div>
+              )}
+              {Math.abs(roundingAdjustment) > 0 && (
+                <div className="self-service-pricing-row" style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                  <span>Rounding Adjustment ({roundingMode})</span>
+                  <span>
+                    {roundingAdjustment > 0
+                      ? `+${formatCurrency(roundingAdjustment)}`
+                      : `-${formatCurrency(Math.abs(roundingAdjustment))}`}
+                  </span>
+                </div>
+              )}
               <div className="self-service-pricing-row total-row">
-                <span>Grand Total</span>
+                <span>Final Payable</span>
                 <span style={{ color: "var(--accent-amber-light)" }}>
-                  {formatCurrency(grandTotal)}
+                  {formatCurrency(finalPayable)}
                 </span>
               </div>
             </div>
@@ -706,27 +1006,27 @@ export function SelfServiceView({
               type="button"
               className="self-service-btn-proceed"
               disabled={cart.length === 0}
-              onClick={handleProceedToPayment}
+              onClick={handleProceedClick}
             >
-              <span>Proceed to Payment</span>
+              <span>Proceed</span>
               <ArrowRight size={16} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* 4. Payment Screen Modal */}
-      {isPaymentOpen && (
+      {/* 4. Order Review Modal (Phase 1) */}
+      {isReviewOpen && (
         <div className="self-service-modal-overlay">
-          <div className="self-service-payment-modal">
+          <div className="self-service-payment-modal" style={{ maxWidth: "520px" }}>
             <div className="self-service-payment-header">
               <h3>
-                <CreditCard size={20} color="var(--accent-amber)" />
-                <span>Complete Self Service Payment</span>
+                <ShoppingCart size={20} color="var(--accent-amber)" />
+                <span>Self Service Order Review</span>
               </h3>
               <button
                 type="button"
-                onClick={() => setIsPaymentOpen(false)}
+                onClick={() => setIsReviewOpen(false)}
                 style={{
                   background: "none",
                   border: "none",
@@ -739,24 +1039,79 @@ export function SelfServiceView({
             </div>
 
             <div className="self-service-payment-body">
-              {/* Order Number & Items Summary */}
-              <div className="self-service-payment-order-summary">
+              {/* Items List */}
+              <div style={{ maxHeight: "240px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {financials.items.map((item) => (
+                  <div
+                    key={item.id || item.menuItemId}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "0.55rem 0.75rem",
+                      background: "var(--bg-primary)",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-subtle)",
+                      fontSize: "0.82rem",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, color: "var(--text-main)" }}>{item.name}</div>
+                      <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                        Unit: {formatCurrency(item.unitPrice)} × Qty: {item.quantity}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 800, color: "var(--accent-amber)", textAlign: "right" }}>
+                      <div style={{ fontSize: "0.86rem" }}>{formatCurrency(item.lineSubtotal)}</div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: 500 }}>
+                        Item Total
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Complete POS Financial Summary */}
+              <div className="self-service-payment-order-summary" style={{ marginTop: "0.5rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Order Reference:</span>
-                  <span style={{ fontWeight: 800, color: "var(--accent-amber)" }}>
-                    #{generatedOrderNumber}
-                  </span>
+                  <span style={{ color: "var(--text-muted)" }}>Subtotal ({totalItemCount} {totalItemCount === 1 ? "item" : "items"}):</span>
+                  <span style={{ fontWeight: 700 }}>{formatCurrency(subtotal)}</span>
                 </div>
+
+                {discountAmount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "var(--success)" }}>
+                    <span>Discount {discountPercent > 0 ? `(${discountPercent}%)` : ""}:</span>
+                    <span style={{ fontWeight: 700 }}>- {formatCurrency(discountAmount)}</span>
+                  </div>
+                )}
+
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Order Type:</span>
-                  <span style={{ fontWeight: 700, color: "var(--text-main)" }}>SELF SERVICE</span>
+                  <span style={{ color: "var(--text-muted)" }}>GST / Food Tax ({foodGstRate}%):</span>
+                  <span style={{ fontWeight: 700 }}>{formatCurrency(taxAmount)}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
-                  <span style={{ color: "var(--text-muted)" }}>Items Selected:</span>
-                  <span style={{ fontWeight: 700, color: "var(--text-main)" }}>
-                    {totalItemCount} items ({cart.map((c) => `${c.name} ×${c.quantity}`).join(", ")})
-                  </span>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "var(--text-muted)", paddingLeft: "0.75rem" }}>
+                  <span>CGST ({cgstRate}%): {formatCurrency(cgstAmount)}</span>
+                  <span>SGST ({sgstRate}%): {formatCurrency(sgstAmount)}</span>
                 </div>
+
+                {serviceChargeEnabled && serviceChargeAmount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Service Charge ({serviceChargeRate}%):</span>
+                    <span style={{ fontWeight: 700 }}>{formatCurrency(serviceChargeAmount)}</span>
+                  </div>
+                )}
+
+                {Math.abs(roundingAdjustment) > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                    <span>Rounding Adjustment ({roundingMode}):</span>
+                    <span style={{ fontWeight: 700 }}>
+                      {roundingAdjustment > 0
+                        ? `+${formatCurrency(roundingAdjustment)}`
+                        : `-${formatCurrency(Math.abs(roundingAdjustment))}`}
+                    </span>
+                  </div>
+                )}
+
                 <div
                   style={{
                     display: "flex",
@@ -768,145 +1123,119 @@ export function SelfServiceView({
                     borderTop: "1px dashed var(--border-subtle)",
                   }}
                 >
-                  <span>Total Payable:</span>
+                  <span>Estimated Payable Amount:</span>
                   <span style={{ color: "var(--accent-amber-light)" }}>
-                    {formatCurrency(grandTotal)}
+                    {formatCurrency(finalPayable)}
                   </span>
                 </div>
               </div>
 
-              {/* Payment Methods Selection */}
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    fontWeight: 750,
-                    color: "var(--text-muted)",
-                    marginBottom: "0.45rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Select Payment Method
-                </label>
-                <div className="self-service-payment-methods-grid">
-                  <div
-                    className={`self-service-payment-method-card ${
-                      paymentMethod === "upi" ? "is-selected" : ""
-                    }`}
-                    onClick={() => setPaymentMethod("upi")}
-                  >
-                    <QrCode size={24} />
-                    <span style={{ fontSize: "0.78rem", fontWeight: 750 }}>UPI / QR</span>
-                  </div>
-                  <div
-                    className={`self-service-payment-method-card ${
-                      paymentMethod === "card" ? "is-selected" : ""
-                    }`}
-                    onClick={() => setPaymentMethod("card")}
-                  >
-                    <CreditCard size={24} />
-                    <span style={{ fontSize: "0.78rem", fontWeight: 750 }}>Debit / Credit</span>
-                  </div>
-                  <div
-                    className={`self-service-payment-method-card ${
-                      paymentMethod === "cash" ? "is-selected" : ""
-                    }`}
-                    onClick={() => setPaymentMethod("cash")}
-                  >
-                    <Banknote size={24} />
-                    <span style={{ fontSize: "0.78rem", fontWeight: 750 }}>Cash Counter</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Method Detail Sub-Panel */}
+              {/* Customer Contact Details (Optional) */}
               <div
                 style={{
-                  padding: "0.85rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                  padding: "0.75rem",
                   background: "var(--bg-primary)",
-                  border: "1px solid var(--border-subtle)",
                   borderRadius: "8px",
+                  border: "1px solid var(--border-subtle)",
                 }}
               >
-                {paymentMethod === "upi" && (
-                  <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ background: "#ffffff", padding: "8px", borderRadius: "8px", display: "inline-block" }}>
-                      <QRCode
-                        value={`upi://pay?pa=restaurant@upi&pn=${encodeURIComponent(
-                          restaurantSettings.restaurantName || "Restaurant"
-                        )}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent(generatedOrderNumber)}`}
-                        size={135}
-                      />
-                    </div>
-                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-main)" }}>
-                      Scan QR code with GPay, PhonePe, or Paytm
-                    </div>
-                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                      Amount: {formatCurrency(grandTotal)} • Status: Awaiting Instant Confirmation
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "card" && (
-                  <div style={{ textAlign: "center", padding: "0.85rem 0" }}>
-                    <CreditCard size={36} color="var(--accent-amber)" style={{ margin: "0 auto 0.5rem" }} />
-                    <div style={{ fontSize: "0.82rem", fontWeight: 750, color: "var(--text-main)" }}>
-                      Tap, Dip or Swipe Card on POS Terminal
-                    </div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                      Accepts Visa, Mastercard, RuPay &amp; Amex cards.
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === "cash" && (
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Amount Tendered:</span>
-                      <input
-                        type="number"
-                        min={grandTotal}
-                        value={cashTendered}
-                        onChange={(e) => setCashTendered(e.target.value)}
-                        style={{
-                          width: "120px",
-                          padding: "4px 8px",
-                          borderRadius: "6px",
-                          border: "1px solid var(--border-subtle)",
-                          background: "var(--bg-tertiary)",
-                          color: "var(--text-main)",
-                          fontSize: "0.85rem",
-                          fontWeight: 750,
-                          textAlign: "right",
-                        }}
-                      />
-                    </div>
-                    {Number(cashTendered) > grandTotal && (
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "var(--success)" }}>
-                        <span>Change Due to Customer:</span>
-                        <strong style={{ fontSize: "0.9rem" }}>
-                          {formatCurrency(Number(cashTendered) - grandTotal)}
-                        </strong>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--text-main)" }}>
+                  Customer Details (Optional)
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+                  <input
+                    type="text"
+                    placeholder="Your Name"
+                    value={customerName}
+                    disabled={isSubmittingOrder}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    style={{
+                      padding: "0.45rem 0.65rem",
+                      fontSize: "0.78rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)",
+                      background: "var(--bg-surface)",
+                      color: "var(--text-main)",
+                    }}
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone (for SMS update)"
+                    value={customerPhone}
+                    disabled={isSubmittingOrder}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    style={{
+                      padding: "0.45rem 0.65rem",
+                      fontSize: "0.78rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)",
+                      background: "var(--bg-surface)",
+                      color: "var(--text-main)",
+                    }}
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Special instructions (e.g. less spicy, extra napkins)"
+                  value={specialInstructions}
+                  disabled={isSubmittingOrder}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  style={{
+                    padding: "0.45rem 0.65rem",
+                    fontSize: "0.78rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--bg-surface)",
+                    color: "var(--text-main)",
+                  }}
+                />
               </div>
 
-              {paymentError && (
+              {/* Error Alert Box (Offline / Server Unavailable / Validation) */}
+              {orderError && (
                 <div
                   style={{
-                    padding: "0.65rem 0.85rem",
-                    borderRadius: "6px",
-                    background: "rgba(239, 68, 68, 0.1)",
-                    border: "1px solid var(--danger)",
-                    color: "var(--danger)",
-                    fontSize: "0.75rem",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    background: "rgba(239, 68, 68, 0.12)",
+                    border: "1px solid var(--danger, #ef4444)",
+                    color: "var(--danger, #ef4444)",
+                    fontSize: "0.78rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.6rem",
                   }}
                 >
-                  {paymentError}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                    <span>{orderError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSubmitSelfServiceOrder}
+                    disabled={isSubmittingOrder}
+                    style={{
+                      background: "var(--danger, #ef4444)",
+                      color: "#fff",
+                      border: "none",
+                      padding: "4px 10px",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <RotateCcw size={12} />
+                    <span>Retry</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -915,30 +1244,576 @@ export function SelfServiceView({
               <button
                 type="button"
                 className="self-service-btn-clear"
-                onClick={() => setIsPaymentOpen(false)}
-                disabled={isProcessingPayment}
+                disabled={isSubmittingOrder}
+                onClick={() => setIsReviewOpen(false)}
               >
-                Cancel Payment
+                Continue Browsing
               </button>
               <button
                 type="button"
                 className="self-service-btn-proceed"
-                style={{ flex: "0 0 auto", minWidth: "180px" }}
-                onClick={handleConfirmPayment}
-                disabled={isProcessingPayment}
+                style={{ flex: "0 0 auto", minWidth: "170px" }}
+                disabled={isSubmittingOrder || cart.length === 0}
+                onClick={handleSubmitSelfServiceOrder}
               >
-                {isProcessingPayment ? (
-                  <span>Processing Payment...</span>
+                {isSubmittingOrder ? (
+                  <>
+                    <Clock size={16} className="animate-spin" />
+                    <span>Placing Order...</span>
+                  </>
                 ) : (
                   <>
-                    <CheckCircle2 size={16} />
-                    <span>Confirm Payment (Paid)</span>
+                    <span>Confirm &amp; Place Order</span>
+                    <ArrowRight size={16} />
                   </>
                 )}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* 5. Customer Order Confirmation Modal (Phase 2B.1 Backend API) */}
+      {confirmedOrder && (
+        <div className="self-service-modal-overlay">
+          <div className="self-service-payment-modal" style={{ maxWidth: "540px" }}>
+            <div className="self-service-payment-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <CheckCircle2 size={22} color="var(--success, #10b981)" />
+                <h3 style={{ margin: 0 }}>Self Service Order Confirmed</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseConfirmedOrder}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="self-service-payment-body">
+              {/* Order Meta Card */}
+              <div
+                style={{
+                  padding: "0.85rem 1rem",
+                  background: "var(--bg-primary)",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Order Number
+                  </div>
+                  <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--accent-amber-light)" }}>
+                    {confirmedOrder.orderNumber || `ORD-${confirmedOrder.orderId}`}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.25rem" }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                      fontSize: "0.72rem",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      background: "rgba(245, 158, 11, 0.15)",
+                      color: "var(--accent-amber, #f59e0b)",
+                    }}
+                  >
+                    <Clock size={12} />
+                    <span>{confirmedOrder.status || "PendingPayment"}</span>
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.68rem",
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    Payment: {confirmedOrder.paymentStatus || "Pending"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Notice (Awaiting Payment) */}
+              <div
+                style={{
+                  padding: "0.75rem 1rem",
+                  borderRadius: "8px",
+                  background: "rgba(245, 158, 11, 0.1)",
+                  border: "1px solid rgba(245, 158, 11, 0.3)",
+                  fontSize: "0.76rem",
+                  color: "var(--text-main)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                }}
+              >
+                <Clock size={18} color="var(--accent-amber, #f59e0b)" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>Order Status: Awaiting Payment.</strong> Your order has been registered in the kitchen queue. Payment processing and automated KOT printing will be integrated in Phase 2B.2.
+                </div>
+              </div>
+
+              {/* Confirmed Ordered Items List */}
+              <div>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                  Ordered Items ({confirmedOrder.items?.length || 0})
+                </div>
+                <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                  {(confirmedOrder.items || []).map((item, idx) => (
+                    <div
+                      key={item.orderItemId || item.menuItemId || idx}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0.45rem 0.65rem",
+                        background: "var(--bg-primary)",
+                        borderRadius: "6px",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontWeight: 600 }}>{item.name}</span>
+                        <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "0.5rem" }}>
+                          {formatCurrency(item.unitPrice || item.price)} × {item.quantity}
+                        </span>
+                      </div>
+                      <div style={{ fontWeight: 750 }}>
+                        {formatCurrency(item.lineSubtotal || (item.unitPrice || item.price) * item.quantity)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Backend-Confirmed Financial Breakdown */}
+              {confirmedOrder.financials && (
+                <div className="self-service-payment-order-summary" style={{ marginTop: "0.25rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Backend-Confirmed Subtotal:</span>
+                    <span style={{ fontWeight: 700 }}>{formatCurrency(confirmedOrder.financials.subtotal)}</span>
+                  </div>
+
+                  {confirmedOrder.financials.discountAmount > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "var(--success)" }}>
+                      <span>Discount ({confirmedOrder.financials.discountPercent}%):</span>
+                      <span style={{ fontWeight: 700 }}>- {formatCurrency(confirmedOrder.financials.discountAmount)}</span>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                    <span style={{ color: "var(--text-muted)" }}>GST Tax ({confirmedOrder.financials.foodGstRate}%):</span>
+                    <span style={{ fontWeight: 700 }}>{formatCurrency(confirmedOrder.financials.taxAmount)}</span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "var(--text-muted)", paddingLeft: "0.75rem" }}>
+                    <span>CGST ({confirmedOrder.financials.cgstRate}%): {formatCurrency(confirmedOrder.financials.cgstAmount)}</span>
+                    <span>SGST ({confirmedOrder.financials.sgstRate}%): {formatCurrency(confirmedOrder.financials.sgstAmount)}</span>
+                  </div>
+
+                  {confirmedOrder.financials.serviceChargeEnabled && confirmedOrder.financials.serviceChargeAmount > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem" }}>
+                      <span style={{ color: "var(--text-muted)" }}>Service Charge ({confirmedOrder.financials.serviceChargeRate}%):</span>
+                      <span style={{ fontWeight: 700 }}>{formatCurrency(confirmedOrder.financials.serviceChargeAmount)}</span>
+                    </div>
+                  )}
+
+                  {Math.abs(confirmedOrder.financials.roundingAdjustment || 0) > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                      <span>Rounding Adjustment:</span>
+                      <span style={{ fontWeight: 700 }}>
+                        {confirmedOrder.financials.roundingAdjustment > 0
+                          ? `+${formatCurrency(confirmedOrder.financials.roundingAdjustment)}`
+                          : `-${formatCurrency(Math.abs(confirmedOrder.financials.roundingAdjustment))}`}
+                      </span>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "1.1rem",
+                      fontWeight: 850,
+                      marginTop: "0.35rem",
+                      paddingTop: "0.4rem",
+                      borderTop: "1px dashed var(--border-subtle)",
+                    }}
+                  >
+                    <span>Final Payable:</span>
+                    <span style={{ color: "var(--accent-amber-light)" }}>
+                      {formatCurrency(confirmedOrder.financials.finalPayable)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="self-service-payment-footer" style={{ flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="self-service-btn-clear"
+                onClick={handleCloseConfirmedOrder}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="self-service-btn-clear"
+                onClick={() => setPreviewOrder(confirmedOrder)}
+              >
+                <FileText size={14} style={{ marginRight: "4px", verticalAlign: "-2px" }} />
+                Preview Invoice &amp; Receipt
+              </button>
+              <button
+                type="button"
+                className="self-service-btn-clear"
+                onClick={() => setTrackingOrder(confirmedOrder)}
+              >
+                <Package size={14} style={{ marginRight: "4px", verticalAlign: "-2px" }} />
+                Track Order
+              </button>
+              <button
+                type="button"
+                className="self-service-btn-proceed"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => {
+                  setPaymentOrder(confirmedOrder);
+                  setIsPaymentOpen(true);
+                }}
+              >
+                <span>Proceed to Payment ({formatCurrency(confirmedOrder.financials?.finalPayable || confirmedOrder.grandTotal)})</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Self Service Payment Modal (Phase 2B.2 - Awaiting Backend Payment Gateway) */}
+      {isPaymentOpen && paymentOrder && (
+        <div className="self-service-modal-overlay">
+          <div className="self-service-payment-modal" style={{ maxWidth: "560px" }}>
+            {/* Modal Header */}
+            <div className="self-service-payment-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    background: "rgba(245, 158, 11, 0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--accent-amber)",
+                  }}
+                >
+                  <CreditCard size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>Select Payment Method</h3>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                    Order: {activeOrderNumber}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePaymentModal}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="self-service-payment-body">
+              {/* Total Payable Banner */}
+              <div
+                style={{
+                  padding: "0.85rem 1.15rem",
+                  background: "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 15%, transparent), var(--bg-primary))",
+                  border: "1.5px solid var(--accent-amber)",
+                  borderRadius: "10px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "var(--text-muted)", letterSpacing: "0.5px" }}>
+                    Total Payable Amount
+                  </div>
+                  <div style={{ fontSize: "1.65rem", fontWeight: 900, color: "var(--accent-amber-light)", lineHeight: 1.2 }}>
+                    {formatCurrency(activePayableAmount)}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                  <div>{paymentOrder?.items?.length || 0} item(s)</div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", color: "var(--accent-amber, #f59e0b)", fontWeight: 700, marginTop: "2px" }}>
+                    <Clock size={13} />
+                    <span>{paymentOrder?.paymentStatus || "Pending"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Selector Tabs */}
+              <div className="self-service-payment-methods-grid">
+                <button
+                  type="button"
+                  className={`self-service-payment-method-card ${selectedPaymentMethod === "upi" ? "is-selected" : ""}`}
+                  onClick={() => setSelectedPaymentMethod("upi")}
+                >
+                  <QrCode size={22} />
+                  <span style={{ fontSize: "0.76rem", fontWeight: 750 }}>UPI / QR Code</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`self-service-payment-method-card ${selectedPaymentMethod === "cash" ? "is-selected" : ""}`}
+                  onClick={() => setSelectedPaymentMethod("cash")}
+                >
+                  <Banknote size={22} />
+                  <span style={{ fontSize: "0.76rem", fontWeight: 750 }}>Pay at Counter</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`self-service-payment-method-card ${selectedPaymentMethod === "card" ? "is-selected" : ""}`}
+                  onClick={() => setSelectedPaymentMethod("card")}
+                >
+                  <CreditCard size={22} />
+                  <span style={{ fontSize: "0.76rem", fontWeight: 750 }}>Card Machine</span>
+                </button>
+              </div>
+
+              {/* Dynamic Content Per Method */}
+              {selectedPaymentMethod === "upi" && (
+                <div className="self-service-qr-wrapper">
+                  {/* QR Display Area */}
+                  <div className="self-service-qr-card">
+                    {qrDataUrl ? (
+                      <img src={qrDataUrl} alt={`Backend UPI QR for ${formatCurrency(activePayableAmount)}`} />
+                    ) : (
+                      <div
+                        style={{
+                          width: "220px",
+                          height: "220px",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textAlign: "center",
+                          padding: "1rem",
+                          boxSizing: "border-box",
+                          color: "#475569",
+                          background: "#f8fafc",
+                          borderRadius: "8px",
+                          border: "1px dashed #cbd5e1",
+                        }}
+                      >
+                        <QrCode size={42} color="#64748b" />
+                        <span style={{ fontSize: "0.8rem", fontWeight: 800, marginTop: "0.65rem", color: "#1e293b" }}>
+                          Payment gateway integration pending.
+                        </span>
+                        <span style={{ fontSize: "0.7rem", marginTop: "0.3rem", color: "#64748b", lineHeight: 1.35 }}>
+                          Awaiting authenticated backend QR payload for {activeOrderNumber}.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pending Integration Notice */}
+                  <div
+                    style={{
+                      width: "100%",
+                      padding: "0.65rem 0.85rem",
+                      borderRadius: "8px",
+                      background: "rgba(245, 158, 11, 0.1)",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                      fontSize: "0.76rem",
+                      color: "var(--text-main)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <AlertCircle size={16} color="var(--accent-amber, #f59e0b)" style={{ flexShrink: 0 }} />
+                    <span>
+                      <strong>Payment gateway integration pending.</strong> Live UPI QR verification will be enabled once the backend payment API is connected.
+                    </span>
+                  </div>
+
+                  {/* UPI Apps Badges */}
+                  <div className="self-service-qr-badges">
+                    <span className="self-service-qr-badge">Google Pay</span>
+                    <span className="self-service-qr-badge">PhonePe</span>
+                    <span className="self-service-qr-badge">Paytm</span>
+                    <span className="self-service-qr-badge">BHIM</span>
+                    <span className="self-service-qr-badge">Cred</span>
+                    <span className="self-service-qr-badge">Any UPI App</span>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === "cash" && (
+                <div className="self-service-info-panel">
+                  <div
+                    style={{
+                      width: "52px",
+                      height: "52px",
+                      borderRadius: "50%",
+                      background: "rgba(245, 158, 11, 0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--accent-amber)",
+                    }}
+                  >
+                    <Building2 size={26} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.98rem", fontWeight: 800 }}>Pay at Cashier Counter</h4>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.4, maxWidth: "380px" }}>
+                      Backend integration pending. Counter payment registration requires the authenticated backend payment API.
+                    </p>
+                  </div>
+                  <div
+                    style={{
+                      padding: "0.65rem 1.25rem",
+                      borderRadius: "8px",
+                      background: "var(--bg-tertiary)",
+                      border: "1px dashed var(--accent-amber)",
+                    }}
+                  >
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Order Reference</div>
+                    <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--accent-amber-light)" }}>
+                      {activeOrderNumber}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedPaymentMethod === "card" && (
+                <div className="self-service-info-panel">
+                  <div
+                    style={{
+                      width: "52px",
+                      height: "52px",
+                      borderRadius: "50%",
+                      background: "rgba(59, 130, 246, 0.15)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#3b82f6",
+                    }}
+                  >
+                    <CreditCard size={26} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.98rem", fontWeight: 800 }}>Card / POS Terminal Payment</h4>
+                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.4, maxWidth: "380px" }}>
+                      Backend integration pending. Card terminal payment initiation requires the authenticated backend payment API.
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", justifyContent: "center" }}>
+                    <span className="self-service-qr-badge">Visa</span>
+                    <span className="self-service-qr-badge">Mastercard</span>
+                    <span className="self-service-qr-badge">RuPay</span>
+                    <span className="self-service-qr-badge">Amex</span>
+                    <span className="self-service-qr-badge">Contactless Tap</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="self-service-payment-footer" style={{ flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="self-service-btn-clear"
+                onClick={handleClosePaymentModal}
+              >
+                Back to Order Summary
+              </button>
+
+              <button
+                type="button"
+                className="self-service-btn-clear"
+                onClick={() => setPreviewOrder(paymentOrder)}
+              >
+                <FileText size={14} style={{ marginRight: "4px", verticalAlign: "-2px" }} />
+                Preview Invoice &amp; Receipt
+              </button>
+
+              <button
+                type="button"
+                className="self-service-btn-clear"
+                onClick={() => setTrackingOrder(paymentOrder)}
+              >
+                <Package size={14} style={{ marginRight: "4px", verticalAlign: "-2px" }} />
+                Track Order
+              </button>
+
+              <button
+                type="button"
+                className="self-service-btn-proceed"
+                style={{ flex: 1, minWidth: "220px", justifyContent: "center" }}
+                disabled
+                title="Backend payment integration pending"
+              >
+                <ShieldCheck size={16} />
+                <span>Payment Integration Pending</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Self Service Invoice & Receipt Preview Modal (Phase 2B.3) */}
+      {previewOrder && (
+        <SelfServicePreviewModal
+          order={previewOrder}
+          restaurantSettings={restaurantSettings}
+          onClose={() => setPreviewOrder(null)}
+        />
+      )}
+
+      {/* 8. Self Service Order Tracking Modal (Phase 2B.4) */}
+      {trackingOrder && (
+        <SelfServiceOrderTracking
+          order={trackingOrder}
+          isLoading={trackingLoading}
+          error={trackingError}
+          hasTrackingApi={true}
+          onRefresh={handleRefreshTracking}
+          onClose={() => {
+            setTrackingOrder(null);
+            setTrackingError("");
+          }}
+        />
       )}
     </div>
   );
