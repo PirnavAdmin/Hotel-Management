@@ -66,6 +66,9 @@ public class MenuItem
     [Column("is_bar_item")]
     public bool IsBarItem { get; set; } = false;
 
+    [Column("branch_id")]
+    public long? BranchId { get; set; }
+
     [Column("recipe_json", TypeName = "longtext")]
     public string? RecipeJson { get; set; }
 

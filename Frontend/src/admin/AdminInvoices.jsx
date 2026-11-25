@@ -1,11 +1,10 @@
-import { SearchableSelect } from "../common/SearchableSelect";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useDialogAccessibility } from "../utils/useDialogAccessibility";
 import {
   FileText,
   Search,
   Calendar,
   Eye,
-  Pencil,
   Save,
   X,
   Smartphone,
@@ -13,18 +12,17 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
-  IndianRupee,
   RefreshCw,
   ShoppingBag,
-  Utensils,
   Printer,
-  Download,
+  Pencil,
+  AlertCircle,
 } from "lucide-react";
+import { SearchableSelect } from "../common/SearchableSelect";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ReceiptModal } from "../user/ReceiptModal";
 import { SkeletonDashboard, SkeletonTable } from "../common/Skeletons";
 import {
-  formatInvoiceNumber,
   getInvoiceCreationTimestamp,
   normalizePaymentMethod,
   parseOrderToYMD,
@@ -33,10 +31,12 @@ import {
   isTakeawayOrder,
   isDineInOrder,
 } from "../utils/orderDedupe";
-import {
-  requestInvoiceManagementRecords,
-} from "../utils/liveInvoiceData";
+import { requestInvoiceManagementRecords } from "../utils/liveInvoiceData";
+import "./AdminInvoices.css";
 
+// ============================================================
+// Timezone-safe Local Date Helpers (YYYY-MM-DD / YYYY-MM)
+// ============================================================
 const localDateInputValue = (date = new Date()) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -44,33 +44,68 @@ const localDateInputValue = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
-const localYesterdayInputValue = () => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return localDateInputValue(yesterday);
+const shiftLocalYmd = (ymd, deltaDays) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd || ""))) return localDateInputValue();
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + deltaDays);
+  return localDateInputValue(dt);
 };
 
-const localWeekStartValue = (date = new Date()) => {
-  const weekStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const daysSinceMonday = (weekStart.getDay() + 6) % 7;
-  weekStart.setDate(weekStart.getDate() - daysSinceMonday);
-  return localDateInputValue(weekStart);
+const getMondayToSundayRange = (ymd) => {
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(String(ymd || ""))
+    ? new Date(`${ymd}T00:00:00`)
+    : new Date();
+  const start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  const daysSinceMonday = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - daysSinceMonday);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  return { from: localDateInputValue(start), to: localDateInputValue(end) };
 };
 
-const localWeekEndValue = (date = new Date()) => {
-  const weekEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const daysUntilSunday = 6 - ((weekEnd.getDay() + 6) % 7);
-  weekEnd.setDate(weekEnd.getDate() + daysUntilSunday);
-  return localDateInputValue(weekEnd);
+const shiftWeekRange = (weekRange, deltaWeeks) => {
+  const nextFrom = shiftLocalYmd(weekRange?.from || localDateInputValue(), deltaWeeks * 7);
+  return getMondayToSundayRange(nextFrom);
 };
 
+const shiftYearMonth = (ym, deltaMonths) => {
+  const match = String(ym || "").match(/^(\d{4})-(\d{2})$/);
+  const base = match ? new Date(Number(match[1]), Number(match[2]) - 1 + deltaMonths, 1) : new Date();
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const formatReadableDate = (ymd) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ymd || ""))) return "—";
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatReadableMonth = (ym) => {
+  const match = String(ym || "").match(/^(\d{4})-(\d{2})$/);
+  if (!match) return "—";
+  return new Date(Number(match[1]), Number(match[2]) - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+// ============================================================
+// Invoice Field & Status Helpers (Backend-Authoritative Only)
+// ============================================================
 const invoiceDateKey = (order) => parseOrderToYMD(order);
+
 const invoiceNumberLabel = (order) => {
-  const actualNumber = order?.invoiceNumber ?? order?.InvoiceNumber ?? order?.invoiceNo ?? order?.InvoiceNo;
+  const actualNumber =
+    order?.invoiceNumber ?? order?.InvoiceNumber ?? order?.invoiceNo ?? order?.InvoiceNo;
   return actualNumber != null && String(actualNumber).trim()
     ? String(actualNumber).trim()
-    : formatInvoiceNumber(order);
+    : "Invoice Number Pending";
 };
+
 const getInvoicePaymentMethod = (order) => {
   const latestPayment = Array.isArray(order?.payments)
     ? order.payments[order.payments.length - 1]
@@ -88,89 +123,89 @@ const getInvoicePaymentMethod = (order) => {
     ""
   );
 };
-const getInvoicePaymentMode = (order) => {
-  const method = getInvoicePaymentMethod(order);
-  return method ? normalizePaymentMethod(method) : "unknown";
-};
+
 const getInvoicePaymentModes = (order) => {
   const paymentModes = Array.isArray(order?.payments)
-    ? [...new Set(order.payments
-        .filter((payment) => Number(payment?.amount ?? payment?.Amount ?? 0) > 0)
-        .map((payment) => normalizePaymentMethod(payment)))]
+    ? [
+        ...new Set(
+          order.payments
+            .filter((p) => Number(p?.amount ?? p?.Amount ?? 0) > 0)
+            .map((p) => normalizePaymentMethod(p))
+        ),
+      ]
     : [];
   if (paymentModes.length) return paymentModes;
-  const mode = getInvoicePaymentMode(order);
-  return mode === "unknown" ? [] : [mode];
+  const method = getInvoicePaymentMethod(order);
+  return method ? [normalizePaymentMethod(method)] : [];
+};
+
+const getNormalizedStatusKey = (order) => {
+  const raw = String(order?.backendStatus ?? order?.status ?? order?.Status ?? "")
+    .trim()
+    .toLowerCase();
+  if (raw === "void" || raw === "voided" || raw === "cancelled" || raw === "canceled" || raw === "refunded") {
+    return "void";
+  }
+  if (raw === "partial") return "partial";
+  if (raw === "unpaid" || raw === "pending") return "unpaid";
+  if (raw === "paid" || raw === "settled") return "paid";
+  const total = Number(order?.totalAmount ?? order?.grandTotal ?? 0) || 0;
+  const paid = Number(order?.paidAmount ?? order?.amountPaid ?? 0) || 0;
+  if (total > 0 && paid >= total) return "paid";
+  if (paid > 0) return "partial";
+  return "unpaid";
+};
+
+const getStatusDisplayLabel = (order) => {
+  const raw = String(order?.backendStatus ?? order?.status ?? order?.Status ?? "").trim();
+  if (raw) return raw.toUpperCase();
+  const key = getNormalizedStatusKey(order);
+  return key.toUpperCase();
 };
 
 const invoiceDisplayDate = (order) => {
-  const rawDate = order?.date || order?.settledDate || order?.settledAt || order?.createdAt || order?.orderTimestamp;
+  const rawDate =
+    order?.invoiceCreatedAt || order?.createdAt || order?.date || order?.settledAt;
   if (rawDate) {
     let s = String(rawDate).trim();
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(s)) {
-      if (!s.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(s)) {
-        s += "Z";
-      }
+      if (!s.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(s)) s += "Z";
       const d = new Date(s);
       if (!Number.isNaN(d.getTime())) {
         return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
       }
     }
   }
-  const dateKey = invoiceDateKey(order);
-  if (!dateKey) return "—";
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
-};
-
-const parseDisplayDateInput = (displayDate) => {
-  const match = String(displayDate || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!match) return "";
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return "";
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const key = invoiceDateKey(order);
+  if (!key) return "—";
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 };
 
 const formatInvoiceTime = (value) => {
   if (!value) return "—";
-  const text = String(value).trim();
-  if (!text) return "—";
-  if (["in queue", "started", "done", "ready", "pending", "waiting", "active", "cooked"].includes(text.toLowerCase())) {
-    return text;
-  }
-  if (/^\d{1,2}:\d{2}\s*(?:AM|PM)$/i.test(text)) {
-    return text.toUpperCase();
-  }
-  if (/^\d{1,2}:\d{2}:\d{2}\s*(?:AM|PM)$/i.test(text)) {
-    const parts = text.split(" ");
-    const timeParts = parts[0].split(":");
-    return `${timeParts[0]}:${timeParts[1]} ${parts[1] || ""}`.trim().toUpperCase();
-  }
-  let isoStr = text;
+  let isoStr = String(value).trim();
+  if (!isoStr) return "—";
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(isoStr)) {
-    if (!isoStr.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(isoStr)) {
-      isoStr += "Z";
-    }
+    if (!isoStr.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(isoStr)) isoStr += "Z";
   }
   const parsed = new Date(isoStr);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
   }
-  const match24 = text.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-  if (match24) {
-    let hour = Number(match24[1]);
-    const minute = match24[2];
-    const suffix = hour >= 12 ? "PM" : "AM";
-    hour %= 12;
-    if (hour === 0) hour = 12;
-    return `${String(hour).padStart(2, "0")}:${minute} ${suffix}`;
-  }
-  return text || "—";
+  return "—";
 };
 
+const getOrderTypeLabel = (order) => {
+  if (isSelfServiceOrder(order)) return "Self Service";
+  if (isTakeawayOrder(order)) return "Takeaway";
+  if (isDineInOrder(order)) return "Dine-In";
+  return "—";
+};
 
 export function AdminInvoices({
   invoiceFilter = null,
@@ -182,33 +217,57 @@ export function AdminInvoices({
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(true);
   const [isRefreshingInvoices, setIsRefreshingInvoices] = useState(false);
   const [invoiceLoadError, setInvoiceLoadError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState("all");
-  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+
+  // Date Range Selection State
+  const [dateFilter, setDateFilter] = useState("daily"); // 'all' | 'daily' | 'weekly' | 'monthly' | 'custom'
   const [selectedDate, setSelectedDate] = useState(() => localDateInputValue());
-  const [selectedWeek, setSelectedWeek] = useState(() => ({
-    from: localWeekStartValue(),
-    to: localWeekEndValue(),
-  }));
+  const [selectedWeek, setSelectedWeek] = useState(() =>
+    getMondayToSundayRange(localDateInputValue())
+  );
   const [selectedMonth, setSelectedMonth] = useState(() => localDateInputValue().slice(0, 7));
-  const [selectedQuarter, setSelectedQuarter] = useState(() => {
-    const now = new Date();
-    return { quarter: Math.floor(now.getMonth() / 3) + 1, year: now.getFullYear() };
-  });
-  const [customFromDate, setCustomFromDate] = useState("");
-  const [customToDate, setCustomToDate] = useState("");
-  const [customFromDateText, setCustomFromDateText] = useState("");
-  const [customToDateText, setCustomToDateText] = useState("");
+  const [customFromDraft, setCustomFromDraft] = useState(() => localDateInputValue());
+  const [customToDraft, setCustomToDraft] = useState(() => localDateInputValue());
+  const [appliedCustomRange, setAppliedCustomRange] = useState(() => ({
+    from: localDateInputValue(),
+    to: localDateInputValue(),
+  }));
+  const [customRangeError, setCustomRangeError] = useState("");
+
+  // Search & Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
+
+  // Pagination & Sorting
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortField, setSortField] = useState("date");
+  const [sortDirection, setSortDirection] = useState("desc");
+
+  // Modals
+  const [viewingInvoice, setViewingInvoice] = useState(null);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [discountDraft, setDiscountDraft] = useState("0");
   const [editError, setEditError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [sortField, setSortField] = useState("date");
-  const [sortDirection, setSortDirection] = useState("desc");
+  const detailDialogRef = useRef(null);
+  const editDialogRef = useRef(null);
+  useDialogAccessibility({
+    isOpen: Boolean(viewingInvoice),
+    onClose: () => setViewingInvoice(null),
+    dialogRef: detailDialogRef,
+  });
+  useDialogAccessibility({
+    isOpen: Boolean(editingInvoice),
+    onClose: () => {
+      if (!isSavingEdit) setEditingInvoice(null);
+    },
+    dialogRef: editDialogRef,
+    closeOnEscape: !isSavingEdit,
+  });
 
   const refreshInvoices = async () => {
     setIsLoadingInvoices(true);
@@ -262,9 +321,234 @@ export function AdminInvoices({
     };
   }, []);
 
-  const allOrders = invoiceRecords.filter(
-    (order) => typeof invoiceFilter !== "function" || invoiceFilter(order),
+  const allOrders = useMemo(
+    () =>
+      invoiceRecords.filter(
+        (order) => typeof invoiceFilter !== "function" || invoiceFilter(order)
+      ),
+    [invoiceRecords, invoiceFilter]
   );
+
+  // Dynamically discover available branches and payment methods from actual backend records
+  const availableBranches = useMemo(() => {
+    const map = new Map();
+    allOrders.forEach((o) => {
+      if (o.branchId != null || o.branchName) {
+        const key = String(o.branchId ?? o.branchName);
+        const label = o.branchName ? String(o.branchName) : `Branch #${o.branchId}`;
+        if (!map.has(key)) map.set(key, label);
+      }
+    });
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  }, [allOrders]);
+
+  const availablePaymentModes = useMemo(() => {
+    const set = new Set();
+    allOrders.forEach((o) => {
+      getInvoicePaymentModes(o).forEach((m) => {
+        if (m && m !== "unknown") set.add(m);
+      });
+    });
+    return Array.from(set).sort();
+  }, [allOrders]);
+
+  // Apply Date Filter + Search + All Facet Filters together
+  const dateFilteredOrders = useMemo(() => {
+    return allOrders.filter((order) => {
+      const orderDate = invoiceDateKey(order);
+      if (dateFilter === "all") return true;
+      if (!orderDate) return false;
+      if (dateFilter === "daily") return orderDate === selectedDate;
+      if (dateFilter === "weekly") {
+        return orderDate >= selectedWeek.from && orderDate <= selectedWeek.to;
+      }
+      if (dateFilter === "monthly") return orderDate.startsWith(selectedMonth);
+      if (dateFilter === "custom") {
+        return (
+          (!appliedCustomRange.from || orderDate >= appliedCustomRange.from) &&
+          (!appliedCustomRange.to || orderDate <= appliedCustomRange.to)
+        );
+      }
+      return true;
+    });
+  }, [allOrders, dateFilter, selectedDate, selectedWeek, selectedMonth, appliedCustomRange]);
+
+  const filteredOrders = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const list = dateFilteredOrders.filter((order) => {
+      if (query) {
+        const invNum = invoiceNumberLabel(order).toLowerCase();
+        const ordRef = String(
+          order.orderNumber ?? order.orderId ?? order.OrderId ?? order.id ?? ""
+        ).toLowerCase();
+        const custName = String(order.customerName ?? "").toLowerCase();
+        const custPhone = String(order.customerPhone ?? "").toLowerCase();
+        const tbl = String(order.tableName ?? "").toLowerCase();
+        if (
+          !invNum.includes(query) &&
+          !ordRef.includes(query) &&
+          !custName.includes(query) &&
+          !custPhone.includes(query) &&
+          !tbl.includes(query)
+        ) {
+          return false;
+        }
+      }
+
+      if (branchFilter !== "all") {
+        const bKey = String(order.branchId ?? order.branchName ?? "");
+        if (bKey !== branchFilter) return false;
+      }
+
+      if (orderTypeFilter !== "all") {
+        if (orderTypeFilter === "dine_in" && !isDineInOrder(order)) return false;
+        if (orderTypeFilter === "takeaway" && !isTakeawayOrder(order)) return false;
+        if (orderTypeFilter === "self_service" && !isSelfServiceOrder(order)) return false;
+      }
+
+      if (statusFilter !== "all") {
+        const sKey = getNormalizedStatusKey(order);
+        if (sKey !== statusFilter) return false;
+      }
+
+      if (paymentFilter !== "all") {
+        if (!getInvoicePaymentModes(order).includes(paymentFilter)) return false;
+      }
+
+      return true;
+    });
+
+    return sortInvoicesByCreationTime(list);
+  }, [dateFilteredOrders, searchTerm, branchFilter, orderTypeFilter, statusFilter, paymentFilter]);
+
+  // Summary Metrics (Strictly from actual backend fields; excludes void/cancelled/refunded from paid sales)
+  const summary = useMemo(() => {
+    let validCount = 0;
+    let voidCount = 0;
+    let grossSales = 0;
+    let totalDiscounts = 0;
+    let totalTax = 0;
+    let netSales = 0;
+    let totalPaid = 0;
+    let pendingAmount = 0;
+    let voidAmount = 0;
+
+    filteredOrders.forEach((o) => {
+      const sKey = getNormalizedStatusKey(o);
+      const sub = Number(o.subtotal ?? 0) || 0;
+      const disc = Number(o.discountAmount ?? 0) || 0;
+      const tax = Number(o.taxAmount ?? 0) || 0;
+      const total = Number(o.totalAmount ?? o.grandTotal ?? 0) || 0;
+      const paid = Number(o.paidAmount ?? o.amountPaid ?? 0) || 0;
+      const due = Number(o.dueAmount ?? 0) || 0;
+
+      if (sKey === "void") {
+        voidCount += 1;
+        voidAmount += total;
+        return;
+      }
+
+      validCount += 1;
+      grossSales += sub;
+      totalDiscounts += disc;
+      totalTax += tax;
+      netSales += total;
+      totalPaid += paid;
+      pendingAmount += due;
+    });
+
+    return {
+      totalInvoices: filteredOrders.length,
+      validCount,
+      voidCount,
+      grossSales,
+      totalDiscounts,
+      totalTax,
+      netSales,
+      totalPaid,
+      pendingAmount,
+      voidAmount,
+    };
+  }, [filteredOrders]);
+
+  // Day-wise Breakdown for Weekly and Monthly views (only dates present in actual backend records)
+  const dayWiseBreakdown = useMemo(() => {
+    if (dateFilter !== "weekly" && dateFilter !== "monthly") return [];
+    const byDay = new Map();
+    filteredOrders.forEach((o) => {
+      const dKey = invoiceDateKey(o);
+      if (!dKey) return;
+      if (!byDay.has(dKey)) {
+        byDay.set(dKey, {
+          dateKey: dKey,
+          count: 0,
+          totalAmount: 0,
+          paidAmount: 0,
+          pendingAmount: 0,
+        });
+      }
+      const entry = byDay.get(dKey);
+      const sKey = getNormalizedStatusKey(o);
+      entry.count += 1;
+      if (sKey !== "void") {
+        entry.totalAmount += Number(o.totalAmount ?? o.grandTotal ?? 0) || 0;
+        entry.paidAmount += Number(o.paidAmount ?? o.amountPaid ?? 0) || 0;
+        entry.pendingAmount += Number(o.dueAmount ?? 0) || 0;
+      }
+    });
+    return Array.from(byDay.values()).sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
+  }, [filteredOrders, dateFilter]);
+
+  // Sorting & Pagination
+  const sortedOrders = useMemo(() => {
+    const copy = [...filteredOrders];
+    copy.sort((a, b) => {
+      if (sortField === "invoiceNo") {
+        const cmp = invoiceNumberLabel(a).localeCompare(invoiceNumberLabel(b), undefined, {
+          numeric: true,
+        });
+        return sortDirection === "asc" ? cmp : -cmp;
+      }
+      if (sortField === "amount") {
+        const totA = Number(a.totalAmount ?? a.grandTotal ?? 0) || 0;
+        const totB = Number(b.totalAmount ?? b.grandTotal ?? 0) || 0;
+        return sortDirection === "asc" ? totA - totB : totB - totA;
+      }
+      const timeA = getInvoiceCreationTimestamp(a);
+      const timeB = getInvoiceCreationTimestamp(b);
+      return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
+    });
+    return copy;
+  }, [filteredOrders, sortField, sortDirection]);
+
+  const pageCount = Math.max(1, Math.ceil(sortedOrders.length / itemsPerPage));
+  const visiblePage = Math.min(currentPage, pageCount);
+  const pageStart = (visiblePage - 1) * itemsPerPage;
+  const paginatedOrders = sortedOrders.slice(pageStart, pageStart + itemsPerPage);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+    setCurrentPage(1);
+  };
+
+  const handleApplyCustomRange = () => {
+    if (!customFromDraft || !customToDraft) {
+      setCustomRangeError("Both Start Date and End Date are required.");
+      return;
+    }
+    if (customFromDraft > customToDraft) {
+      setCustomRangeError("Start Date cannot be after End Date.");
+      return;
+    }
+    setCustomRangeError("");
+    setAppliedCustomRange({ from: customFromDraft, to: customToDraft });
+    setCurrentPage(1);
+  };
 
   const openDiscountEditor = (order) => {
     setEditingInvoice(order);
@@ -288,1074 +572,672 @@ export function AdminInvoices({
     try {
       await onUpdateInvoiceDiscount(editingInvoice?.id, discountPercent, editingInvoice);
       setEditingInvoice(null);
+      await refreshInvoices();
     } catch (error) {
-      setEditError(error?.message || "Could not update the invoice discount.");
+      setEditError(error?.message || "Could not update invoice discount.");
     } finally {
       setIsSavingEdit(false);
     }
   };
 
-  const invalidCustomDate = dateFilter === "custom" && (
-    (customFromDateText && !customFromDate) ||
-    (customToDateText && !customToDate) ||
-    (customFromDate && customToDate && customFromDate > customToDate)
-  );
-  const yesterdayDate = localYesterdayInputValue();
-
-  const baseFilteredOrders = allOrders.filter((order) => {
-    const orderDate = invoiceDateKey(order);
-    const matchesDate = dateFilter === "all" ||
-      (dateFilter === "daily" && orderDate === selectedDate) ||
-      (dateFilter === "yesterday" && orderDate === yesterdayDate) ||
-      (dateFilter === "weekly" && orderDate >= selectedWeek.from && orderDate <= selectedWeek.to) ||
-      (dateFilter === "monthly" && orderDate.startsWith(selectedMonth)) ||
-      (dateFilter === "quarterly" && (() => {
-        const [year, month] = orderDate.split("-").map(Number);
-        return year === selectedQuarter.year && Math.ceil(month / 3) === selectedQuarter.quarter;
-      })()) ||
-      (dateFilter === "custom" && !invalidCustomDate && !!orderDate &&
-        (!customFromDate || orderDate >= customFromDate) &&
-        (!customToDate || orderDate <= customToDate));
-
-    const query = searchTerm.toLowerCase();
-    const matchesSearch =
-      invoiceNumberLabel(order).toLowerCase().includes(query) ||
-      String(order.orderId ?? order.OrderId ?? order.id ?? "").toLowerCase().includes(query) ||
-      String(order.tableName || "").toLowerCase().includes(query) ||
-      String(order.server || "").toLowerCase().includes(query);
-
-    return matchesDate && matchesSearch;
-  });
-
-  const filteredOrders = sortInvoicesByCreationTime(baseFilteredOrders.filter((order) => {
-    const matchesOrderType =
-      orderTypeFilter === "all" ||
-      (orderTypeFilter === "takeaway" && isTakeawayOrder(order)) ||
-      (orderTypeFilter === "dine_in" && isDineInOrder(order)) ||
-      (orderTypeFilter === "self_service" && isSelfServiceOrder(order));
-
-    const matchesPayment =
-      paymentFilter === "all" ||
-      getInvoicePaymentModes(order).includes(paymentFilter);
-
-    return matchesOrderType && matchesPayment;
-  }));
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-    setCurrentPage(1);
-  };
-
-  const parseInvSerial = (order) => {
-    const invStr = invoiceNumberLabel(order);
-    const m = String(invStr).match(/[-_](\d{1,6})$/);
-    if (m && m[1]) return parseInt(m[1], 10);
-    const num = parseInt(String(invStr).replace(/\D/g, ""), 10);
-    return isNaN(num) ? 0 : num;
-  };
-
-  const getOrderRevenue = (o) =>
-    Number(o.grandTotal ?? o.totalAmount ?? o.total ?? o.paidAmount ?? 0) || 0;
-  const getInvoiceCollectedForMode = (order, mode) => {
-    const payments = Array.isArray(order?.payments) ? order.payments : [];
-    if (payments.length) {
-      return payments.reduce((sum, payment) => {
-        const amount = Number(payment?.amount ?? payment?.Amount ?? 0) || 0;
-        return normalizePaymentMethod(payment) === mode ? sum + amount : sum;
-      }, 0);
-    }
-    return getInvoicePaymentModes(order).includes(mode)
-      ? Number(order.paidAmount ?? order.PaidAmount ?? getOrderRevenue(order)) || 0
-      : 0;
-  };
-
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    if (sortField === "invoiceNo") {
-      const numA = parseInvSerial(a);
-      const numB = parseInvSerial(b);
-      return sortDirection === "asc" ? numA - numB : numB - numA;
-    }
-    if (sortField === "date") {
-      const timeA = getInvoiceCreationTimestamp(a);
-      const timeB = getInvoiceCreationTimestamp(b);
-      if (timeA !== timeB) return sortDirection === "asc" ? timeA - timeB : timeB - timeA;
-      return sortDirection === "asc" ? parseInvSerial(a) - parseInvSerial(b) : parseInvSerial(b) - parseInvSerial(a);
-    }
-    if (sortField === "amount") {
-      const totA = getOrderRevenue(a);
-      const totB = getOrderRevenue(b);
-      return sortDirection === "asc" ? totA - totB : totB - totA;
-    }
-    const numA = parseInvSerial(a);
-    const numB = parseInvSerial(b);
-    return numB - numA;
-  });
-
-  const pageCount = Math.max(
-    1,
-    Math.ceil(sortedOrders.length / itemsPerPage),
-  );
-  const visiblePage = Math.min(currentPage, pageCount);
-  const pageStart = (visiblePage - 1) * itemsPerPage;
-  const paginatedOrders = sortedOrders.slice(
-    pageStart,
-    pageStart + itemsPerPage,
-  );
-
-  const totalCollected = filteredOrders.reduce(
-    (sum, o) => sum + getOrderRevenue(o),
-    0,
-  );
-
-  const upiTotal = filteredOrders
-    .reduce((sum, o) => sum + getInvoiceCollectedForMode(o, "upi"), 0);
-
-  const cashTotal = filteredOrders
-    .reduce((sum, o) => sum + getInvoiceCollectedForMode(o, "cash"), 0);
-
-  const takeawayTotal = filteredOrders
-    .filter(isTakeawayOrder)
-    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
-
-  const selfServiceTotal = filteredOrders
-    .filter(isSelfServiceOrder)
-    .reduce((sum, o) => sum + getOrderRevenue(o), 0);
-
-  const totalOrdersCount = baseFilteredOrders.length;
-
-  const cashOrdersCount = filteredOrders.filter(
-    (o) => getInvoicePaymentModes(o).includes("cash"),
-  ).length;
-
-  const upiOrdersCount = filteredOrders.filter(
-    (o) => getInvoicePaymentModes(o).includes("upi"),
-  ).length;
-
-  const takeawayOrdersCount = filteredOrders.filter(isTakeawayOrder).length;
-  const selfServiceOrdersCount = filteredOrders.filter(isSelfServiceOrder).length;
-  const dineInOrdersCount = filteredOrders.filter(isDineInOrder).length;
-
-  const availableTakeawayOrdersCount = baseFilteredOrders.filter(isTakeawayOrder).length;
-  const availableSelfServiceOrdersCount = baseFilteredOrders.filter(isSelfServiceOrder).length;
-  const availableDineInOrdersCount = baseFilteredOrders.filter(isDineInOrder).length;
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Outer Card Matching Design */}
-      <div
-        className="no-print"
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border-card)",
-          borderRadius: "16px",
-          padding: "1.5rem",
-        }}
-      >
-        {/* Header Strip inside Card */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "1rem",
-            marginBottom: "1.5rem",
-          }}
-        >
-          {/* Left Title with Orange Squircle */}
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}
-          >
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 14px color-mix(in srgb, var(--accent-amber) 35%, transparent)",
-              }}
-            >
+    <div className="admin-inv-root">
+      <div className="admin-inv-shell no-print">
+        {/* Top Header */}
+        <div className="admin-inv-header">
+          <div className="admin-inv-title-group">
+            <div className="admin-inv-icon-box">
               <FileText size={22} color="#ffffff" />
             </div>
             <div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
-              >
-                <h2
-                  style={{
-                    fontSize: "1.35rem",
-                    fontWeight: 800,
-                    color: "var(--text-main)",
-                    margin: 0,
-                  }}
-                >
-                  Settled Invoices & Billing Logs
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                <h2 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--text-main)", margin: 0 }}>
+                  Admin Invoice Management
                 </h2>
-                <span
-                  style={{
-                    background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
-                    color: "var(--accent-amber-light)",
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    padding: "2px 10px",
-                    borderRadius: "20px",
-                  }}
-                >
-                  {filteredOrders.length} invoices
+                <span className="admin-inv-range-label">
+                  {filteredOrders.length} {filteredOrders.length === 1 ? "invoice" : "invoices"}
                 </span>
               </div>
-              <p
-                style={{
-                  fontSize: "0.8rem",
-                  color: "var(--text-dim)",
-                  margin: "3px 0 0 0",
-                }}
-              >
-                Detailed receipts, taxes, payment modes and customer settlement
-                records
+              <p style={{ fontSize: "0.78rem", color: "var(--text-dim)", margin: "3px 0 0 0" }}>
+                Authoritative backend invoice records, date-wise reports, and payment statuses
               </p>
             </div>
           </div>
 
-          {/* Right Controls: Search and live refresh */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <div
-              style={{
-                position: "relative",
-                width: "280px",
-                height: "40px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
+          <div className="admin-inv-header-actions">
+            <div className="admin-inv-search-wrap">
               <Search
-                size={16}
+                size={15}
                 color="var(--text-dim)"
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  pointerEvents: "none",
-                }}
+                style={{ position: "absolute", left: "12px", pointerEvents: "none" }}
               />
               <input
                 type="text"
-                placeholder="Search invoice #, table, waiter..."
+                className="admin-inv-search-input"
+                aria-label="Search invoices"
+                placeholder="Search invoice #, order #, customer..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: "var(--bg-tertiary)",
-                  border: "1px solid var(--border-card)",
-                  borderRadius: "9px",
-                  padding: "0 12px 0 36px",
-                  color: "var(--text-main)",
-                  fontSize: "0.82rem",
-                  outline: "none",
-                }}
               />
             </div>
-            <button type="button" onClick={refreshInvoices} disabled={isLoadingInvoices} aria-label="Refresh live invoices" title="Refresh live invoices" style={{ height: "40px", display: "inline-flex", alignItems: "center", gap: "0.35rem", padding: "0 0.75rem", borderRadius: "9px", border: "1px solid var(--border-card)", background: "var(--bg-tertiary)", color: "var(--text-main)", cursor: isLoadingInvoices ? "wait" : "pointer" }}>
-              <RefreshCw size={14} style={{ animation: isRefreshingInvoices ? "spin 1s linear infinite" : "none" }} />
-              Refresh
+
+            <button
+              type="button"
+              className="admin-inv-btn-neutral"
+              onClick={refreshInvoices}
+              disabled={isLoadingInvoices}
+              aria-label="Refresh live invoices"
+            >
+              <RefreshCw
+                size={14}
+                style={{ animation: isRefreshingInvoices ? "spin 1s linear infinite" : "none" }}
+              />
+              <span>Refresh</span>
             </button>
           </div>
         </div>
 
-        {invoiceLoadError && (
-          <div role="alert" style={{ padding: "0.7rem 0.9rem", borderRadius: "8px", border: "1px solid rgba(239, 68, 68, 0.35)", background: "rgba(239, 68, 68, 0.08)", color: "var(--danger)", fontSize: "0.8rem" }}>
-            {invoiceLoadError}
-          </div>
-        )}
-        {isLoadingInvoices && invoiceRecords.length === 0 && (
-          <div style={{ marginBottom: "1rem" }}>
-            <SkeletonDashboard cards={3} />
-            <SkeletonTable rows={5} columns={6} />
-          </div>
-        )}
-
-        {/* Invoices Overview Summary Bar (Total Revenue & Total Invoices List) */}
-        <div className="responsive-card-grid" style={{ "--responsive-card-min": "220px", "--responsive-card-gap": "0.75rem", marginBottom: "1.1rem" }}>
-          {/* Card 1: Total Invoices List */}
-          <div
-            onClick={() => {
-              setPaymentFilter("all");
-              setCurrentPage(1);
-            }}
-            style={{
-              background:
-                paymentFilter === "all"
-                  ? "rgba(99, 102, 241, 0.08)"
-                  : "var(--bg-tertiary)",
-              border:
-                paymentFilter === "all"
-                  ? "1px solid rgba(99, 102, 241, 0.45)"
-                  : "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow:
-                paymentFilter === "all"
-                  ? "0 2px 10px rgba(99, 102, 241, 0.18)"
-                  : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "var(--accent-indigo)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor =
-                paymentFilter === "all"
-                  ? "rgba(99, 102, 241, 0.45)"
-                  : "var(--border-subtle)";
-            }}
-            title="Click to view all invoices in this list"
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Total Invoices List
-              </div>
-              <div
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  color: "var(--text-main)",
-                  marginTop: "2px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {filteredOrders.length}{" "}
-                <span
-                  style={{
-                    fontSize: "0.82rem",
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
+        {/* Date Range Selection & Navigation */}
+        <div className="admin-inv-date-bar">
+          <div className="admin-inv-date-modes">
+            <div className="admin-inv-mode-pills" role="tablist" aria-label="Invoice report date period">
+              {[
+                { id: "daily", label: "Daily" },
+                { id: "weekly", label: "Weekly" },
+                { id: "monthly", label: "Monthly" },
+                { id: "custom", label: "Custom Date Range" },
+                { id: "all", label: "All Dates" },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={dateFilter === m.id}
+                  className={`admin-inv-mode-pill ${dateFilter === m.id ? "is-active" : ""}`}
+                  onClick={() => {
+                    setDateFilter(m.id);
+                    setCustomRangeError("");
+                    setCurrentPage(1);
                   }}
                 >
-                  {filteredOrders.length === 1 ? "Invoice" : "Invoices"}
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-dim)",
-                  marginTop: "3px",
-                }}
-              >
-                {dateFilter === "all" && paymentFilter === "all"
-                  ? "All settled records"
-                  : `Filtered (${filteredOrders.length} of ${totalOrdersCount})`}
-              </div>
+                  {m.label}
+                </button>
+              ))}
             </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "rgba(99, 102, 241, 0.15)",
-                border: "1px solid rgba(99, 102, 241, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <FileText size={18} color="var(--accent-indigo)" />
+
+            <div className="admin-inv-range-label">
+              {dateFilter === "daily" && formatReadableDate(selectedDate)}
+              {dateFilter === "weekly" &&
+                `${formatReadableDate(selectedWeek.from)} – ${formatReadableDate(selectedWeek.to)}`}
+              {dateFilter === "monthly" && formatReadableMonth(selectedMonth)}
+              {dateFilter === "custom" &&
+                `${formatReadableDate(appliedCustomRange.from)} – ${formatReadableDate(appliedCustomRange.to)}`}
+              {dateFilter === "all" && "All Available Backend Dates"}
             </div>
           </div>
 
-          {/* Card 2: Total Revenue */}
-          <div
-            onClick={() => {
-              setPaymentFilter("all");
-              setCurrentPage(1);
-            }}
-            style={{
-              background:
-                paymentFilter === "all"
-                  ? "color-mix(in srgb, var(--accent-amber) 8%, transparent)"
-                  : "var(--bg-tertiary)",
-              border:
-                paymentFilter === "all"
-                  ? "1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent)"
-                  : "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow:
-                paymentFilter === "all"
-                  ? "0 2px 10px color-mix(in srgb, var(--accent-amber) 18%, transparent)"
-                  : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "var(--accent-amber)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor =
-                paymentFilter === "all"
-                  ? "color-mix(in srgb, var(--accent-amber) 45%, transparent)"
-                  : "var(--border-subtle)";
-            }}
-            title="Total settled billing revenue"
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Total Revenue
-              </div>
-              <div
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  color: "var(--accent-amber-light)",
-                  marginTop: "2px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {formatCurrency(totalCollected)}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-dim)",
-                  marginTop: "3px",
-                }}
-              >
-                Gross customer settlements
-              </div>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <IndianRupee size={18} color="var(--accent-amber)" />
-            </div>
-          </div>
-
-          {/* Card 3: Cash Revenue */}
-          <div
-            onClick={() => {
-              setPaymentFilter(paymentFilter === "cash" ? "all" : "cash");
-              setCurrentPage(1);
-            }}
-            style={{
-              background:
-                paymentFilter === "cash"
-                  ? "rgba(16, 185, 129, 0.12)"
-                  : "var(--bg-tertiary)",
-              border:
-                paymentFilter === "cash"
-                  ? "1px solid #10b981"
-                  : "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow:
-                paymentFilter === "cash"
-                  ? "0 2px 10px rgba(16, 185, 129, 0.22)"
-                  : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "var(--success)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor =
-                paymentFilter === "cash" ? "#10b981" : "var(--border-subtle)";
-            }}
-            title="Click to filter by Cash payments"
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Cash Collected
-              </div>
-              <div
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  color: "var(--success)",
-                  marginTop: "2px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {formatCurrency(cashTotal)}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-dim)",
-                  marginTop: "3px",
-                }}
-              >
-                {cashOrdersCount}{" "}
-                {cashOrdersCount === 1 ? "cash invoice" : "cash invoices"}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "rgba(16, 185, 129, 0.15)",
-                border: "1px solid rgba(16, 185, 129, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Banknote size={18} color="var(--success)" />
-            </div>
-          </div>
-
-          {/* Card 4: UPI Revenue */}
-          <div
-            onClick={() => {
-              setPaymentFilter(paymentFilter === "upi" ? "all" : "upi");
-              setCurrentPage(1);
-            }}
-            style={{
-              background:
-                paymentFilter === "upi"
-                  ? "rgba(56, 189, 248, 0.12)"
-                  : "var(--bg-tertiary)",
-              border:
-                paymentFilter === "upi"
-                  ? "1px solid #38bdf8"
-                  : "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow:
-                paymentFilter === "upi"
-                  ? "0 2px 10px rgba(56, 189, 248, 0.22)"
-                  : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "var(--info)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor =
-                paymentFilter === "upi" ? "#38bdf8" : "var(--border-subtle)";
-            }}
-            title="Click to filter by UPI payments"
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                UPI Collected
-              </div>
-              <div
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  color: "var(--info)",
-                  marginTop: "2px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {formatCurrency(upiTotal)}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-dim)",
-                  marginTop: "3px",
-                }}
-              >
-                {upiOrdersCount}{" "}
-                {upiOrdersCount === 1 ? "UPI invoice" : "UPI invoices"}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "rgba(56, 189, 248, 0.15)",
-                border: "1px solid rgba(56, 189, 248, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Smartphone size={18} color="var(--info)" />
-            </div>
-          </div>
-
-          {/* Card 5: Takeaway Revenue */}
-          <div
-            onClick={() => {
-              setOrderTypeFilter(orderTypeFilter === "takeaway" ? "all" : "takeaway");
-              setCurrentPage(1);
-            }}
-            style={{
-              background:
-                orderTypeFilter === "takeaway"
-                  ? "color-mix(in srgb, var(--accent-amber) 12%, transparent)"
-                  : "var(--bg-tertiary)",
-              border:
-                orderTypeFilter === "takeaway"
-                  ? "1px solid var(--accent-amber)"
-                  : "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow:
-                orderTypeFilter === "takeaway"
-                  ? "0 2px 10px color-mix(in srgb, var(--accent-amber) 22%, transparent)"
-                  : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "var(--accent-amber)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor =
-                orderTypeFilter === "takeaway" ? "var(--accent-amber)" : "var(--border-subtle)";
-            }}
-            title="Click to filter by Takeaway invoices"
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Takeaway Collected
-              </div>
-              <div
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  color: "var(--accent-amber)",
-                  marginTop: "2px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {formatCurrency(takeawayTotal)}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-dim)",
-                  marginTop: "3px",
-                }}
-              >
-                {takeawayOrdersCount}{" "}
-                {takeawayOrdersCount === 1 ? "takeaway invoice" : "takeaway invoices"}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <ShoppingBag size={18} color="var(--accent-amber)" />
-            </div>
-          </div>
-
-          {/* Card 6: Self Service Revenue */}
-          <div
-            onClick={() => {
-              setOrderTypeFilter(orderTypeFilter === "self_service" ? "all" : "self_service");
-              setCurrentPage(1);
-            }}
-            style={{
-              background:
-                orderTypeFilter === "self_service"
-                  ? "color-mix(in srgb, var(--info, #38bdf8) 12%, transparent)"
-                  : "var(--bg-tertiary)",
-              border:
-                orderTypeFilter === "self_service"
-                  ? "1px solid var(--info, #38bdf8)"
-                  : "1px solid var(--border-subtle)",
-              borderRadius: "12px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow:
-                orderTypeFilter === "self_service"
-                  ? "0 2px 10px color-mix(in srgb, var(--info, #38bdf8) 22%, transparent)"
-                  : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.borderColor = "var(--info, #38bdf8)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor =
-                orderTypeFilter === "self_service" ? "var(--info, #38bdf8)" : "var(--border-subtle)";
-            }}
-            title="Click to filter by Self Service kiosk invoices"
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-muted)",
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Self Service Collected
-              </div>
-              <div
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  color: "var(--info, #38bdf8)",
-                  marginTop: "2px",
-                  lineHeight: 1.2,
-                }}
-              >
-                {formatCurrency(selfServiceTotal)}
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  color: "var(--text-dim)",
-                  marginTop: "3px",
-                }}
-              >
-                {selfServiceOrdersCount}{" "}
-                {selfServiceOrdersCount === 1 ? "self service bill" : "self service bills"}
-              </div>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "color-mix(in srgb, var(--info, #38bdf8) 15%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--info, #38bdf8) 30%, transparent)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Smartphone size={18} color="var(--info, #38bdf8)" />
-            </div>
-          </div>
-        </div>
-
-        {/* ── Bill Category Filter Tabs: Dine In | Takeaway | Self Service ── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.55rem",
-            marginBottom: "1rem",
-            flexWrap: "wrap",
-            background: "var(--bg-secondary)",
-            padding: "0.55rem 0.85rem",
-            borderRadius: "12px",
-            border: "1px solid var(--border-subtle)",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.74rem",
-              fontWeight: 800,
-              color: "var(--text-muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.04em",
-              marginRight: "4px",
-            }}
-          >
-            Bill Categories:
-          </span>
-          {[
-            { id: "all", label: "All Bills", count: baseFilteredOrders.length },
-            { id: "dine_in", label: "🍽️ Dine In Bills", count: availableDineInOrdersCount },
-            { id: "takeaway", label: "🛍️ Takeaway Bills", count: availableTakeawayOrdersCount },
-            { id: "self_service", label: "📱 Self Service Bills", count: availableSelfServiceOrdersCount },
-          ].map((tab) => {
-            const active = orderTypeFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => {
-                  setOrderTypeFilter(tab.id);
-                  setCurrentPage(1);
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                  padding: "0.42rem 0.9rem",
-                  borderRadius: "8px",
-                  fontSize: "0.78rem",
-                  fontWeight: 750,
-                  border: active
-                    ? "1.5px solid var(--accent-amber)"
-                    : "1px solid var(--border-subtle)",
-                  background: active
-                    ? "color-mix(in srgb, var(--accent-amber) 18%, transparent)"
-                    : "var(--bg-tertiary)",
-                  color: active ? "var(--accent-amber-light)" : "var(--text-muted)",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  boxShadow: active
-                    ? "0 2px 8px color-mix(in srgb, var(--accent-amber) 25%, transparent)"
-                    : "none",
-                }}
-              >
-                <span>{tab.label}</span>
-                <span
-                  style={{
-                    fontSize: "0.68rem",
-                    padding: "1px 6px",
-                    borderRadius: "10px",
-                    background: active ? "var(--accent-amber)" : "rgba(255, 255, 255, 0.08)",
-                    color: active ? "#000000" : "var(--text-muted)",
-                    fontWeight: 800,
-                  }}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Invoice date & dining type filters */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: "0.85rem", flexWrap: "wrap", minHeight: "56px", boxSizing: "border-box", padding: "0.6rem 0.9rem", marginBottom: "0.95rem", background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)", borderRadius: "12px", boxShadow: "0 4px 14px rgba(0, 0, 0, 0.14)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", height: "38px", flex: "0 0 auto" }}>
-            <Calendar size={15} color="var(--accent-amber)" style={{ flex: "0 0 auto" }} />
-            <SearchableSelect
-              aria-label="Filter invoices by date"
-              value={dateFilter}
-              onChange={(event) => { setDateFilter(event.target.value); setCurrentPage(1); }}
-              style={{ height: "38px", width: "auto", minWidth: "170px", boxSizing: "border-box", padding: "0 0.75rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", fontWeight: 700 }}
-            >
-              <option value="all">All Dates</option>
-              <option value="daily">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="weekly">This Week</option>
-              <option value="monthly">This Month</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="custom">Custom Date Range</option>
-            </SearchableSelect>
-          </div>
-
-          {/* Service / Dining Type Filter Dropdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", height: "38px", flex: "0 0 auto" }}>
-            <Utensils size={15} color="var(--accent-amber)" style={{ flex: "0 0 auto" }} />
-            <SearchableSelect
-              aria-label="Filter by Service / Dining Type"
-              value={orderTypeFilter}
-              onChange={(event) => {
-                setOrderTypeFilter(event.target.value);
-                setCurrentPage(1);
-              }}
-              style={{
-                height: "38px",
-                width: "auto",
-                minWidth: "215px",
-                boxSizing: "border-box",
-                padding: "0 0.75rem",
-                borderRadius: "8px",
-                border: "1px solid var(--border-card)",
-                color: "var(--text-main)",
-                background: "var(--bg-card)",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-              }}
-            >
-              <option value="all">All Categories ({baseFilteredOrders.length})</option>
-              <option value="dine_in">🍽️ Dine-In ({availableDineInOrdersCount})</option>
-              <option value="takeaway">🛍️ Takeaway ({availableTakeawayOrdersCount})</option>
-              <option value="self_service">📱 Self Service ({availableSelfServiceOrdersCount})</option>
-            </SearchableSelect>
-          </div>
           {dateFilter === "daily" && (
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-              Date
-              <input type="date" value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setCurrentPage(1); }} style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
-            </label>
-          )}
-          {dateFilter === "monthly" && (
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-              Month
-              <input type="month" value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setCurrentPage(1); }} style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }} />
-            </label>
-          )}
-          {dateFilter === "quarterly" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-              <label htmlFor="invoice-quarter">Quarter</label>
-              <SearchableSelect
-                id="invoice-quarter"
-                value={selectedQuarter.quarter}
-                onChange={(event) => {
-                  setSelectedQuarter((current) => ({ ...current, quarter: Number(event.target.value) }));
+            <div className="admin-inv-date-nav">
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedDate((prev) => shiftLocalYmd(prev, -1));
                   setCurrentPage(1);
                 }}
-                style={{ height: "38px", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
               >
-                {[1, 2, 3, 4].map((quarter) => <option key={quarter} value={quarter}>Q{quarter} ({(quarter - 1) * 3 + 1}–{quarter * 3})</option>)}
-              </SearchableSelect>
-              <label htmlFor="invoice-quarter-year">Year</label>
+                <ChevronLeft size={14} />
+                <span>Previous Day</span>
+              </button>
               <input
-                id="invoice-quarter-year"
-                type="number"
-                min="2000"
-                max="2100"
-                value={selectedQuarter.year}
-                onChange={(event) => {
-                  setSelectedQuarter((current) => ({ ...current, year: Number(event.target.value) }));
+                type="date"
+                aria-label="Select daily date"
+                className="admin-inv-date-input"
+                value={selectedDate}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDate(e.target.value);
+                    setCurrentPage(1);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedDate((prev) => shiftLocalYmd(prev, 1));
                   setCurrentPage(1);
                 }}
-                style={{ width: "88px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
-              />
+              >
+                <span>Next Day</span>
+                <ChevronRight size={14} />
+              </button>
+              <button
+                type="button"
+                className="admin-inv-btn-primary"
+                onClick={() => {
+                  setSelectedDate(localDateInputValue());
+                  setCurrentPage(1);
+                }}
+              >
+                <Calendar size={14} />
+                <span>Today</span>
+              </button>
             </div>
           )}
+
           {dateFilter === "weekly" && (
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-              Week of
+            <div className="admin-inv-date-nav">
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedWeek((prev) => shiftWeekRange(prev, -1));
+                  setCurrentPage(1);
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Previous Week</span>
+              </button>
               <input
                 type="date"
                 aria-label="Choose week"
+                className="admin-inv-date-input"
                 value={selectedWeek.from}
-                onChange={(event) => {
-                  const from = event.target.value;
-                  if (!from) return;
-                  const weekStart = new Date(`${from}T00:00:00`);
-                  const offset = (weekStart.getDay() + 6) % 7;
-                  weekStart.setDate(weekStart.getDate() - offset);
-                  const weekEnd = new Date(weekStart);
-                  weekEnd.setDate(weekStart.getDate() + 6);
-                  setSelectedWeek({ from: localDateInputValue(weekStart), to: localDateInputValue(weekEnd) });
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedWeek(getMondayToSundayRange(e.target.value));
+                    setCurrentPage(1);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedWeek((prev) => shiftWeekRange(prev, 1));
                   setCurrentPage(1);
                 }}
-                style={{ width: "148px", height: "38px", boxSizing: "border-box", padding: "0 0.55rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem" }}
-              />
-              <span style={{ fontWeight: 500 }}>{selectedWeek.from} – {selectedWeek.to}</span>
-            </label>
-          )}
-          {dateFilter === "custom" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                From
-                <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-                  <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="From date (day/month/year)" value={customFromDateText} onChange={(event) => { const text = event.target.value; setCustomFromDateText(text); setCustomFromDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 2.1rem 0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
-                  <input type="date" aria-label="Choose from date" value={customFromDate} max={customToDate || undefined} onChange={(event) => { const value = event.target.value; setCustomFromDate(value); setCustomFromDateText(value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : ""); setCurrentPage(1); }} onClick={(event) => { try { event.currentTarget.showPicker(); } catch {} }} style={{ position: "absolute", right: "5px", width: "28px", height: "30px", opacity: 0, cursor: "pointer" }} />
-                  <Calendar size={16} color="var(--text-muted)" style={{ position: "absolute", right: "10px", pointerEvents: "none" }} />
-                </span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "38px", color: "var(--text-muted)", fontSize: "0.78rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                To
-                <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-                  <input type="text" inputMode="numeric" placeholder="dd/mm/yyyy" aria-label="To date (day/month/year)" value={customToDateText} onChange={(event) => { const text = event.target.value; setCustomToDateText(text); setCustomToDate(parseDisplayDateInput(text)); setCurrentPage(1); }} style={{ width: "132px", height: "38px", boxSizing: "border-box", padding: "0 2.1rem 0 0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "var(--bg-card)", fontSize: "0.8rem", lineHeight: 1 }} />
-                  <input type="date" aria-label="Choose to date" value={customToDate} min={customFromDate || undefined} onChange={(event) => { const value = event.target.value; setCustomToDate(value); setCustomToDateText(value ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}` : ""); setCurrentPage(1); }} onClick={(event) => { try { event.currentTarget.showPicker(); } catch {} }} style={{ position: "absolute", right: "5px", width: "28px", height: "30px", opacity: 0, cursor: "pointer" }} />
-                  <Calendar size={16} color="var(--text-muted)" style={{ position: "absolute", right: "10px", pointerEvents: "none" }} />
-                </span>
-              </label>
+              >
+                <span>Next Week</span>
+                <ChevronRight size={14} />
+              </button>
             </div>
           )}
-          {invalidCustomDate && <span role="alert" style={{ color: "var(--danger)", fontSize: "0.73rem" }}>Enter valid dates in DD/MM/YYYY order.</span>}
-          <span style={{ marginLeft: "auto", color: "var(--text-muted)", fontSize: "0.75rem", fontWeight: 600, whiteSpace: "nowrap", background: "rgba(255,255,255,0.04)", border: "1px solid var(--border-subtle)", padding: "0.3rem 0.65rem", borderRadius: "999px" }}>Showing {filteredOrders.length} invoices</span>
+
+          {dateFilter === "monthly" && (
+            <div className="admin-inv-date-nav">
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedMonth((prev) => shiftYearMonth(prev, -1));
+                  setCurrentPage(1);
+                }}
+              >
+                <ChevronLeft size={14} />
+                <span>Previous Month</span>
+              </button>
+              <input
+                type="month"
+                aria-label="Select month"
+                className="admin-inv-date-input"
+                value={selectedMonth}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedMonth(e.target.value);
+                    setCurrentPage(1);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedMonth((prev) => shiftYearMonth(prev, 1));
+                  setCurrentPage(1);
+                }}
+              >
+                <span>Next Month</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+
+          {dateFilter === "custom" && (
+            <div className="admin-inv-date-nav">
+              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                Start Date
+                <input
+                  type="date"
+                  aria-label="Start Date"
+                  className="admin-inv-date-input"
+                  value={customFromDraft}
+                  onChange={(e) => {
+                    setCustomFromDraft(e.target.value);
+                    setCustomRangeError("");
+                  }}
+                />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.76rem", fontWeight: 700, color: "var(--text-muted)" }}>
+                End Date
+                <input
+                  type="date"
+                  aria-label="End Date"
+                  className="admin-inv-date-input"
+                  value={customToDraft}
+                  onChange={(e) => {
+                    setCustomToDraft(e.target.value);
+                    setCustomRangeError("");
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="admin-inv-btn-primary"
+                onClick={handleApplyCustomRange}
+              >
+                Apply Filter
+              </button>
+              {customRangeError && (
+                <span role="alert" style={{ color: "var(--danger)", fontSize: "0.76rem", fontWeight: 700 }}>
+                  {customRangeError}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Filter Strip & Mini Metrics */}
+        {/* Error & Loading States */}
+        {invoiceLoadError && (
+          <div
+            role="alert"
+            style={{
+              padding: "0.75rem 0.95rem",
+              borderRadius: "10px",
+              border: "1px solid rgba(239, 68, 68, 0.35)",
+              background: "rgba(239, 68, 68, 0.08)",
+              color: "var(--danger)",
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <AlertCircle size={16} />
+            <span>{invoiceLoadError}</span>
+          </div>
+        )}
+
+        {isLoadingInvoices && invoiceRecords.length === 0 && (
+          <div>
+            <SkeletonDashboard cards={4} />
+            <SkeletonTable rows={5} columns={7} />
+          </div>
+        )}
+
+        {/* Summary Cards (Backend Invoice Totals Only; Void/Cancelled Excluded) */}
+        <div className="admin-inv-summary-grid">
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Total Invoices</div>
+            <div className="admin-inv-summary-value">{summary.validCount}</div>
+            <div className="admin-inv-summary-sub">
+              {summary.voidCount > 0
+                ? `${summary.voidCount} void/cancelled excluded`
+                : "Active backend invoices"}
+            </div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Gross Sales</div>
+            <div className="admin-inv-summary-value">{formatCurrency(summary.grossSales)}</div>
+            <div className="admin-inv-summary-sub">Sum of backend subtotals</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Total Discounts</div>
+            <div className="admin-inv-summary-value">{formatCurrency(summary.totalDiscounts)}</div>
+            <div className="admin-inv-summary-sub">Backend discount amounts</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">GST / Tax</div>
+            <div className="admin-inv-summary-value">{formatCurrency(summary.totalTax)}</div>
+            <div className="admin-inv-summary-sub">Backend tax totals</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Net Sales</div>
+            <div className="admin-inv-summary-value" style={{ color: "var(--accent-amber-light)" }}>
+              {formatCurrency(summary.netSales)}
+            </div>
+            <div className="admin-inv-summary-sub">Excludes void/cancelled</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Total Paid</div>
+            <div className="admin-inv-summary-value" style={{ color: "var(--success, #10b981)" }}>
+              {formatCurrency(summary.totalPaid)}
+            </div>
+            <div className="admin-inv-summary-sub">Collected payments</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Pending Amount</div>
+            <div
+              className="admin-inv-summary-value"
+              style={{ color: summary.pendingAmount > 0 ? "var(--danger, #ef4444)" : "var(--text-main)" }}
+            >
+              {formatCurrency(summary.pendingAmount)}
+            </div>
+            <div className="admin-inv-summary-sub">Unpaid / partial due</div>
+          </div>
+        </div>
+
+        {/* Facet Filters */}
+        <div className="admin-inv-filter-bar">
+          {availableBranches.length > 0 && (
+            <SearchableSelect
+              aria-label="Filter by Branch"
+              className="admin-inv-select"
+              value={branchFilter}
+              onChange={(e) => {
+                setBranchFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="all">All Branches</option>
+              {availableBranches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.label}
+                </option>
+              ))}
+            </SearchableSelect>
+          )}
+
+          <SearchableSelect
+            aria-label="Filter by Order Type"
+            className="admin-inv-select"
+            value={orderTypeFilter}
+            onChange={(e) => {
+              setOrderTypeFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="all">All Order Types</option>
+            <option value="dine_in">Dine-In</option>
+            <option value="takeaway">Takeaway</option>
+            <option value="self_service">Self Service</option>
+          </SearchableSelect>
+
+          <SearchableSelect
+            aria-label="Filter by Payment Status"
+            className="admin-inv-select"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="all">All Payment Statuses</option>
+            <option value="paid">Paid</option>
+            <option value="partial">Partial</option>
+            <option value="unpaid">Unpaid / Pending</option>
+            <option value="void">Void / Cancelled / Refunded</option>
+          </SearchableSelect>
+
+          <SearchableSelect
+            aria-label="Filter by Payment Method"
+            className="admin-inv-select"
+            value={paymentFilter}
+            onChange={(e) => {
+              setPaymentFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="all">All Payment Methods</option>
+            {availablePaymentModes.map((mode) => (
+              <option key={mode} value={mode}>
+                {mode.toUpperCase()}
+              </option>
+            ))}
+          </SearchableSelect>
+
+          {(searchTerm || branchFilter !== "all" || orderTypeFilter !== "all" || statusFilter !== "all" || paymentFilter !== "all") && (
+            <button
+              type="button"
+              className="admin-inv-btn-neutral"
+              onClick={() => {
+                setSearchTerm("");
+                setBranchFilter("all");
+                setOrderTypeFilter("all");
+                setStatusFilter("all");
+                setPaymentFilter("all");
+                setCurrentPage(1);
+              }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+
+        {/* Day-Wise Breakdown (Weekly & Monthly views; only dates with actual records) */}
+        {(dateFilter === "weekly" || dateFilter === "monthly") && (
+          <div className="admin-inv-breakdown-card">
+            <div className="admin-inv-breakdown-title">
+              <span>
+                Day-Wise Breakdown ({dateFilter === "weekly" ? "Weekly" : "Monthly"})
+              </span>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                Click any date to inspect that day&apos;s invoices
+              </span>
+            </div>
+
+            {dayWiseBreakdown.length === 0 ? (
+              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", padding: "0.5rem 0" }}>
+                No matching backend invoices found for this period.
+              </div>
+            ) : (
+              <div className="admin-inv-table-wrap">
+                <table className="admin-inv-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Invoices</th>
+                      <th>Total Invoice Amount</th>
+                      <th>Paid Amount</th>
+                      <th>Pending Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dayWiseBreakdown.map((row) => (
+                      <tr
+                        key={row.dateKey}
+                        className="admin-inv-breakdown-row"
+                        onClick={() => {
+                          setDateFilter("daily");
+                          setSelectedDate(row.dateKey);
+                          setCurrentPage(1);
+                        }}
+                        title={`View invoices for ${formatReadableDate(row.dateKey)}`}
+                      >
+                        <td style={{ fontWeight: 750, color: "var(--accent-amber-light)" }}>
+                          {formatReadableDate(row.dateKey)}
+                        </td>
+                        <td>{row.count}</td>
+                        <td style={{ fontWeight: 700 }}>{formatCurrency(row.totalAmount)}</td>
+                        <td style={{ color: "var(--success, #10b981)", fontWeight: 700 }}>
+                          {formatCurrency(row.paidAmount)}
+                        </td>
+                        <td style={{ color: row.pendingAmount > 0 ? "var(--danger)" : "var(--text-muted)" }}>
+                          {formatCurrency(row.pendingAmount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Main Invoices Table */}
+        <div className="admin-inv-table-wrap">
+          <table className="admin-inv-table">
+            <thead>
+              <tr>
+                <th
+                  onClick={() => handleSort("invoiceNo")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Invoice Number {sortField === "invoiceNo" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
+                <th
+                  onClick={() => handleSort("date")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Date &amp; Time {sortField === "date" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
+                <th>Order No / ID</th>
+                <th>Customer</th>
+                <th>Order Type</th>
+                <th>Subtotal</th>
+                <th>Discount</th>
+                <th>Tax</th>
+                <th
+                  onClick={() => handleSort("amount")}
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                >
+                  Total Amount {sortField === "amount" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
+                </th>
+                <th>Paid Amount</th>
+                <th>Pending Amount</th>
+                <th>Payment Method</th>
+                <th>Status</th>
+                <th style={{ textAlign: "center" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedOrders.length === 0 && !isLoadingInvoices ? (
+                <tr>
+                  <td colSpan={14} style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--text-muted)" }}>
+                    No invoices match the selected date range and filters.
+                  </td>
+                </tr>
+              ) : (
+                paginatedOrders.map((order, idx) => {
+                  const paymentMethod = getInvoicePaymentMethod(order);
+                  const paymentModes = getInvoicePaymentModes(order);
+                  const paymentLabel = paymentModes.length
+                    ? paymentModes.map((m) => m.toUpperCase()).join(" + ")
+                    : paymentMethod
+                      ? String(paymentMethod).trim()
+                      : "—";
+                  const sKey = getNormalizedStatusKey(order);
+                  const statusLabel = getStatusDisplayLabel(order);
+                  const orderRef =
+                    order.orderNumber ?? order.orderId ?? order.OrderId ?? order.id ?? null;
+                  const customerText = order.customerName || order.customerPhone || "—";
+
+                  return (
+                    <tr
+                      key={order.invoiceId ?? order.InvoiceId ?? order.orderId ?? order.id ?? idx}
+                    >
+                      <td style={{ fontFamily: "monospace", fontWeight: 800 }}>
+                        {invoiceNumberLabel(order)}
+                      </td>
+                      <td>
+                        <div>{invoiceDisplayDate(order)}</div>
+                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                          {formatInvoiceTime(order.invoiceCreatedAt || order.createdAt)}
+                        </div>
+                      </td>
+                      <td>{orderRef != null ? `#${orderRef}` : "—"}</td>
+                      <td>{customerText}</td>
+                      <td>
+                        {isSelfServiceOrder(order) ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--info)", fontWeight: 700 }}>
+                            <Smartphone size={11} /> Self Service
+                          </span>
+                        ) : isTakeawayOrder(order) ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "var(--accent-amber-light)", fontWeight: 700 }}>
+                            <ShoppingBag size={11} /> Takeaway
+                          </span>
+                        ) : (
+                          <span>{order.tableName || getOrderTypeLabel(order)}</span>
+                        )}
+                      </td>
+                      <td>{order.subtotal != null ? formatCurrency(order.subtotal) : "—"}</td>
+                      <td>{order.discountAmount != null ? formatCurrency(order.discountAmount) : "—"}</td>
+                      <td>{order.taxAmount != null ? formatCurrency(order.taxAmount) : "—"}</td>
+                      <td style={{ fontWeight: 800, color: "var(--accent-amber-light)" }}>
+                        {formatCurrency(order.totalAmount ?? order.grandTotal ?? 0)}
+                      </td>
+                      <td style={{ color: "var(--success, #10b981)", fontWeight: 700 }}>
+                        {formatCurrency(order.paidAmount ?? 0)}
+                      </td>
+                      <td style={{ color: (order.dueAmount ?? 0) > 0 ? "var(--danger)" : "var(--text-muted)" }}>
+                        {formatCurrency(order.dueAmount ?? 0)}
+                      </td>
+                      <td>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          {paymentModes[0] === "upi" ? (
+                            <Smartphone size={11} />
+                          ) : paymentModes[0] === "card" ? (
+                            <CreditCard size={11} />
+                          ) : paymentModes[0] === "cash" ? (
+                            <Banknote size={11} />
+                          ) : null}
+                          {paymentLabel}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`admin-inv-status-pill ${
+                            sKey === "paid"
+                              ? "is-paid"
+                              : sKey === "void"
+                                ? "is-void"
+                                : "is-pending"
+                          }`}
+                        >
+                          {statusLabel}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <div style={{ display: "inline-flex", gap: "0.35rem" }}>
+                          <button
+                            type="button"
+                            className="admin-inv-btn-neutral"
+                            style={{ height: "28px", padding: "0 8px", fontSize: "0.7rem" }}
+                            onClick={() => setViewingInvoice(order)}
+                          >
+                            <Eye size={12} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-inv-btn-neutral"
+                            style={{ height: "28px", padding: "0 8px", fontSize: "0.7rem" }}
+                            onClick={() => setSelectedReceipt(order)}
+                          >
+                            <Printer size={12} />
+                            <span>Print</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
         <div
           style={{
             display: "flex",
@@ -1363,663 +1245,279 @@ export function AdminInvoices({
             alignItems: "center",
             flexWrap: "wrap",
             gap: "0.75rem",
-            marginBottom: "1.25rem",
+            fontSize: "0.76rem",
+            color: "var(--text-muted)",
           }}
         >
-          {/* Quick Payment Filter Pills (ALL PAYMENTS, UPI, CASH) */}
-          <div style={{ display: "inline-flex", gap: "0.35rem", alignItems: "center", background: "rgba(255,255,255,0.03)", padding: "3px 4px", borderRadius: "20px", border: "1px solid var(--border-subtle)", flexWrap: "wrap" }}>
-            {[
-              { id: "all", label: "ALL PAYMENTS", active: paymentFilter === "all", onClick: () => { setPaymentFilter("all"); setCurrentPage(1); } },
-              { id: "upi", label: "UPI", active: paymentFilter === "upi", onClick: () => { setPaymentFilter("upi"); setCurrentPage(1); } },
-              { id: "cash", label: "CASH", active: paymentFilter === "cash", onClick: () => { setPaymentFilter("cash"); setCurrentPage(1); } },
-            ].map(({ id, label, active, onClick }) => (
-              <button
-                key={id}
-                onClick={onClick}
-                style={{
-                  background: active
-                    ? id === "upi"
-                      ? "rgba(56, 189, 248, 0.2)"
-                      : id === "cash"
-                      ? "rgba(16, 185, 129, 0.2)"
-                      : "color-mix(in srgb, var(--accent-amber) 20%, transparent)"
-                    : "transparent",
-                  border: active
-                    ? id === "upi"
-                      ? "1px solid #38bdf8"
-                      : id === "cash"
-                      ? "1px solid var(--success)"
-                      : "1px solid var(--accent-amber)"
-                    : "1px solid transparent",
-                  color: active
-                    ? id === "upi"
-                      ? "#38bdf8"
-                      : id === "cash"
-                      ? "var(--success)"
-                      : "var(--accent-amber)"
-                    : "var(--text-muted)",
-                  padding: "0.32rem 0.85rem",
-                  borderRadius: "16px",
-                  fontSize: "0.74rem",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  letterSpacing: "0.03em",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                {label}
-              </button>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span>
+              Showing {sortedOrders.length === 0 ? 0 : pageStart + 1}–
+              {Math.min(pageStart + itemsPerPage, sortedOrders.length)} of {sortedOrders.length}
+            </span>
+            <select
+              aria-label="Rows per page"
+              className="admin-inv-date-input"
+              style={{ height: "28px" }}
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              {[6, 10, 20, 50].map((n) => (
+                <option key={n} value={n}>
+                  {n} / page
+                </option>
+              ))}
+            </select>
           </div>
 
-        </div>
-
-        {/* Invoices Table */}
-        <div
-          style={{
-            overflowX: "auto",
-            borderRadius: "12px",
-            border: "1px solid var(--border-card)",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              textAlign: "left",
-              fontSize: "0.76rem",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  borderBottom: "1px solid var(--border-subtle)",
-                  background: "var(--bg-tertiary)",
-                  color: "var(--text-muted)",
-                  fontSize: "0.72rem",
-                  fontWeight: 700,
-                }}
-              >
-                <th
-                  onClick={() => handleSort("invoiceNo")}
-                  style={{
-                    padding: "0.55rem 0.65rem",
-                    whiteSpace: "nowrap",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    color: sortField === "invoiceNo" ? "var(--accent-amber, var(--accent-amber))" : "inherit",
-                  }}
-                  title="Click to sort by sequential Invoice Number"
-                >
-                  Order / Invoice No {sortField === "invoiceNo" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
-                </th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Order Type &amp; Table</th>
-                <th
-                  onClick={() => handleSort("date")}
-                  style={{
-                    padding: "0.55rem 0.65rem",
-                    whiteSpace: "nowrap",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    color: sortField === "date" ? "var(--accent-amber, var(--accent-amber))" : "inherit",
-                  }}
-                  title="Click to sort by Date &amp; Time"
-                >
-                  Date &amp; Time {sortField === "date" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
-                </th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Items Summary</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Method</th>
-                <th style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>Payment Status</th>
-                <th
-                  onClick={() => handleSort("amount")}
-                  style={{
-                    padding: "0.55rem 0.65rem",
-                    whiteSpace: "nowrap",
-                    cursor: "pointer",
-                    userSelect: "none",
-                    color: sortField === "amount" ? "var(--accent-amber, var(--accent-amber))" : "inherit",
-                  }}
-                  title="Click to sort by Grand Total"
-                >
-                  Grand Total {sortField === "amount" ? (sortDirection === "asc" ? "▲" : "▼") : "↕"}
-                </th>
-                <th style={{ padding: "0.55rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedOrders.map((order, idx) => {
-                const orderIndex = pageStart + idx;
-                const paymentMethod = getInvoicePaymentMethod(order);
-                const paymentModes = getInvoicePaymentModes(order);
-                const paymentLabel = paymentModes.length
-                  ? paymentModes.map((mode) => mode.toUpperCase()).join(" + ")
-                  : paymentMethod ? String(paymentMethod).trim() : "—";
-                const pMode = paymentModes[0] || (paymentMethod ? normalizePaymentMethod(paymentMethod) : "unknown");
-                const orderId = order.orderNumber ?? order.orderId ?? order.OrderId ?? order.id ?? order.Id;
-                const isSelf = isSelfServiceOrder(order);
-                const isTake = isTakeawayOrder(order);
-                const itemCount = (order.items || []).reduce(
-                  (sum, i) => sum + Number(i.quantity || 1),
-                  0,
-                );
-                const rawStatus = String(order.paymentStatus || order.status || "Paid").toLowerCase();
-                const isPaid = rawStatus.includes("paid") || rawStatus.includes("settled") || rawStatus.includes("completed");
-
-                return (
-                  <tr
-                    key={order.invoiceId ?? order.InvoiceId ?? order.id ?? order.orderId ?? order.invoiceNo ?? orderIndex}
-                    style={{
-                      borderBottom: "1px solid var(--border-subtle)",
-                      transition: "background 0.15s ease",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "var(--bg-tertiary)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    {/* Invoice No & Order ID */}
-                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
-                      <span
-                        style={{
-                          fontFamily: "monospace",
-                          fontWeight: 800,
-                          color: "var(--text-main)",
-                          fontSize: "0.76rem",
-                        }}
-                      >
-                        {invoiceNumberLabel(order)}
-                      </span>
-                      <div style={{ marginTop: "2px", color: "var(--text-muted)", fontSize: "0.66rem" }}>
-                        Order #{orderId ?? "—"}
-                      </div>
-                    </td>
-
-                    {/* Order Type & Table */}
-                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
-                      {isSelf ? (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            background: "rgba(56, 189, 248, 0.15)",
-                            border: "1px solid rgba(56, 189, 248, 0.35)",
-                            color: "var(--info)",
-                            fontSize: "0.7rem",
-                            fontWeight: 800,
-                          }}
-                        >
-                          <Smartphone size={10} /> Self Service
-                        </span>
-                      ) : isTake ? (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            background: "color-mix(in srgb, var(--accent-amber) 15%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
-                            color: "var(--accent-amber-light)",
-                            fontSize: "0.7rem",
-                            fontWeight: 800,
-                          }}
-                        >
-                          <ShoppingBag size={10} /> Takeaway
-                        </span>
-                      ) : (
-                        <div style={{ fontWeight: 750, color: "var(--text-main)" }}>
-                          {order.tableName || (order.tableId != null ? "Table " + order.tableId : "Dine-In")}
-                        </div>
-                      )}
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-muted)",
-                          marginTop: "2px",
-                        }}
-                      >
-                        {isSelf ? "Self Service Kiosk" : `Waiter: ${order.server || "Staff"}`}
-                      </div>
-                    </td>
-
-                    {/* Date & Time */}
-                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
-                      <div style={{ color: "var(--text-main)", fontWeight: 600 }}>
-                        {invoiceDisplayDate(order)}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-muted)",
-                          marginTop: "1px",
-                        }}
-                      >
-                        {formatInvoiceTime(order.invoiceCreatedAt || order.createdAt || order.settledAt || order.orderTime)}
-                      </div>
-                    </td>
-
-                    {/* Items */}
-                    <td style={{ padding: "0.5rem 0.65rem", color: "var(--text-main)" }}>
-                      <span style={{ fontWeight: 600 }}>{itemCount} items</span>
-                      <div
-                        style={{
-                          fontSize: "0.68rem",
-                          color: "var(--text-muted)",
-                          maxWidth: "160px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {(order.items || []).map((i) => i.name).filter(Boolean).join(", ") || "—"}
-                      </div>
-                    </td>
-
-                    {/* Payment Mode Badge */}
-                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
-                      {pMode === "upi" ? (
-                        <span
-                          style={{
-                            background: "rgba(56, 189, 248, 0.12)",
-                            border: "1px solid rgba(56, 189, 248, 0.3)",
-                            color: "var(--info)",
-                            borderRadius: "20px",
-                            padding: "2px 8px",
-                            fontSize: "0.68rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <Smartphone size={10} />
-                          {paymentLabel}
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            background: pMode === "card" ? "rgba(99, 102, 241, 0.12)" : "rgba(16, 185, 129, 0.12)",
-                            border: pMode === "card" ? "1px solid rgba(99, 102, 241, 0.3)" : "1px solid rgba(16, 185, 129, 0.3)",
-                            color: pMode === "card" ? "var(--accent-indigo)" : "var(--success)",
-                            borderRadius: "20px",
-                            padding: "2px 8px",
-                            fontSize: "0.68rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          {pMode === "card" ? <CreditCard size={10} /> : pMode === "cash" ? <Banknote size={10} /> : null}
-                          {paymentLabel}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Payment Status */}
-                    <td style={{ padding: "0.5rem 0.65rem", whiteSpace: "nowrap" }}>
-                      <span
-                        style={{
-                          background: isPaid ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                          border: isPaid ? "1px solid rgba(16, 185, 129, 0.35)" : "1px solid rgba(239, 68, 68, 0.35)",
-                          color: isPaid ? "var(--success)" : "var(--danger)",
-                          borderRadius: "20px",
-                          padding: "2px 8px",
-                          fontSize: "0.68rem",
-                          fontWeight: 800,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {isPaid ? "Paid" : "Pending"}
-                      </span>
-                    </td>
-
-                    {/* Grand Total */}
-                    <td
-                      style={{
-                        padding: "0.5rem 0.65rem",
-                        fontWeight: 800,
-                        color: "var(--accent-amber-light)",
-                        fontSize: "0.82rem",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {formatCurrency(order.grandTotal ?? order.totalAmount ?? order.total ?? 0)}
-                    </td>
-
-                    {/* Action Buttons: View, Print, Download */}
-                    <td style={{ padding: "0.5rem 0.65rem", textAlign: "center", whiteSpace: "nowrap" }}>
-                      <div style={{ display: "inline-flex", justifyContent: "center", gap: "0.3rem" }}>
-                        <button
-                          onClick={() => setSelectedReceipt(order)}
-                          title="View Invoice Details"
-                          style={{
-                            background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
-                            border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
-                            color: "var(--accent-amber-light)",
-                            borderRadius: "6px",
-                            padding: "4px 7px",
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
-                          }}
-                        >
-                          <Eye size={11} />
-                          <span>View</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedReceipt(order)}
-                          title="Print Receipt"
-                          style={{
-                            background: "rgba(16, 185, 129, 0.08)",
-                            border: "1px solid rgba(16, 185, 129, 0.35)",
-                            color: "var(--success)",
-                            borderRadius: "6px",
-                            padding: "4px 7px",
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
-                          }}
-                        >
-                          <Printer size={11} />
-                          <span>Print</span>
-                        </button>
-                        <button
-                          onClick={() => setSelectedReceipt(order)}
-                          title="Download Receipt PDF"
-                          style={{
-                            background: "rgba(99, 102, 241, 0.08)",
-                            border: "1px solid rgba(99, 102, 241, 0.35)",
-                            color: "var(--accent-indigo)",
-                            borderRadius: "6px",
-                            padding: "4px 7px",
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
-                          }}
-                        >
-                          <Download size={11} />
-                          <span>PDF</span>
-                        </button>
-                        {!isSelf && (
-                          <button
-                            onClick={() => openDiscountEditor(order)}
-                            disabled={!onUpdateInvoiceDiscount || (!order.id && !order.invoiceNo)}
-                            title="Edit bill discount"
-                            style={{
-                              background: "rgba(59, 130, 246, 0.08)",
-                              border: "1px solid rgba(59, 130, 246, 0.35)",
-                              color: "var(--info)",
-                              borderRadius: "6px",
-                              padding: "4px 7px",
-                              fontSize: "0.7rem",
-                              fontWeight: 700,
-                              cursor: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? "pointer" : "not-allowed",
-                              opacity: onUpdateInvoiceDiscount && (order.id || order.invoiceNo) ? 1 : 0.5,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "3px",
-                            }}
-                          >
-                            <Pencil size={11} />
-                            <span>Edit</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {paginatedOrders.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    style={{
-                      padding: "2rem 1rem",
-                      color: "var(--text-dim)",
-                      textAlign: "center",
-                    }}
-                  >
-                    No invoices match these filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "0.5rem 0.85rem",
-              borderTop: "1px solid var(--border-subtle)",
-              background: "var(--bg-tertiary)",
-              fontSize: "0.74rem",
-              color: "var(--text-muted)",
-              flexWrap: "wrap",
-              gap: "0.5rem",
-            }}
-          >
-            <span>
-              Showing{" "}
-              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
-                {filteredOrders.length === 0 ? 0 : pageStart + 1}
-              </strong>
-              –
-              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
-                {Math.min(pageStart + itemsPerPage, filteredOrders.length)}
-              </strong>{" "}
-              of{" "}
-              <strong style={{ color: "var(--text-main)", fontWeight: 700 }}>
-                {filteredOrders.length}
-              </strong>{" "}
-              invoices
-            </span>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <button
+              type="button"
+              className="admin-inv-btn-neutral"
+              style={{ height: "28px", padding: "0 10px" }}
+              disabled={visiblePage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             >
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
-              >
-                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                  Per page:
-                </span>
-                <select
-                  aria-label="Invoices per page"
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    background: "var(--bg-tertiary)",
-                    color: "var(--text-main)",
-                    border: "1px solid var(--border-card)",
-                    borderRadius: "5px",
-                    padding: "2px 6px",
-                    fontSize: "0.72rem",
-                    outline: "none",
-                    cursor: "pointer",
-                    height: "24px",
-                  }}
-                >
-                  {[5, 6, 8, 10, 20].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Modern Compact Sliding Window Pagination */}
-              {(() => {
-                const total = Math.max(1, pageCount);
-                const current = visiblePage;
-                const pagesToRender = [];
-
-                if (total <= 6) {
-                  for (let i = 1; i <= total; i++) pagesToRender.push(i);
-                } else {
-                  pagesToRender.push(1);
-                  if (current > 3) pagesToRender.push("dots-left");
-                  const start = Math.max(2, current - 1);
-                  const end = Math.min(total - 1, current + 1);
-                  for (let i = start; i <= end; i++) {
-                    if (!pagesToRender.includes(i)) pagesToRender.push(i);
-                  }
-                  if (current < total - 2) pagesToRender.push("dots-right");
-                  if (!pagesToRender.includes(total)) pagesToRender.push(total);
-                }
-
-                const navBtnStyle = (disabled) => ({
-                  height: "26px",
-                  padding: "0 8px",
-                  borderRadius: "6px",
-                  background: disabled
-                    ? "rgba(255, 255, 255, 0.03)"
-                    : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
-                  border: "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
-                  color: disabled ? "#475569" : "var(--text-main, #e2e8f0)",
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  opacity: disabled ? 0.45 : 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "2px",
-                  fontSize: "0.74rem",
-                  fontWeight: 600,
-                  transition: "all 0.15s ease",
-                  whiteSpace: "nowrap",
-                });
-
-                return (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.3rem",
-                    }}
-                  >
-                    {/* « First */}
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage(1)}
-                      disabled={current === 1}
-                      style={navBtnStyle(current === 1)}
-                      title="Go to first page"
-                    >
-                      « First
-                    </button>
-
-                    {/* < Prev */}
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={current === 1}
-                      style={navBtnStyle(current === 1)}
-                      title="Go to previous page"
-                    >
-                      &lt; Prev
-                    </button>
-
-                    {/* Page Numbers & Ellipsis */}
-                    {pagesToRender.map((p, idx) => {
-                      if (typeof p === "string") {
-                        return (
-                          <span
-                            key={`${p}-${idx}`}
-                            style={{
-                              padding: "0 4px",
-                              color: "var(--text-muted)",
-                              fontSize: "0.8rem",
-                              userSelect: "none",
-                            }}
-                          >
-                            ...
-                          </span>
-                        );
-                      }
-                      const isActive = p === current;
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => setCurrentPage(p)}
-                          style={{
-                            height: "26px",
-                            minWidth: "26px",
-                            padding: "0 7px",
-                            borderRadius: "6px",
-                            background: isActive
-                              ? "linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-saffron) 100%)"
-                              : "var(--bg-tertiary, rgba(255, 255, 255, 0.06))",
-                            border: isActive
-                              ? "1px solid var(--accent-amber)"
-                              : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
-                            color: isActive ? "#ffffff" : "var(--text-main, #e2e8f0)",
-                            cursor: "pointer",
-                            fontSize: "0.76rem",
-                            fontWeight: isActive ? 800 : 600,
-                            boxShadow: isActive
-                              ? "0 2px 8px color-mix(in srgb, var(--accent-amber) 40%, transparent)"
-                              : "none",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {p}
-                        </button>
-                      );
-                    })}
-
-                    {/* Next > */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(total, p + 1))
-                      }
-                      disabled={current === total}
-                      style={navBtnStyle(current === total)}
-                      title="Go to next page"
-                    >
-                      Next &gt;
-                    </button>
-
-                    {/* Last » */}
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage(total)}
-                      disabled={current === total}
-                      style={navBtnStyle(current === total)}
-                      title="Go to last page"
-                    >
-                      Last »
-                    </button>
-                  </div>
-                );
-              })()}
-            </div>
+              Prev
+            </button>
+            <span style={{ fontWeight: 700, padding: "0 6px" }}>
+              Page {visiblePage} / {pageCount}
+            </span>
+            <button
+              type="button"
+              className="admin-inv-btn-neutral"
+              style={{ height: "28px", padding: "0 10px" }}
+              disabled={visiblePage >= pageCount}
+              onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Receipt Modal */}
+      {/* Invoice Detail Modal */}
+      {viewingInvoice && (
+        <div className="admin-inv-modal-overlay" role="dialog" aria-modal="true" aria-label="Invoice Details">
+          <div ref={detailDialogRef} tabIndex={-1} className="admin-inv-detail-modal">
+            <div className="admin-inv-detail-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 850 }}>
+                  {invoiceNumberLabel(viewingInvoice)}
+                </h3>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Invoice ID: {viewingInvoice.invoiceId ?? "—"} • Order Ref:{" "}
+                  {viewingInvoice.orderNumber ?? viewingInvoice.orderId ?? "—"}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingInvoice(null)}
+                aria-label="Close invoice details"
+                style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="admin-inv-detail-body">
+              <div className="admin-inv-detail-grid">
+                <div>
+                  <span style={{ color: "var(--text-muted)" }}>Date &amp; Time:</span>{" "}
+                  <strong>
+                    {invoiceDisplayDate(viewingInvoice)} •{" "}
+                    {formatInvoiceTime(viewingInvoice.invoiceCreatedAt || viewingInvoice.createdAt)}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)" }}>Order Type:</span>{" "}
+                  <strong>{getOrderTypeLabel(viewingInvoice)}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)" }}>Customer:</span>{" "}
+                  <strong>
+                    {viewingInvoice.customerName || viewingInvoice.customerPhone
+                      ? [viewingInvoice.customerName, viewingInvoice.customerPhone]
+                          .filter(Boolean)
+                          .join(" • ")
+                      : "—"}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)" }}>Status:</span>{" "}
+                  <strong>{getStatusDisplayLabel(viewingInvoice)}</strong>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--text-muted)", marginBottom: "0.4rem" }}>
+                  Items ({Array.isArray(viewingInvoice.items) ? viewingInvoice.items.length : 0})
+                </div>
+                {Array.isArray(viewingInvoice.items) && viewingInvoice.items.length > 0 ? (
+                  <div className="admin-inv-table-wrap">
+                    <table className="admin-inv-table">
+                      <thead>
+                        <tr>
+                          <th>Item</th>
+                          <th>Qty</th>
+                          <th>Rate</th>
+                          <th style={{ textAlign: "right" }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {viewingInvoice.items.map((item, idx) => (
+                          <tr key={item.id ?? idx}>
+                            <td>{item.name || item.dishName || "—"}</td>
+                            <td>{item.quantity ?? 1}</td>
+                            <td>{formatCurrency(item.price ?? 0)}</td>
+                            <td style={{ textAlign: "right", fontWeight: 700 }}>
+                              {formatCurrency(item.total ?? (Number(item.price || 0) * Number(item.quantity || 1)))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                    No item details returned by backend.
+                  </div>
+                )}
+              </div>
+
+              {/* Financial Breakdown */}
+              <div className="admin-inv-detail-grid" style={{ gridTemplateColumns: "1fr" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Subtotal</span>
+                  <strong>{formatCurrency(viewingInvoice.subtotal ?? 0)}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Discount</span>
+                  <strong>{formatCurrency(viewingInvoice.discountAmount ?? 0)}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Tax / GST</span>
+                  <strong>{formatCurrency(viewingInvoice.taxAmount ?? 0)}</strong>
+                </div>
+                {viewingInvoice.serviceChargeAmount != null && (
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "var(--text-muted)" }}>Service Charge</span>
+                    <strong>{formatCurrency(viewingInvoice.serviceChargeAmount)}</strong>
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    borderTop: "1px dashed var(--border-subtle)",
+                    paddingTop: "0.4rem",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  <strong>Total Amount</strong>
+                  <strong style={{ color: "var(--accent-amber-light)" }}>
+                    {formatCurrency(viewingInvoice.totalAmount ?? viewingInvoice.grandTotal ?? 0)}
+                  </strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Paid Amount</span>
+                  <strong style={{ color: "var(--success, #10b981)" }}>
+                    {formatCurrency(viewingInvoice.paidAmount ?? 0)}
+                  </strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-muted)" }}>Pending Amount</span>
+                  <strong style={{ color: (viewingInvoice.dueAmount ?? 0) > 0 ? "var(--danger)" : "var(--text-main)" }}>
+                    {formatCurrency(viewingInvoice.dueAmount ?? 0)}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Payment Records */}
+              <div>
+                <div style={{ fontSize: "0.76rem", fontWeight: 800, color: "var(--text-muted)", marginBottom: "0.4rem" }}>
+                  Payment Records
+                </div>
+                {Array.isArray(viewingInvoice.payments) && viewingInvoice.payments.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                    {viewingInvoice.payments.map((p, idx) => (
+                      <div
+                        key={p.paymentId ?? idx}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "0.45rem 0.65rem",
+                          borderRadius: "8px",
+                          background: "var(--bg-secondary)",
+                          border: "1px solid var(--border-subtle)",
+                          fontSize: "0.76rem",
+                        }}
+                      >
+                        <div>
+                          <strong>{String(p.paymentMode || p.paymentMethod || "—").toUpperCase()}</strong>
+                          {p.transactionReference && (
+                            <span style={{ color: "var(--text-muted)", marginLeft: "0.5rem" }}>
+                              Ref: {p.transactionReference}
+                            </span>
+                          )}
+                        </div>
+                        <strong>{formatCurrency(p.amount ?? p.amountPaid ?? 0)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                    {getInvoicePaymentMethod(viewingInvoice)
+                      ? `Method: ${String(getInvoicePaymentMethod(viewingInvoice)).toUpperCase()}`
+                      : "No payment records returned."}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="admin-inv-detail-footer">
+              {typeof onUpdateInvoiceDiscount === "function" && (
+                <button
+                  type="button"
+                  className="admin-inv-btn-neutral"
+                  onClick={() => {
+                    const target = viewingInvoice;
+                    setViewingInvoice(null);
+                    openDiscountEditor(target);
+                  }}
+                >
+                  <Pencil size={13} />
+                  <span>Edit Discount</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="admin-inv-btn-neutral"
+                onClick={() => {
+                  setSelectedReceipt(viewingInvoice);
+                  setViewingInvoice(null);
+                }}
+              >
+                <Printer size={13} />
+                <span>Print Invoice</span>
+              </button>
+              <button
+                type="button"
+                className="admin-inv-btn-primary"
+                onClick={() => setViewingInvoice(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Receipt / Print Modal */}
       {selectedReceipt && (
         <ReceiptModal
           table={selectedReceipt}
@@ -2032,20 +1530,12 @@ export function AdminInvoices({
         />
       )}
 
+      {/* Edit Invoice Discount Modal */}
       {editingInvoice && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 170,
-            display: "grid",
-            placeItems: "center",
-            padding: "1rem",
-            background: "var(--modal-overlay)",
-            backdropFilter: "blur(5px)",
-          }}
-        >
+        <div className="admin-inv-modal-overlay" role="dialog" aria-modal="true" aria-label="Edit invoice discount">
           <form
+            ref={editDialogRef}
+            tabIndex={-1}
             onSubmit={saveInvoiceDiscount}
             style={{
               width: "100%",
@@ -2062,20 +1552,17 @@ export function AdminInvoices({
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Edit invoice discount</h3>
                 <div style={{ marginTop: "0.25rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                  {formatInvoiceNumber(editingInvoice)}
+                  {invoiceNumberLabel(editingInvoice)}
                 </div>
               </div>
-              <button type="button" onClick={() => setEditingInvoice(null)} aria-label="Close edit discount" style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
+              <button
+                type="button"
+                onClick={() => setEditingInvoice(null)}
+                aria-label="Close edit discount"
+                style={{ border: 0, background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}
+              >
                 <X size={18} />
               </button>
-            </div>
-            <div style={{ maxHeight: "150px", overflowY: "auto", marginBottom: "0.9rem", padding: "0.65rem", border: "1px solid var(--border-card)", borderRadius: "8px", background: "var(--bg-secondary)" }}>
-              {(Array.isArray(editingInvoice.items) ? editingInvoice.items : []).map((item, index) => {
-                const quantity = Number(item.quantity ?? item.qty) || 1;
-                const unitPrice = Number(item.price ?? item.unitPrice) || 0;
-                return <div key={item.id ?? `${item.name || item.dishName}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", padding: "0.32rem 0", color: "var(--text-main)", fontSize: "0.75rem" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{item.name || item.dishName || "—"} × {quantity} · {formatCurrency(unitPrice)}</span><strong style={{ whiteSpace: "nowrap" }}>{formatCurrency(quantity * unitPrice)}</strong></div>;
-              })}
-              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--border-card)", marginTop: "0.35rem", paddingTop: "0.45rem", fontSize: "0.75rem", fontWeight: 800 }}><span>Items subtotal</span><span>{formatCurrency((Array.isArray(editingInvoice.items) ? editingInvoice.items : []).reduce((sum, item) => sum + (Number(item.price ?? item.unitPrice) || 0) * (Number(item.quantity ?? item.qty) || 1), 0))}</span></div>
             </div>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, marginBottom: "0.4rem" }}>
               Discount percentage
@@ -2097,12 +1584,23 @@ export function AdminInvoices({
             </p>
             {editError && <div role="alert" style={{ color: "var(--danger)", fontSize: "0.78rem", marginBottom: "0.8rem" }}>{editError}</div>}
             <div style={{ display: "flex", gap: "0.6rem", marginTop: "1rem" }}>
-              <button type="button" onClick={() => setEditingInvoice(null)} disabled={isSavingEdit} style={{ flex: 1, padding: "0.65rem", borderRadius: "8px", border: "1px solid var(--border-card)", color: "var(--text-main)", background: "transparent", cursor: "pointer" }}>
+              <button
+                type="button"
+                onClick={() => setEditingInvoice(null)}
+                disabled={isSavingEdit}
+                className="admin-inv-btn-neutral"
+                style={{ flex: 1 }}
+              >
                 Cancel
               </button>
-              <button type="submit" disabled={isSavingEdit} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.4rem", padding: "0.65rem", borderRadius: "8px", border: 0, color: "#fff", background: "linear-gradient(135deg, var(--accent-amber), var(--accent-saffron))", fontWeight: 700, cursor: isSavingEdit ? "wait" : "pointer", opacity: isSavingEdit ? 0.7 : 1 }}>
+              <button
+                type="submit"
+                disabled={isSavingEdit}
+                className="admin-inv-btn-primary"
+                style={{ flex: 1 }}
+              >
                 <Save size={14} />
-                {isSavingEdit ? "Saving..." : "Save Discount"}
+                <span>{isSavingEdit ? "Saving..." : "Save Discount"}</span>
               </button>
             </div>
           </form>

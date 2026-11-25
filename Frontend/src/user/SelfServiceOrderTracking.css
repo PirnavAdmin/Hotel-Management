@@ -1,0 +1,373 @@
+/* ============================================================
+   Phase 2B.4 – Self Service Order Tracking UI Styling
+   Follows existing theme tokens and responsive kiosk layout
+   ============================================================ */
+
+.ss-tracking-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ss-tracking-card {
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ss-tracking-header {
+  padding: 1rem 1.25rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ss-tracking-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.ss-tracking-header-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: var(--text-main);
+}
+
+.ss-tracking-header-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.ss-tracking-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ss-tracking-body {
+  padding: 1.15rem 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.ss-tracking-state-box,
+.ss-tracking-unavailable-box {
+  padding: 1.5rem 1rem;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.ss-tracking-unavailable-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.ss-tracking-unavailable-text {
+  margin: 0;
+  font-size: 0.76rem;
+  max-width: 360px;
+  line-height: 1.4;
+}
+
+.ss-tracking-error-box {
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid var(--danger, #ef4444);
+  color: var(--danger, #ef4444);
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ss-tracking-ref-card {
+  padding: 0.85rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.ss-tracking-meta-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.ss-tracking-order-num {
+  font-size: 1.15rem;
+  font-weight: 850;
+  color: var(--accent-amber-light);
+  margin-top: 2px;
+}
+
+.ss-tracking-meta-sub {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.ss-tracking-dates {
+  text-align: right;
+}
+
+.ss-tracking-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.ss-tracking-status-card {
+  padding: 0.7rem 0.75rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ss-tracking-status-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ss-tracking-status-value {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.ss-tracking-timeline-section,
+.ss-tracking-items-section {
+  padding: 0.85rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ss-tracking-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.ss-tracking-neutral-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.ss-tracking-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ss-tracking-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.ss-tracking-step.is-current {
+  border-color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 12%, var(--bg-secondary));
+  color: var(--text-main);
+}
+
+.ss-tracking-step-marker {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent-amber);
+}
+
+.ss-tracking-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-subtle);
+}
+
+.ss-tracking-step-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ss-tracking-step-label {
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.ss-tracking-step-state {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ss-tracking-step.is-current .ss-tracking-step-state {
+  color: var(--accent-amber-light);
+  font-weight: 750;
+}
+
+.ss-tracking-total-text {
+  color: var(--accent-amber-light);
+  font-weight: 850;
+}
+
+.ss-tracking-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.ss-tracking-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  font-size: 0.78rem;
+}
+
+.ss-tracking-item-name {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ss-tracking-item-qty {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: 0.4rem;
+}
+
+.ss-tracking-item-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ss-tracking-kot-pill {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.ss-tracking-item-price {
+  font-weight: 750;
+  color: var(--text-main);
+}
+
+.ss-tracking-pending-banner {
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--text-main);
+  font-size: 0.76rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ss-tracking-footer {
+  padding: 0.9rem 1.25rem;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .ss-tracking-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ss-tracking-dates {
+    text-align: left;
+  }
+}

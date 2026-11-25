@@ -7,6 +7,7 @@ import { Search, ShoppingBag, Plus, Minus, History, X, ClipboardList, CheckCircl
 import { findCustomerByPhone } from "../utils/customerStorage";
 import { MenuItemCard } from "../common/MenuItemCard";
 import { subscribeToRealtimeEvents } from "../realtime/realtimeService";
+import { useDialogAccessibility } from "../utils/useDialogAccessibility";
 import {
   apiCancelTakeawayOrder,
   apiDispatchTakeawayOrder,
@@ -74,6 +75,18 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [paidOrdersOpen, setPaidOrdersOpen] = useState(false);
   const [selectedOrderInfo, setSelectedOrderInfo] = useState(null);
+  const paidDialogRef = useRef(null);
+  const historyDialogRef = useRef(null);
+  useDialogAccessibility({
+    isOpen: paidOrdersOpen && !selectedOrderInfo,
+    onClose: () => setPaidOrdersOpen(false),
+    dialogRef: paidDialogRef,
+  });
+  useDialogAccessibility({
+    isOpen: historyOpen && !selectedOrderInfo,
+    onClose: () => setHistoryOpen(false),
+    dialogRef: historyDialogRef,
+  });
   const [paidSearch, setPaidSearch] = useState("");
   const [paidStatus, setPaidStatus] = useState("all");
   const [paidDate, setPaidDate] = useState("");
@@ -793,7 +806,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         </section>
       </div>}
       {paidOrdersOpen && <div className="takeaway-history-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setPaidOrdersOpen(false); }}>
-        <section className="takeaway-history-dialog" role="dialog" aria-modal="true" aria-labelledby="paid-takeaway-title">
+        <section ref={paidDialogRef} tabIndex={-1} className="takeaway-history-dialog" role="dialog" aria-modal="true" aria-labelledby="paid-takeaway-title">
           <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".75rem", padding: "1rem", borderBottom: "1px solid var(--border-subtle)" }}>
             <div><h3 id="paid-takeaway-title" style={{ margin: 0 }}>Paid Takeaway Orders</h3><p style={{ margin: ".25rem 0 0", color: "var(--text-muted)", fontSize: ".85rem" }}>Active and handed-over paid orders</p></div>
             <button type="button" className="takeaway-secondary-button" aria-label="Close paid takeaway orders" onClick={() => setPaidOrdersOpen(false)} style={{ display: "inline-flex", padding: ".45rem", alignItems: "center" }}><X size={18}/></button>
@@ -833,7 +846,7 @@ export function TakeawayView({ menuItems = [], menuLoading = false, onCheckout, 
         </section>
       </div>}
       {historyOpen && <div className="takeaway-history-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setHistoryOpen(false); }}>
-        <section className="takeaway-history-dialog" role="dialog" aria-modal="true" aria-labelledby="takeaway-history-title">
+        <section ref={historyDialogRef} tabIndex={-1} className="takeaway-history-dialog" role="dialog" aria-modal="true" aria-labelledby="takeaway-history-title">
           <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".75rem", padding: "1rem", borderBottom: "1px solid var(--border-subtle)" }}>
             <div><h3 id="takeaway-history-title" style={{ margin: 0 }}>Takeaway Order History</h3><p style={{ margin: ".25rem 0 0", color: "var(--text-muted)", fontSize: ".85rem" }}>Previous takeaway orders</p></div>
             <button type="button" className="takeaway-secondary-button" aria-label="Close order history" onClick={() => setHistoryOpen(false)} style={{ display: "inline-flex", padding: ".45rem", alignItems: "center" }}><X size={18}/></button>

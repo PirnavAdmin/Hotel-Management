@@ -656,3 +656,478 @@
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
+/* ============================================================
+   Phase 2B.2 Payment Styles & Components
+   Dynamic UPI QR, Channels, Counter & Terminal Flows
+   ============================================================ */
+
+.self-service-qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.self-service-qr-card {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border-subtle);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.self-service-qr-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.self-service-qr-card img {
+  display: block;
+  width: 220px;
+  height: 220px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.self-service-qr-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.self-service-qr-badge {
+  font-size: 0.68rem;
+  font-weight: 750;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+.self-service-qr-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--accent-amber-light);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 3px 10px;
+  border-radius: 16px;
+}
+
+.self-service-channel-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.self-service-channel-tab {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.self-service-channel-tab:hover {
+  color: var(--text-main);
+  border-color: var(--accent-amber);
+}
+
+.self-service-channel-tab.is-active {
+  background: var(--accent-amber);
+  color: #000000;
+  border-color: var(--accent-amber);
+  font-weight: 850;
+}
+
+.self-service-utr-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.self-service-utr-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.self-service-utr-input:focus {
+  border-color: var(--accent-amber);
+}
+
+.self-service-info-panel {
+  padding: 1.25rem 1rem;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.self-service-token-hero {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: var(--accent-amber-light);
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+
+.self-service-success-modal {
+  max-width: 500px;
+  width: 100%;
+}
+
+.self-service-success-header {
+  text-align: center;
+  padding: 1.5rem 1.25rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.self-service-success-badge-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  border: 2px solid var(--success, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--success, #10b981);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+}
+
+/* ============================================================
+   Phase 2B.3 Invoice & Receipt Preview Modal (Print-Friendly)
+   ============================================================ */
+
+.self-service-preview-modal {
+  max-width: 680px;
+  max-height: 92vh;
+}
+
+.self-service-preview-toolbar {
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.self-service-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--accent-amber-light, #f59e0b);
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.4px;
+  text-align: center;
+}
+
+.self-service-preview-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.self-service-preview-scroll-area {
+  padding: 1.15rem;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  display: flex;
+  justify-content: center;
+}
+
+.self-service-preview-sheet {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 1.35rem 1.5rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.self-service-preview-sheet.is-thermal {
+  max-width: 340px;
+  padding: 1rem 0.95rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.self-service-preview-draft-tag {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.6px;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+}
+
+.self-service-preview-restaurant {
+  text-align: center;
+  border-bottom: 1px dashed #cbd5e1;
+  padding-bottom: 0.75rem;
+}
+
+.self-service-preview-rest-name {
+  font-size: 1.12rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.self-service-preview-rest-meta {
+  font-size: 0.74rem;
+  color: #475569;
+  margin-top: 2px;
+}
+
+.self-service-preview-meta-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.self-service-preview-meta-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.self-service-preview-meta-value {
+  font-size: 0.98rem;
+  font-weight: 850;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.self-service-preview-meta-sub {
+  font-size: 0.72rem;
+  color: #475569;
+  margin-top: 2px;
+}
+
+.self-service-preview-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #b45309;
+  margin-top: 2px;
+}
+
+.self-service-preview-notice-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.self-service-preview-customer {
+  background: #f8fafc;
+  padding: 0.55rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.self-service-preview-section-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.self-service-preview-customer-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: #1e293b;
+}
+
+.self-service-preview-customer-items span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.self-service-preview-notes {
+  font-size: 0.74rem;
+  color: #334155;
+  background: #f8fafc;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+}
+
+.self-service-preview-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.self-service-preview-items-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px 76px 84px;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #64748b;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.self-service-preview-item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px 76px 84px;
+  gap: 0.5rem;
+  align-items: start;
+  font-size: 0.78rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.self-service-preview-item-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.self-service-preview-item-note {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.self-service-preview-empty,
+.self-service-preview-unavailable {
+  font-size: 0.76rem;
+  color: #64748b;
+  text-align: center;
+  padding: 0.65rem;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.self-service-preview-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid #cbd5e1;
+}
+
+.self-service-preview-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.self-service-preview-total-row.is-discount {
+  color: #047857;
+  font-weight: 700;
+}
+
+.self-service-preview-tax-split {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #64748b;
+  padding-left: 0.65rem;
+}
+
+.self-service-preview-grand-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: #0f172a;
+  padding-top: 0.45rem;
+  margin-top: 0.2rem;
+  border-top: 1.5px solid #0f172a;
+}
+
+.self-service-preview-sheet-footer {
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 750;
+  color: #64748b;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 0.55rem;
+}
+
+@media print {
+  .self-service-preview-sheet {
+    box-shadow: none !important;
+    border-color: #cbd5e1 !important;
+  }
+}

@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ChefHat, X, Printer } from 'lucide-react';
 import { printSurface } from '../utils/printSurface';
+import { useDialogAccessibility } from '../utils/useDialogAccessibility';
 
 export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "Restaurant", restaurantLogo = "" }) {
+  const dialogRef = useRef(null);
+  useDialogAccessibility({ isOpen: Boolean(table), onClose, dialogRef });
+
   if (!table) return null;
 
   const barMenuIds = new Set(
@@ -38,7 +42,14 @@ export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "
       padding: '1rem',
       animation: 'fadeIn 0.15s ease'
     }}>
-      <div className="receipt-modal-container" style={{
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kitchen Order Ticket"
+        className="receipt-modal-container"
+        style={{
         background: 'var(--bg-card)',
         color: 'var(--text-main)',
         width: '100%',
@@ -67,6 +78,8 @@ export function KOTModal({ table, barMenuItems = [], onClose, restaurantName = "
             </span>
           </div>
           <button 
+            type="button"
+            aria-label="Close KOT"
             onClick={onClose} 
             style={{ 
               background: 'transparent', 

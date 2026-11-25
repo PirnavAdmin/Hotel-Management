@@ -160,6 +160,20 @@ export function AdminSettings({
     return () => window.removeEventListener("accent-synchronized", handleSynchronizedAccent);
   }, []);
 
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      isDraggingRef.current = false;
+    };
+    window.addEventListener("pointerup", handleGlobalPointerUp);
+    window.addEventListener("pointercancel", handleGlobalPointerUp);
+    window.addEventListener("blur", handleGlobalPointerUp);
+    return () => {
+      window.removeEventListener("pointerup", handleGlobalPointerUp);
+      window.removeEventListener("pointercancel", handleGlobalPointerUp);
+      window.removeEventListener("blur", handleGlobalPointerUp);
+    };
+  }, []);
+
   const pickColorAtPoint = (clientX, clientY, updateHue = false) => {
     const bounds = colorAreaRef.current?.getBoundingClientRect();
     if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
@@ -870,6 +884,7 @@ export function AdminSettings({
                   aria-valuetext={selectedAccent}
                   style={{ "--picker-hue": `hsl(${hue} 100% 50%)` }}
                   onPointerDown={(event) => {
+                    if (event.button !== 0 && event.buttons !== 1) return;
                     try {
                       event.currentTarget.setPointerCapture(event.pointerId);
                     } catch {}
@@ -877,9 +892,17 @@ export function AdminSettings({
                     pickColorAtPoint(event.clientX, event.clientY, false);
                   }}
                   onPointerMove={(event) => {
-                    if (isDraggingRef.current && (event.buttons === 1 || event.pressure > 0)) {
-                      pickColorAtPoint(event.clientX, event.clientY, false);
+                    if (!isDraggingRef.current) return;
+                    if (event.buttons !== 1) {
+                      isDraggingRef.current = false;
+                      try {
+                        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                          event.currentTarget.releasePointerCapture(event.pointerId);
+                        }
+                      } catch {}
+                      return;
                     }
+                    pickColorAtPoint(event.clientX, event.clientY, false);
                   }}
                   onPointerUp={(event) => {
                     isDraggingRef.current = false;

@@ -20,6 +20,20 @@ if (args.Length > 0 && args.Contains("--run-issue21-tests"))
     return;
 }
 
+if (args.Length > 0 && args.Contains("--run-phase2b1-tests"))
+{
+    var exitCode = await Phase2B1OrderCreationTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
+
+if (args.Length > 0 && args.Contains("--run-phase2b14-tests"))
+{
+    var exitCode = await Phase2B14InvoiceTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Respect URLs configured via launchSettings.json, ASPNETCORE_URLS (e.g. Docker), or --urls;

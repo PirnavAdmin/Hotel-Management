@@ -13,6 +13,25 @@ public class Invoice
     [Column("order_id")]
     public long OrderId { get; set; }
 
+    [MaxLength(30)]
+    [Column("order_number")]
+    public string? OrderNumber { get; set; }
+
+    [Column("branch_id")]
+    public long? BranchId { get; set; }
+
+    [MaxLength(30)]
+    [Column("order_type")]
+    public string? OrderType { get; set; }
+
+    [MaxLength(120)]
+    [Column("customer_name")]
+    public string? CustomerName { get; set; }
+
+    [MaxLength(20)]
+    [Column("customer_phone")]
+    public string? CustomerPhone { get; set; }
+
     [Required]
     [MaxLength(50)]
     [Column("invoice_number")]
@@ -24,11 +43,29 @@ public class Invoice
     [Column("taxable_amount", TypeName = "decimal(18,2)")]
     public decimal TaxableAmount { get; set; }
 
+    [Column("gst_percent", TypeName = "decimal(5,2)")]
+    public decimal GstPercent { get; set; }
+
+    [Column("cgst_amount", TypeName = "decimal(18,2)")]
+    public decimal CgstAmount { get; set; }
+
+    [Column("sgst_amount", TypeName = "decimal(18,2)")]
+    public decimal SgstAmount { get; set; }
+
     [Column("tax_amount", TypeName = "decimal(18,2)")]
     public decimal TaxAmount { get; set; }
 
     [Column("discount_amount", TypeName = "decimal(18,2)")]
     public decimal DiscountAmount { get; set; }
+
+    [Column("service_charge_percent", TypeName = "decimal(5,2)")]
+    public decimal ServiceChargePercent { get; set; }
+
+    [Column("service_charge_amount", TypeName = "decimal(18,2)")]
+    public decimal ServiceChargeAmount { get; set; }
+
+    [Column("rounding_adjustment", TypeName = "decimal(18,2)")]
+    public decimal RoundingAdjustment { get; set; }
 
     [Column("total_amount", TypeName = "decimal(18,2)")]
     public decimal TotalAmount { get; set; }
@@ -38,6 +75,10 @@ public class Invoice
 
     [Column("amount_paid", TypeName = "decimal(18,2)")]
     public decimal AmountPaid { get; set; }
+
+    [MaxLength(20)]
+    [Column("payment_status")]
+    public string? PaymentStatus { get; set; }
 
     [Required]
     [MaxLength(20)]

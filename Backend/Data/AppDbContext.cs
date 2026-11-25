@@ -270,6 +270,7 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("menu_items");
             entity.HasKey(m => m.MenuItemId);
+            entity.Property(m => m.BranchId).HasColumnName("branch_id");
         });
 
         // ============================================================
@@ -412,6 +413,8 @@ public class AppDbContext : DbContext
             entity.Property(o => o.CancelledBy).HasColumnName("cancelled_by");
             entity.Property(o => o.CancelledByName).HasColumnName("cancelled_by_name").HasMaxLength(120);
             entity.Property(o => o.BranchId).HasColumnName("branch_id");
+            entity.HasIndex(o => new { o.BranchId, o.IdempotencyKey })
+                  .HasDatabaseName("ix_restaurant_orders_branch_idempotency");
         });
 
         modelBuilder.Entity<Branch>(entity =>
@@ -483,14 +486,28 @@ public class AppDbContext : DbContext
             entity.HasKey(i => i.InvoiceId);
             entity.Property(i => i.InvoiceId).HasColumnName("invoice_id").ValueGeneratedOnAdd();
             entity.Property(i => i.OrderId).HasColumnName("order_id").IsRequired();
+            entity.HasIndex(i => i.OrderId).IsUnique();
+            entity.Property(i => i.OrderNumber).HasColumnName("order_number").HasMaxLength(30);
+            entity.Property(i => i.BranchId).HasColumnName("branch_id");
+            entity.Property(i => i.OrderType).HasColumnName("order_type").HasMaxLength(30);
+            entity.Property(i => i.CustomerName).HasColumnName("customer_name").HasMaxLength(120);
+            entity.Property(i => i.CustomerPhone).HasColumnName("customer_phone").HasMaxLength(20);
             entity.Property(i => i.InvoiceNumber).HasColumnName("invoice_number").HasMaxLength(50).IsRequired();
+            entity.HasIndex(i => i.InvoiceNumber).IsUnique();
             entity.Property(i => i.Subtotal).HasColumnName("subtotal").HasPrecision(18, 2);
             entity.Property(i => i.TaxableAmount).HasColumnName("taxable_amount").HasPrecision(18, 2);
+            entity.Property(i => i.GstPercent).HasColumnName("gst_percent").HasPrecision(5, 2);
+            entity.Property(i => i.CgstAmount).HasColumnName("cgst_amount").HasPrecision(18, 2);
+            entity.Property(i => i.SgstAmount).HasColumnName("sgst_amount").HasPrecision(18, 2);
             entity.Property(i => i.TaxAmount).HasColumnName("tax_amount").HasPrecision(18, 2);
             entity.Property(i => i.DiscountAmount).HasColumnName("discount_amount").HasPrecision(18, 2);
+            entity.Property(i => i.ServiceChargePercent).HasColumnName("service_charge_percent").HasPrecision(5, 2);
+            entity.Property(i => i.ServiceChargeAmount).HasColumnName("service_charge_amount").HasPrecision(18, 2);
+            entity.Property(i => i.RoundingAdjustment).HasColumnName("rounding_adjustment").HasPrecision(18, 2);
             entity.Property(i => i.TotalAmount).HasColumnName("total_amount").HasPrecision(18, 2);
             entity.Property(i => i.PaidAmount).HasColumnName("paid_amount").HasPrecision(18, 2);
             entity.Property(i => i.AmountPaid).HasColumnName("amount_paid").HasPrecision(18, 2);
+            entity.Property(i => i.PaymentStatus).HasColumnName("payment_status").HasMaxLength(20);
             entity.Property(i => i.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
             entity.Property(i => i.CreatedAt).HasColumnName("created_at");
             entity.Property(i => i.UpdatedAt).HasColumnName("updated_at");

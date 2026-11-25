@@ -17,7 +17,8 @@ Zap,
 import { sounds } from '../utils/audio';
 import { logFormSubmission, logUserAction } from '../utils/logger';
 import { formatCurrency, roundCurrency } from '../utils/formatCurrency';
-import { getBusinessDayKey, getBusinessDayStart, getNextInvoiceNumber, getTodayDateString } from '../utils/invoiceCounter';
+import { getBusinessDayKey, getBusinessDayStart, getTodayDateString } from '../utils/invoiceCounter';
+import { useDialogAccessibility } from '../utils/useDialogAccessibility';
 
 export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayment, confirmLabel }) {
   // 'upi' | 'cash'
@@ -29,6 +30,8 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
   const cashInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState("");
+  const dialogRef = useRef(null);
+  useDialogAccessibility({ isOpen: Boolean(table), onClose, dialogRef, closeOnEscape: !isProcessing });
 
   const [currentTheme, setCurrentTheme] = useState(() => {
     return (
@@ -241,7 +244,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
         settledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: getTodayDateString(),
         settledDate: getBusinessDayKey(new Date()),
-        invoiceNo: getNextInvoiceNumber()
+        idempotencyKey: `pos_settle_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         });
         if (result === false) {
           setProcessingError("Payment was not completed. Please correct the order and try again.");
@@ -412,7 +415,7 @@ export function SettlementModal({ table, menuItems = [], onClose, onConfirmPayme
           box-shadow: 0 0 20px color-mix(in srgb, var(--accent-amber) 20%, transparent);
         }
       `}</style>
-      <div className="settlement-modal" role="dialog" aria-modal="true" aria-label={`Settle order for ${table.name}`} style={{
+      <div ref={dialogRef} tabIndex={-1} className="settlement-modal" role="dialog" aria-modal="true" aria-label={`Settle order for ${table.name}`} style={{
         background: isLight ? 'var(--bg-secondary, #ffffff)' : 'linear-gradient(180deg, #0f172a 0%, #0b1120 100%)',
         border: isLight ? '1.5px solid var(--border-subtle, #e2e8f0)' : '1px solid rgba(255, 255, 255, 0.1)',
         width: '100%',

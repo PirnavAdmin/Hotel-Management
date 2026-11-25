@@ -1,5 +1,10 @@
 namespace HMS.Controllers;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +73,9 @@ public class OrdersController : ControllerBase
             RecalculateTotals(order);
         }
 
-        return Ok(orders.Select(MapToOrderDto));
+        var dtos = orders.Select(MapToOrderDto).ToList();
+        await PopulateInvoiceLinksAsync(dtos);
+        return Ok(dtos);
     }
 
     [HttpPost("{id:long}/dispatch")]
@@ -136,7 +143,9 @@ public class OrdersController : ControllerBase
             RecalculateTotals(order);
         }
 
-        return Ok(orders.Select(MapToOrderDto));
+        var dtos = orders.Select(MapToOrderDto).ToList();
+        await PopulateInvoiceLinksAsync(dtos);
+        return Ok(dtos);
     }
 
     // ============================================================
@@ -159,7 +168,36 @@ public class OrdersController : ControllerBase
         await PopulateDisplayFields(order);
         RecalculateTotals(order);
 
-        return Ok(MapToOrderDto(order));
+        var dto = MapToOrderDto(order);
+        await PopulateInvoiceLinksAsync(new[] { dto });
+        return Ok(dto);
+    }
+
+    private async Task PopulateInvoiceLinksAsync(IList<OrderDto> dtos)
+    {
+        if (dtos == null || dtos.Count == 0) return;
+        var ids = dtos.Select(d => d.Id).Where(id => id > 0).Distinct().ToList();
+        if (ids.Count == 0) return;
+
+        var invoices = await _context.Invoices
+            .AsNoTracking()
+            .Where(i => ids.Contains(i.OrderId))
+            .OrderByDescending(i => i.CreatedAt)
+            .Select(i => new { i.OrderId, i.InvoiceId, i.InvoiceNumber })
+            .ToListAsync();
+
+        var byOrder = invoices
+            .GroupBy(i => i.OrderId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        foreach (var dto in dtos)
+        {
+            if (byOrder.TryGetValue(dto.Id, out var inv))
+            {
+                dto.InvoiceId = inv.InvoiceId;
+                dto.InvoiceNo = inv.InvoiceNumber;
+            }
+        }
     }
 
 
@@ -219,7 +257,9 @@ public class OrdersController : ControllerBase
             await PopulateDisplayFields(order);
             RecalculateTotals(order);
 
-            return Ok(MapToOrderDto(order));
+            var dto = MapToOrderDto(order);
+            await PopulateInvoiceLinksAsync(new[] { dto });
+            return Ok(dto);
         }
         catch (Exception ex)
         {
@@ -277,7 +317,32 @@ public class OrdersController : ControllerBase
             }
         }
 
-        // 2. Takeaway Order Handling (direct takeaway checkout without locking a dining table)
+        // 2. Self Service Order Handling
+        bool isSelfService = string.Equals(request.OrderType, "SelfService", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.OrderType, "Self Service", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.TableName, "Self Service", StringComparison.OrdinalIgnoreCase);
+
+        if (isSelfService)
+        {
+            var ssRequest = new CreateSelfServiceOrderRequest
+            {
+                CustomerName = request.CustomerName,
+                CustomerPhone = request.CustomerPhone,
+                IdempotencyKey = request.IdempotencyKey ?? request.InvoiceNumber,
+                RequestedDiscountPercent = request.DiscountPercent > 0 ? request.DiscountPercent : null,
+                Items = request.Items?.Select(i => new SelfServiceOrderItemInput
+                {
+                    MenuItemId = i.MenuItemId ?? i.Id ?? i.BackendId ?? i.ItemId ?? 0,
+                    Quantity = i.Quantity,
+                    Notes = i.Notes,
+                    ClientSuppliedPrice = i.Price
+                }).ToList() ?? new List<SelfServiceOrderItemInput>()
+            };
+
+            return await CreateSelfServiceOrderInternalAsync(ssRequest, null);
+        }
+
+        // 3. Takeaway Order Handling (direct takeaway checkout without locking a dining table)
         bool isTakeaway = request.IsTakeaway ||
             string.Equals(request.OrderType, "Takeaway", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(request.TableName, "Takeaway", StringComparison.OrdinalIgnoreCase);
@@ -791,6 +856,867 @@ public class OrdersController : ControllerBase
         }
 
         return Ok(finalOrderDto);
+    }
+
+
+    // ============================================================
+    // SELF SERVICE ORDER CREATION (PHASE 2B.1)
+    // ============================================================
+
+    [HttpPost("self-service")]
+    public async Task<IActionResult> CreateSelfServiceOrder(
+        [FromBody] CreateSelfServiceOrderRequest request,
+        [FromQuery] long? branchId)
+    {
+        return await CreateSelfServiceOrderInternalAsync(request, branchId);
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [HttpGet("self-service/{id:long}")]
+    public async Task<IActionResult> TrackSelfServiceOrder(long id, [FromQuery] long? branchId = null)
+    {
+        var (allowed, branch, statusCode, branchError) = await AuthorizeSelfServiceBranchAsync(branchId);
+        if (!allowed || branch == null)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
+        var order = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o =>
+                o.Id == id &&
+                o.IsActive &&
+                !o.IsDeleted &&
+                o.OrderType == "SelfService" &&
+                ((o.BranchId.HasValue && o.BranchId.Value == branch.BranchId) || o.OutletId == branch.BranchId));
+
+        if (order == null)
+        {
+            return NotFound(new { success = false, message = "Self service order not found for this branch." });
+        }
+
+        var roleName = User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? "";
+        var normRole = roleName.Trim().ToLowerInvariant();
+        bool isStaffOrAdmin = normRole is "admin" or "superadmin" or "super admin" or "manager" or "branch manager" or "cashier" or "pos cashier" or "user pos";
+        if (!isStaffOrAdmin && long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+        {
+            if (order.CreatedBy.HasValue && order.CreatedBy.Value != userId)
+            {
+                return StatusCode(403, new { success = false, message = "You are not authorized to view this order." });
+            }
+        }
+
+        var dto = await BuildSelfServiceResponseDtoAsync(order);
+        return Ok(new { success = true, data = dto });
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [HttpPost("self-service/{id:long}/initiate-payment")]
+    public async Task<IActionResult> InitiateSelfServicePayment(
+        long id,
+        [FromBody] SelfServicePaymentInitiationRequest? request,
+        [FromQuery] long? branchId = null)
+    {
+        var (allowed, branch, statusCode, branchError) = await AuthorizeSelfServiceBranchAsync(branchId);
+        if (!allowed || branch == null)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o =>
+                o.Id == id &&
+                o.IsActive &&
+                !o.IsDeleted &&
+                o.OrderType == "SelfService" &&
+                ((o.BranchId.HasValue && o.BranchId.Value == branch.BranchId) || o.OutletId == branch.BranchId));
+
+        if (order == null)
+        {
+            return NotFound(new { success = false, message = "Self service order not found." });
+        }
+
+        if (string.Equals(order.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase))
+        {
+            return Conflict(new { success = false, message = "This order has already been paid." });
+        }
+
+        var dto = await BuildSelfServiceResponseDtoAsync(order);
+        var mode = string.IsNullOrWhiteSpace(request?.PaymentMethod) ? "UPI" : request.PaymentMethod.Trim().ToUpperInvariant();
+        if (mode is not ("UPI" or "CASH" or "CARD"))
+        {
+            return BadRequest(new { success = false, message = "Unsupported payment method. Use UPI, CASH, or CARD." });
+        }
+
+        if (mode == "UPI")
+        {
+            var targetRestaurantKey = $"restaurant_{branch.BranchId}";
+            var settings = await _context.RestaurantSettings.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantKey || s.Id == branch.BranchId)
+                ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1);
+
+            string? upiId = null;
+            if (!string.IsNullOrWhiteSpace(settings?.PaymentQrs))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(settings.PaymentQrs);
+                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var el in doc.RootElement.EnumerateArray())
+                        {
+                            var isMatch = string.IsNullOrWhiteSpace(settings.SelectedQrId) ||
+                                (el.TryGetProperty("id", out var idProp) && idProp.ToString() == settings.SelectedQrId);
+                            if (!isMatch) continue;
+                            if (el.TryGetProperty("upiId", out var upiProp) || el.TryGetProperty("upi_id", out upiProp))
+                            {
+                                var candidate = upiProp.GetString()?.Trim();
+                                if (!string.IsNullOrWhiteSpace(candidate))
+                                {
+                                    upiId = candidate;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    upiId = null;
+                }
+            }
+            if (string.IsNullOrWhiteSpace(upiId))
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = new SelfServicePaymentInitiationResponseDto
+                    {
+                        OrderId = order.Id,
+                        OrderNumber = order.OrderNumber,
+                        PaymentMethod = "UPI",
+                        PaymentStatus = order.PaymentStatus ?? "Pending",
+                        Amount = dto.Financials.FinalPayable,
+                        GatewayConfigured = false,
+                        QrPayload = null,
+                        Message = "Merchant UPI / payment gateway is not configured for this branch."
+                    }
+                });
+            }
+
+            var merchantName = string.IsNullOrWhiteSpace(settings?.RestaurantName) ? branch.BranchName : settings.RestaurantName.Trim();
+            var qrPayload =
+                $"upi://pay?pa={Uri.EscapeDataString(upiId)}&pn={Uri.EscapeDataString(merchantName)}&am={dto.Financials.FinalPayable:F2}&cu=INR&tn={Uri.EscapeDataString(order.OrderNumber)}";
+
+            return Ok(new
+            {
+                success = true,
+                data = new SelfServicePaymentInitiationResponseDto
+                {
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    PaymentMethod = "UPI",
+                    PaymentStatus = order.PaymentStatus ?? "Pending",
+                    Amount = dto.Financials.FinalPayable,
+                    GatewayConfigured = true,
+                    QrPayload = qrPayload,
+                    Message = "Scan QR with any UPI app. Official invoice will be issued after cashier/gateway verification."
+                }
+            });
+        }
+
+        return Ok(new
+        {
+            success = true,
+            data = new SelfServicePaymentInitiationResponseDto
+            {
+                OrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                PaymentMethod = mode,
+                PaymentStatus = order.PaymentStatus ?? "Pending",
+                Amount = dto.Financials.FinalPayable,
+                GatewayConfigured = false,
+                QrPayload = null,
+                Message = mode == "CASH"
+                    ? "Please pay at the counter. Cashier confirmation will issue the official invoice."
+                    : "Card terminal integration pending; pay at counter or wait for terminal verification."
+            }
+        });
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Super Admin,SuperAdmin,Manager,Branch Manager,Cashier,POS Cashier")]
+    [HttpPost("self-service/{id:long}/confirm-payment")]
+    public async Task<IActionResult> ConfirmSelfServicePayment(
+        long id,
+        [FromBody] SelfServicePaymentConfirmRequest? request,
+        [FromQuery] long? branchId = null)
+    {
+        var (allowed, branch, statusCode, branchError) = await AuthorizeSelfServiceBranchAsync(branchId);
+        if (!allowed || branch == null)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o =>
+                o.Id == id &&
+                o.IsActive &&
+                !o.IsDeleted &&
+                o.OrderType == "SelfService" &&
+                ((o.BranchId.HasValue && o.BranchId.Value == branch.BranchId) || o.OutletId == branch.BranchId));
+
+        if (order == null)
+        {
+            return NotFound(new { success = false, message = "Self service order not found." });
+        }
+
+        var dto = await BuildSelfServiceResponseDtoAsync(order);
+        var requiredAmount = dto.Financials.FinalPayable;
+        if (request == null || request.Amount < requiredAmount)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = $"Confirmed payment amount must be at least {requiredAmount:F2}."
+            });
+        }
+
+        var paymentMethod = string.IsNullOrWhiteSpace(request.PaymentMethod) ? "CASH" : request.PaymentMethod.Trim().ToUpperInvariant();
+        order.Subtotal = dto.Financials.Subtotal;
+        order.DiscountPercent = dto.Financials.DiscountPercent;
+        order.DiscountAmount = dto.Financials.DiscountAmount;
+        order.TaxPercent = dto.Financials.FoodGstRate;
+        order.TaxAmount = dto.Financials.TaxAmount;
+        order.ServiceCharge = 0m;
+        order.ServiceChargePercent = 0m;
+        order.ServiceChargeAmount = 0m;
+        order.GrandTotal = requiredAmount;
+
+        var invoiceId = await EnsureInvoiceCreatedAsync(order, paymentMethod);
+        if (invoiceId <= 0)
+        {
+            return StatusCode(502, new { success = false, message = "Official invoice could not be generated. Payment was not finalized." });
+        }
+
+        order.Status = "Settled";
+        order.PaymentStatus = "Paid";
+        order.PaymentMethod = paymentMethod;
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        var updatedDto = await BuildSelfServiceResponseDtoAsync(order);
+        return Ok(new { success = true, message = "Payment verified and official invoice issued.", data = updatedDto });
+    }
+
+    private long? GetUserBranchId()
+    {
+        var claim = User.FindFirstValue("branchId")
+                 ?? User.FindFirstValue("restaurantId")
+                 ?? User.FindFirstValue("branch_id")
+                 ?? User.FindFirstValue("restaurant_id");
+
+        if (!string.IsNullOrWhiteSpace(claim))
+        {
+            var sanitized = claim.Replace("restaurant_", "", StringComparison.OrdinalIgnoreCase).Trim();
+            if (long.TryParse(sanitized, out var bId) && bId > 0)
+            {
+                return bId;
+            }
+        }
+        return null;
+    }
+
+    private static string? MaskPhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return null;
+        var p = phone.Trim();
+        if (p.Length <= 4) return "****";
+        return new string('*', p.Length - 4) + p[^4..];
+    }
+
+    private static string? MaskEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        var parts = email.Trim().Split('@');
+        if (parts.Length != 2) return "***@***";
+        var name = parts[0];
+        var domain = parts[1];
+        var maskedName = name.Length <= 2 ? "**" : name[0] + new string('*', name.Length - 2) + name[^1];
+        return $"{maskedName}@{domain}";
+    }
+
+    private async Task<(bool Allowed, Branch? Branch, int StatusCode, string? ErrorMessage)> AuthorizeSelfServiceBranchAsync(long? requestedBranchId)
+    {
+        if (User?.Identity?.IsAuthenticated != true)
+        {
+            return (false, null, 401, "Authentication is required to place a self service order.");
+        }
+
+        // 1. Resolve user from Claims and Database
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        User? dbUser = null;
+        if (long.TryParse(userIdClaim, out var numericUserId))
+        {
+            dbUser = await _context.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.UserId == numericUserId);
+        }
+
+        var roleName = dbUser?.Role?.RoleName ?? User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? "User";
+        var normalizedRole = roleName.Trim().ToLowerInvariant();
+
+        // A genuine global admin has no assigned branch (or <= 0)
+        long? userDbBranch = dbUser?.BranchId ?? GetUserBranchId();
+        bool isGlobalAdmin = (normalizedRole == "admin" || normalizedRole == "superadmin" || normalizedRole == "super admin") &&
+                             (!userDbBranch.HasValue || userDbBranch.Value <= 0);
+
+        long targetBranchId = 0;
+
+        if (isGlobalAdmin)
+        {
+            // Global Admin must explicitly select an active branch; never silently default to Branch 1
+            if (requestedBranchId.HasValue && requestedBranchId.Value > 0)
+            {
+                targetBranchId = requestedBranchId.Value;
+            }
+            else
+            {
+                return (false, null, 400, "Branch context is missing. SuperAdmin must specify an active branch.");
+            }
+        }
+        else
+        {
+            // Branch-scoped staff: strictly locked to assigned branch. NO default branch 1 fallback!
+            if (!userDbBranch.HasValue || userDbBranch.Value <= 0)
+            {
+                return (false, null, 403, "Authenticated user account is not associated with any restaurant branch.");
+            }
+
+            // Cross-branch rejection: if a non-global staff requests another branch, reject immediately
+            if (requestedBranchId.HasValue && requestedBranchId.Value > 0 && requestedBranchId.Value != userDbBranch.Value)
+            {
+                return (false, null, 403, "Cross-branch access forbidden. Your account is not authorized for this branch.");
+            }
+
+            targetBranchId = userDbBranch.Value;
+        }
+
+        // Branch existence and active status verification
+        var branch = await _context.Branches.AsNoTracking()
+            .FirstOrDefaultAsync(b => b.BranchId == targetBranchId && b.IsActive && b.DeletedAt == null);
+
+        if (branch == null)
+        {
+            return (false, null, 403, $"Branch {targetBranchId} does not exist or is inactive.");
+        }
+
+        return (true, branch, 200, null);
+    }
+
+    private async Task<IActionResult> CreateSelfServiceOrderInternalAsync(
+        CreateSelfServiceOrderRequest? request,
+        long? branchId)
+    {
+        if (request == null)
+        {
+            return BadRequest(new { success = false, message = "Request body is required." });
+        }
+
+        // 1. Authenticate and resolve branch context with strict isolation
+        var (allowed, branch, statusCode, branchError) = await AuthorizeSelfServiceBranchAsync(branchId);
+        if (!allowed || branch == null)
+        {
+            return StatusCode(statusCode, new { success = false, message = branchError });
+        }
+
+        // 2. Reject empty orders
+        if (request.Items == null || request.Items.Count == 0)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                message = "At least one order item is required. Empty orders cannot be created."
+            });
+        }
+
+        // 3. Idempotency Check (prevent duplicate order creation on retries)
+        if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
+        {
+            var trimmedKey = request.IdempotencyKey.Trim();
+            var existingOrder = await _context.Orders
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.IdempotencyKey == trimmedKey &&
+                    ((o.BranchId.HasValue && o.BranchId.Value == branch.BranchId) || o.OutletId == branch.BranchId));
+
+            if (existingOrder != null)
+            {
+                _logger.LogInformation("Idempotent request received. Returning existing SelfService order {OrderId} for key '{Key}'", existingOrder.Id, trimmedKey);
+                var existingResponse = await BuildSelfServiceResponseDtoAsync(existingOrder, isDuplicate: true);
+                return Ok(new
+                {
+                    success = true,
+                    isDuplicate = true,
+                    message = "Order already created (idempotent response).",
+                    data = existingResponse
+                });
+            }
+        }
+
+        // 4. Validate menu items and enforce authoritative database prices (never trust frontend prices)
+        var menuItemIds = request.Items.Select(i => i.MenuItemId).Distinct().ToList();
+        var menuItemsMap = await _context.MenuItems.AsNoTracking()
+            .Where(m => menuItemIds.Contains(m.MenuItemId) && m.DeletedAt == null)
+            .ToDictionaryAsync(m => m.MenuItemId);
+
+        var orderItems = new List<OrderItem>();
+        foreach (var itemInput in request.Items)
+        {
+            if (itemInput.Quantity <= 0 || itemInput.Quantity > 100)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Invalid quantity for item {itemInput.MenuItemId}. Quantity must be between 1 and 100."
+                });
+            }
+
+            if (!menuItemsMap.TryGetValue(itemInput.MenuItemId, out var menuItem))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Menu item with ID {itemInput.MenuItemId} was not found or has been deleted."
+                });
+            }
+
+            // Cross-branch menu item check: reject if item belongs to a different branch
+            if (menuItem.BranchId.HasValue && menuItem.BranchId.Value != branch.BranchId)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Menu item with ID {itemInput.MenuItemId} is not available for this restaurant branch."
+                });
+            }
+
+            if (!menuItem.IsAvailable)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Menu item '{menuItem.DishName}' is currently unavailable."
+                });
+            }
+
+            decimal authoritativePrice = menuItem.Price;
+            orderItems.Add(new OrderItem
+            {
+                MenuItemId = menuItem.MenuItemId,
+                Name = menuItem.DishName,
+                Price = authoritativePrice,
+                Quantity = itemInput.Quantity,
+                TotalPrice = Math.Round(authoritativePrice * itemInput.Quantity, 2),
+                Notes = !string.IsNullOrWhiteSpace(itemInput.Notes) ? itemInput.Notes.Trim() : "Self Service Order",
+                KotStatus = "Queued",
+                KotBatch = 1,
+                IsActive = true,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        // 5. Financial Calculation Preparation & Discount Validation
+        decimal subtotal = Math.Round(orderItems.Sum(i => i.TotalPrice), 2);
+        decimal discountPercent = 0m;
+        decimal discountAmount = 0m;
+        var roleName = User.FindFirstValue("roleName") ?? User.FindFirstValue(ClaimTypes.Role) ?? "";
+        bool canApplyStaffDiscount = User.IsInRole("Admin") || User.IsInRole("SuperAdmin") || User.IsInRole("Manager") ||
+                                     string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(roleName, "SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(roleName, "Manager", StringComparison.OrdinalIgnoreCase);
+
+        if ((request.RequestedDiscountPercent.HasValue && request.RequestedDiscountPercent.Value > 0) ||
+            (request.RequestedDiscountAmount.HasValue && request.RequestedDiscountAmount.Value > 0))
+        {
+            if (!canApplyStaffDiscount)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Arbitrary customer discounts are not permitted on self service orders."
+                });
+            }
+
+            if (request.RequestedDiscountPercent.HasValue && request.RequestedDiscountPercent.Value > 0)
+            {
+                discountPercent = Math.Clamp(request.RequestedDiscountPercent.Value, 0m, 50m);
+                discountAmount = Math.Round(subtotal * (discountPercent / 100m), 2);
+            }
+            else if (request.RequestedDiscountAmount.HasValue && request.RequestedDiscountAmount.Value > 0)
+            {
+                var maxDiscount = Math.Round(subtotal * 0.50m, 2);
+                discountAmount = Math.Min(maxDiscount, Math.Round(request.RequestedDiscountAmount.Value, 2));
+                discountPercent = subtotal > 0 ? Math.Round((discountAmount / subtotal) * 100m, 2) : 0m;
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(request.DiscountCode))
+        {
+            var code = request.DiscountCode.Trim().ToUpperInvariant();
+            var promo = await _context.Promotions.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Code.ToUpper() == code && p.IsActive && p.ValidUntil >= DateTime.UtcNow);
+            if (promo != null)
+            {
+                if (promo.DiscountPercentage > 0)
+                {
+                    discountPercent = Math.Clamp(promo.DiscountPercentage, 0m, 50m);
+                    discountAmount = Math.Round(subtotal * (discountPercent / 100m), 2);
+                }
+                else if (promo.FlatDiscount > 0)
+                {
+                    var maxDiscount = Math.Round(subtotal * 0.50m, 2);
+                    discountAmount = Math.Min(maxDiscount, Math.Round(promo.FlatDiscount, 2));
+                    discountPercent = subtotal > 0 ? Math.Round((discountAmount / subtotal) * 100m, 2) : 0m;
+                }
+            }
+            else
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = $"Promotion code '{request.DiscountCode}' is invalid or expired."
+                });
+            }
+        }
+
+        // 6. Independent Backend Financial Recalculation using active restaurant settings
+        var targetRestaurantKey = $"restaurant_{branch.BranchId}";
+        var settings = await _context.RestaurantSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantKey || s.Id == branch.BranchId)
+            ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1)
+            ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync();
+
+        decimal foodGstRate = settings?.FoodGstRate ?? 5m;
+        // Self Service orders never incur a service charge.
+        bool serviceChargeEnabled = false;
+        decimal serviceChargeRate = 0m;
+        string roundingMode = settings?.RoundingMode ?? "nearest";
+
+        decimal taxableAmount = Math.Max(0m, subtotal - discountAmount);
+
+        decimal taxAmount = Math.Round(taxableAmount * (foodGstRate / 100m), 2);
+        decimal cgstRate = foodGstRate / 2m;
+        decimal sgstRate = foodGstRate / 2m;
+        decimal cgstAmount = Math.Round(taxAmount / 2m, 2);
+        decimal sgstAmount = taxAmount - cgstAmount;
+
+        decimal serviceChargeAmount = 0m;
+
+        decimal unroundedTotal = taxableAmount + taxAmount + serviceChargeAmount;
+
+        decimal finalPayable = unroundedTotal;
+        var normRounding = roundingMode.Trim().ToLowerInvariant();
+        if (normRounding == "rupee" || normRounding == "nearest")
+        {
+            finalPayable = Math.Round(unroundedTotal, MidpointRounding.AwayFromZero);
+        }
+        else if (normRounding == "five")
+        {
+            finalPayable = Math.Round(unroundedTotal / 5m, MidpointRounding.AwayFromZero) * 5m;
+        }
+        else if (normRounding == "none")
+        {
+            finalPayable = unroundedTotal;
+        }
+        else
+        {
+            finalPayable = Math.Round(unroundedTotal, MidpointRounding.AwayFromZero);
+        }
+
+        decimal roundingAdjustment = finalPayable - unroundedTotal;
+
+        // 7. Persist Order Entity with SelfService order type and full financial snapshot
+        var order = new Order
+        {
+            OrderNumber = await GenerateOrderNumber(),
+            OutletId = branch.BranchId,
+            BranchId = branch.BranchId,
+            OrderType = "SelfService",
+            TableId = null,
+            TableName = "Self Service",
+            Section = "Self Service",
+            ServerName = "Self Service Kiosk",
+            Guests = 1,
+            Status = "PendingPayment",
+            FulfillmentStatus = "New",
+            PaymentStatus = "Pending",
+            Subtotal = subtotal,
+            DiscountPercent = discountPercent,
+            DiscountAmount = discountAmount,
+            TaxPercent = foodGstRate,
+            TaxAmount = taxAmount,
+            PackagingCharge = 0m,
+            ServiceCharge = serviceChargeRate,
+            ServiceChargePercent = serviceChargeRate,
+            ServiceChargeAmount = serviceChargeAmount,
+            GrandTotal = finalPayable,
+            CustomerName = request.CustomerName?.Trim(),
+            CustomerPhone = request.CustomerPhone?.Trim(),
+            CustomerEmail = request.CustomerEmail?.Trim(),
+            SpecialInstructions = request.SpecialInstructions?.Trim(),
+            IdempotencyKey = request.IdempotencyKey?.Trim(),
+            IsActive = true,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        foreach (var oi in orderItems)
+        {
+            order.Items.Add(oi);
+        }
+
+        _context.Orders.Add(order);
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "DbUpdateException when saving order. Checking for concurrent idempotent insert.");
+            if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
+            {
+                var trimmedKey = request.IdempotencyKey.Trim();
+                var concurrentOrder = await _context.Orders
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.IdempotencyKey == trimmedKey &&
+                        ((o.BranchId.HasValue && o.BranchId.Value == branch.BranchId) || o.OutletId == branch.BranchId));
+
+                if (concurrentOrder != null)
+                {
+                    _logger.LogInformation("Concurrent duplicate order caught via unique index. Returning existing order {OrderId}", concurrentOrder.Id);
+                    var existingResponse = await BuildSelfServiceResponseDtoAsync(concurrentOrder, isDuplicate: true);
+                    return Ok(new
+                    {
+                        success = true,
+                        isDuplicate = true,
+                        message = "Order already created (idempotent response).",
+                        data = existingResponse
+                    });
+                }
+            }
+            throw;
+        }
+
+        _logger.LogInformation("SelfService order {OrderId} ({OrderNumber}) created. Total: {Total}. KOT queued awaiting payment confirmation.",
+            order.Id, order.OrderNumber, finalPayable);
+
+        // 8. Realtime Event Broadcast (scoped strictly to active branch with masked PII)
+        var responseDto = new SelfServiceOrderResponseDto
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            BranchId = branch.BranchId,
+            OrderType = order.OrderType,
+            Status = order.Status,
+            FulfillmentStatus = order.FulfillmentStatus ?? "New",
+            PaymentStatus = order.PaymentStatus ?? "Pending",
+            CustomerName = order.CustomerName,
+            CustomerPhone = order.CustomerPhone,
+            CustomerEmail = order.CustomerEmail,
+            SpecialInstructions = order.SpecialInstructions,
+            IdempotencyKey = order.IdempotencyKey,
+            IsDuplicate = false,
+            CreatedAt = order.CreatedAt,
+            Items = order.Items.Select(i => new SelfServiceOrderItemResponseDto
+            {
+                OrderItemId = i.Id,
+                MenuItemId = i.MenuItemId,
+                Name = i.Name,
+                UnitPrice = i.Price,
+                Quantity = i.Quantity,
+                LineSubtotal = i.TotalPrice,
+                Notes = i.Notes,
+                KotStatus = i.KotStatus
+            }).ToList(),
+            Financials = new SelfServiceFinancialSummaryDto
+            {
+                Subtotal = subtotal,
+                DiscountPercent = discountPercent,
+                DiscountAmount = discountAmount,
+                TaxableAmount = taxableAmount,
+                FoodGstRate = foodGstRate,
+                CgstRate = cgstRate,
+                SgstRate = sgstRate,
+                CgstAmount = cgstAmount,
+                SgstAmount = sgstAmount,
+                TaxAmount = taxAmount,
+                ServiceChargeEnabled = serviceChargeEnabled,
+                ServiceChargeRate = serviceChargeRate,
+                ServiceChargeAmount = serviceChargeAmount,
+                RoundingMode = roundingMode,
+                RoundingAdjustment = roundingAdjustment,
+                FinalPayable = finalPayable
+            }
+        };
+
+        var broadcastDto = new SelfServiceOrderResponseDto
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            BranchId = branch.BranchId,
+            OrderType = order.OrderType,
+            Status = order.Status,
+            FulfillmentStatus = order.FulfillmentStatus ?? "New",
+            PaymentStatus = order.PaymentStatus ?? "Pending",
+            CustomerName = order.CustomerName,
+            CustomerPhone = MaskPhone(order.CustomerPhone),
+            CustomerEmail = MaskEmail(order.CustomerEmail),
+            SpecialInstructions = order.SpecialInstructions,
+            IdempotencyKey = order.IdempotencyKey,
+            IsDuplicate = false,
+            CreatedAt = order.CreatedAt,
+            Items = responseDto.Items,
+            Financials = responseDto.Financials
+        };
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "selfservice:created",
+            Module = "SelfService",
+            Action = "created",
+            BranchId = branch.BranchId,
+            RecordId = order.Id.ToString(),
+            Data = broadcastDto
+        });
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:created",
+            Module = "Orders",
+            Action = "created",
+            BranchId = branch.BranchId,
+            RecordId = order.Id.ToString(),
+            Data = broadcastDto
+        });
+
+        return StatusCode(201, new
+        {
+            success = true,
+            message = "Self service order created successfully.",
+            data = responseDto
+        });
+    }
+
+    private async Task<SelfServiceOrderResponseDto> BuildSelfServiceResponseDtoAsync(Order order, bool isDuplicate = false)
+    {
+        var resolvedBranchId = order.BranchId ?? order.OutletId;
+        var targetRestaurantKey = $"restaurant_{resolvedBranchId}";
+        var settings = await _context.RestaurantSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantKey || s.Id == resolvedBranchId)
+            ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1)
+            ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync();
+
+        decimal foodGstRate = settings?.FoodGstRate ?? 5m;
+        // Self Service orders never incur a service charge.
+        bool serviceChargeEnabled = false;
+        decimal serviceChargeRate = 0m;
+        string roundingMode = settings?.RoundingMode ?? "nearest";
+
+        var activeItems = order.Items.Where(i => i.IsActive && !i.IsDeleted).ToList();
+        decimal subtotal = order.Subtotal > 0 ? order.Subtotal : Math.Round(activeItems.Sum(i => i.Price * i.Quantity), 2);
+        decimal discountPercent = order.DiscountPercent;
+        decimal discountAmount = order.DiscountAmount > 0
+            ? order.DiscountAmount
+            : (discountPercent > 0 ? Math.Round(subtotal * (discountPercent / 100m), 2) : 0m);
+        decimal taxableAmount = Math.Max(0m, subtotal - discountAmount);
+
+        decimal taxAmount = Math.Round(taxableAmount * (foodGstRate / 100m), 2);
+        decimal cgstRate = foodGstRate / 2m;
+        decimal sgstRate = foodGstRate / 2m;
+        decimal cgstAmount = Math.Round(taxAmount / 2m, 2);
+        decimal sgstAmount = taxAmount - cgstAmount;
+
+        decimal serviceChargeAmount = 0m;
+
+        decimal unroundedTotal = taxableAmount + taxAmount + serviceChargeAmount;
+
+        decimal finalPayable = unroundedTotal;
+        var normRounding = roundingMode.Trim().ToLowerInvariant();
+        if (normRounding == "rupee" || normRounding == "nearest")
+        {
+            finalPayable = Math.Round(unroundedTotal, MidpointRounding.AwayFromZero);
+        }
+        else if (normRounding == "five")
+        {
+            finalPayable = Math.Round(unroundedTotal / 5m, MidpointRounding.AwayFromZero) * 5m;
+        }
+        else if (normRounding == "none")
+        {
+            finalPayable = unroundedTotal;
+        }
+        else
+        {
+            finalPayable = Math.Round(unroundedTotal, MidpointRounding.AwayFromZero);
+        }
+
+        decimal roundingAdjustment = finalPayable - unroundedTotal;
+
+        var linkedInvoice = await _context.Invoices
+            .AsNoTracking()
+            .Where(i => i.OrderId == order.Id)
+            .OrderByDescending(i => i.CreatedAt)
+            .Select(i => new { i.InvoiceId, i.InvoiceNumber })
+            .FirstOrDefaultAsync();
+
+        return new SelfServiceOrderResponseDto
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            BranchId = order.BranchId ?? order.OutletId,
+            OrderType = order.OrderType,
+            Status = order.Status,
+            FulfillmentStatus = order.FulfillmentStatus ?? "New",
+            PaymentStatus = order.PaymentStatus ?? "Pending",
+            CustomerName = order.CustomerName,
+            CustomerPhone = order.CustomerPhone,
+            CustomerEmail = order.CustomerEmail,
+            SpecialInstructions = order.SpecialInstructions,
+            IdempotencyKey = order.IdempotencyKey,
+            IsDuplicate = isDuplicate,
+            CreatedAt = order.CreatedAt,
+            InvoiceId = linkedInvoice?.InvoiceId,
+            InvoiceNumber = linkedInvoice?.InvoiceNumber,
+            Items = activeItems.Select(i => new SelfServiceOrderItemResponseDto
+            {
+                OrderItemId = i.Id,
+                MenuItemId = i.MenuItemId,
+                Name = i.Name,
+                UnitPrice = i.Price,
+                Quantity = i.Quantity,
+                LineSubtotal = i.TotalPrice > 0 ? i.TotalPrice : Math.Round(i.Price * i.Quantity, 2),
+                Notes = i.Notes,
+                KotStatus = i.KotStatus
+            }).ToList(),
+            Financials = new SelfServiceFinancialSummaryDto
+            {
+                Subtotal = subtotal,
+                DiscountPercent = discountPercent,
+                DiscountAmount = discountAmount,
+                TaxableAmount = taxableAmount,
+                FoodGstRate = foodGstRate,
+                CgstRate = cgstRate,
+                SgstRate = sgstRate,
+                CgstAmount = cgstAmount,
+                SgstAmount = sgstAmount,
+                TaxAmount = taxAmount,
+                ServiceChargeEnabled = serviceChargeEnabled,
+                ServiceChargeRate = serviceChargeRate,
+                ServiceChargeAmount = serviceChargeAmount,
+                RoundingMode = roundingMode,
+                RoundingAdjustment = roundingAdjustment,
+                FinalPayable = finalPayable
+            }
+        };
     }
 
 
@@ -1645,6 +2571,9 @@ public class OrdersController : ControllerBase
             RecalculateTotals(order);
         }
 
+        var orderDtos = orders.Select(MapToOrderDto).ToList();
+        await PopulateInvoiceLinksAsync(orderDtos);
+
         return Ok(new
         {
             totalCount,
@@ -1658,8 +2587,7 @@ public class OrdersController : ControllerBase
                     totalCount /
                     (double)pageSize),
 
-            orders =
-                orders.Select(MapToOrderDto)
+            orders = orderDtos
         });
     }
 
@@ -2363,6 +3291,28 @@ public class OrdersController : ControllerBase
                     };
 
                     await _spService.ExecuteNonQueryAsync("sp_RecordInvoicePayment", payParams);
+
+                    // Backfill unified invoice metadata columns not yet written by sp_CreateInvoice
+                    var spInvoice = await _context.Invoices.FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
+                    if (spInvoice != null)
+                    {
+                        var cgst = Math.Round(taxAmount / 2m, 2);
+                        var sgst = taxAmount - cgst;
+                        var resolvedBranch = order.BranchId ?? (order.OutletId > 0 ? order.OutletId : 1);
+                        spInvoice.BranchId ??= resolvedBranch;
+                        spInvoice.OrderNumber ??= order.OrderNumber;
+                        spInvoice.OrderType ??= order.OrderType;
+                        spInvoice.CustomerName ??= order.CustomerName;
+                        spInvoice.CustomerPhone ??= order.CustomerPhone;
+                        spInvoice.GstPercent = order.TaxPercent;
+                        spInvoice.CgstAmount = cgst;
+                        spInvoice.SgstAmount = sgst;
+                        spInvoice.ServiceChargePercent = order.ServiceChargePercent;
+                        spInvoice.ServiceChargeAmount = order.ServiceChargeAmount;
+                        spInvoice.PaymentStatus = "Paid";
+                        spInvoice.UpdatedAt = DateTime.UtcNow;
+                        await _context.SaveChangesAsync();
+                    }
                 }
             }
             catch (Exception spEx)
@@ -2373,11 +3323,30 @@ public class OrdersController : ControllerBase
             if (invoiceId <= 0)
             {
                 var existingInvoice = await _context.Invoices.FirstOrDefaultAsync(i => i.OrderId == order.Id || i.InvoiceNumber == persistedInvoiceNumber);
+                var cgst = Math.Round(taxAmount / 2m, 2);
+                var sgst = taxAmount - cgst;
+                var resolvedBranch = order.BranchId ?? (order.OutletId > 0 ? order.OutletId : 1);
+
                 if (existingInvoice != null)
                 {
+                    existingInvoice.BranchId ??= resolvedBranch;
+                    existingInvoice.OrderNumber ??= order.OrderNumber;
+                    existingInvoice.OrderType ??= order.OrderType;
+                    existingInvoice.CustomerName ??= order.CustomerName;
+                    existingInvoice.CustomerPhone ??= order.CustomerPhone;
+                    existingInvoice.Subtotal = subtotal;
+                    existingInvoice.TaxableAmount = taxable;
+                    existingInvoice.GstPercent = order.TaxPercent;
+                    existingInvoice.CgstAmount = cgst;
+                    existingInvoice.SgstAmount = sgst;
+                    existingInvoice.TaxAmount = taxAmount;
+                    existingInvoice.DiscountAmount = discount;
+                    existingInvoice.ServiceChargePercent = order.ServiceChargePercent;
+                    existingInvoice.ServiceChargeAmount = order.ServiceChargeAmount;
                     existingInvoice.TotalAmount = totalAmount;
                     existingInvoice.PaidAmount = totalAmount;
                     existingInvoice.AmountPaid = totalAmount;
+                    existingInvoice.PaymentStatus = "Paid";
                     existingInvoice.Status = "PAID";
                     existingInvoice.UpdatedAt = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
@@ -2388,14 +3357,25 @@ public class OrdersController : ControllerBase
                     var newInvoice = new Invoice
                     {
                         OrderId = order.Id,
+                        OrderNumber = order.OrderNumber,
+                        BranchId = resolvedBranch,
+                        OrderType = order.OrderType,
+                        CustomerName = order.CustomerName,
+                        CustomerPhone = order.CustomerPhone,
                         InvoiceNumber = persistedInvoiceNumber,
                         Subtotal = subtotal,
                         TaxableAmount = taxable,
+                        GstPercent = order.TaxPercent,
+                        CgstAmount = cgst,
+                        SgstAmount = sgst,
                         TaxAmount = taxAmount,
                         DiscountAmount = discount,
+                        ServiceChargePercent = order.ServiceChargePercent,
+                        ServiceChargeAmount = order.ServiceChargeAmount,
                         TotalAmount = totalAmount,
                         PaidAmount = totalAmount,
                         AmountPaid = totalAmount,
+                        PaymentStatus = "Paid",
                         Status = "PAID",
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow

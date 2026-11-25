@@ -56,21 +56,17 @@ export function AdminSelfService({
   const fetchOrders = async () => {
     setIsRefreshing(true);
     try {
-      const { records } = await requestInvoiceManagementRecords();
-      // Filter strictly for self service orders
-      const selfServiceOnly = (Array.isArray(records) ? records : []).filter(isSelfServiceOrder);
-      setOrders(selfServiceOnly);
+      const { records, error } = await requestInvoiceManagementRecords();
+      if (error && (!Array.isArray(records) || records.length === 0)) {
+        // Keep official backend records empty on API failure; never promote legacy local records as official invoices.
+        setOrders([]);
+      } else {
+        const selfServiceOnly = (Array.isArray(records) ? records : []).filter(isSelfServiceOrder);
+        setOrders(selfServiceOnly);
+      }
     } catch (err) {
       console.warn("Could not load self service records:", err);
-      // Fallback to local storage past orders
-      try {
-        const raw = localStorage.getItem("gourmet_pos_past_orders_v2_inr");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          const selfOnly = (Array.isArray(parsed) ? parsed : []).filter(isSelfServiceOrder);
-          setOrders(selfOnly);
-        }
-      } catch {}
+      setOrders([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -133,11 +129,18 @@ export function AdminSelfService({
     });
   }, [orders, dateFilter, statusFilter, searchTerm, todayStr]);
 
-  // Financial Metrics
+  // Financial Metrics (exclude void/cancelled/refunded records from revenue totals)
+  const isExcludedFromSales = (o) => {
+    const s = String(o?.backendStatus || o?.status || o?.paymentStatus || "").trim().toLowerCase();
+    return s === "void" || s === "voided" || s === "cancelled" || s === "canceled" || s === "refunded";
+  };
+  const validSalesOrders = orders.filter((o) => !isExcludedFromSales(o));
   const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
+  const totalRevenue = validSalesOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
   const todayOrders = orders.filter((o) => parseOrderToYMD(o) === todayStr);
-  const todayRevenue = todayOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
+  const todayRevenue = todayOrders
+    .filter((o) => !isExcludedFromSales(o))
+    .reduce((sum, o) => sum + Number(o.grandTotal || o.totalAmount || 0), 0);
   const paidOrdersCount = orders.filter((o) => {
     const raw = String(o.paymentStatus || o.status || "").toLowerCase();
     return raw.includes("paid") || raw.includes("settled") || raw.includes("completed");

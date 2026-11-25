@@ -1,5 +1,5 @@
 import { SearchableSelect } from "../common/SearchableSelect";
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from "react";
 import { logRouteChange, logUserAction } from "../utils/logger";
 import { applyTheme } from "../utils/theme";
 import {
@@ -48,7 +48,7 @@ import QRCode from "../utils/qrCode";
 import { formatCurrency } from "../utils/formatCurrency";
 import { getTableSortNumber, compareTablesNaturally } from "../utils/tableSortHelper";
 import { formatDisplayTime } from "../utils/timer";
-import { LoginManagement } from "./LoginManagement";
+const LoginManagement = lazy(() => import("./LoginManagement").then((m) => ({ default: m.LoginManagement })));
 import { ProfileDropdown } from "../common/ProfileDropdown";
 import { CustomCreatableDropdown } from "../common/CustomCreatableDropdown";
 import {
@@ -61,23 +61,23 @@ import { AdminHeader } from "./AdminHeader";
 import { isDrinkItem, isBeverageCategory } from "../kot/orderRouting";
 import { isBarCategory, isDrinkCategory } from "../utils/drinkCategoryHelper";
 import { MENU_CATEGORIES } from "../data/menuData";
-import { AdminOverview } from "./AdminOverview";
-import { AdminTakeaway } from "./AdminTakeaway";
-import { AdminSelfService } from "./AdminSelfService";
+const AdminOverview = lazy(() => import("./AdminOverview").then((m) => ({ default: m.AdminOverview })));
+const AdminTakeaway = lazy(() => import("./AdminTakeaway").then((m) => ({ default: m.AdminTakeaway })));
+const AdminSelfService = lazy(() => import("./AdminSelfService").then((m) => ({ default: m.AdminSelfService })));
 import { AdminInventory, isBarInventoryItem, INITIAL_KITCHEN_INVENTORY } from "./AdminInventory";
-import { AdminInvoices } from "./AdminInvoices";
-import { AdminReports } from "./AdminReports";
-import { AdminSettings } from "./AdminSettings";
-import { CustomersManagement } from "./modules/CustomersManagement";
-import { ReservationsManagement } from "./modules/ReservationsManagement";
-import { DeliveryManagement } from "./modules/DeliveryManagement";
-import { AttendanceManagement } from "./modules/AttendanceManagement";
-import { PromotionsManagement } from "./modules/PromotionsManagement";
-import { SuppliersManagement } from "./modules/SuppliersManagement";
-import { RolesManagement } from "./modules/RolesManagement";
+const AdminInvoices = lazy(() => import("./AdminInvoices").then((m) => ({ default: m.AdminInvoices })));
+const AdminReports = lazy(() => import("./AdminReports").then((m) => ({ default: m.AdminReports })));
+const AdminSettings = lazy(() => import("./AdminSettings").then((m) => ({ default: m.AdminSettings })));
+const CustomersManagement = lazy(() => import("./modules/CustomersManagement").then((m) => ({ default: m.CustomersManagement })));
+const ReservationsManagement = lazy(() => import("./modules/ReservationsManagement").then((m) => ({ default: m.ReservationsManagement })));
+const DeliveryManagement = lazy(() => import("./modules/DeliveryManagement").then((m) => ({ default: m.DeliveryManagement })));
+const AttendanceManagement = lazy(() => import("./modules/AttendanceManagement").then((m) => ({ default: m.AttendanceManagement })));
+const PromotionsManagement = lazy(() => import("./modules/PromotionsManagement").then((m) => ({ default: m.PromotionsManagement })));
+const SuppliersManagement = lazy(() => import("./modules/SuppliersManagement").then((m) => ({ default: m.SuppliersManagement })));
+const RolesManagement = lazy(() => import("./modules/RolesManagement").then((m) => ({ default: m.RolesManagement })));
 import { apiGetRestaurantSettings, apiSaveRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
-import { BarWorkspace } from "../bar/BarWorkspace";
-import { BarBOTView } from "../bar/BarBOTView";
+const BarWorkspace = lazy(() => import("../bar/BarWorkspace").then((m) => ({ default: m.BarWorkspace })));
+const BarBOTView = lazy(() => import("../bar/BarBOTView").then((m) => ({ default: m.BarBOTView })));
 import { apiGetInventory, apiCreateIngredient } from "../api/inventoryApi";
 import { apiVacateTable, apiUpdateTableStatus } from "../api/tableApi";
 import { apiGetOrder } from "../api/orderApi";
@@ -1410,6 +1410,7 @@ export function AdminPortal({
       taxRate: Number(settings.taxRate ?? settings.foodGstRate ?? 5),
       logo: resolvedLogo,
       restaurantLogo: resolvedLogo,
+      accentColor: settings.accentColor || undefined,
       updatedAt: new Date().toISOString(),
       isUserConfigured: true,
     };
@@ -2556,6 +2557,7 @@ export function AdminPortal({
               minHeight: 0,
             }}
           >
+            <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
             {portalMode === "bar" ? (
               <BarWorkspace
                 activeTab={activeBarTab}
@@ -6916,6 +6918,7 @@ export function AdminPortal({
                 )}
               </>
             )}
+            </Suspense>
           </div>
         </div>
       </div>

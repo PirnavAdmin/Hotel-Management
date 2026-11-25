@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -117,6 +118,7 @@ public sealed class RestaurantThemeColorService
 
         // 1. Try to persist into restaurant_theme_settings
         RestaurantThemeSetting? saved = null;
+        Exception? primaryEx = null;
         try
         {
             var existingTheme = await _db.RestaurantThemeSettings
@@ -146,10 +148,22 @@ public sealed class RestaurantThemeColorService
         }
         catch (Exception ex)
         {
+            primaryEx = ex;
             _logger.LogWarning(ex, "Failed to save theme setting to 'restaurant_theme_settings'. Falling back to restaurant_settings.");
+            try
+            {
+                // Targeted detachment: detach only RestaurantThemeSetting entries so unrelated
+                // pending changes in other entities in DbContext are NOT discarded.
+                foreach (var entry in _db.ChangeTracker.Entries<RestaurantThemeSetting>().ToList())
+                {
+                    entry.State = EntityState.Detached;
+                }
+            }
+            catch { }
         }
 
         // 2. Synchronize to restaurant_settings table as well
+        bool fallbackSucceeded = false;
         try
         {
             var targetRestaurantKey = $"restaurant_{restaurantId}";
@@ -168,21 +182,72 @@ public sealed class RestaurantThemeColorService
                 setting.UpdatedAt = now;
                 setting.UpdatedBy = updatedBy.ToString();
                 await _db.SaveChangesAsync();
+                fallbackSucceeded = true;
                 _logger.LogInformation("Synchronized theme accent color '{Color}' to restaurant_settings.", normalizedColor);
+            }
+            else if (saved == null)
+            {
+                // If primary save failed and no restaurant_settings row existed, try creating one
+                var newSetting = new RestaurantSetting
+                {
+                    RestaurantId = targetRestaurantKey,
+                    RestaurantName = "Restaurant",
+                    AccentColor = normalizedColor,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    UpdatedBy = updatedBy.ToString()
+                };
+                _db.RestaurantSettings.Add(newSetting);
+                await _db.SaveChangesAsync();
+                fallbackSucceeded = true;
+                _logger.LogInformation("Created restaurant_settings entry with theme accent color '{Color}'.", normalizedColor);
             }
         }
         catch (Exception syncEx)
         {
             _logger.LogWarning(syncEx, "Could not synchronize accent color to restaurant_settings table.");
+            try
+            {
+                // Targeted detachment: detach only RestaurantSetting entries
+                foreach (var entry in _db.ChangeTracker.Entries<RestaurantSetting>().ToList())
+                {
+                    entry.State = EntityState.Detached;
+                }
+            }
+            catch { }
+
+            // If primary save failed and fallback also threw, propagate the genuine database error
+            if (saved == null)
+            {
+                throw new InvalidOperationException(
+                    "Failed to save theme setting to both 'restaurant_theme_settings' and 'restaurant_settings'.",
+                    syncEx);
+            }
         }
 
-        return saved ?? new RestaurantThemeSetting
+        if (saved != null)
         {
-            RestaurantId = restaurantId,
-            AccentColor = normalizedColor,
-            CreatedAt = now,
-            UpdatedAt = now,
-            UpdatedBy = updatedBy
-        };
+            return saved;
+        }
+
+        if (fallbackSucceeded)
+        {
+            return new RestaurantThemeSetting
+            {
+                RestaurantId = restaurantId,
+                AccentColor = normalizedColor,
+                CreatedAt = now,
+                UpdatedAt = now,
+                UpdatedBy = updatedBy
+            };
+        }
+
+        // If neither primary table save succeeded nor fallback succeeded, do NOT hide the database error!
+        if (primaryEx != null)
+        {
+            throw new InvalidOperationException("Failed to save theme setting to database.", primaryEx);
+        }
+
+        throw new InvalidOperationException("Failed to save theme setting: no target restaurant record found to update.");
     }
 }

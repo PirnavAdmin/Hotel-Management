@@ -1,24 +1,23 @@
 import { getSavedTheme, applyTheme, normalizeTheme } from './utils/theme';
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-// Admin modules
-import { AdminPortal } from "./admin";
-// Kitchen KOT modules
-import { KitchenKOTView, KOTModal } from "./kot";
-// User POS / Dining Floor modules
-import {
-  TableView,
-  TableDetailView,
-  ReceiptModal,
-  SettlementModal,
-  TransferTableModal,
-  PastOrdersModal,
-  TakeawayOrderFlowView,
-  SelfServiceView,
-} from "./user";
-import { Header, LoginPage, ErrorBoundary, CustomerLandingPage } from "./common";
-import { TableReservationFlow } from "./reservation";
-import { TakeawayView } from "./user/TakeawayView";
+// Lazy-loaded full views & modals
+const AdminPortal = lazy(() => import("./admin/AdminPortal").then((m) => ({ default: m.AdminPortal })));
+const KitchenKOTView = lazy(() => import("./kot/KitchenKOTView").then((m) => ({ default: m.KitchenKOTView })));
+const TakeawayView = lazy(() => import("./user/TakeawayView").then((m) => ({ default: m.TakeawayView })));
+const SelfServiceView = lazy(() => import("./user/SelfServiceView").then((m) => ({ default: m.SelfServiceView })));
+const CustomerLandingPage = lazy(() => import("./common/CustomerLandingPage").then((m) => ({ default: m.CustomerLandingPage })));
+const TableDetailView = lazy(() => import("./user/TableDetailView").then((m) => ({ default: m.TableDetailView })));
+const ReceiptModal = lazy(() => import("./user/ReceiptModal").then((m) => ({ default: m.ReceiptModal })));
+const SettlementModal = lazy(() => import("./user/SettlementModal").then((m) => ({ default: m.SettlementModal })));
+const TransferTableModal = lazy(() => import("./user/TransferTableModal").then((m) => ({ default: m.TransferTableModal })));
+const PastOrdersModal = lazy(() => import("./user/PastOrdersModal").then((m) => ({ default: m.PastOrdersModal })));
+const KOTModal = lazy(() => import("./kot/KOTModal").then((m) => ({ default: m.KOTModal })));
+// Immediate POS Floor & Auth shell
+import { TableView } from "./user/TableView";
+import { Header } from "./common/Header";
+import { LoginPage } from "./common/LoginPage";
+import { ErrorBoundary } from "./common/ErrorBoundary";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
 import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
@@ -99,9 +98,6 @@ import { requestLiveInvoiceRecords } from "./utils/liveInvoiceData";
 import { getTodayDateString } from "./utils/invoiceCounter";
 import { useAppDialog } from "./common/DialogContext";
 import { SkeletonTable } from "./common/Skeletons";
-import {
-  autoGenerateInventoryFromRecipe,
-} from "./admin/AdminPortal";
 
 const STORAGE_KEY_TABLES = "gourmet_pos_tables_v2_inr";
 const STORAGE_KEY_SETTLED_ORDER_IDS = "gourmet_pos_settled_order_ids";
@@ -922,6 +918,7 @@ export function App() {
     const syncMenuIngredientsToInventory = async () => {
       try {
         let menuChanged = false;
+        const { autoGenerateInventoryFromRecipe } = await import("./admin/AdminPortal");
         const syncedMenu = await Promise.all(
           menuItems.map(async (item) => {
             if (!Array.isArray(item.recipe) || item.recipe.length === 0) return item;
@@ -3729,8 +3726,11 @@ export function App() {
     if (isTakeawayOrder) {
       if (takeawayCheckoutInFlightRef.current) return false;
       takeawayCheckoutInFlightRef.current = true;
-      let backendOrderId = Date.now();
+      let backendOrderId = null;
       try {
+        const takeawayIdempotencyKey =
+          settlementData.idempotencyKey ||
+          `takeaway_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const createResult = await apiCreatePaidTakeawayOrder({
           orderType: "Takeaway",
           tableId: null,
@@ -3741,8 +3741,7 @@ export function App() {
           customerPhone: enrichedSettlement.customerPhone || undefined,
           status: "Settled",
           paymentMethod: enrichedSettlement.paymentMethod,
-          invoiceNumber: settlementData.invoiceNo,
-          idempotencyKey: settlementData.invoiceNo,
+          idempotencyKey: takeawayIdempotencyKey,
           discountPercent: Number(settlementData.discountPercent) || 0,
           serviceChargeEnabled: false,
           tipAmount: Number(settlementData.tipAmount) || 0,
@@ -3754,26 +3753,64 @@ export function App() {
             notes: item.notes || "",
           })),
         });
-        if (createResult?.success) {
-          const backendOrder = createResult.data?.data ?? createResult.data;
-          const returnedId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
-          if (returnedId) backendOrderId = returnedId;
-          enrichedSettlement.serverInvoiceNo = backendOrder?.invoiceNo ?? backendOrder?.InvoiceNo ?? settlementData.invoiceNo;
+        if (!createResult?.success || createResult?.data?.success === false) {
+          throw new Error(
+            createResult?.error ||
+              createResult?.data?.message ||
+              "Could not connect to the backend to place the takeaway order. Your cart has been preserved; please retry."
+          );
+        }
+        const backendOrder = createResult.data?.data ?? createResult.data;
+        const returnedId = Number(backendOrder?.id ?? backendOrder?.Id) || null;
+        if (!returnedId) {
+          throw new Error(
+            "The server did not return an order ID. Your cart has been preserved; please retry."
+          );
+        }
+        backendOrderId = returnedId;
+        const backendInvoiceNo =
+          backendOrder?.invoiceNo ??
+          backendOrder?.InvoiceNo ??
+          backendOrder?.invoiceNumber ??
+          backendOrder?.InvoiceNumber ??
+          "";
+        enrichedSettlement.invoiceId =
+          backendOrder?.invoiceId ?? backendOrder?.InvoiceId ?? enrichedSettlement.invoiceId ?? null;
+        enrichedSettlement.invoiceNo = backendInvoiceNo ? String(backendInvoiceNo).trim() : "";
+        enrichedSettlement.serverInvoiceNo = enrichedSettlement.invoiceNo;
+
+        try {
+          const invoiceResult = await apiGetInvoiceByOrder(backendOrderId);
+          const invoice = invoiceResult?.data?.data ?? invoiceResult?.data?.invoice ?? invoiceResult?.data;
+          const invoiceOrderId = Number(invoice?.orderId ?? invoice?.OrderId);
+          if (invoiceResult?.success && invoiceResult?.data?.success !== false && invoice && invoiceOrderId === backendOrderId) {
+            settledInvoice = invoice;
+            enrichedSettlement.invoiceId = invoice.invoiceId ?? invoice.InvoiceId ?? enrichedSettlement.invoiceId;
+            enrichedSettlement.invoiceNo = invoice.invoiceNumber ?? invoice.InvoiceNumber ?? enrichedSettlement.invoiceNo;
+            enrichedSettlement.serverInvoiceNo = enrichedSettlement.invoiceNo;
+          }
+        } catch (invErr) {
+          console.warn(`Takeaway order ${backendOrderId} placed, but invoice retrieval failed:`, invErr);
         }
       } catch (error) {
-        console.warn("Takeaway API sync failed, recorded locally:", error);
+        console.warn("Takeaway checkout failed:", error);
+        const message =
+          error?.message ||
+          "Could not connect to the backend to place the takeaway order. Your cart has been preserved; please retry.";
+        showToast(message);
+        return typeof message === "string" ? message : false;
       } finally {
         takeawayCheckoutInFlightRef.current = false;
       }
 
       enrichedSettlement.backendOrderId = backendOrderId;
       enrichedSettlement.billingSessionId = String(backendOrderId);
-      enrichedSettlement.id = backendOrderId || enrichedSettlement.id;
-      enrichedSettlement.orderId = backendOrderId || enrichedSettlement.orderId;
+      enrichedSettlement.id = backendOrderId;
+      enrichedSettlement.orderId = backendOrderId;
       enrichedSettlement.orderType = "Takeaway";
       enrichedSettlement.tableName = "Takeaway";
 
-      // Always save active takeaway order to storage so Kitchen KOT displays it immediately
+      // Save backend-confirmed active takeaway order to storage so Kitchen KOT displays it immediately
       try {
         const raw = localStorage.getItem("gourmet_pos_takeaway_orders");
         const list = raw ? JSON.parse(raw) : [];
@@ -3781,7 +3818,7 @@ export function App() {
           ...enrichedSettlement,
           id: backendOrderId,
           orderId: backendOrderId,
-          invoiceNo: settlementData.invoiceNo,
+          invoiceNo: enrichedSettlement.invoiceNo,
           orderType: "Takeaway",
           tableName: "Takeaway",
           section: "Takeaway",
@@ -3793,7 +3830,7 @@ export function App() {
             kotSent: true,
           })),
         };
-        const nextList = [activeTakeawayOrder, ...list.filter((o) => String(o.id) !== String(backendOrderId) && String(o.invoiceNo) !== String(settlementData.invoiceNo))];
+        const nextList = [activeTakeawayOrder, ...list.filter((o) => String(o.id) !== String(backendOrderId))];
         localStorage.setItem("gourmet_pos_takeaway_orders", JSON.stringify(nextList));
         window.dispatchEvent(new CustomEvent("avsr-takeaway-updated"));
         window.dispatchEvent(new CustomEvent("avsr-kot-updated"));
@@ -3801,10 +3838,10 @@ export function App() {
 
       triggerKitchenNotification({
         tableId: `takeaway-${backendOrderId}`,
-        tableName: `Takeaway #${settlementData.invoiceNo}`,
+        tableName: `Takeaway #${backendOrderId}`,
         type: "order_received",
         title: "🥡 Takeaway KOT",
-        message: `Takeaway order #${settlementData.invoiceNo} was sent to the kitchen.`,
+        message: `Takeaway order #${backendOrderId} was sent to the kitchen.`,
       });
     } else {
       if (dineInSettlementInFlightRef.current) return false;
@@ -3901,7 +3938,6 @@ export function App() {
             serviceChargeEnabled: Number(settlementData.serviceChargeAmount ?? 0) > 0,
             tipAmount: settlementData.tipAmount,
             paymentMethod: enrichedSettlement.paymentMethod,
-            invoiceNumber: enrichedSettlement.invoiceNo,
           });
         const settledOrder = settlementResult?.data?.data ?? settlementResult?.data ?? settlementResult?.order ?? null;
         const confirmedOrderId = Number(
@@ -3926,7 +3962,7 @@ export function App() {
         enrichedSettlement.billingSessionId = String(confirmedOrderId);
         const settleResponse = settlementResult?.data || {};
         enrichedSettlement.invoiceId = settleResponse.invoiceId ?? settleResponse.InvoiceId ?? settledOrder?.invoiceId ?? settledOrder?.InvoiceId ?? null;
-        enrichedSettlement.invoiceNo = settleResponse.invoiceNumber ?? settleResponse.InvoiceNumber ?? settledOrder?.invoiceNo ?? settledOrder?.InvoiceNo ?? settlementData.invoiceNo ?? null;
+        enrichedSettlement.invoiceNo = settleResponse.invoiceNumber ?? settleResponse.InvoiceNumber ?? settledOrder?.invoiceNo ?? settledOrder?.InvoiceNo ?? "";
         try {
           const unlockResult = await apiUnlockTable(backendTableId);
           if (!unlockResult?.success) {
@@ -5077,20 +5113,22 @@ export function App() {
         )}
 
         {isLandingRoute && (
-          <CustomerLandingPage
-            restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
-            restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
-            menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
-            menuLoading={sharedRecordLoad.menu === "loading"}
-            menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
-            tables={tables}
-            onHotelLogin={handleHotelLogin}
-            onAdminLogin={handleHotelLogin}
-            kitchenNotifications={kitchenNotifications}
-            onClearNotifications={handleClearNotifications}
-            onMarkAllRead={handleMarkAllNotificationsRead}
-            onMarkNotificationRead={handleMarkNotificationRead}
-          />
+          <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
+            <CustomerLandingPage
+              restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
+              restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
+              menuItems={Array.isArray(menuItems) && menuItems.length > 0 ? menuItems : []}
+              menuLoading={sharedRecordLoad.menu === "loading"}
+              menuError={sharedRecordLoad.menu === "error" ? sharedRecordLoad.menuError : ""}
+              tables={tables}
+              onHotelLogin={handleHotelLogin}
+              onAdminLogin={handleHotelLogin}
+              kitchenNotifications={kitchenNotifications}
+              onClearNotifications={handleClearNotifications}
+              onMarkAllRead={handleMarkAllNotificationsRead}
+              onMarkNotificationRead={handleMarkNotificationRead}
+            />
+          </Suspense>
         )}
 
         {/* 1. DEDICATED KITCHEN KOT VIEW (ROUTE: /kot) - KITCHEN & BAR BOT WORKSPACE */}
@@ -5098,8 +5136,8 @@ export function App() {
           (kotSession &&
           (kotSession.role === "kot" || kotSession.role === "admin") ? (
             <ErrorBoundary>
-              <>
-                  <KitchenKOTView
+              <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
+                <KitchenKOTView
                     tables={tables}
                     pastOrders={pastOrders}
                     takeawayOrders={pastOrders.filter((o) => o && (o.orderType === "Takeaway" || o.tableName === "Takeaway"))}
@@ -5117,7 +5155,7 @@ export function App() {
                     restaurantName={restaurantSettings.restaurantName}
                     restaurantLogo={restaurantSettings.logo}
                   />
-              </>
+              </Suspense>
             </ErrorBoundary>
           ) : (
             <LoginPage
@@ -5135,7 +5173,8 @@ export function App() {
         {isAdminRoute &&
           (adminSession &&
           (adminSession.role === "admin" || adminSession.role === "manager") ? (
-            <AdminPortal
+            <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
+              <AdminPortal
               isFullPage={true}
               onClose={() => navigate("/")}
               menuItems={menuItems}
@@ -5173,6 +5212,7 @@ export function App() {
               onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
               showToast={showToast}
             />
+            </Suspense>
           ) : (
             <LoginPage
               currentTheme={theme}
@@ -5206,6 +5246,7 @@ export function App() {
                 </div>
               )}
               {activeView === "takeaway" && (
+                <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
                 <TakeawayView
                   menuItems={menuItems}
                   menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
@@ -5256,12 +5297,19 @@ export function App() {
                     setIsSettlementOpen(true);
                   }}
                 />
+                </Suspense>
               )}
               {activeView === "self-service" && (
                 <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", width: "100%" }}>
+                  <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
                   <SelfServiceView
+                    currentSession={posSession}
                     menuItems={menuItems}
                     menuLoading={sharedRecordLoad.menu === "loading" && menuItems.length === 0}
+                    menuError={sharedRecordLoad.menu === "error" ? "Could not retrieve restaurant menu." : null}
+                    onRetryMenu={() => {
+                      if (typeof refreshFloorState === "function") refreshFloorState();
+                    }}
                     restaurantSettings={restaurantSettings}
                     onShowReceipt={(receipt, orderId) => {
                       const receiptItems = Array.isArray(receipt?.items) ? receipt.items.map((item) => ({
@@ -5299,10 +5347,12 @@ export function App() {
                       }
                     }}
                   />
+                  </Suspense>
                 </div>
               )}
               {activeView === "order" && (
                 <div style={{ flex: 1, minHeight: 0, height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", width: "100%" }}>
+                  <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
                   <TableDetailView
                   table={currentTable}
                   allTables={tables}
@@ -5369,6 +5419,7 @@ export function App() {
                   currentTheme={theme}
                   onChangeTheme={setTheme}
                 />
+                  </Suspense>
               </div>
             )}
             </>
@@ -5605,7 +5656,8 @@ export function App() {
 
       {/* Admin Portal Modal (if opened in overlay mode) */}
       {isAdminOpen && !isAdminRoute && (
-        <AdminPortal
+        <Suspense fallback={<div style={{ padding: "1.5rem" }}><SkeletonTable rows={6} columns={5} /></div>}>
+          <AdminPortal
           onClose={() => setIsAdminOpen(false)}
           menuItems={menuItems}
           onAddMenuItem={handleAddMenuItem}
@@ -5641,9 +5693,11 @@ export function App() {
           onUpdateInvoiceDiscount={handleUpdateInvoiceDiscount}
           showToast={showToast}
         />
+        </Suspense>
       )}
 
-      {/* Receipt Modal */}
+      {/* Lazy-loaded POS Modals */}
+      <Suspense fallback={null}>
       {/* Settlement Checkout Modal */}
       {isSettlementOpen && (
         <SettlementModal
@@ -5736,6 +5790,7 @@ export function App() {
           }}
         />
       )}
+      </Suspense>
     </div>
   );
 }

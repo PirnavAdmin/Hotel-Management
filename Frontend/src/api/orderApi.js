@@ -51,6 +51,87 @@ export async function apiCreatePaidSelfServiceOrder(orderData) {
   });
 }
 
+/**
+ * Create a dedicated Self Service Order (Phase 2B.1 Backend API)
+ * Dispatches to POST /api/v1/orders/self-service with authenticated JWT and authoritative recalculation
+ * @param {Object} orderData
+ * @param {Array<{menuItemId: number, quantity: number, notes?: string}>} orderData.items
+ * @param {string} [orderData.customerName]
+ * @param {string} [orderData.customerPhone]
+ * @param {string} [orderData.customerEmail]
+ * @param {string} [orderData.specialInstructions]
+ * @param {string} [orderData.idempotencyKey]
+ * @param {string} [orderData.discountCode]
+ * @param {number|string} [branchId]
+ * @returns {Promise<{success: boolean, data?: Object, error?: string, status?: number, isNetworkError?: boolean}>}
+ */
+export async function apiCreateSelfServiceOrder(orderData, branchId = null) {
+  const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+  const payload = {
+    items: Array.isArray(orderData?.items)
+      ? orderData.items.map((i) => ({
+          menuItemId: Number(i.menuItemId || i.id || 0),
+          quantity: Number(i.quantity || 1),
+          notes: i.notes ? String(i.notes).trim() : "Self Service Order",
+        }))
+      : [],
+    customerName: orderData?.customerName ? String(orderData.customerName).trim() : undefined,
+    customerPhone: orderData?.customerPhone ? String(orderData.customerPhone).trim() : undefined,
+    customerEmail: orderData?.customerEmail ? String(orderData.customerEmail).trim() : undefined,
+    specialInstructions: orderData?.specialInstructions ? String(orderData.specialInstructions).trim() : undefined,
+    idempotencyKey: orderData?.idempotencyKey ? String(orderData.idempotencyKey).trim() : undefined,
+    discountCode: orderData?.discountCode ? String(orderData.discountCode).trim() : undefined,
+    // Authoritative calculations are strictly performed on the backend; client values are omitted.
+  };
+
+  return await apiClient(`/api/v1/orders/self-service${query}`, {
+    method: "POST",
+    remoteOnly: true,
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Track a Self Service Order (Phase 2B.14 Backend API)
+ * GET /api/v1/orders/self-service/{id}
+ */
+export async function apiGetSelfServiceOrder(orderId, branchId = null) {
+  const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+  return await apiClient(`/api/v1/orders/self-service/${encodeURIComponent(orderId)}${query}`, {
+    remoteOnly: true,
+  });
+}
+
+/**
+ * Initiate payment for a Self Service Order (Phase 2B.14 Backend API)
+ * POST /api/v1/orders/self-service/{id}/initiate-payment
+ */
+export async function apiInitiateSelfServicePayment(orderId, paymentMethod = "UPI", branchId = null) {
+  const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+  return await apiClient(`/api/v1/orders/self-service/${encodeURIComponent(orderId)}/initiate-payment${query}`, {
+    method: "POST",
+    remoteOnly: true,
+    body: JSON.stringify({ paymentMethod: String(paymentMethod || "UPI").toUpperCase() }),
+  });
+}
+
+/**
+ * Confirm payment and issue official invoice for a Self Service Order (Staff-only, Phase 2B.14 Backend API)
+ * POST /api/v1/orders/self-service/{id}/confirm-payment
+ */
+export async function apiConfirmSelfServicePayment(orderId, { paymentMethod = "CASH", amount = 0, transactionReference } = {}, branchId = null) {
+  const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+  return await apiClient(`/api/v1/orders/self-service/${encodeURIComponent(orderId)}/confirm-payment${query}`, {
+    method: "POST",
+    remoteOnly: true,
+    body: JSON.stringify({
+      paymentMethod: String(paymentMethod || "CASH").toUpperCase(),
+      amount: Number(amount) || 0,
+      ...(transactionReference ? { transactionReference: String(transactionReference).trim() } : {}),
+    }),
+  });
+}
+
 async function dispatchKot(endpoint, options = {}) {
   const result = await apiClient(endpoint, options);
   if (!result?.success) {
