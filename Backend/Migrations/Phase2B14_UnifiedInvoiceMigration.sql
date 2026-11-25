@@ -1,3 +1,5 @@
+USE hoteldb;
+
 -- ============================================================================
 -- Phase 2B.14 / 2B.15 – Unified Invoice Schema Migration (MySQL 8.0+)
 -- IMPORTANT: Take a full database backup (mysqldump) BEFORE running this script.
