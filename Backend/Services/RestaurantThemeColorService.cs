@@ -34,21 +34,22 @@ public sealed class RestaurantThemeColorService
         }
 
         var normalizedColor = accentColor.Trim().ToLowerInvariant();
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-        await _db.Database.ExecuteSqlInterpolatedAsync($@"
-            INSERT INTO `restaurant_theme_settings`
-                (`restaurant_id`, `accent_color`, `updated_by`)
-            VALUES
-                ({restaurantId}, {normalizedColor}, {updatedBy})
-            ON DUPLICATE KEY UPDATE
-                `accent_color` = VALUES(`accent_color`),
-                `updated_at` = CURRENT_TIMESTAMP(6),
-                `updated_by` = VALUES(`updated_by`);");
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await _db.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO `restaurant_theme_settings`
+                    (`restaurant_id`, `accent_color`, `updated_by`)
+                VALUES
+                    ({restaurantId}, {normalizedColor}, {updatedBy})
+                ON DUPLICATE KEY UPDATE
+                    `accent_color` = VALUES(`accent_color`),
+                    `updated_at` = CURRENT_TIMESTAMP(6),
+                    `updated_by` = VALUES(`updated_by`);");
 
-        var saved = await _db.RestaurantThemeSettings
-            .AsNoTracking()
-            .FirstAsync(theme => theme.RestaurantId == restaurantId);
-        await transaction.CommitAsync();
-        return saved;
+            return await _db.RestaurantThemeSettings
+                .AsNoTracking()
+                .FirstAsync(theme => theme.RestaurantId == restaurantId);
+        });
     }
 }
