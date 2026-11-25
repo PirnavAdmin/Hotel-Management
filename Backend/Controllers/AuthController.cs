@@ -86,6 +86,12 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        return Ok(new { success = true, message = "Logged out successfully." });
+    }
+
     // ============================================================
     // LOGIN MANAGEMENT
     // ============================================================

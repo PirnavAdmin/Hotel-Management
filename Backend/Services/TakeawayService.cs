@@ -572,14 +572,26 @@ public class TakeawayService
                 var invoice = new Invoice
                 {
                     OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    BranchId = order.BranchId ?? (order.OutletId > 0 ? order.OutletId : 1),
+                    OrderType = "Takeaway",
+                    CustomerName = order.CustomerName,
+                    CustomerPhone = order.CustomerPhone,
                     InvoiceNumber = invoiceNumber,
                     Subtotal = calculation.Subtotal,
                     TaxableAmount = calculation.TaxableAmount,
+                    GstPercent = 5.00m,
+                    CgstAmount = calculation.CgstAmount,
+                    SgstAmount = calculation.SgstAmount,
                     TaxAmount = calculation.TaxAmount,
                     DiscountAmount = calculation.DiscountAmount,
+                    ServiceChargePercent = 0.00m,
+                    ServiceChargeAmount = 0.00m,
+                    RoundingAdjustment = calculation.RoundOff,
                     TotalAmount = calculation.TotalAmount,
                     PaidAmount = isPaid ? calculation.TotalAmount : 0m,
                     AmountPaid = isPaid ? calculation.TotalAmount : 0m,
+                    PaymentStatus = isPaid ? "Paid" : "Unpaid",
                     Status = isPaid ? "PAID" : "UNPAID",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -723,7 +735,6 @@ public class TakeawayService
                         SgstAmount = calculation.SgstAmount,
                         GstAmount = calculation.GstAmount,
                         PackagingCharge = calculation.PackagingCharge,
-                        RoundOff = calculation.RoundOff,
                         TotalAmount = calculation.TotalAmount,
                         PaidAmount = isPaid ? calculation.TotalAmount : 0m
                     },
@@ -1320,17 +1331,30 @@ public class TakeawayService
             decimal sub = order.Items.Where(i => !i.IsDeleted).Sum(i => i.TotalPrice);
             decimal tax = Math.Round(sub * 0.05m, 2);
             decimal tot = Math.Round(sub + tax + order.PackagingCharge, 2);
+            var cgst = Math.Round(tax / 2m, 2);
+            var sgst = tax - cgst;
             invoice = new Invoice
             {
                 OrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                BranchId = order.BranchId ?? (order.OutletId > 0 ? order.OutletId : 1),
+                OrderType = "Takeaway",
+                CustomerName = order.CustomerName,
+                CustomerPhone = order.CustomerPhone,
                 InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{DateTime.UtcNow:HHmmssfff}",
                 Subtotal = sub,
                 TaxableAmount = sub,
+                GstPercent = 5.00m,
+                CgstAmount = cgst,
+                SgstAmount = sgst,
                 TaxAmount = tax,
                 DiscountAmount = 0m,
+                ServiceChargePercent = 0.00m,
+                ServiceChargeAmount = 0.00m,
                 TotalAmount = tot,
                 PaidAmount = 0m,
                 AmountPaid = 0m,
+                PaymentStatus = "Unpaid",
                 Status = "UNPAID",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow

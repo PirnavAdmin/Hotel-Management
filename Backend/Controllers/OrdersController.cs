@@ -386,6 +386,18 @@ public class OrdersController : ControllerBase
                 }
                 if (menuItemId <= 0) menuItemId = OrderItemRouting.IsBarItem(false, null, null, itemInput.Name) ? 7 : 1;
 
+                if (menuItemId > 0 && (itemInput.Price <= 0 || string.IsNullOrWhiteSpace(itemInput.Name)))
+                {
+                    var m = await _context.MenuItems
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(mi => mi.MenuItemId == menuItemId);
+                    if (m != null)
+                    {
+                        if (itemInput.Price <= 0) itemInput.Price = m.Price;
+                        if (string.IsNullOrWhiteSpace(itemInput.Name)) itemInput.Name = m.DishName;
+                    }
+                }
+
                 var newItem = new OrderItem
                 {
                     OrderId = takeawayOrder.Id,
@@ -682,6 +694,16 @@ public class OrdersController : ControllerBase
             if (menuItemId <= 0)
             {
                 menuItemId = OrderItemRouting.IsBarItem(false, null, null, itemInput.Name) ? 7 : 1;
+            }
+
+            if (menuItemId > 0 && (itemInput.Price <= 0 || string.IsNullOrWhiteSpace(itemInput.Name)))
+            {
+                var miRec = await _context.MenuItems.AsNoTracking().FirstOrDefaultAsync(mi => mi.MenuItemId == menuItemId);
+                if (miRec != null)
+                {
+                    if (itemInput.Price <= 0) itemInput.Price = miRec.Price;
+                    if (string.IsNullOrWhiteSpace(itemInput.Name)) itemInput.Name = miRec.DishName;
+                }
             }
 
             var existingItem = order.Items.FirstOrDefault(i =>
