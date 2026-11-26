@@ -197,7 +197,7 @@ public class AuthService
             {
                 var adminUser = new User
                 {
-                    UserId = 1,
+                    UserId = normUser.Contains("pirnav") ? 26 : 7,
                     UserName = normUser.Contains("pirnav") ? "pirnav" : "admin",
                     FullName = "pirnav",
                     Email = normUser.Contains("pirnav") ? "pasupuleti.bhanu7@gmail.com" : "admin@bhanupos.com",
@@ -245,13 +245,13 @@ public class AuthService
         {
             var fallbackUser = new User
             {
-                UserId = 1,
+                UserId = normUser.Contains("pirnav") ? 26 : 7,
                 UserName = normUser.Contains("pirnav") ? "pirnav" : "admin",
                 FullName = "pirnav",
                 Email = normUser.Contains("pirnav") ? "pasupuleti.bhanu7@gmail.com" : "admin@bhanupos.com",
                 Phone = "9999999999",
                 RoleId = 1,
-                BranchId = 1,
+                BranchId = normUser.Contains("pirnav") ? 1 : (long?)null,
                 IsActive = true,
                 Role = new Role
                 {
