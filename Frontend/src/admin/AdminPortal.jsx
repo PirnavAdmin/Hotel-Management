@@ -75,6 +75,7 @@ const AttendanceManagement = lazy(() => import("./modules/AttendanceManagement")
 const PromotionsManagement = lazy(() => import("./modules/PromotionsManagement").then((m) => ({ default: m.PromotionsManagement })));
 const SuppliersManagement = lazy(() => import("./modules/SuppliersManagement").then((m) => ({ default: m.SuppliersManagement })));
 const RolesManagement = lazy(() => import("./modules/RolesManagement").then((m) => ({ default: m.RolesManagement })));
+const MultiAdminManagement = lazy(() => import("./modules/MultiAdminManagement").then((m) => ({ default: m.MultiAdminManagement })));
 import { apiGetRestaurantSettings, apiSaveRestaurantSettings, apiUpdateRestaurantSettings } from "../api/settingsApi";
 const BarWorkspace = lazy(() => import("../bar/BarWorkspace").then((m) => ({ default: m.BarWorkspace })));
 const BarBOTView = lazy(() => import("../bar/BarBOTView").then((m) => ({ default: m.BarBOTView })));
@@ -2605,6 +2606,7 @@ export function AdminPortal({
                     onNavigateTab={setActiveTab}
                     onOpenKOTView={onOpenKOTView}
                     onOpenItemModal={handleOpenItemModal}
+                    currentSession={currentSession}
                   />
                 )}
 
@@ -6901,7 +6903,10 @@ export function AdminPortal({
 
                 {/* ================= TAB 8: LOGIN MANAGEMENT ================= */}
                 {activeTab === "logins" && (
-                  <LoginManagement currentAdminSession={currentSession} />
+                  <>
+                    <MultiAdminManagement showToast={showToast} />
+                    <LoginManagement currentAdminSession={currentSession} />
+                  </>
                 )}
 
                 {/* ================= TAB 9: SETTINGS ================= */}

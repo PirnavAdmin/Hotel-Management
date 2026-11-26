@@ -96,10 +96,13 @@ export function normalizeInvoiceRecord(invoice, order = null) {
     valueFrom(invoice, "taxableAmount", "TaxableAmount") ??
       Math.max(0, subtotal - discountAmount),
   ) || 0;
-  const taxAmount = Number(
-    valueFrom(invoice, "taxAmount", "TaxAmount") ??
-      valueFrom(order, "taxAmount", "TaxAmount"),
-  ) || 0;
+  const rawExplicitTax = valueFrom(invoice, "taxAmount", "TaxAmount") ?? valueFrom(order, "taxAmount", "TaxAmount");
+  const rawCgst = Number(valueFrom(invoice, "cgstAmount", "CgstAmount") ?? valueFrom(order, "cgstAmount", "CgstAmount")) || 0;
+  const rawSgst = Number(valueFrom(invoice, "sgstAmount", "SgstAmount") ?? valueFrom(order, "sgstAmount", "SgstAmount")) || 0;
+  const taxAmount =
+    rawExplicitTax !== undefined && rawExplicitTax !== null && Number.isFinite(Number(rawExplicitTax))
+      ? Number(rawExplicitTax)
+      : (rawCgst + rawSgst);
 
   const rawTotal = Number(rawInvoiceTotal ?? rawOrderTotal) || 0;
   const grandTotal = rawTotal > 0
@@ -327,9 +330,24 @@ async function loadInvoiceManagementRecords() {
     };
   }
 
-  const records = sortInvoicesByCreationTime(
-    invoices.map((invoice) => normalizeInvoiceRecord(invoice)),
-  );
+  const seenKeys = new Set();
+  const deduped = invoices
+    .map((invoice) => normalizeInvoiceRecord(invoice))
+    .filter((rec) => {
+      const key = rec.invoiceId != null
+        ? `id:${String(rec.invoiceId)}`
+        : rec.invoiceNumber
+          ? `num:${rec.invoiceNumber}`
+          : rec.orderId != null
+            ? `ord:${String(rec.orderId)}`
+            : null;
+      if (!key) return true;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+
+  const records = sortInvoicesByCreationTime(deduped);
   return { records, error: "" };
 }
 

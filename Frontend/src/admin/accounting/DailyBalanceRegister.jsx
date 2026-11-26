@@ -19,6 +19,7 @@ import { formatCurrency, roundCurrency } from "../../utils/formatCurrency";
 import {
   getDailyBalances,
   saveDailyBalances,
+  retryAccountingSync,
   exportToCSV,
   printFinancialReport,
 } from "./accountingService";
@@ -34,7 +35,8 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
   const [actualCashCounted, setActualCashCounted] = useState(0);
   const [isDayClosed, setIsDayClosed] = useState(false);
   const [closureNotes, setClosureNotes] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
+  const [saveNotice, setSaveNotice] = useState(null);
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
 
   // Calculate day-specific inflows from orders
   const dayOrders = orders.filter((o) => {
@@ -112,7 +114,7 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
     }
   }, [selectedDate, balances]);
 
-  const handleSaveRegister = (closeDay = false) => {
+  const handleSaveRegister = async (closeDay = false) => {
     const record = {
       date: selectedDate,
       openingCash: roundCurrency(openingCash),
@@ -141,10 +143,45 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     setBalances(nextBalances);
-    saveDailyBalances(nextBalances);
     setIsDayClosed(record.isClosed);
-    setSaveMessage(closeDay ? "✅ Register Closed & Locked for Today!" : "✅ Daily Balances Saved Successfully!");
-    setTimeout(() => setSaveMessage(""), 3500);
+    setSaveNotice({
+      status: "pending",
+      message: closeDay
+        ? "Register closed locally. Syncing to server..."
+        : "Daily balances saved locally. Syncing to server...",
+    });
+
+    const syncRes = await saveDailyBalances(nextBalances, record);
+    setSaveNotice(
+      syncRes?.synced
+        ? {
+            status: "synced",
+            message: closeDay
+              ? "Register closed locally and synced to server."
+              : "Daily balances saved locally and synced to server.",
+          }
+        : {
+            status: "failed",
+            syncKey: syncRes?.syncKey || `balance:${record.date}`,
+            message: `Saved locally only — backend sync failed: ${syncRes?.error || "Server unavailable."}`,
+          }
+    );
+  };
+
+  const handleRetrySync = async () => {
+    if (!saveNotice?.syncKey || isRetryingSync) return;
+    setIsRetryingSync(true);
+    const res = await retryAccountingSync(saveNotice.syncKey);
+    setIsRetryingSync(false);
+    setSaveNotice(
+      res?.synced
+        ? { status: "synced", message: "Daily balance register synced to server successfully." }
+        : {
+            status: "failed",
+            syncKey: saveNotice.syncKey,
+            message: `Saved locally only — backend sync failed: ${res?.error || "Server unavailable."}`,
+          }
+    );
   };
 
   const handleExportCSV = () => {
@@ -356,19 +393,59 @@ export function DailyBalanceRegister({ orders = [], inventoryPurchases = [], sal
         </div>
       </div>
 
-      {saveMessage && (
+      {saveNotice && (
         <div
+          role={saveNotice.status === "failed" ? "alert" : "status"}
           style={{
             padding: "0.75rem 1rem",
-            background: "rgba(16, 185, 129, 0.15)",
-            border: "1px solid rgba(16, 185, 129, 0.4)",
+            background:
+              saveNotice.status === "synced"
+                ? "rgba(16, 185, 129, 0.15)"
+                : saveNotice.status === "failed"
+                ? "rgba(239, 68, 68, 0.15)"
+                : "rgba(245, 158, 11, 0.15)",
+            border:
+              saveNotice.status === "synced"
+                ? "1px solid rgba(16, 185, 129, 0.4)"
+                : saveNotice.status === "failed"
+                ? "1px solid rgba(239, 68, 68, 0.4)"
+                : "1px solid rgba(245, 158, 11, 0.4)",
             borderRadius: "8px",
-            color: "#10b981",
+            color:
+              saveNotice.status === "synced"
+                ? "#10b981"
+                : saveNotice.status === "failed"
+                ? "#ef4444"
+                : "#f59e0b",
             fontWeight: 700,
             fontSize: "0.85rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "0.75rem",
+            flexWrap: "wrap",
           }}
         >
-          {saveMessage}
+          <span>{saveNotice.message}</span>
+          {saveNotice.status === "failed" && saveNotice.syncKey && (
+            <button
+              type="button"
+              onClick={handleRetrySync}
+              disabled={isRetryingSync}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "6px",
+                border: "1px solid rgba(239, 68, 68, 0.45)",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                fontWeight: 700,
+                fontSize: "0.75rem",
+                cursor: isRetryingSync ? "not-allowed" : "pointer",
+              }}
+            >
+              {isRetryingSync ? "Retrying..." : "Retry Sync"}
+            </button>
+          )}
         </div>
       )}
 

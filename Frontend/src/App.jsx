@@ -7,6 +7,12 @@ const KitchenKOTView = lazy(() => import("./kot/KitchenKOTView").then((m) => ({ 
 const TakeawayView = lazy(() => import("./user/TakeawayView").then((m) => ({ default: m.TakeawayView })));
 const SelfServiceView = lazy(() => import("./user/SelfServiceView").then((m) => ({ default: m.SelfServiceView })));
 const CustomerLandingPage = lazy(() => import("./common/CustomerLandingPage").then((m) => ({ default: m.CustomerLandingPage })));
+const PublicLandingPage = lazy(() => import("./pages/public/PublicLandingPage"));
+const DemoRequestPage = lazy(() => import("./pages/public/DemoRequestPage"));
+const RestaurantRegisterPage = lazy(() => import("./pages/public/RestaurantRegisterPage"));
+const PricingPage = lazy(() => import("./pages/public/PricingPage"));
+const StaffLoginPage = lazy(() => import("./pages/public/StaffLoginPage"));
+const SuperAdminPortalPage = lazy(() => import("./pages/public/SuperAdminPortalPage"));
 const TableDetailView = lazy(() => import("./user/TableDetailView").then((m) => ({ default: m.TableDetailView })));
 const ReceiptModal = lazy(() => import("./user/ReceiptModal").then((m) => ({ default: m.ReceiptModal })));
 const SettlementModal = lazy(() => import("./user/SettlementModal").then((m) => ({ default: m.SettlementModal })));
@@ -20,7 +26,8 @@ import { LoginPage } from "./common/LoginPage";
 import { ErrorBoundary } from "./common/ErrorBoundary";
 import { sounds } from "./utils/audio";
 import { parseTimeToSeconds, formatElapsedTimer } from "./utils/timer";
-import { setSession, logoutUser, fetchCurrentAuthUser } from "./utils/auth";
+import { setSession, logoutUser, fetchCurrentAuthUser, isTokenExpired } from "./utils/auth";
+import { resolvePostLoginRoute } from "./utils/saasValidation";
 import {
   apiGetTables,
   apiCreateTable,
@@ -1022,7 +1029,13 @@ export function App() {
 
   const isKotRoute = location.pathname === "/kot";
   const isAdminRoute = location.pathname === "/admin";
-  const isStaffLoginRoute = ["/login", "/pos", "/staff"].includes(location.pathname);
+  const isPosLoginRoute = ["/pos", "/staff"].includes(location.pathname);
+  const isPublicLoginRoute = location.pathname === "/login";
+  const isPricingRoute = location.pathname === "/pricing";
+  const isDemoRoute = location.pathname === "/demo";
+  const isRegisterRestaurantRoute = location.pathname === "/register-restaurant";
+  const isSuperAdminRoute =
+    location.pathname === "/super-admin" || location.pathname.startsWith("/super-admin/");
 
   // ── Live Backend Integration Hook ──────────────────────────────
   useEffect(() => {
@@ -1315,19 +1328,31 @@ export function App() {
     "/reserve",
     "/takeaway-menu",
   ];
-  const isExplicitCustomerRoute = customerMenuRoutes.includes(location.pathname);
+  const isBranchMenuRoute = /^\/r\/[^/]+\/menu\/?$/i.test(location.pathname);
+  const isExplicitCustomerRoute = customerMenuRoutes.includes(location.pathname) || isBranchMenuRoute;
   const isCustomerScan =
     isExplicitCustomerRoute ||
     Boolean(location.search && (location.search.includes("table=") || location.search.includes("qr=")));
-  const isPublicRestaurantHome =
+  const isPublicSaasLanding =
     location.pathname === "/" && !posSession && !isCustomerScan;
+  const isPublicSaasRoute =
+    isPublicSaasLanding ||
+    isPricingRoute ||
+    isDemoRoute ||
+    isRegisterRestaurantRoute ||
+    isSuperAdminRoute ||
+    (isPublicLoginRoute && !posSession);
   // Explicit customer URLs must remain on the customer landing flow even when
   // a staff POS session is restored in this browser. CustomerLandingPage still
   // enforces its own customer authentication before protected actions.
   const isLandingRoute =
-    (isCustomerScan && (!posSession || isExplicitCustomerRoute)) ||
-    isPublicRestaurantHome;
-  const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute && !isStaffLoginRoute;
+    isCustomerScan && (!posSession || isExplicitCustomerRoute);
+  const isUserRoute =
+    !isKotRoute &&
+    !isAdminRoute &&
+    !isLandingRoute &&
+    !isPublicSaasRoute &&
+    !(isPosLoginRoute && !posSession);
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),
   );
@@ -1365,7 +1390,7 @@ export function App() {
       setAdminSession(null);
     };
 
-    if (!savedToken) {
+    if (!savedToken || isTokenExpired(savedToken)) {
       clearSavedSessions();
       setAuthRestorePending(false);
       return;
@@ -1431,17 +1456,21 @@ export function App() {
   };
 
   const handleGlobalLogin = (s, targetRole) => {
-    const roleToUse = targetRole || s?.role || "pos";
+    const roleToUse = targetRole || s?.rawRole || s?.role || "pos";
+    const destination = resolvePostLoginRoute(roleToUse);
     setSession(s);
-    if (roleToUse === "admin") {
+    if (destination === "/super-admin") {
+      handleAdminLogin(s);
+      navigate("/super-admin/dashboard");
+    } else if (destination === "/admin") {
       handleAdminLogin(s);
       navigate("/admin");
-    } else if (roleToUse === "kot") {
+    } else if (destination === "/kot") {
       handleKotLogin(s);
       navigate("/kot");
     } else {
       handlePosLogin(s);
-      navigate("/");
+      navigate("/pos");
     }
   };
 
@@ -1476,6 +1505,36 @@ export function App() {
     saveRouteSession(SESSION_KEY_ADMIN, null);
     logoutUser();
   };
+
+  useEffect(() => {
+    const clearAllInMemorySessions = () => {
+      setPosSession(null);
+      setKotSession(null);
+      setAdminSession(null);
+      saveRouteSession(SESSION_KEY_POS, null);
+      saveRouteSession(SESSION_KEY_KOT, null);
+      saveRouteSession(SESSION_KEY_ADMIN, null);
+    };
+    const handleAuthExpired = () => {
+      clearAllInMemorySessions();
+      logoutUser();
+    };
+    const handleAuthChanged = () => {
+      let hasToken = false;
+      try {
+        hasToken = Boolean(localStorage.getItem("avsr_jwt_token"));
+      } catch {}
+      if (!hasToken) {
+        clearAllInMemorySessions();
+      }
+    };
+    window.addEventListener("avsr-auth-expired", handleAuthExpired);
+    window.addEventListener("avsr-auth-changed", handleAuthChanged);
+    return () => {
+      window.removeEventListener("avsr-auth-expired", handleAuthExpired);
+      window.removeEventListener("avsr-auth-changed", handleAuthChanged);
+    };
+  }, []);
 
   // Modals state
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -5302,8 +5361,33 @@ export function App() {
         )}
 
       {/* Main Separate Routes Rendering */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-        {isStaffLoginRoute && !posSession && (
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: isPublicSaasRoute ? "auto" : "hidden" }}>
+        {isPublicSaasRoute && (
+          <ErrorBoundary>
+            <Suspense fallback={<div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)" }}>Loading page...</div>}>
+              {isSuperAdminRoute ? (
+                <SuperAdminPortalPage session={adminSession || posSession || kotSession} onLogout={handleAdminLogout} />
+              ) : isPricingRoute ? (
+                <PricingPage />
+              ) : isDemoRoute ? (
+                <DemoRequestPage />
+              ) : isRegisterRestaurantRoute ? (
+                <RestaurantRegisterPage />
+              ) : isPublicLoginRoute && !posSession ? (
+                <StaffLoginPage
+                  currentTheme={theme}
+                  onChangeTheme={setTheme}
+                  onLoginSuccess={handleGlobalLogin}
+                  restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
+                  restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
+                />
+              ) : (
+                <PublicLandingPage />
+              )}
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        {isPosLoginRoute && !posSession && (
           <LoginPage
             currentTheme={theme}
             onChangeTheme={setTheme}
@@ -5311,7 +5395,7 @@ export function App() {
             onLoginSuccess={handleGlobalLogin}
             restaurantName={restaurantSettings.restaurantName && !/bhanu|avsr/i.test(restaurantSettings.restaurantName) ? restaurantSettings.restaurantName : "The Rustic Spin"}
             restaurantLogo={restaurantSettings.logo || restaurantSettings.restaurantLogo || ""}
-            onBackToLanding={null}
+            onBackToLanding={() => navigate("/")}
           />
         )}
 

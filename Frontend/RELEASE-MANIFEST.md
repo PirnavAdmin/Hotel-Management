@@ -1,0 +1,23 @@
+# Frontend Release Manifest
+
+- **Release Phase:** Phase 3.19
+- **Project:** Restaurant SaaS + POS Frontend (React + Vite)
+- **Build Command:** `npm --prefix Frontend run build` (`vite build`)
+- **Build Output Directory:** `Frontend/dist/` (ignored by `.gitignore` and `Frontend/.gitignore`)
+- **Build Timestamp (Local):** `2026-11-26T19:51+05:30`
+- **Git Branch:** `main`
+- **Git Commit (HEAD prior to uncommitted Phase 3.2–3.19 changes):** `34dc31c`
+- **Node.js Version:** `v20.19.5`
+- **npm Version:** `10.8.2`
+- **Base Path Assumption:** Root path `/` (`BrowserRouter` client-side routes; requires SPA fallback to `index.html` for nested routes)
+- **Source Maps:** Not emitted in `Frontend/dist/assets/`
+- **Vite Build Result:** `PASS` (`2126` modules transformed, `dist/index.html` + chunked JS/CSS/fonts/images)
+- **Unit Test Result:** `PASS` (`8/8` scratch suites passing)
+- **Playwright Browser Result:** `PASS` (`15` environment-independent tests passed in Google Chrome; `4` staging-credential-gated tests skipped)
+- **Oxlint Result:** `PASS` (`0` errors)
+- **Credential Scan Result:** `PASS` (`BUNDLE_CREDENTIAL_SCAN_CLEAN`)
+- **Staging Deployment Status:** `GO FOR STAGING` (Frontend package verified; live backend integration `NOT TESTED` / `INTEGRATION PENDING`)
+- **Known Integration Limitations:**
+  - Live Admin, POS, KOT, and Multi-Branch staging credentials not configured in this environment (`NOT TESTED`).
+  - Public SaaS registration/demo, Super Admin APIs, Workspace APIs, Subscription APIs, and JWT multi-tenant claims (`INTEGRATION PENDING`).
+  - Access JWT stored in `localStorage` under current Bearer token contract (`KNOWN LIMITATION`).

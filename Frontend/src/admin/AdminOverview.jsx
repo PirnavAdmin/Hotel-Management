@@ -38,6 +38,7 @@ import {
 import { compareTablesNaturally } from "../utils/tableSortHelper";
 import { SkeletonDashboard } from "../common/Skeletons";
 import { isDrinkItem } from "../kot/orderRouting";
+import { TenantWorkspaceOverview } from "./modules/TenantWorkspaceOverview";
 
 const isBarMenuItem = (item) => isDrinkItem(item);
 
@@ -51,6 +52,7 @@ export function AdminOverview({
   onOpenKOTView,
   onOpenItemModal,
   sharedRecordLoad = { tables: "ready", staff: "ready" },
+  currentSession = null,
 }) {
   const [salesRange, setSalesRange] = useState(7);
   // Live tables synced with props, localStorage, and floor events
@@ -358,6 +360,7 @@ export function AdminOverview({
         @media (max-width: 560px) { .admin-overview-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
       `}</style>
       {/* 1. Overview Header Banner */}
+      <TenantWorkspaceOverview currentSession={currentSession} />
       <div
         className="admin-overview-kpis"
         style={{

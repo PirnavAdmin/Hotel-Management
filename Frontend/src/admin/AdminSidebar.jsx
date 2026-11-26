@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { detectImageBgColor } from "../utils/logoHelper";
+import { hasBackendPermissionClaims, hasPermission } from "../utils/permissions";
 import {
   ChefHat,
   LayoutDashboard,
@@ -21,6 +22,11 @@ import {
   ReceiptText,
   Clock,
   Smartphone,
+  Truck,
+  Building2,
+  UserCheck,
+  Tag,
+  KeyRound,
 } from "lucide-react";
 
 export const BAR_ICON_MAP = {
@@ -149,6 +155,12 @@ export function AdminSidebar({
           badge: selfServiceCount > 0 ? selfServiceCount : null,
         },
         {
+          id: "delivery",
+          label: "Delivery Orders",
+          icon: Truck,
+          permission: "orders.view",
+        },
+        {
           id: "reservations",
           label: "Table Reservations",
           icon: CalendarDays,
@@ -171,6 +183,12 @@ export function AdminSidebar({
           icon: Package,
         },
         {
+          id: "suppliers",
+          label: "Suppliers & POs",
+          icon: Building2,
+          permission: "inventory.manage",
+        },
+        {
           id: "invoices",
           label: "Invoices",
           icon: ReceiptText,
@@ -179,6 +197,12 @@ export function AdminSidebar({
           id: "reports",
           label: "Reports",
           icon: BarChart3,
+        },
+        {
+          id: "promotions",
+          label: "Promotions",
+          icon: Tag,
+          permission: "settings.edit",
         },
       ],
     },
@@ -189,6 +213,18 @@ export function AdminSidebar({
           id: "customers",
           label: "Customers",
           icon: Users,
+        },
+        {
+          id: "attendance",
+          label: "Staff Attendance",
+          icon: UserCheck,
+          permission: "staff.manage",
+        },
+        {
+          id: "roles",
+          label: "Roles & RBAC",
+          icon: KeyRound,
+          permission: "roles.manage",
         },
         {
           id: "logins",
@@ -203,6 +239,12 @@ export function AdminSidebar({
       ],
     },
   ];
+
+  const enforceGranularPermissions = hasBackendPermissionClaims(currentSession);
+  const canViewNavItem = (item) => {
+    if (!item?.permission || !enforceGranularPermissions) return true;
+    return hasPermission(currentSession, item.permission);
+  };
 
   // ================= BAR SIDEBAR NAVIGATION =================
   const barNavSections = [
@@ -540,7 +582,13 @@ export function AdminSidebar({
           zIndex: 1,
         }}
       >
-        {(portalMode === "bar" ? barNavSections : navSections).map(
+        {(portalMode === "bar" ? barNavSections : navSections)
+          .map((section) => ({
+            ...section,
+            items: (section.items || []).filter(canViewNavItem),
+          }))
+          .filter((section) => section.items.length > 0)
+          .map(
           (section) => (
             <div key={section.title} style={{ marginBottom: "0.15rem" }}>
               <div

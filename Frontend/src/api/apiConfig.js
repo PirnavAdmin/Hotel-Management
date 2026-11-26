@@ -6,7 +6,7 @@ function getResolvedApiBase() {
       return "";
     }
   }
-  const envVal = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_UR || "")
+  const envVal = (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_API_BASE_UR || "")
     .trim()
     .replace(/^["']|["']$/g, "")
     .replace(/\/$/, "");
@@ -99,13 +99,14 @@ async function performApiRequest(endpoint, options = {}) {
 
       if (!displayError) {
         if (
+          res.status >= 500 ||
           errorText.includes("Microsoft.AspNetCore") ||
           errorText.includes("System.") ||
           errorText.includes("Exception")
         ) {
-          displayError = `Backend Server Error (500): Unhandled exception in backend controller. Check server logs.`;
+          displayError = `Server Error (${res.status}): An unexpected error occurred on the server.`;
         } else if (errorText.length > 200) {
-          displayError = `Server Error (${res.status}): ${errorText.substring(0, 150)}...`;
+          displayError = `Request Error (${res.status}): Unable to process request.`;
         } else {
           displayError = errorText || `HTTP Error ${res.status}`;
         }

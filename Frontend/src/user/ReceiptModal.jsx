@@ -239,10 +239,6 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     : roundCurrency(Math.max(0, subtotal - discountAmount));
 
   // Backend-authoritative tax: never fabricate a 5% GST fallback when taxAmount is absent.
-  const hasTaxData =
-    table.taxAmount !== undefined && table.taxAmount !== null && Number.isFinite(Number(table.taxAmount));
-  const taxAmount = hasTaxData ? Number(table.taxAmount) : null;
-
   const hasExplicitCgstSgst =
     table.cgstAmount !== undefined &&
     table.cgstAmount !== null &&
@@ -250,6 +246,15 @@ export function ReceiptModal({ table, onClose, onPrint, restaurantSettings = {} 
     table.sgstAmount !== undefined &&
     table.sgstAmount !== null &&
     Number.isFinite(Number(table.sgstAmount));
+  const hasExplicitTaxAmount =
+    table.taxAmount !== undefined && table.taxAmount !== null && Number.isFinite(Number(table.taxAmount));
+  const hasTaxData = hasExplicitTaxAmount || hasExplicitCgstSgst;
+  const taxAmount = hasExplicitTaxAmount
+    ? Number(table.taxAmount)
+    : hasExplicitCgstSgst
+      ? roundCurrency(Number(table.cgstAmount) + Number(table.sgstAmount))
+      : null;
+
   const cgst = hasExplicitCgstSgst
     ? Number(table.cgstAmount)
     : hasTaxData

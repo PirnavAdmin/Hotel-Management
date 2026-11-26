@@ -1,4 +1,4 @@
-import { apiClient } from './apiConfig';
+import { apiClient } from './apiConfig.js';
 
 /**
  * Fetch Chart of Accounts from ASP.NET API

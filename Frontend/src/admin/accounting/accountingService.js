@@ -1,4 +1,4 @@
-import { roundCurrency } from "../../utils/formatCurrency";
+import { roundCurrency } from "../../utils/formatCurrency.js";
 import {
   apiGetChartOfAccounts,
   apiSaveChartOfAccount,
@@ -7,7 +7,7 @@ import {
   apiDeleteJournalEntry,
   apiGetDailyBalances,
   apiSaveDailyBalance,
-} from "../../api/accountingApi";
+} from "../../api/accountingApi.js";
 
 // ============================================================================
 // STORAGE KEYS
@@ -15,6 +15,207 @@ import {
 export const STORAGE_KEY_BALANCES = "avsr_opening_closing_balances_v1";
 export const STORAGE_KEY_JOURNALS = "avsr_journal_entries_v1";
 export const STORAGE_KEY_COA = "avsr_custom_accounts_v1";
+export const STORAGE_KEY_PENDING_SYNCS = "avsr_accounting_pending_syncs_v1";
+
+const inFlightAccountingSyncs = new Set();
+
+function emitAccountingEvent(eventName, detail) {
+  try {
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+      window.dispatchEvent(new CustomEvent(eventName, { detail }));
+    }
+  } catch {
+    // Ignore event dispatch errors in non-browser environments
+  }
+}
+
+export function sanitizeAccountingSyncError(errorOrRes) {
+  const raw =
+    typeof errorOrRes === "string"
+      ? errorOrRes
+      : errorOrRes?.error || errorOrRes?.message || "";
+  const cleaned = String(raw || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned || /bearer\s+[a-z0-9\-_.]+/i.test(cleaned) || /stack|exception at/i.test(cleaned)) {
+    const status = typeof errorOrRes === "object" ? Number(errorOrRes?.status || 0) : 0;
+    return status > 0
+      ? `Server rejected synchronization (HTTP ${status}). Changes are saved locally.`
+      : "Unable to reach server. Changes are saved locally.";
+  }
+  return cleaned.slice(0, 180);
+}
+
+export function getPendingAccountingSyncs() {
+  try {
+    if (typeof localStorage === "undefined") return [];
+    const raw = localStorage.getItem(STORAGE_KEY_PENDING_SYNCS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingAccountingSyncs(items) {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_KEY_PENDING_SYNCS, JSON.stringify(items));
+    }
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
+function upsertPendingAccountingSync(entry) {
+  const current = getPendingAccountingSyncs().filter((item) => item.syncKey !== entry.syncKey);
+  const next = [entry, ...current].slice(0, 50);
+  writePendingAccountingSyncs(next);
+  return next;
+}
+
+function clearPendingAccountingSync(syncKey) {
+  const current = getPendingAccountingSyncs();
+  const next = current.filter((item) => item.syncKey !== syncKey);
+  if (next.length !== current.length) {
+    writePendingAccountingSyncs(next);
+  }
+  return next;
+}
+
+async function performAccountingApiSync({ syncKey, recordType, recordKey, payload, apiCall }) {
+  if (!syncKey || typeof apiCall !== "function") {
+    return {
+      localSaved: true,
+      synced: false,
+      status: "unconfirmed",
+      syncKey: syncKey || "",
+      recordType: recordType || "",
+      recordKey: recordKey || "",
+      error: "",
+      retryable: false,
+    };
+  }
+
+  if (inFlightAccountingSyncs.has(syncKey)) {
+    return {
+      localSaved: true,
+      synced: false,
+      status: "pending",
+      syncKey,
+      recordType,
+      recordKey,
+      error: "Synchronization already in progress.",
+      retryable: false,
+    };
+  }
+
+  inFlightAccountingSyncs.add(syncKey);
+  try {
+    const res = await apiCall();
+    if (res?.success) {
+      clearPendingAccountingSync(syncKey);
+      const result = {
+        localSaved: true,
+        synced: true,
+        status: "synced",
+        syncKey,
+        recordType,
+        recordKey,
+        error: "",
+        retryable: false,
+      };
+      emitAccountingEvent("avsr-accounting-sync-updated", result);
+      return result;
+    }
+
+    const errorMsg = sanitizeAccountingSyncError(res);
+    upsertPendingAccountingSync({
+      syncKey,
+      recordType,
+      recordKey,
+      payload,
+      error: errorMsg,
+      updatedAt: new Date().toISOString(),
+    });
+    const result = {
+      localSaved: true,
+      synced: false,
+      status: "failed",
+      syncKey,
+      recordType,
+      recordKey,
+      error: errorMsg,
+      retryable: true,
+    };
+    emitAccountingEvent("avsr-accounting-sync-updated", result);
+    return result;
+  } catch (err) {
+    const errorMsg = sanitizeAccountingSyncError(err);
+    upsertPendingAccountingSync({
+      syncKey,
+      recordType,
+      recordKey,
+      payload,
+      error: errorMsg,
+      updatedAt: new Date().toISOString(),
+    });
+    const result = {
+      localSaved: true,
+      synced: false,
+      status: "failed",
+      syncKey,
+      recordType,
+      recordKey,
+      error: errorMsg,
+      retryable: true,
+    };
+    emitAccountingEvent("avsr-accounting-sync-updated", result);
+    return result;
+  } finally {
+    inFlightAccountingSyncs.delete(syncKey);
+  }
+}
+
+export async function retryAccountingSync(syncKey, apiOverrides = {}) {
+  const pending = getPendingAccountingSyncs().find((item) => item.syncKey === syncKey);
+  if (!pending) {
+    return {
+      localSaved: true,
+      synced: false,
+      status: "unconfirmed",
+      syncKey,
+      error: "No pending failed synchronization found for this record.",
+      retryable: false,
+    };
+  }
+
+  const coaApi = apiOverrides.apiSaveChartOfAccount || apiSaveChartOfAccount;
+  const journalCreateApi = apiOverrides.apiCreateJournalEntry || apiCreateJournalEntry;
+  const journalDeleteApi = apiOverrides.apiDeleteJournalEntry || apiDeleteJournalEntry;
+  const balanceApi = apiOverrides.apiSaveDailyBalance || apiSaveDailyBalance;
+
+  let apiCall = null;
+  if (pending.recordType === "coa") {
+    apiCall = () => coaApi(pending.payload);
+  } else if (pending.recordType === "journal") {
+    apiCall = () => journalCreateApi(pending.payload);
+  } else if (pending.recordType === "journal-delete") {
+    apiCall = () => journalDeleteApi(pending.recordKey);
+  } else if (pending.recordType === "balance") {
+    apiCall = () => balanceApi(pending.payload);
+  }
+
+  return performAccountingApiSync({
+    syncKey: pending.syncKey,
+    recordType: pending.recordType,
+    recordKey: pending.recordKey,
+    payload: pending.payload,
+    apiCall,
+  });
+}
 
 // ============================================================================
 // STANDARD CHART OF ACCOUNTS (COA)
@@ -82,18 +283,32 @@ export async function syncChartOfAccountsFromApi() {
   return getChartOfAccounts();
 }
 
-export function saveChartOfAccounts(accounts) {
+export function saveChartOfAccounts(accounts, latestAccountToPost = null, apiOverride = null) {
   try {
     localStorage.setItem(STORAGE_KEY_COA, JSON.stringify(accounts));
-    window.dispatchEvent(new CustomEvent("avsr-coa-updated", { detail: accounts }));
+    emitAccountingEvent("avsr-coa-updated", accounts);
   } catch {}
-  // Asynchronously sync latest custom account to backend API
-  if (Array.isArray(accounts)) {
-    const lastItem = accounts[accounts.length - 1];
-    if (lastItem) {
-      apiSaveChartOfAccount(lastItem).catch(() => {});
-    }
+  const accountToPost = latestAccountToPost || (Array.isArray(accounts) ? accounts[accounts.length - 1] : null);
+  if (accountToPost && accountToPost.code) {
+    const apiFn = apiOverride || apiSaveChartOfAccount;
+    return performAccountingApiSync({
+      syncKey: `coa:${accountToPost.code}`,
+      recordType: "coa",
+      recordKey: String(accountToPost.code),
+      payload: accountToPost,
+      apiCall: () => apiFn(accountToPost),
+    });
   }
+  return Promise.resolve({
+    localSaved: true,
+    synced: false,
+    status: "unconfirmed",
+    syncKey: "",
+    recordType: "coa",
+    recordKey: "",
+    error: "",
+    retryable: false,
+  });
 }
 
 export function getJournalEntries() {
@@ -151,32 +366,56 @@ export async function syncJournalEntriesFromApi() {
   return getJournalEntries();
 }
 
-export function saveJournalEntries(entries, latestEntryToPost = null) {
+export function saveJournalEntries(entries, latestEntryToPost = null, apiOverride = null) {
   try {
     localStorage.setItem(STORAGE_KEY_JOURNALS, JSON.stringify(entries));
-    window.dispatchEvent(new CustomEvent("avsr-journals-updated", { detail: entries }));
+    emitAccountingEvent("avsr-journals-updated", entries);
   } catch {}
-  // Asynchronously post to backend API
-  const entryToPost = latestEntryToPost || (Array.isArray(entries) ? entries[entries.length - 1] : null);
+  const entryToPost = latestEntryToPost || (Array.isArray(entries) ? entries[0] : null);
   if (entryToPost && entryToPost.voucherNumber) {
-    apiCreateJournalEntry({
+    const payload = {
       voucherNumber: entryToPost.voucherNumber,
       entryDate: entryToPost.date || entryToPost.entryDate,
       narration: entryToPost.narration,
       lines: entryToPost.lines,
-      createdBy: entryToPost.createdBy || "pirnav",
-    }).catch(() => {});
+      createdBy: entryToPost.createdBy || "admin",
+    };
+    const apiFn = apiOverride || apiCreateJournalEntry;
+    return performAccountingApiSync({
+      syncKey: `journal:${entryToPost.voucherNumber}`,
+      recordType: "journal",
+      recordKey: String(entryToPost.voucherNumber),
+      payload,
+      apiCall: () => apiFn(payload),
+    });
   }
+  return Promise.resolve({
+    localSaved: true,
+    synced: false,
+    status: "unconfirmed",
+    syncKey: "",
+    recordType: "journal",
+    recordKey: "",
+    error: "",
+    retryable: false,
+  });
 }
 
-export function deleteJournalEntryLocallyAndApi(voucherNumber) {
+export function deleteJournalEntryLocallyAndApi(voucherNumber, apiOverride = null) {
   try {
     const current = getJournalEntries();
     const updated = current.filter((e) => e.voucherNumber !== voucherNumber && e.id !== voucherNumber);
     localStorage.setItem(STORAGE_KEY_JOURNALS, JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent("avsr-journals-updated", { detail: updated }));
+    emitAccountingEvent("avsr-journals-updated", updated);
   } catch {}
-  apiDeleteJournalEntry(voucherNumber).catch(() => {});
+  const apiFn = apiOverride || apiDeleteJournalEntry;
+  return performAccountingApiSync({
+    syncKey: `journal-delete:${voucherNumber}`,
+    recordType: "journal-delete",
+    recordKey: String(voucherNumber),
+    payload: { voucherNumber },
+    apiCall: () => apiFn(voucherNumber),
+  });
 }
 
 export function getDailyBalances() {
@@ -202,14 +441,14 @@ export async function syncDailyBalancesFromApi() {
   return getDailyBalances();
 }
 
-export function saveDailyBalances(balances, latestBalanceToPost = null) {
+export function saveDailyBalances(balances, latestBalanceToPost = null, apiOverride = null) {
   try {
     localStorage.setItem(STORAGE_KEY_BALANCES, JSON.stringify(balances));
-    window.dispatchEvent(new CustomEvent("avsr-balances-updated", { detail: balances }));
+    emitAccountingEvent("avsr-balances-updated", balances);
   } catch {}
-  const balanceToPost = latestBalanceToPost || (Array.isArray(balances) ? balances[balances.length - 1] : null);
+  const balanceToPost = latestBalanceToPost || (Array.isArray(balances) ? balances[0] : null);
   if (balanceToPost && balanceToPost.date) {
-    apiSaveDailyBalance({
+    const payload = {
       date: balanceToPost.date,
       openingCash: Number(balanceToPost.openingCash) || 0,
       openingBank: Number(balanceToPost.openingBank) || 0,
@@ -218,11 +457,29 @@ export function saveDailyBalances(balances, latestBalanceToPost = null) {
       expectedCash: balanceToPost.expectedCash != null ? Number(balanceToPost.expectedCash) : null,
       cashDifference: balanceToPost.cashDifference != null ? Number(balanceToPost.cashDifference) : null,
       isClosed: Boolean(balanceToPost.isClosed),
-      openedBy: balanceToPost.openedBy || "pirnav",
-      closedBy: balanceToPost.closedBy || (balanceToPost.isClosed ? "pirnav" : null),
+      openedBy: balanceToPost.openedBy || "admin",
+      closedBy: balanceToPost.closedBy || (balanceToPost.isClosed ? "admin" : null),
       notes: balanceToPost.notes || "",
-    }).catch(() => {});
+    };
+    const apiFn = apiOverride || apiSaveDailyBalance;
+    return performAccountingApiSync({
+      syncKey: `balance:${balanceToPost.date}`,
+      recordType: "balance",
+      recordKey: String(balanceToPost.date),
+      payload,
+      apiCall: () => apiFn(payload),
+    });
   }
+  return Promise.resolve({
+    localSaved: true,
+    synced: false,
+    status: "unconfirmed",
+    syncKey: "",
+    recordType: "balance",
+    recordKey: "",
+    error: "",
+    retryable: false,
+  });
 }
 
 // ============================================================================

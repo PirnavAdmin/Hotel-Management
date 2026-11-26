@@ -15,6 +15,7 @@ import { formatCurrency } from "../../utils/formatCurrency";
 import {
   getChartOfAccounts,
   saveChartOfAccounts,
+  retryAccountingSync,
   exportToCSV,
   printFinancialReport,
 } from "./accountingService";
@@ -33,6 +34,8 @@ export function ChartOfAccountsView() {
   const [newNormalBalance, setNewNormalBalance] = useState("Debit");
   const [newDescription, setNewDescription] = useState("");
   const [formError, setFormError] = useState("");
+  const [syncNotice, setSyncNotice] = useState(null);
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
 
   const filteredAccounts = accounts.filter((a) => {
     const q = searchQuery.toLowerCase().trim();
@@ -41,7 +44,7 @@ export function ChartOfAccountsView() {
     return matchesSearch && matchesGroup;
   });
 
-  const handleCreateAccount = (e) => {
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
     if (!newCode.trim() || !newName.trim()) {
       setFormError("Account Code and Account Name are required.");
@@ -63,12 +66,38 @@ export function ChartOfAccountsView() {
 
     const nextAccounts = [...accounts, newAcc].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     setAccounts(nextAccounts);
-    saveChartOfAccounts(nextAccounts);
     setIsAddModalOpen(false);
     setNewCode("");
     setNewName("");
     setNewDescription("");
     setFormError("");
+    setSyncNotice({ status: "pending", message: "Saved locally. Syncing account to server..." });
+    const syncRes = await saveChartOfAccounts(nextAccounts, newAcc);
+    setSyncNotice(
+      syncRes?.synced
+        ? { status: "synced", message: `Account ${newAcc.code} saved locally and synced to server.` }
+        : {
+            status: "failed",
+            syncKey: syncRes?.syncKey || `coa:${newAcc.code}`,
+            message: `Saved locally only — backend sync failed: ${syncRes?.error || "Server unavailable."}`,
+          }
+    );
+  };
+
+  const handleRetrySync = async () => {
+    if (!syncNotice?.syncKey || isRetryingSync) return;
+    setIsRetryingSync(true);
+    const res = await retryAccountingSync(syncNotice.syncKey);
+    setIsRetryingSync(false);
+    setSyncNotice(
+      res?.synced
+        ? { status: "synced", message: "Account synced to server successfully." }
+        : {
+            status: "failed",
+            syncKey: syncNotice.syncKey,
+            message: `Saved locally only — backend sync failed: ${res?.error || "Server unavailable."}`,
+          }
+    );
   };
 
   const handleExportCSV = () => {
@@ -214,6 +243,62 @@ export function ChartOfAccountsView() {
           </button>
         </div>
       </div>
+
+      {syncNotice && (
+        <div
+          role={syncNotice.status === "failed" ? "alert" : "status"}
+          style={{
+            padding: "0.75rem 1rem",
+            borderRadius: "10px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "0.75rem",
+            flexWrap: "wrap",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            background:
+              syncNotice.status === "synced"
+                ? "rgba(16, 185, 129, 0.12)"
+                : syncNotice.status === "failed"
+                ? "rgba(239, 68, 68, 0.12)"
+                : "rgba(245, 158, 11, 0.12)",
+            border:
+              syncNotice.status === "synced"
+                ? "1px solid rgba(16, 185, 129, 0.35)"
+                : syncNotice.status === "failed"
+                ? "1px solid rgba(239, 68, 68, 0.35)"
+                : "1px solid rgba(245, 158, 11, 0.35)",
+            color:
+              syncNotice.status === "synced"
+                ? "#10b981"
+                : syncNotice.status === "failed"
+                ? "#ef4444"
+                : "#f59e0b",
+          }}
+        >
+          <span>{syncNotice.message}</span>
+          {syncNotice.status === "failed" && syncNotice.syncKey && (
+            <button
+              type="button"
+              onClick={handleRetrySync}
+              disabled={isRetryingSync}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "6px",
+                border: "1px solid rgba(239, 68, 68, 0.45)",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                fontWeight: 700,
+                fontSize: "0.75rem",
+                cursor: isRetryingSync ? "not-allowed" : "pointer",
+              }}
+            >
+              {isRetryingSync ? "Retrying..." : "Retry Sync"}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Filter Row */}
       <div

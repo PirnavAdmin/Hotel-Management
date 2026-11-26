@@ -18,6 +18,7 @@ import {
   getChartOfAccounts,
   getJournalEntries,
   saveJournalEntries,
+  retryAccountingSync,
   exportToCSV,
   printFinancialReport,
 } from "./accountingService";
@@ -36,6 +37,8 @@ export function JournalEntriesView({ currentSession }) {
     { accountCode: "1002", accountName: "Bank & UPI Collections", debit: 0, credit: 25000, description: "Bank transfer" },
   ]);
   const [formError, setFormError] = useState("");
+  const [syncNotice, setSyncNotice] = useState(null);
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
 
   // Calculate live Dr/Cr balance
   const totalDebit = roundCurrency(lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0));
@@ -71,7 +74,7 @@ export function JournalEntriesView({ currentSession }) {
     );
   };
 
-  const handleSaveVoucher = (e) => {
+  const handleSaveVoucher = async (e) => {
     e.preventDefault();
     if (!narration.trim()) {
       setFormError("Please enter a narration/description for this journal voucher.");
@@ -102,10 +105,36 @@ export function JournalEntriesView({ currentSession }) {
 
     const nextEntries = [newEntry, ...entries];
     setEntries(nextEntries);
-    saveJournalEntries(nextEntries);
     setIsModalOpen(false);
     setNarration("");
     setFormError("");
+    setSyncNotice({ status: "pending", message: `Voucher ${nextVoucherNum} saved locally. Syncing to server...` });
+    const syncRes = await saveJournalEntries(nextEntries, newEntry);
+    setSyncNotice(
+      syncRes?.synced
+        ? { status: "synced", message: `Voucher ${nextVoucherNum} saved locally and synced to server.` }
+        : {
+            status: "failed",
+            syncKey: syncRes?.syncKey || `journal:${nextVoucherNum}`,
+            message: `Saved locally only — backend sync failed: ${syncRes?.error || "Server unavailable."}`,
+          }
+    );
+  };
+
+  const handleRetrySync = async () => {
+    if (!syncNotice?.syncKey || isRetryingSync) return;
+    setIsRetryingSync(true);
+    const res = await retryAccountingSync(syncNotice.syncKey);
+    setIsRetryingSync(false);
+    setSyncNotice(
+      res?.synced
+        ? { status: "synced", message: "Journal voucher synced to server successfully." }
+        : {
+            status: "failed",
+            syncKey: syncNotice.syncKey,
+            message: `Saved locally only — backend sync failed: ${res?.error || "Server unavailable."}`,
+          }
+    );
   };
 
   const filteredEntries = entries.filter((entry) => {
@@ -274,6 +303,62 @@ export function JournalEntriesView({ currentSession }) {
           </button>
         </div>
       </div>
+
+      {syncNotice && (
+        <div
+          role={syncNotice.status === "failed" ? "alert" : "status"}
+          style={{
+            padding: "0.75rem 1rem",
+            borderRadius: "10px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "0.75rem",
+            flexWrap: "wrap",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            background:
+              syncNotice.status === "synced"
+                ? "rgba(16, 185, 129, 0.12)"
+                : syncNotice.status === "failed"
+                ? "rgba(239, 68, 68, 0.12)"
+                : "rgba(245, 158, 11, 0.12)",
+            border:
+              syncNotice.status === "synced"
+                ? "1px solid rgba(16, 185, 129, 0.35)"
+                : syncNotice.status === "failed"
+                ? "1px solid rgba(239, 68, 68, 0.35)"
+                : "1px solid rgba(245, 158, 11, 0.35)",
+            color:
+              syncNotice.status === "synced"
+                ? "#10b981"
+                : syncNotice.status === "failed"
+                ? "#ef4444"
+                : "#f59e0b",
+          }}
+        >
+          <span>{syncNotice.message}</span>
+          {syncNotice.status === "failed" && syncNotice.syncKey && (
+            <button
+              type="button"
+              onClick={handleRetrySync}
+              disabled={isRetryingSync}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "6px",
+                border: "1px solid rgba(239, 68, 68, 0.45)",
+                background: "rgba(239, 68, 68, 0.15)",
+                color: "#ef4444",
+                fontWeight: 700,
+                fontSize: "0.75rem",
+                cursor: isRetryingSync ? "not-allowed" : "pointer",
+              }}
+            >
+              {isRetryingSync ? "Retrying..." : "Retry Sync"}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Search Bar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>

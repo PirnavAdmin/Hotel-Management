@@ -17,7 +17,14 @@ import {
   Printer,
   Pencil,
   AlertCircle,
+  Download,
 } from "lucide-react";
+import {
+  buildDayWiseBreakdown,
+  buildInvoicesCsv,
+  computeFinancialSummary,
+  getInvoiceStatusCategory,
+} from "../utils/invoiceFinancials";
 import { SearchableSelect } from "../common/SearchableSelect";
 import { formatCurrency } from "../utils/formatCurrency";
 import { ReceiptModal } from "../user/ReceiptModal";
@@ -139,22 +146,7 @@ const getInvoicePaymentModes = (order) => {
   return method ? [normalizePaymentMethod(method)] : [];
 };
 
-const getNormalizedStatusKey = (order) => {
-  const raw = String(order?.backendStatus ?? order?.status ?? order?.Status ?? "")
-    .trim()
-    .toLowerCase();
-  if (raw === "void" || raw === "voided" || raw === "cancelled" || raw === "canceled" || raw === "refunded") {
-    return "void";
-  }
-  if (raw === "partial") return "partial";
-  if (raw === "unpaid" || raw === "pending") return "unpaid";
-  if (raw === "paid" || raw === "settled") return "paid";
-  const total = Number(order?.totalAmount ?? order?.grandTotal ?? 0) || 0;
-  const paid = Number(order?.paidAmount ?? order?.amountPaid ?? 0) || 0;
-  if (total > 0 && paid >= total) return "paid";
-  if (paid > 0) return "partial";
-  return "unpaid";
-};
+const getNormalizedStatusKey = (order) => getInvoiceStatusCategory(order);
 
 const getStatusDisplayLabel = (order) => {
   const raw = String(order?.backendStatus ?? order?.status ?? order?.Status ?? "").trim();
@@ -422,82 +414,40 @@ export function AdminInvoices({
   }, [dateFilteredOrders, searchTerm, branchFilter, orderTypeFilter, statusFilter, paymentFilter]);
 
   // Summary Metrics (Strictly from actual backend fields; excludes void/cancelled/refunded from paid sales)
-  const summary = useMemo(() => {
-    let validCount = 0;
-    let voidCount = 0;
-    let grossSales = 0;
-    let totalDiscounts = 0;
-    let totalTax = 0;
-    let netSales = 0;
-    let totalPaid = 0;
-    let pendingAmount = 0;
-    let voidAmount = 0;
+  const summary = useMemo(() => computeFinancialSummary(filteredOrders), [filteredOrders]);
 
-    filteredOrders.forEach((o) => {
-      const sKey = getNormalizedStatusKey(o);
-      const sub = Number(o.subtotal ?? 0) || 0;
-      const disc = Number(o.discountAmount ?? 0) || 0;
-      const tax = Number(o.taxAmount ?? 0) || 0;
-      const total = Number(o.totalAmount ?? o.grandTotal ?? 0) || 0;
-      const paid = Number(o.paidAmount ?? o.amountPaid ?? 0) || 0;
-      const due = Number(o.dueAmount ?? 0) || 0;
+  // Day-wise Breakdown for Weekly (Mon-Sun), Monthly (all days), and Custom ranges
+  const dayWiseBreakdown = useMemo(
+    () =>
+      buildDayWiseBreakdown({
+        orders: filteredOrders,
+        dateFilter,
+        selectedWeek,
+        selectedMonth,
+        appliedCustomRange,
+        getDateKey: invoiceDateKey,
+      }),
+    [filteredOrders, dateFilter, selectedWeek, selectedMonth, appliedCustomRange]
+  );
 
-      if (sKey === "void") {
-        voidCount += 1;
-        voidAmount += total;
-        return;
-      }
-
-      validCount += 1;
-      grossSales += sub;
-      totalDiscounts += disc;
-      totalTax += tax;
-      netSales += total;
-      totalPaid += paid;
-      pendingAmount += due;
+  const handleExportCsv = () => {
+    if (!filteredOrders.length) return;
+    const csv = buildInvoicesCsv(filteredOrders, {
+      getInvoiceNumber: invoiceNumberLabel,
+      getDateText: invoiceDisplayDate,
+      getOrderType: getOrderTypeLabel,
+      getStatusLabel: getStatusDisplayLabel,
     });
-
-    return {
-      totalInvoices: filteredOrders.length,
-      validCount,
-      voidCount,
-      grossSales,
-      totalDiscounts,
-      totalTax,
-      netSales,
-      totalPaid,
-      pendingAmount,
-      voidAmount,
-    };
-  }, [filteredOrders]);
-
-  // Day-wise Breakdown for Weekly and Monthly views (only dates present in actual backend records)
-  const dayWiseBreakdown = useMemo(() => {
-    if (dateFilter !== "weekly" && dateFilter !== "monthly") return [];
-    const byDay = new Map();
-    filteredOrders.forEach((o) => {
-      const dKey = invoiceDateKey(o);
-      if (!dKey) return;
-      if (!byDay.has(dKey)) {
-        byDay.set(dKey, {
-          dateKey: dKey,
-          count: 0,
-          totalAmount: 0,
-          paidAmount: 0,
-          pendingAmount: 0,
-        });
-      }
-      const entry = byDay.get(dKey);
-      const sKey = getNormalizedStatusKey(o);
-      entry.count += 1;
-      if (sKey !== "void") {
-        entry.totalAmount += Number(o.totalAmount ?? o.grandTotal ?? 0) || 0;
-        entry.paidAmount += Number(o.paidAmount ?? o.amountPaid ?? 0) || 0;
-        entry.pendingAmount += Number(o.dueAmount ?? 0) || 0;
-      }
-    });
-    return Array.from(byDay.values()).sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1));
-  }, [filteredOrders, dateFilter]);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `invoices-${dateFilter}-${localDateInputValue()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Sorting & Pagination
   const sortedOrders = useMemo(() => {
@@ -623,6 +573,17 @@ export function AdminInvoices({
                 }}
               />
             </div>
+
+            <button
+              type="button"
+              className="admin-inv-btn-neutral"
+              onClick={handleExportCsv}
+              disabled={isLoadingInvoices || filteredOrders.length === 0}
+              aria-label="Export filtered invoices to CSV"
+            >
+              <Download size={14} />
+              <span>Export CSV</span>
+            </button>
 
             <button
               type="button"
@@ -885,8 +846,8 @@ export function AdminInvoices({
             <div className="admin-inv-summary-label">Total Invoices</div>
             <div className="admin-inv-summary-value">{summary.validCount}</div>
             <div className="admin-inv-summary-sub">
-              {summary.voidCount > 0
-                ? `${summary.voidCount} void/cancelled excluded`
+              {summary.excludedCount > 0
+                ? `${summary.excludedCount} void/cancelled/refunded excluded`
                 : "Active backend invoices"}
             </div>
           </div>
@@ -898,15 +859,21 @@ export function AdminInvoices({
           </div>
 
           <div className="admin-inv-summary-card">
-            <div className="admin-inv-summary-label">Total Discounts</div>
+            <div className="admin-inv-summary-label">Discounts</div>
             <div className="admin-inv-summary-value">{formatCurrency(summary.totalDiscounts)}</div>
             <div className="admin-inv-summary-sub">Backend discount amounts</div>
           </div>
 
           <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Service Charges</div>
+            <div className="admin-inv-summary-value">{formatCurrency(summary.totalServiceCharges)}</div>
+            <div className="admin-inv-summary-sub">Backend service charges</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
             <div className="admin-inv-summary-label">GST / Tax</div>
             <div className="admin-inv-summary-value">{formatCurrency(summary.totalTax)}</div>
-            <div className="admin-inv-summary-sub">Backend tax totals</div>
+            <div className="admin-inv-summary-sub">TaxAmount / CGST+SGST</div>
           </div>
 
           <div className="admin-inv-summary-card">
@@ -914,11 +881,11 @@ export function AdminInvoices({
             <div className="admin-inv-summary-value" style={{ color: "var(--accent-amber-light)" }}>
               {formatCurrency(summary.netSales)}
             </div>
-            <div className="admin-inv-summary-sub">Excludes void/cancelled</div>
+            <div className="admin-inv-summary-sub">Excludes void/cancelled/refunded</div>
           </div>
 
           <div className="admin-inv-summary-card">
-            <div className="admin-inv-summary-label">Total Paid</div>
+            <div className="admin-inv-summary-label">Paid Amount</div>
             <div className="admin-inv-summary-value" style={{ color: "var(--success, #10b981)" }}>
               {formatCurrency(summary.totalPaid)}
             </div>
@@ -935,7 +902,44 @@ export function AdminInvoices({
             </div>
             <div className="admin-inv-summary-sub">Unpaid / partial due</div>
           </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Cancelled Amount</div>
+            <div className="admin-inv-summary-value">{formatCurrency(summary.cancelledAmount)}</div>
+            <div className="admin-inv-summary-sub">{summary.cancelledCount} cancelled</div>
+          </div>
+
+          <div className="admin-inv-summary-card">
+            <div className="admin-inv-summary-label">Refunded Amount</div>
+            <div className="admin-inv-summary-value">{formatCurrency(summary.refundedAmount)}</div>
+            <div className="admin-inv-summary-sub">{summary.refundedCount} refunded</div>
+          </div>
         </div>
+
+        {(summary.paymentBreakdown.hasData || summary.orderTypeBreakdown.hasData) && (
+          <div className="admin-inv-summary-grid" style={{ marginTop: "-0.25rem" }}>
+            {summary.paymentBreakdown.hasData && (
+              <div className="admin-inv-summary-card">
+                <div className="admin-inv-summary-label">Payment Method Breakdown</div>
+                <div style={{ display: "flex", gap: "0.85rem", flexWrap: "wrap", fontSize: "0.78rem", marginTop: "0.25rem" }}>
+                  <span>Cash: <strong>{formatCurrency(summary.paymentBreakdown.cash)}</strong></span>
+                  <span>UPI: <strong>{formatCurrency(summary.paymentBreakdown.upi)}</strong></span>
+                  <span>Card: <strong>{formatCurrency(summary.paymentBreakdown.card)}</strong></span>
+                </div>
+              </div>
+            )}
+            {summary.orderTypeBreakdown.hasData && (
+              <div className="admin-inv-summary-card">
+                <div className="admin-inv-summary-label">Order Type Breakdown</div>
+                <div style={{ display: "flex", gap: "0.85rem", flexWrap: "wrap", fontSize: "0.78rem", marginTop: "0.25rem" }}>
+                  <span>Dine-In ({summary.orderTypeBreakdown.dineIn.count}): <strong>{formatCurrency(summary.orderTypeBreakdown.dineIn.netSales)}</strong></span>
+                  <span>Takeaway ({summary.orderTypeBreakdown.takeaway.count}): <strong>{formatCurrency(summary.orderTypeBreakdown.takeaway.netSales)}</strong></span>
+                  <span>Self-Service ({summary.orderTypeBreakdown.selfService.count}): <strong>{formatCurrency(summary.orderTypeBreakdown.selfService.netSales)}</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Facet Filters */}
         <div className="admin-inv-filter-bar">
@@ -982,11 +986,13 @@ export function AdminInvoices({
               setCurrentPage(1);
             }}
           >
-            <option value="all">All Payment Statuses</option>
+            <option value="all">All Invoice Statuses</option>
             <option value="paid">Paid</option>
             <option value="partial">Partial</option>
-            <option value="unpaid">Unpaid / Pending</option>
-            <option value="void">Void / Cancelled / Refunded</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="void">Void</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="refunded">Refunded</option>
           </SearchableSelect>
 
           <SearchableSelect
@@ -1024,12 +1030,13 @@ export function AdminInvoices({
           )}
         </div>
 
-        {/* Day-Wise Breakdown (Weekly & Monthly views; only dates with actual records) */}
-        {(dateFilter === "weekly" || dateFilter === "monthly") && (
+        {/* Day-Wise Breakdown (Weekly Mon-Sun, Monthly 1..N, and Custom Range) */}
+        {(dateFilter === "weekly" || dateFilter === "monthly" || dateFilter === "custom") && (
           <div className="admin-inv-breakdown-card">
             <div className="admin-inv-breakdown-title">
               <span>
-                Day-Wise Breakdown ({dateFilter === "weekly" ? "Weekly" : "Monthly"})
+                Day-Wise Breakdown (
+                {dateFilter === "weekly" ? "Weekly Mon–Sun" : dateFilter === "monthly" ? "Monthly" : "Custom Range"})
               </span>
               <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 600 }}>
                 Click any date to inspect that day&apos;s invoices
@@ -1057,10 +1064,19 @@ export function AdminInvoices({
                       <tr
                         key={row.dateKey}
                         className="admin-inv-breakdown-row"
+                        tabIndex={0}
                         onClick={() => {
                           setDateFilter("daily");
                           setSelectedDate(row.dateKey);
                           setCurrentPage(1);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDateFilter("daily");
+                            setSelectedDate(row.dateKey);
+                            setCurrentPage(1);
+                          }
                         }}
                         title={`View invoices for ${formatReadableDate(row.dateKey)}`}
                       >
@@ -1226,6 +1242,16 @@ export function AdminInvoices({
                           >
                             <Printer size={12} />
                             <span>Print</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-inv-btn-neutral"
+                            style={{ height: "28px", padding: "0 8px", fontSize: "0.7rem" }}
+                            onClick={() => setSelectedReceipt(order)}
+                            title="Open receipt & download PDF"
+                          >
+                            <Download size={12} />
+                            <span>PDF</span>
                           </button>
                         </div>
                       </td>

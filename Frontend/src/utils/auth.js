@@ -1,5 +1,8 @@
 import { apiGetUsers, apiUpdateUser, apiDeleteUser, apiUpdateUserPassword } from '../api/userApi';
 import { apiLogin, apiRegister, apiGetMe } from '../api/authApi';
+import { AUTH_SESSION_STORAGE_KEYS, isAllowedForRoute as checkRouteAccess, isTokenExpired } from './authSecurity';
+
+export { isTokenExpired };
 
 const STORAGE_KEY_SESSION  = 'avsr_auth_session_v1';
 const STORAGE_KEY_MANAGED_USERS = 'avsr_auth_users_v1';
@@ -23,7 +26,9 @@ export function parseJwt(token) {
 export const mapRole = (r) => {
   if (r === undefined || r === null) return 'pos';
   const str = String(r).toLowerCase().trim();
-  if (str === '0' || str === 'admin' || str.includes('admin') || str.includes('manager')) return 'admin';
+  const compact = str.replace(/[\s_-]+/g, '');
+  if (compact === 'platformsuperadmin' || compact === 'superadmin') return 'PlatformSuperAdmin';
+  if (str === '0' || str === 'admin' || str.includes('admin') || str.includes('manager') || str.includes('owner')) return 'admin';
   if (str === '2' || str === 'kot' || str.includes('kitchen') || str.includes('kot') || str.includes('chef') || str.includes('cook')) return 'kot';
   if (str === '1' || str === 'pos' || str.includes('pos') || str.includes('user') || str.includes('cashier') || str.includes('waiter') || str.includes('staff')) return 'pos';
   return str;
@@ -113,13 +118,6 @@ export async function getUsers() {
       .filter((user) => user && typeof user === 'object')
       .map(normalizeUser);
   } catch {}
-  if (!cachedUsers.length) {
-    cachedUsers = [
-      { id: 'pirnav', username: 'pirnav', name: 'pirnav', role: 'admin', email: 'pasupuleti.bhanu7@gmail.com', mobile: '9999999999', createdAt: null },
-      { id: 'pos-1', username: 'pos', name: 'Billing Counter Operator', role: 'pos', email: 'pos@therusticspin.com', mobile: '9999999999', createdAt: null },
-      { id: 'kot-1', username: 'kot', name: 'Kitchen Master Chef', role: 'kot', email: 'kitchen@therusticspin.com', mobile: '9999999999', createdAt: null }
-    ];
-  }
   return {
     users: cachedUsers,
     error: res.error || '',
@@ -231,23 +229,6 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
   const normUser = trimmedInput.toLowerCase();
   const res = await apiLogin(trimmedInput, password.trim());
   if (!res.success) {
-    // Guaranteed fallback authentication for primary administrator account
-    if (normUser.includes('pirnav') && ['admin@123', 'admin', 'pirnav', '1234', 'pirnav@123'].includes(password.trim().toLowerCase())) {
-      const fallbackSession = {
-        userId: '1',
-        username: 'pirnav',
-        name: 'pirnav',
-        role: 'admin',
-        email: 'pasupuleti.bhanu7@gmail.com',
-        loginEmail: 'pasupuleti.bhanu7@gmail.com',
-        loginIdentifier: trimmedInput,
-        mobile: '9999999999',
-        loginAt: new Date().toISOString()
-      };
-      setSession(fallbackSession, 'mock-jwt-token-pirnav-admin');
-      return { success: true, session: fallbackSession };
-    }
-
     const isConnectionError =
       !res.status ||
       [502, 503, 504].includes(res.status) ||
@@ -292,17 +273,14 @@ export async function loginUser(usernameOrEmail, password, expectedRole) {
       : String(user?.email || user?.Email || user?.emailAddress || jwt?.email || '').trim())
   ).toLowerCase();
 
-  let sessionName = user?.name || user?.FullName || user?.fullName || jwt?.name || trimmedInput;
-  if (normUser.includes('pirnav') || String(sessionName).includes('SURESH REDDY') || resolvedEmail === 'maturi.vikas@pirnav.com') {
-    sessionName = 'pirnav';
-    resolvedEmail = 'pasupuleti.bhanu7@gmail.com';
-  }
+  const sessionName = user?.name || user?.FullName || user?.fullName || jwt?.name || trimmedInput;
 
   const session = {
     userId: user?.id || user?.userId || user?.Id || user?.UserId || jwt?.nameid || jwt?.sub || '1',
-    username: normUser.includes('pirnav') ? 'pirnav' : (user?.username || user?.Username || jwt?.unique_name || jwt?.name || trimmedInput),
+    username: user?.username || user?.Username || jwt?.unique_name || jwt?.name || trimmedInput,
     name: sessionName,
     role: actualRole,
+    rawRole: rawRole ? String(rawRole) : actualRole,
     email: resolvedEmail,
     loginEmail: resolvedEmail,
     loginIdentifier: trimmedInput,
@@ -318,17 +296,7 @@ export function getSession() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY_SESSION);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && (parsed.username === 'pirnav' || parsed.name === 'pirnav' || parsed.email === 'maturi.vikas@pirnav.com')) {
-        parsed.email = 'pasupuleti.bhanu7@gmail.com';
-        parsed.loginEmail = 'pasupuleti.bhanu7@gmail.com';
-        try {
-          const sessStr = JSON.stringify(parsed);
-          localStorage.setItem(STORAGE_KEY_SESSION, sessStr);
-          localStorage.setItem('auth_user', sessStr);
-        } catch {}
-      }
-      return parsed;
+      return JSON.parse(saved);
     }
   } catch {}
   return null;
@@ -366,18 +334,7 @@ export function setSession(session, token = null) {
 
 export function logoutUser() {
   try {
-    const keysToRemove = [
-      STORAGE_KEY_SESSION,
-      'auth_user',
-      'auth_token_timestamp',
-      'avsr_jwt_token',
-      'avsr_kitchen_notifications',
-      'avsr_latest_kitchen_alert',
-      'avsr_pos_session',
-      'avsr_kot_session',
-      'avsr_admin_session'
-    ];
-    keysToRemove.forEach(key => {
+    AUTH_SESSION_STORAGE_KEYS.forEach(key => {
       localStorage.removeItem(key);
       sessionStorage.removeItem(key);
     });
@@ -386,9 +343,5 @@ export function logoutUser() {
 }
 
 export function isAllowedForRoute(session, route) {
-  if (!session) return false;
-  if (route === '/admin') return session.role === 'admin';
-  if (route === '/kot')   return session.role === 'kot' || session.role === 'admin';
-  if (route === '/')      return session.role === 'pos' || session.role === 'admin';
-  return false;
+  return checkRouteAccess(session, route);
 }

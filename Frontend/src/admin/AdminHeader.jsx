@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Calendar, Clock, Utensils, Wine, Bell, ChefHat, CheckCircle2, Trash2, CheckCheck, Menu, X } from "lucide-react";
 import { ProfileDropdown } from "../common/ProfileDropdown";
+import { WorkspaceSwitcher } from "../components/tenant/WorkspaceSwitcher";
 
 export function AdminHeader({
   currentSession,
@@ -847,6 +848,8 @@ export function AdminHeader({
             </div>
           </div>
         )}
+
+        <WorkspaceSwitcher currentSession={currentSession} />
 
         <ThemeToggle currentTheme={currentTheme} onChangeTheme={onChangeTheme}/>
 
