@@ -878,11 +878,12 @@ public static class DbInitializer
             SafeExecuteSql(conn, "ALTER TABLE `order_items` MODIFY COLUMN `item_id` BIGINT NULL DEFAULT NULL;");
 
             // Verify invoices schema
+            EnsureInvoiceSchema(conn);
             try { _ = context.Invoices.AsNoTracking().Take(1).ToList(); }
             catch
             {
-                SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `invoice_payments`; DROP TABLE IF EXISTS `invoices`; SET FOREIGN_KEY_CHECKS = 1;");
                 CreateAllTables(conn);
+                EnsureInvoiceSchema(conn);
             }
 
             // Ensure customer portal authentication columns and tables exist BEFORE probing Customers via EF Core
@@ -1158,13 +1159,30 @@ public static class DbInitializer
             CREATE TABLE IF NOT EXISTS `invoices` (
                 `invoice_id` BIGINT NOT NULL AUTO_INCREMENT,
                 `order_id` BIGINT NOT NULL,
+                `order_number` VARCHAR(50) NULL,
+                `branch_id` BIGINT NULL DEFAULT 1,
+                `order_type` VARCHAR(50) NULL DEFAULT 'DineIn',
+                `customer_name` VARCHAR(150) NULL,
+                `customer_phone` VARCHAR(20) NULL,
                 `invoice_number` VARCHAR(50) NOT NULL,
                 `subtotal` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `taxable_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `gst_percent` DECIMAL(5,2) NOT NULL DEFAULT 5.00,
+                `cgst_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `sgst_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
                 `tax_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
                 `discount_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `service_charge_percent` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+                `service_charge_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `service_charge` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `rounding_adjustment` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `round_off` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
                 `total_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
                 `paid_amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
-                `status` VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
+                `amount_paid` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `payment_status` VARCHAR(30) NULL DEFAULT 'PAID',
+                `status` VARCHAR(50) NOT NULL DEFAULT 'UNPAID',
+                `invoice_date` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
                 `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`invoice_id`)
@@ -1175,8 +1193,18 @@ public static class DbInitializer
                 `payment_id` BIGINT NOT NULL AUTO_INCREMENT,
                 `invoice_id` BIGINT NOT NULL,
                 `amount` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `amount_paid` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
                 `payment_mode` VARCHAR(30) NOT NULL DEFAULT 'CASH',
+                `payment_method` VARCHAR(20) NULL DEFAULT 'CASH',
                 `transaction_reference` VARCHAR(100) NULL,
+                `txn_reference` VARCHAR(100) NULL,
+                `payment_status` VARCHAR(20) NULL DEFAULT 'SUCCESS',
+                `gateway_provider` VARCHAR(40) NULL,
+                `gateway_order_id` VARCHAR(100) NULL,
+                `gateway_payment_id` VARCHAR(100) NULL,
+                `gateway_signature` VARCHAR(255) NULL,
+                `failure_reason` VARCHAR(255) NULL,
+                `idempotency_key` VARCHAR(100) NULL,
                 `paid_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`payment_id`)
             ) ENGINE=InnoDB;");
@@ -1928,6 +1956,53 @@ public static class DbInitializer
         SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
         SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `status` VARCHAR(40) NOT NULL DEFAULT 'PENDING_PAYMENT';");
         SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `notes` VARCHAR(500) NULL;");
+    }
+
+    private static void EnsureInvoiceSchema(DbConnection conn)
+    {
+        EnsureColumnExists(conn, "invoices", "order_id", "BIGINT NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "invoices", "order_number", "VARCHAR(50) NULL");
+        EnsureColumnExists(conn, "invoices", "branch_id", "BIGINT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "invoices", "order_type", "VARCHAR(50) NULL DEFAULT 'DineIn'");
+        EnsureColumnExists(conn, "invoices", "customer_name", "VARCHAR(150) NULL");
+        EnsureColumnExists(conn, "invoices", "customer_phone", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "invoices", "invoice_number", "VARCHAR(50) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "invoices", "subtotal", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "taxable_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "gst_percent", "DECIMAL(5,2) NOT NULL DEFAULT 5.00");
+        EnsureColumnExists(conn, "invoices", "cgst_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "sgst_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "tax_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "discount_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "service_charge_percent", "DECIMAL(5,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "service_charge_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "service_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "rounding_adjustment", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "round_off", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "total_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "paid_amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "amount_paid", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoices", "payment_status", "VARCHAR(30) NULL DEFAULT 'PAID'");
+        EnsureColumnExists(conn, "invoices", "status", "VARCHAR(50) NOT NULL DEFAULT 'UNPAID'");
+        EnsureColumnExists(conn, "invoices", "invoice_date", "DATETIME NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "invoices", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "invoices", "updated_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+
+        // invoice_payments columns
+        EnsureColumnExists(conn, "invoice_payments", "amount", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoice_payments", "amount_paid", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "invoice_payments", "payment_mode", "VARCHAR(30) NOT NULL DEFAULT 'CASH'");
+        EnsureColumnExists(conn, "invoice_payments", "payment_method", "VARCHAR(20) NULL DEFAULT 'CASH'");
+        EnsureColumnExists(conn, "invoice_payments", "transaction_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "txn_reference", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "payment_status", "VARCHAR(20) NULL DEFAULT 'SUCCESS'");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_provider", "VARCHAR(40) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_order_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_payment_id", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "gateway_signature", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "failure_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "invoice_payments", "paid_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
     }
 
     private static void EnsureCustomerAuthSchema(DbConnection conn)
