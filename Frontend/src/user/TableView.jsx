@@ -1416,7 +1416,7 @@ export function TableView({
 
       // 2. Status Filter
       const hasActive = Array.isArray(t.items) && t.items.some((i) => i && i.status !== "cancelled" && i.kotStatus !== "cancelled");
-      const effectiveStatus = hasActive ? (t.status || "occupied") : "vacant";
+      const effectiveStatus = t.status === "billed" ? "billed" : (hasActive ? (t.status || "occupied") : "vacant");
       const matchesStatus =
         statusFilter === "all" || effectiveStatus === statusFilter;
 
@@ -1723,18 +1723,17 @@ export function TableView({
             let statusText = "Vacant";
             let statusBg = "var(--status-vacant-bg)";
 
-            const isOccupied = (hasActiveItems || table.status === "occupied" || table.status === "dining" || table.status === "billed") && table.status !== "vacant";
+            const isBilled = table.status === "billed";
+            const isOccupied = (hasActiveItems || table.status === "occupied" || table.status === "dining" || isBilled) && table.status !== "vacant";
 
-            if (isOccupied) {
-              if (table.status === "billed") {
-                statusColor = "var(--status-billed)";
-                statusText = "Billed";
-                statusBg = "var(--status-billed-bg)";
-              } else {
-                statusColor = "var(--status-occupied)";
-                statusText = "Dining";
-                statusBg = "var(--status-occupied-bg)";
-              }
+            if (isBilled) {
+              statusColor = "var(--status-billed, #b862ff)";
+              statusText = "Billed";
+              statusBg = "var(--status-billed-bg, rgba(184, 98, 255, 0.2))";
+            } else if (isOccupied) {
+              statusColor = "var(--status-occupied)";
+              statusText = "Dining";
+              statusBg = "var(--status-occupied-bg)";
             }
             const hasCooking =
               isOccupied && items.some((i) => i.kotStatus === "cooking");
@@ -1757,12 +1756,16 @@ export function TableView({
 
             const isTable5 = table.id === 5;
 
-            const cardBorderColor = !isOccupied
-              ? "var(--border-subtle)"
-              : "color-mix(in srgb, var(--accent-amber) 45%, transparent)";
-            const cardShadow = !isOccupied
-              ? "var(--shadow-sm)"
-              : "0 4px 14px color-mix(in srgb, var(--accent-amber) 16%, transparent)";
+            const cardBorderColor = isBilled
+              ? "color-mix(in srgb, var(--status-billed, #b862ff) 55%, transparent)"
+              : (!isOccupied
+                ? "var(--border-subtle)"
+                : "color-mix(in srgb, var(--accent-amber) 45%, transparent)");
+            const cardShadow = isBilled
+              ? "0 4px 14px color-mix(in srgb, var(--status-billed, #b862ff) 20%, transparent)"
+              : (!isOccupied
+                ? "var(--shadow-sm)"
+                : "0 4px 14px color-mix(in srgb, var(--accent-amber) 16%, transparent)");
 
             const currentLock = tableLocks && tableLocks[String(table.id)];
             const isLockedByOther =
@@ -1871,22 +1874,40 @@ export function TableView({
                         {table.section && !/^[\\|/\s]+$/.test(table.section.trim()) ? table.section : "Main Hall"}
                       </span>
                     </div>
-                    <span
-                      title={statusText}
-                      style={{
-                        width: "9px",
-                        height: "9px",
-                        borderRadius: "50%",
-                        background: statusColor,
-                        boxShadow: `0 0 6px color-mix(in srgb, ${statusColor} 50.20%, transparent)`,
-                        display: "inline-block",
-                        flexShrink: 0,
-                        marginTop: "4px",
-                      }}
-                      className={
-                        table.status !== "vacant" ? "pulse-indicator" : ""
-                      }
-                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {table.status === "billed" && (
+                        <span
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 800,
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            background: "var(--status-billed-bg, rgba(184, 98, 255, 0.2))",
+                            color: "var(--status-billed, #b862ff)",
+                            border: "1px solid var(--status-billed, #b862ff)",
+                            letterSpacing: "0.02em",
+                          }}
+                        >
+                          Billed
+                        </span>
+                      )}
+                      <span
+                        title={statusText}
+                        style={{
+                          width: "9px",
+                          height: "9px",
+                          borderRadius: "50%",
+                          background: statusColor,
+                          boxShadow: `0 0 6px color-mix(in srgb, ${statusColor} 50.20%, transparent)`,
+                          display: "inline-block",
+                          flexShrink: 0,
+                          marginTop: table.status === "billed" ? "0px" : "4px",
+                        }}
+                        className={
+                          table.status !== "vacant" ? "pulse-indicator" : ""
+                        }
+                      />
+                    </div>
                   </div>
 
                   {/* Capacity & Seated Seats Button */}
@@ -1909,11 +1930,15 @@ export function TableView({
                         justifyContent: "center",
                         width: "100%",
                         gap: "0.3rem",
-                        background: "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
+                        background: isBilled
+                          ? "color-mix(in srgb, var(--status-billed, #b862ff) 12%, transparent)"
+                          : "color-mix(in srgb, var(--accent-amber) 8%, transparent)",
+                        border: isBilled
+                          ? "1px solid color-mix(in srgb, var(--status-billed, #b862ff) 40%, transparent)"
+                          : "1px solid color-mix(in srgb, var(--accent-amber) 35%, transparent)",
                         borderRadius: "8px",
                         padding: "0.18rem 0.45rem",
-                        color: "var(--accent-amber)",
+                        color: isBilled ? "var(--status-billed, #b862ff)" : "var(--accent-amber)",
                         fontSize: "0.71rem",
                         fontWeight: 600,
                         cursor: "pointer",
@@ -1922,20 +1947,30 @@ export function TableView({
                         transition: "all 0.15s ease",
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 22%, transparent)";
-                        e.currentTarget.style.borderColor = "var(--accent-amber)";
+                        e.currentTarget.style.background = isBilled
+                          ? "color-mix(in srgb, var(--status-billed, #b862ff) 22%, transparent)"
+                          : "color-mix(in srgb, var(--accent-amber) 22%, transparent)";
+                        e.currentTarget.style.borderColor = isBilled
+                          ? "var(--status-billed, #b862ff)"
+                          : "var(--accent-amber)";
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
-                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--accent-amber) 35%, transparent)";
+                        e.currentTarget.style.background = isBilled
+                          ? "color-mix(in srgb, var(--status-billed, #b862ff) 12%, transparent)"
+                          : "color-mix(in srgb, var(--accent-amber) 8%, transparent)";
+                        e.currentTarget.style.borderColor = isBilled
+                          ? "color-mix(in srgb, var(--status-billed, #b862ff) 40%, transparent)"
+                          : "color-mix(in srgb, var(--accent-amber) 35%, transparent)";
                       }}
                     >
-                      <Armchair size={12} color="var(--accent-amber)" />
+                      <Armchair size={12} color={isBilled ? "var(--status-billed, #b862ff)" : "var(--accent-amber)"} />
                       <span>
                         {table.capacity} Seats ·{" "}
-                        {isOccupied && (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0))
-                          ? `${Number(table.guests) || table.selectedSeats.length} Seated`
-                          : "0 Seated"}
+                        {table.status === "billed"
+                          ? "Billed"
+                          : (isOccupied && (Number(table.guests) > 0 || (Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0))
+                            ? `${Number(table.guests) || table.selectedSeats.length} Seated`
+                            : "0 Seated")}
                       </span>
                     </button>
                   </div>
@@ -2232,15 +2267,21 @@ export function TableView({
                       background:
                         table.status === "vacant"
                           ? "rgba(var(--surface-rgb),0.05)"
-                          : "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 28%, transparent), color-mix(in srgb, var(--accent-amber) 12%, transparent))",
+                          : (isBilled
+                            ? "linear-gradient(135deg, color-mix(in srgb, var(--status-billed, #b862ff) 28%, transparent), color-mix(in srgb, var(--status-billed, #b862ff) 12%, transparent))"
+                            : "linear-gradient(135deg, color-mix(in srgb, var(--accent-amber) 28%, transparent), color-mix(in srgb, var(--accent-amber) 12%, transparent))"),
                       color:
                         table.status === "vacant"
                           ? "var(--text-main)"
-                          : "var(--accent-amber-light)",
+                          : (isBilled
+                            ? "var(--status-billed, #b862ff)"
+                            : "var(--accent-amber-light)"),
                       border:
                         table.status === "vacant"
                           ? "1px solid var(--border-subtle)"
-                          : "1px solid var(--accent-amber)",
+                          : (isBilled
+                            ? "1px solid var(--status-billed, #b862ff)"
+                            : "1px solid var(--accent-amber)"),
                       fontSize: "0.76rem",
                       fontWeight: 700,
                       display: "flex",
@@ -2251,9 +2292,9 @@ export function TableView({
                       cursor: "pointer",
                     }}
                   >
-                    <Utensils size={12} />
+                    <Utensils size={12} color={isBilled ? "var(--status-billed, #b862ff)" : undefined} />
                     <span>
-                      {(!isOccupied || !hasActiveItems) ? "Take Order" : "Manage Bill"}
+                      {isBilled ? "Manage Bill" : ((!isOccupied || !hasActiveItems) ? "Take Order" : "Manage Bill")}
                     </span>
                     <ChevronRight size={12} />
                   </button>

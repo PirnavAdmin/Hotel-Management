@@ -2390,6 +2390,95 @@ public class OrdersController : ControllerBase
     }
 
     // ============================================================
+    // BILL ORDER
+    // ============================================================
+    [HttpPost("{id}/bill")]
+    public async Task<IActionResult> BillOrder(long id)
+    {
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o =>
+                o.Id == id &&
+                o.IsActive &&
+                !o.IsDeleted);
+
+        if (order == null)
+        {
+            return NotFound(new
+            {
+                success = false,
+                message = "Order not found."
+            });
+        }
+
+        order.Status = "Billed";
+        order.UpdatedAt = DateTime.UtcNow;
+
+        if (order.TableId.HasValue)
+        {
+            var diningTable = await _context.DiningTables.FirstOrDefaultAsync(t => t.Id == order.TableId.Value);
+            if (diningTable != null)
+            {
+                diningTable.Status = "billed";
+                diningTable.UpdatedAt = DateTime.UtcNow;
+            }
+
+            var restaurantTable = await _context.RestaurantTables.FirstOrDefaultAsync(t => t.TableId == order.TableId.Value);
+            if (restaurantTable != null)
+            {
+                restaurantTable.Status = "billed";
+                restaurantTable.UpdatedAt = DateTime.UtcNow;
+            }
+
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE restaurant_tables SET status = 'billed', updated_at = NOW() WHERE table_id = {0}",
+                    order.TableId.Value);
+            }
+            catch { }
+        }
+
+        await _context.SaveChangesAsync();
+
+        if (order.TableId.HasValue)
+        {
+            await _hubContext.Clients.All.SendAsync("TableStatusUpdated", new
+            {
+                tableId = order.TableId.Value,
+                status = "billed"
+            });
+
+            await _realtimeSync.PublishAsync(new RealtimeEvent
+            {
+                EventType = "table:statusChanged",
+                Module = "Tables",
+                Action = "statusChanged",
+                BranchId = order.BranchId ?? 1,
+                RecordId = order.TableId.Value.ToString(),
+                Data = new { tableId = order.TableId.Value, status = "billed" }
+            });
+        }
+
+        await _realtimeSync.PublishAsync(new RealtimeEvent
+        {
+            EventType = "order:statusChanged",
+            Module = "Orders",
+            Action = "statusChanged",
+            BranchId = order.BranchId ?? 1,
+            RecordId = order.Id.ToString(),
+            Data = new { orderId = order.Id, status = "Billed" }
+        });
+
+        return Ok(new
+        {
+            success = true,
+            message = "Order and table marked as billed successfully.",
+            data = MapToOrderDto(order)
+        });
+    }
+
+    // ============================================================
     // SETTLE ORDER
     // ============================================================
 
