@@ -239,7 +239,9 @@ export function Header({
 
   const totalGuests = safeTables
     .reduce((acc, t) => {
-      if (!isTableActiveDining(t)) return acc;
+      const seatedWithoutItems = ["occupied", "dining", "billed"].includes(String(t?.status || "").toLowerCase()) &&
+        (Number(t?.guests) > 0 || (Array.isArray(t?.selectedSeats) && t.selectedSeats.length > 0) || Number(t?.occupiedChairs) > 0);
+      if (!isTableActiveDining(t) && !seatedWithoutItems) return acc;
       const g = Math.max(0, Number(t?.guests) || (Array.isArray(t?.selectedSeats) ? t.selectedSeats.length : 0) || Number(t?.occupiedChairs) || 0);
       return acc + g;
     }, 0);

@@ -3527,8 +3527,12 @@ export function App() {
 
   // Clear / Void Table Order
   const handleClearOrder = async (tableId) => {
+    const selectedTable = tables.find((t) =>
+      [t.id, t.backendTableId, t.tableId].some((id) => id != null && String(id) === String(tableId)),
+    );
+    const tableName = selectedTable?.name || selectedTable?.tableName || selectedTable?.tableNumber || `Table ${tableId}`;
     const confirmed = await confirmDialog(
-      `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      `Are you sure you want to clear the entire order for ${tableName}?`,
       {
         title: "Clear table order?",
         confirmText: "Yes, Clear Order",
@@ -3571,14 +3575,14 @@ export function App() {
       return nextTables;
     });
 
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const tbl = selectedTable;
     const targetApiId = tbl?.backendTableId || tableId;
     try {
       apiVacateTable(targetApiId).catch(() => {});
       apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
     } catch {}
 
-    showToast(`Table ${tableId} order cleared.`);
+    showToast(`${tableName} order cleared.`);
   };
 
   // Transfer Table Order
@@ -4546,7 +4550,12 @@ export function App() {
       return updated;
     });
     const targetApiId = updatedTable.backendTableId || updatedTable.id;
-    return apiUpdateTable(targetApiId, normalized).then((result) => {
+    const activeOrderId = updatedTable.backendOrderId ?? updatedTable.activeOrderId ?? previousTable?.backendOrderId ?? previousTable?.activeOrderId;
+    const saveTable = apiUpdateTable(targetApiId, normalized);
+    const saveOrderGuests = Number(activeOrderId) > 0 && occupiedSeatsCount > 0
+      ? apiUpdateOrderGuests(activeOrderId, occupiedSeatsCount)
+      : Promise.resolve(null);
+    return Promise.all([saveTable, saveOrderGuests]).then(([result, guestResult]) => {
       const savedRecord = result?.data?.data || result?.data?.table || result?.data;
       const assignmentClearRequested = !updatedTable.assignedServerId && !updatedTable.server && !updatedTable.assignedServerName;
       const assignmentClearUnsupported = Boolean(previousTable && assignmentClearRequested && (savedRecord?.assignedServerId || savedRecord?.assignedServerName));
@@ -4567,6 +4576,10 @@ export function App() {
         // Backend offline or route unhandled - gracefully keep changes in local storage!
         console.warn(`Table sync offline (${result?.error || "unreachable"}), saved in local storage.`);
         showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${normalized.persons || cap} Persons)`);
+        return true;
+      }
+      if (guestResult && !guestResult.success) {
+        showToast(guestResult.error || "The table was updated, but the active order guest count could not be saved.");
         return true;
       }
       showToast(`Updated ${normalized.name} (${cap} Chairs / ${normalized.persons || cap} Persons) in shared hotel tables.`);
