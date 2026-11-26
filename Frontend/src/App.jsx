@@ -1315,10 +1315,18 @@ export function App() {
     "/reserve",
     "/takeaway-menu",
   ];
+  const isExplicitCustomerRoute = customerMenuRoutes.includes(location.pathname);
   const isCustomerScan =
-    customerMenuRoutes.includes(location.pathname) ||
+    isExplicitCustomerRoute ||
     Boolean(location.search && (location.search.includes("table=") || location.search.includes("qr=")));
-  const isLandingRoute = isCustomerScan && !posSession;
+  const isPublicRestaurantHome =
+    location.pathname === "/" && !posSession && !isCustomerScan;
+  // Explicit customer URLs must remain on the customer landing flow even when
+  // a staff POS session is restored in this browser. CustomerLandingPage still
+  // enforces its own customer authentication before protected actions.
+  const isLandingRoute =
+    (isCustomerScan && (!posSession || isExplicitCustomerRoute)) ||
+    isPublicRestaurantHome;
   const isUserRoute = !isKotRoute && !isAdminRoute && !isLandingRoute && !isStaffLoginRoute;
   const [authRestorePending, setAuthRestorePending] = useState(() =>
     [SESSION_KEY_POS, SESSION_KEY_KOT, SESSION_KEY_ADMIN].some((key) => loadRouteSession(key)),

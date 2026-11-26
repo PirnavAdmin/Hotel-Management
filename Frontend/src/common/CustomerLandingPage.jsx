@@ -278,7 +278,10 @@ export function CustomerLandingPage({
   const [activeScreen, setActiveScreen] = useState(() => {
     const hash = window.location.hash;
     const path = window.location.pathname;
+    const searchParams = new URLSearchParams(window.location.search);
     const user = getInitialCustomer();
+    const hasDiningTable = ["table", "t", "qr"].some((key) => searchParams.has(key));
+    if (hash === "#home" || (path === "/" && !hash && !hasDiningTable)) return "home";
     if (hash === "#auth") return "auth";
     if (hash === "#menu" || path === "/menu" || path.startsWith("/menu")) return "menu";
     if (hash === "#cart") return "menu";
