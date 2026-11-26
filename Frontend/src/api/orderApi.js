@@ -198,6 +198,12 @@ export async function apiRemoveOrderItem(orderId, itemId) {
   });
 }
 
+export async function apiBillOrder(orderId) {
+  return apiClient(`/api/v1/orders/${orderId}/bill`, {
+    method: "POST",
+  });
+}
+
 export async function apiSettleOrder(orderId, settlementData = {}) {
   return apiClient(`/api/v1/orders/${orderId}/settle`, {
     method: "POST",

@@ -29,6 +29,8 @@ import {
   apiLockTable,
   apiUnlockTable,
   apiGetTableLocks,
+  apiVacateTable,
+  apiUpdateTableStatus,
 } from "./api/tableApi";
 import {
   apiGetMenuItems,
@@ -79,6 +81,7 @@ import {
   apiCreatePaidTakeawayOrder,
   apiUpdateOrderGuests,
   apiUpdateOrderDiscount,
+  apiBillOrder,
   apiSettleOrder,
 } from "./api/orderApi";
 import { apiGetInvoiceByOrder } from "./api/invoiceApi";
@@ -390,23 +393,16 @@ const isSyntheticOverflowTable = (table) => {
 };
 
 const clearCachedTableOrder = (table) => {
-  const preservedSeats = Array.isArray(table?.selectedSeats) ? table.selectedSeats : [];
-  const preservedCount = Number(
-    (preservedSeats.length > 0 ? preservedSeats.length : null) ??
-    (table?.occupiedChairs !== undefined && table?.occupiedChairs !== null && Number(table.occupiedChairs) >= 0 ? Number(table.occupiedChairs) : null) ??
-    (table?.guests !== undefined && table?.guests !== null && Number(table.guests) >= 0 ? Number(table.guests) : null) ??
-    0
-  );
   return {
     ...table,
     status: ["reserved", "cleaning", "inactive"].includes(
       String(table?.status || "").toLowerCase(),
     )
       ? table.status
-      : (preservedCount > 0 ? "occupied" : "vacant"),
-    guests: preservedCount,
-    occupiedChairs: preservedCount,
-    selectedSeats: preservedSeats,
+      : "vacant",
+    guests: 0,
+    occupiedChairs: 0,
+    selectedSeats: [],
     items: [],
     orderTime: null,
     orderTimestamp: null,
@@ -540,29 +536,33 @@ const mergeIncomingTables = (
       const seatLabels = table.seatLabels || existing.seatLabels || {};
 
       // A fresh backend count supersedes cached seat IDs, which may belong to an older selection.
-      const incomingGuests = incomingSelectedSeats
-        ? incomingSelectedSeats.length
-        : (hasSavedGuestCount
-          ? savedGuestCount
-          : (cachedSelectedSeats?.length ?? (Number(existing.occupiedChairs) > 0
-            ? Number(existing.occupiedChairs)
-            : (Number(existing.guests) > 0 ? Number(existing.guests) : 0))));
-      const preservedSelectedSeats = incomingSelectedSeats || (hasSavedGuestCount
-        ? (savedGuestCount === 0
-          ? []
-          : (cachedSelectedSeats?.length === savedGuestCount
-            ? cachedSelectedSeats
-              : Array.from({ length: savedGuestCount }, (_, index) => {
-                  const seatId = `S${index + 1}`;
-                  return seatLabels[seatId] || seatId;
-                })))
-        : (cachedSelectedSeats || []));
+      const incomingGuests = (serverSaysVacant || !preserveCachedOrders)
+        ? 0
+        : (incomingSelectedSeats
+          ? incomingSelectedSeats.length
+          : (hasSavedGuestCount
+            ? savedGuestCount
+            : (cachedSelectedSeats?.length ?? (Number(existing.occupiedChairs) > 0
+              ? Number(existing.occupiedChairs)
+              : (Number(existing.guests) > 0 ? Number(existing.guests) : 0)))));
+      const preservedSelectedSeats = (serverSaysVacant || !preserveCachedOrders)
+        ? []
+        : (incomingSelectedSeats || (hasSavedGuestCount
+          ? (savedGuestCount === 0
+            ? []
+            : (cachedSelectedSeats?.length === savedGuestCount
+              ? cachedSelectedSeats
+                : Array.from({ length: savedGuestCount }, (_, index) => {
+                    const seatId = `S${index + 1}`;
+                    return seatLabels[seatId] || seatId;
+                  })))
+          : (cachedSelectedSeats || [])));
 
       const hasOccupiedSeats = incomingGuests > 0 || preservedSelectedSeats.length > 0;
 
       let finalStatus = "vacant";
       if (!hasActiveItems) {
-        if (hasOccupiedSeats) {
+        if (hasOccupiedSeats && !serverSaysVacant) {
           finalStatus = "occupied";
         } else {
           finalStatus = ["reserved", "cleaning", "inactive"].includes(rawStatus) ? rawStatus : "vacant";
@@ -5576,7 +5576,35 @@ export function App() {
                   onUpdateDiscount={handleUpdateDiscount}
                   onToggleServiceCharge={handleToggleServiceCharge}
                   onSendKOT={handleSendKOT}
-                  onOpenReceipt={() => {
+                  onOpenReceipt={async (targetTableId) => {
+                    const tableToBill = (targetTableId && tables.find((t) => String(t.id) === String(targetTableId) || String(t.backendTableId) === String(targetTableId))) || currentTable;
+                    if (tableToBill) {
+                      const targetIds = [tableToBill.id, tableToBill.backendTableId, tableToBill.tableId, tableToBill.tableNumber]
+                        .filter((v) => v != null)
+                        .map(String);
+                      setTables((prev) => {
+                        const updated = prev.map((t) => {
+                          const matches = [t.id, t.backendTableId, t.tableId, t.tableNumber]
+                            .filter((v) => v != null)
+                            .some((v) => targetIds.includes(String(v)));
+                          return matches ? { ...t, status: "billed" } : t;
+                        });
+                        try {
+                          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+                          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
+                        } catch {}
+                        return updated;
+                      });
+
+                      const orderId = tableToBill.activeOrderId || tableToBill.backendOrderId;
+                      if (orderId) {
+                        apiBillOrder(orderId).catch(() => {});
+                      }
+                      const apiTableId = tableToBill.backendTableId ?? tableToBill.tableId ?? tableToBill.id;
+                      if (apiTableId) {
+                        apiUpdateTableStatus(apiTableId, "billed").catch(() => {});
+                      }
+                    }
                     setReprintReceiptData(null);
                     setIsReceiptOpen(true);
                   }}
@@ -5983,6 +6011,15 @@ export function App() {
         <ReceiptModal
           table={reprintReceiptData || currentTable}
           restaurantSettings={restaurantSettings}
+          onPrint={() => {
+            const tableToBill = reprintReceiptData || currentTable;
+            if (tableToBill) {
+              const orderId = tableToBill.activeOrderId || tableToBill.backendOrderId;
+              if (orderId) apiBillOrder(orderId).catch(() => {});
+              const apiTableId = tableToBill.backendTableId ?? tableToBill.tableId ?? tableToBill.id;
+              if (apiTableId) apiUpdateTableStatus(apiTableId, "billed").catch(() => {});
+            }
+          }}
           onClose={() => {
             setIsReceiptOpen(false);
             setReprintReceiptData(null);

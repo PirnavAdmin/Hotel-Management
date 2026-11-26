@@ -4717,7 +4717,10 @@ export function TableDetailView({
                     <span>{isSendingKot ? "Sending..." : (hasUnsentItems ? `${dispatchButtonLabel} (Required)` : dispatchButtonLabel)}</span>
                   </button>
                   <button
-                    onClick={() => onOpenReceipt(targetTableId)}
+                    onClick={() => {
+                      onOpenReceipt(targetTableId);
+                      onShowToast?.("📄 Bill generated. Table marked as Billed.");
+                    }}
                     disabled={safeItems.length === 0}
                     style={{
                       display: "flex",
@@ -5122,6 +5125,7 @@ export function TableDetailView({
                   onClick={() => {
                     setIsMobileOrderSlipOpen(false);
                     onOpenReceipt(targetTableId);
+                    onShowToast?.("📄 Bill generated. Table marked as Billed.");
                   }}
                   disabled={safeItems.length === 0}
                   style={{
