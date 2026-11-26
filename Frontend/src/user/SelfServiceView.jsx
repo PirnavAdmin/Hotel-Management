@@ -1694,27 +1694,47 @@ export function SelfServiceView({
                       alignItems: "center",
                       justifyContent: "center",
                       color: "var(--accent-amber)",
+                      flexShrink: 0,
                     }}
                   >
                     <Building2 size={26} />
                   </div>
-                  <div>
-                    <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.98rem", fontWeight: 800 }}>Pay at Cashier Counter</h4>
-                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.4, maxWidth: "380px" }}>
-                      Backend integration pending. Counter payment registration requires the authenticated backend payment API.
+                  <div style={{ maxWidth: "420px", width: "100%" }}>
+                    <h4 style={{ margin: "0 0 0.4rem", fontSize: "1.02rem", fontWeight: 800, color: "var(--text-main)" }}>
+                      Pay at Cashier Counter
+                    </h4>
+                    <p style={{ margin: 0, fontSize: "0.84rem", color: "var(--text-main)", fontWeight: 600, lineHeight: 1.45 }}>
+                      Please pay at the cashier counter.
+                    </p>
+                    <p style={{ margin: "0.3rem 0 0", fontSize: "0.76rem", color: "var(--text-muted)", lineHeight: 1.4 }}>
+                      Share the order reference below with the cashier so they can identify and verify your order.
                     </p>
                   </div>
-                  <div
-                    style={{
-                      padding: "0.65rem 1.25rem",
-                      borderRadius: "8px",
-                      background: "var(--bg-tertiary)",
-                      border: "1px dashed var(--accent-amber)",
-                    }}
-                  >
-                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase" }}>Order Reference</div>
-                    <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--accent-amber-light)" }}>
-                      {activeOrderNumber}
+                  <div className="self-service-counter-ref-box">
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                      }}
+                    >
+                      Order Reference
+                    </div>
+                    <div className="self-service-counter-ref-value">
+                      {activeOrderNumber || "—"}
+                    </div>
+                    <div className="self-service-counter-meta">
+                      <span>
+                        Payable: <strong style={{ color: "var(--text-main)" }}>{formatCurrency(activePayableAmount)}</strong>
+                      </span>
+                      <span>
+                        Status:{" "}
+                        <strong style={{ color: "var(--accent-amber, #f59e0b)" }}>
+                          {paymentOrder?.paymentStatus || "Pending"}
+                        </strong>
+                      </span>
                     </div>
                   </div>
                 </div>
