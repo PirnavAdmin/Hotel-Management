@@ -972,9 +972,59 @@ public class OrdersController : ControllerBase
             return BadRequest(new { success = false, message = "Unsupported payment method. Use UPI, CASH, or CARD." });
         }
 
+        // Persist selected payment method and instructions on order
+        order.PaymentMethod = mode switch
+        {
+            "CASH" => "Cash",
+            "CARD" => "Card",
+            "UPI" => "UPI",
+            _ => mode
+        };
+
+        if (!string.IsNullOrWhiteSpace(request?.TransactionReference))
+        {
+            var cleanRef = request.TransactionReference.Trim();
+            order.SpecialInstructions = string.IsNullOrWhiteSpace(order.SpecialInstructions)
+                ? "Payment Ref: " + cleanRef
+                : order.SpecialInstructions + " | Payment Ref: " + cleanRef;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request?.Notes))
+        {
+            var cleanNotes = request.Notes.Trim();
+            if (string.IsNullOrWhiteSpace(order.SpecialInstructions) || !order.SpecialInstructions.Contains(cleanNotes, StringComparison.OrdinalIgnoreCase))
+            {
+                order.SpecialInstructions = string.IsNullOrWhiteSpace(order.SpecialInstructions)
+                    ? cleanNotes
+                    : order.SpecialInstructions + " | " + cleanNotes;
+            }
+        }
+
+        order.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Broadcast real-time SignalR event to Cashier / POS
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("OrderUpdated", order.Id);
+            await _hubContext.Clients.All.SendAsync("SelfServicePaymentRequested", new
+            {
+                orderId = order.Id,
+                orderNumber = order.OrderNumber,
+                paymentMethod = order.PaymentMethod,
+                amount = dto.Financials.FinalPayable,
+                specialInstructions = order.SpecialInstructions,
+                requestedAt = DateTime.UtcNow
+            });
+        }
+        catch (Exception exHub)
+        {
+            _logger.LogWarning(exHub, "Failed to broadcast payment request for order {OrderId}", order.Id);
+        }
+
         if (mode == "UPI")
         {
-            var targetRestaurantKey = $"restaurant_{branch.BranchId}";
+            var targetRestaurantKey = "restaurant_" + branch.BranchId;
             var settings = await _context.RestaurantSettings.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.RestaurantId == targetRestaurantKey || s.Id == branch.BranchId)
                 ?? await _context.RestaurantSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == 1);
@@ -1023,14 +1073,15 @@ public class OrdersController : ControllerBase
                         Amount = dto.Financials.FinalPayable,
                         GatewayConfigured = false,
                         QrPayload = null,
-                        Message = "Merchant UPI / payment gateway is not configured for this branch."
+                        CounterPaymentRegistered = false,
+                        InitiatedAt = DateTime.UtcNow,
+                        Message = "Merchant UPI / payment gateway is not configured for this branch. Please pay at the counter."
                     }
                 });
             }
 
             var merchantName = string.IsNullOrWhiteSpace(settings?.RestaurantName) ? branch.BranchName : settings.RestaurantName.Trim();
-            var qrPayload =
-                $"upi://pay?pa={Uri.EscapeDataString(upiId)}&pn={Uri.EscapeDataString(merchantName)}&am={dto.Financials.FinalPayable:F2}&cu=INR&tn={Uri.EscapeDataString(order.OrderNumber)}";
+            var qrPayload = "upi://pay?pa=" + Uri.EscapeDataString(upiId) + "&pn=" + Uri.EscapeDataString(merchantName) + "&am=" + dto.Financials.FinalPayable.ToString("F2") + "&cu=INR&tn=" + Uri.EscapeDataString(order.OrderNumber);
 
             return Ok(new
             {
@@ -1044,6 +1095,8 @@ public class OrdersController : ControllerBase
                     Amount = dto.Financials.FinalPayable,
                     GatewayConfigured = true,
                     QrPayload = qrPayload,
+                    CounterPaymentRegistered = true,
+                    InitiatedAt = DateTime.UtcNow,
                     Message = "Scan QR with any UPI app. Official invoice will be issued after cashier/gateway verification."
                 }
             });
@@ -1059,11 +1112,13 @@ public class OrdersController : ControllerBase
                 PaymentMethod = mode,
                 PaymentStatus = order.PaymentStatus ?? "Pending",
                 Amount = dto.Financials.FinalPayable,
-                GatewayConfigured = false,
+                GatewayConfigured = true,
                 QrPayload = null,
+                CounterPaymentRegistered = true,
+                InitiatedAt = DateTime.UtcNow,
                 Message = mode == "CASH"
-                    ? "Please pay at the counter. Cashier confirmation will issue the official invoice."
-                    : "Card terminal integration pending; pay at counter or wait for terminal verification."
+                    ? "Counter cash payment registered for order " + order.OrderNumber + ". Please present reference at the cashier counter."
+                    : "Card machine payment registered for order " + order.OrderNumber + ". Please proceed to the cashier counter to complete card tap/swipe."
             }
         });
     }

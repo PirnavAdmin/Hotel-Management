@@ -106,12 +106,23 @@ export async function apiGetSelfServiceOrder(orderId, branchId = null) {
  * Initiate payment for a Self Service Order (Phase 2B.14 Backend API)
  * POST /api/v1/orders/self-service/{id}/initiate-payment
  */
-export async function apiInitiateSelfServicePayment(orderId, paymentMethod = "UPI", branchId = null) {
-  const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+export async function apiInitiateSelfServicePayment(orderId, paymentMethod = "UPI", options = {}, branchId = null) {
+  let opts = options;
+  let resolvedBranch = branchId;
+  if (typeof options === "number" || (typeof options === "string" && !isNaN(Number(options)) && branchId === null)) {
+    resolvedBranch = options;
+    opts = {};
+  }
+  const query = resolvedBranch ? `?branchId=${encodeURIComponent(resolvedBranch)}` : "";
+  const payload = {
+    paymentMethod: String(paymentMethod || "UPI").toUpperCase(),
+    ...(opts?.transactionReference ? { transactionReference: String(opts.transactionReference).trim() } : {}),
+    ...(opts?.notes ? { notes: String(opts.notes).trim() } : {}),
+  };
   return await apiClient(`/api/v1/orders/self-service/${encodeURIComponent(orderId)}/initiate-payment${query}`, {
     method: "POST",
     remoteOnly: true,
-    body: JSON.stringify({ paymentMethod: String(paymentMethod || "UPI").toUpperCase() }),
+    body: JSON.stringify(payload),
   });
 }
 

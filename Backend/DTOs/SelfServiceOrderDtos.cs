@@ -111,6 +111,12 @@ public class SelfServicePaymentInitiationRequest
     [Required]
     [MaxLength(20)]
     public string PaymentMethod { get; set; } = "UPI"; // UPI | CASH | CARD
+
+    [MaxLength(100)]
+    public string? TransactionReference { get; set; }
+
+    [MaxLength(255)]
+    public string? Notes { get; set; }
 }
 
 public class SelfServicePaymentInitiationResponseDto
@@ -123,6 +129,8 @@ public class SelfServicePaymentInitiationResponseDto
     public bool GatewayConfigured { get; set; }
     public string? QrPayload { get; set; }
     public string? Message { get; set; }
+    public bool CounterPaymentRegistered { get; set; }
+    public DateTime? InitiatedAt { get; set; }
 }
 
 public class SelfServicePaymentConfirmRequest

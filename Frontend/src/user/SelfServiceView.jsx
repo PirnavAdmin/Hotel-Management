@@ -130,6 +130,10 @@ export function SelfServiceView({
   const [paymentOrder, setPaymentOrder] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("upi"); // 'upi' | 'cash' | 'card'
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [upiUtr, setUpiUtr] = useState("");
 
   // Phase 2B.3 Invoice & Receipt Preview State (preview only, no official issuance)
   const [previewOrder, setPreviewOrder] = useState(null);
@@ -465,6 +469,54 @@ export function SelfServiceView({
   const handleClosePaymentModal = () => {
     setIsPaymentOpen(false);
     setPaymentOrder(null);
+    setPaymentMessage("");
+    setPaymentSuccess(false);
+    setUpiUtr("");
+  };
+
+  const handleConfirmPaymentMethod = async () => {
+    const orderId = paymentOrder?.orderId ?? paymentOrder?.id;
+    if (!orderId || paymentSubmitting) return;
+    setPaymentSubmitting(true);
+    setPaymentMessage("");
+    try {
+      const res = await apiInitiateSelfServicePayment(
+        orderId,
+        selectedPaymentMethod.toUpperCase(),
+        {
+          transactionReference: selectedPaymentMethod === "upi" ? upiUtr.trim() : undefined,
+          notes: selectedPaymentMethod === "cash"
+            ? "Pay at cashier counter requested"
+            : selectedPaymentMethod === "card"
+              ? "Card machine payment requested at counter"
+              : "UPI payment submitted",
+        },
+        resolvedBranchId
+      );
+      if (res?.success && res.data) {
+        const data = res.data?.data ?? res.data;
+        setPaymentSuccess(true);
+        setPaymentMessage(data.message || "Payment method registered successfully.");
+        setPaymentOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                paymentMethod: selectedPaymentMethod === "cash" ? "Cash" : selectedPaymentMethod === "card" ? "Card" : "UPI",
+                qrPayload: data.qrPayload || prev.qrPayload,
+                gatewayConfigured: data.gatewayConfigured,
+              }
+            : prev
+        );
+      } else {
+        setPaymentSuccess(false);
+        setPaymentMessage(res?.error || "Could not register payment. Please try again.");
+      }
+    } catch (err) {
+      setPaymentSuccess(false);
+      setPaymentMessage(err?.message || "Payment registration failed. Please try again.");
+    } finally {
+      setPaymentSubmitting(false);
+    }
   };
 
   // Active payable amount & order number from backend-confirmed Phase 2B.1 order
@@ -1699,7 +1751,7 @@ export function SelfServiceView({
                   >
                     <Building2 size={26} />
                   </div>
-                  <div style={{ maxWidth: "420px", width: "100%" }}>
+<div style={{ maxWidth: "420px", width: "100%" }}>
                     <h4 style={{ margin: "0 0 0.4rem", fontSize: "1.02rem", fontWeight: 800, color: "var(--text-main)" }}>
                       Pay at Cashier Counter
                     </h4>
@@ -1737,6 +1789,29 @@ export function SelfServiceView({
                       </span>
                     </div>
                   </div>
+
+                  {paymentMessage && (
+                    <div
+                      style={{
+                        padding: "0.65rem 0.95rem",
+                        borderRadius: "8px",
+                        background: paymentSuccess ? "rgba(34, 197, 94, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                        border: paymentSuccess ? "1px solid rgba(34, 197, 94, 0.35)" : "1px solid rgba(239, 68, 68, 0.35)",
+                        color: paymentSuccess ? "#16a34a" : "#dc2626",
+                        fontSize: "0.82rem",
+                        fontWeight: 650,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.45rem",
+                        textAlign: "left",
+                        width: "100%",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {paymentSuccess ? <ShieldCheck size={16} style={{ flexShrink: 0 }} /> : <AlertCircle size={16} style={{ flexShrink: 0 }} />}
+                      <span>{paymentMessage}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1758,9 +1833,23 @@ export function SelfServiceView({
                   </div>
                   <div>
                     <h4 style={{ margin: "0 0 0.35rem", fontSize: "0.98rem", fontWeight: 800 }}>Card / POS Terminal Payment</h4>
-                    <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--text-muted)", lineHeight: 1.4, maxWidth: "380px" }}>
-                      Backend integration pending. Card terminal payment initiation requires the authenticated backend payment API.
+                    <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: 1.5, maxWidth: "420px" }}>
+                      Present your <strong>Order Reference</strong> at the counter to tap or swipe your Credit/Debit card on the POS machine.
                     </p>
+                  </div>
+                  <div
+                    style={{
+                      padding: "0.65rem 1.25rem",
+                      borderRadius: "8px",
+                      background: "var(--bg-tertiary)",
+                      border: "1.5px dashed #3b82f6",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>Order Reference</div>
+                    <div style={{ fontSize: "1.35rem", fontWeight: 850, color: "#3b82f6" }}>
+                      {activeOrderNumber}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", justifyContent: "center" }}>
                     <span className="self-service-qr-badge">Visa</span>
@@ -1769,6 +1858,28 @@ export function SelfServiceView({
                     <span className="self-service-qr-badge">Amex</span>
                     <span className="self-service-qr-badge">Contactless Tap</span>
                   </div>
+                  {paymentMessage && (
+                    <div
+                      style={{
+                        padding: "0.65rem 0.95rem",
+                        borderRadius: "8px",
+                        background: paymentSuccess ? "rgba(34, 197, 94, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                        border: paymentSuccess ? "1px solid rgba(34, 197, 94, 0.35)" : "1px solid rgba(239, 68, 68, 0.35)",
+                        color: paymentSuccess ? "#16a34a" : "#dc2626",
+                        fontSize: "0.82rem",
+                        fontWeight: 650,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.45rem",
+                        textAlign: "left",
+                        width: "100%",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      {paymentSuccess ? <ShieldCheck size={16} style={{ flexShrink: 0 }} /> : <AlertCircle size={16} style={{ flexShrink: 0 }} />}
+                      <span>{paymentMessage}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1804,12 +1915,41 @@ export function SelfServiceView({
               <button
                 type="button"
                 className="self-service-btn-proceed"
-                style={{ flex: 1, minWidth: "220px", justifyContent: "center" }}
-                disabled
-                title="Backend payment integration pending"
+                style={{
+                  flex: 1,
+                  minWidth: "220px",
+                  justifyContent: "center",
+                  background: paymentSuccess ? "var(--color-primary-green, #16a34a)" : undefined,
+                  borderColor: paymentSuccess ? "var(--color-primary-green, #16a34a)" : undefined,
+                  cursor: paymentSubmitting ? "wait" : "pointer",
+                }}
+                onClick={handleConfirmPaymentMethod}
+                disabled={paymentSubmitting}
+                title="Register payment choice with Cashier"
               >
-                <ShieldCheck size={16} />
-                <span>Payment Integration Pending</span>
+                {paymentSubmitting ? (
+                  <span>Registering...</span>
+                ) : paymentSuccess ? (
+                  <>
+                    <ShieldCheck size={16} />
+                    <span>Payment Choice Registered</span>
+                  </>
+                ) : selectedPaymentMethod === "cash" ? (
+                  <>
+                    <Banknote size={16} />
+                    <span>Confirm Pay at Counter</span>
+                  </>
+                ) : selectedPaymentMethod === "card" ? (
+                  <>
+                    <CreditCard size={16} />
+                    <span>Request Card Terminal</span>
+                  </>
+                ) : (
+                  <>
+                    <QrCode size={16} />
+                    <span>Confirm UPI Payment</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
