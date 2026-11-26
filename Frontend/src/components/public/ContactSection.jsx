@@ -41,9 +41,15 @@ export default function ContactSection() {
               Reach our hospitality product specialists for multi-branch rollouts, hardware
               compatibility checks, and pricing guidance.
             </p>
-            <div style={{ display: "grid", gap: 10, marginTop: 6, fontSize: 14, color: "#e2e8f0" }}>
+            <div style={{ display: "grid", gap: 10, marginTop: 6, fontSize: 14, color: "var(--text-main)" }}>
               <div>
-                <strong>Email:</strong> sales@restroflow.local
+                <strong>Company:</strong> PIRNAV Software Solutions
+              </div>
+              <div>
+                <strong>Email:</strong>{" "}
+                <a href="mailto:contact@pirnav.com" style={{ color: "var(--pirnav-teal)", fontWeight: 700, textDecoration: "none" }}>
+                  contact@pirnav.com
+                </a>
               </div>
               <div>
                 <strong>Support Hours:</strong> Mon–Sat, 9:00 AM – 8:00 PM IST

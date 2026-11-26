@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import PirnavBrandMark, { PIRNAV_BRAND } from "./PirnavBrandMark";
 
 export default function PublicNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -32,10 +33,10 @@ export default function PublicNavbar() {
           type="button"
           className="saas-brand"
           onClick={() => goToRoute("/")}
-          aria-label="RestroFlow SaaS Home"
+          aria-label={`${PIRNAV_BRAND.name} SaaS Home`}
         >
-          <span className="saas-brand-mark" aria-hidden="true">RF</span>
-          <span>RestroFlow OS</span>
+          <PirnavBrandMark />
+          <span>{PIRNAV_BRAND.name}</span>
         </button>
 
         <nav className="saas-nav-links" aria-label="Primary navigation">

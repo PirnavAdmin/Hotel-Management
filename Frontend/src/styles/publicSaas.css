@@ -1,16 +1,35 @@
-/* Public SaaS Marketing & Onboarding Styles
- * Uses existing CSS variables from index.css / design-system.css
- * Scoped under .saas-page to avoid interfering with POS, KOT, or Admin views.
+/* PIRNAV Public SaaS Marketing & Onboarding Styles (Phase 3.22)
+ * Palette extracted directly from https://www.pirnav.com/assets/index-d3uyEvSk.css:
+ *   --pirnav-teal: #0b7286
+ *   --pirnav-teal-deep: #074c59
+ *   --pirnav-teal-mid: #148ea1
+ *   --pirnav-teal-light: #6dc7d3
+ *   --pirnav-teal-soft: #dff4f6
+ *   --pirnav-navy: #102238
+ * Scoped strictly under .saas-page so global POS, KOT, and Admin themes remain unchanged.
  */
 
 .saas-page {
+  --pirnav-teal: #0b7286;
+  --pirnav-teal-deep: #074c59;
+  --pirnav-teal-mid: #148ea1;
+  --pirnav-teal-light: #6dc7d3;
+  --pirnav-teal-soft: #dff4f6;
+  --pirnav-navy: #102238;
+  --pirnav-bg: #f8fbff;
+  --pirnav-bg-alt: #eef8fa;
+  --pirnav-surface: #ffffff;
+  --pirnav-ink: #111827;
+  --pirnav-ink-muted: #526879;
+  --pirnav-border: #dbe4ec;
+
   min-height: 100%;
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  background: var(--bg-primary, #0b1120);
-  color: var(--text-main, #f8fafc);
-  font-family: var(--font-sans, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
+  background: var(--pirnav-bg);
+  color: var(--pirnav-ink);
+  font-family: "Segoe UI", var(--font-sans, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
   scroll-behavior: smooth;
 }
 
@@ -27,9 +46,9 @@
 }
 
 .saas-section-alt {
-  background: rgba(15, 23, 42, 0.55);
-  border-top: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.14));
-  border-bottom: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.14));
+  background: var(--pirnav-bg-alt);
+  border-top: 1px solid var(--pirnav-border);
+  border-bottom: 1px solid var(--pirnav-border);
 }
 
 .saas-eyebrow {
@@ -42,9 +61,9 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--accent-amber, #f59e0b);
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: var(--pirnav-teal-deep);
+  background: var(--pirnav-teal-soft);
+  border: 1px solid rgba(11, 114, 134, 0.25);
   margin-bottom: 14px;
 }
 
@@ -54,7 +73,7 @@
   line-height: 1.12;
   font-weight: 800;
   letter-spacing: -0.025em;
-  color: var(--text-main, #f8fafc);
+  color: var(--pirnav-navy);
 }
 
 .saas-h2 {
@@ -63,14 +82,14 @@
   line-height: 1.2;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--text-main, #f8fafc);
+  color: var(--pirnav-navy);
 }
 
 .saas-lead {
   margin: 0;
   font-size: clamp(15px, 1.8vw, 18px);
   line-height: 1.65;
-  color: var(--text-muted, #94a3b8);
+  color: var(--pirnav-ink-muted);
 }
 
 .saas-section-header {
@@ -102,41 +121,47 @@
 .saas-nav-link:focus-visible,
 .saas-input:focus-visible,
 .saas-textarea:focus-visible,
-.saas-tab-btn:focus-visible {
-  outline: 2px solid var(--accent-amber, #f59e0b);
+.saas-tab-btn:focus-visible,
+.saas-footer-link:focus-visible {
+  outline: 2px solid var(--pirnav-teal);
   outline-offset: 2px;
 }
 
 .saas-btn-primary {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #0b1120;
-  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.22);
+  background: linear-gradient(135deg, var(--pirnav-teal), var(--pirnav-teal-deep));
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(11, 114, 134, 0.24);
 }
 
 .saas-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, var(--pirnav-teal-mid), var(--pirnav-teal));
+  box-shadow: 0 14px 28px rgba(11, 114, 134, 0.32);
 }
 
 .saas-btn-secondary {
-  background: rgba(30, 41, 59, 0.85);
-  color: var(--text-main, #f8fafc);
-  border-color: rgba(148, 163, 184, 0.28);
+  background: var(--pirnav-surface);
+  color: var(--pirnav-navy);
+  border-color: var(--pirnav-border);
+  box-shadow: 0 2px 8px rgba(16, 34, 56, 0.05);
 }
 
 .saas-btn-secondary:hover {
-  background: rgba(51, 65, 85, 0.9);
-  border-color: rgba(148, 163, 184, 0.45);
+  background: var(--pirnav-teal-soft);
+  border-color: var(--pirnav-teal);
+  color: var(--pirnav-teal-deep);
 }
 
 .saas-btn-ghost {
   background: transparent;
-  color: var(--text-main, #f8fafc);
-  border-color: rgba(148, 163, 184, 0.22);
+  color: var(--pirnav-navy);
+  border-color: var(--pirnav-border);
 }
 
 .saas-btn-ghost:hover {
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--pirnav-teal-soft);
+  border-color: var(--pirnav-teal);
+  color: var(--pirnav-teal-deep);
 }
 
 .saas-btn:disabled {
@@ -150,9 +175,9 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(11, 17, 32, 0.9);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.14));
+  border-bottom: 1px solid var(--pirnav-border);
 }
 
 .saas-navbar-inner {
@@ -168,7 +193,7 @@
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: var(--text-main, #f8fafc);
+  color: var(--pirnav-navy);
   font-weight: 800;
   font-size: 18px;
   letter-spacing: -0.02em;
@@ -178,6 +203,10 @@
   cursor: pointer;
 }
 
+.saas-brand-on-dark {
+  color: #ffffff;
+}
+
 .saas-brand-mark {
   width: 34px;
   height: 34px;
@@ -185,10 +214,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f59e0b, #ea580c);
-  color: #0b1120;
+  background: linear-gradient(135deg, var(--pirnav-teal), var(--pirnav-teal-deep));
+  color: #ffffff;
   font-weight: 900;
-  font-size: 15px;
+  font-size: 16px;
   flex-shrink: 0;
 }
 
@@ -201,7 +230,7 @@
 .saas-nav-link {
   background: none;
   border: none;
-  color: var(--text-muted, #cbd5e1);
+  color: var(--pirnav-ink-muted);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -212,7 +241,7 @@
 
 .saas-nav-link:hover,
 .saas-nav-link.active {
-  color: var(--accent-amber, #f59e0b);
+  color: var(--pirnav-teal);
 }
 
 .saas-nav-actions {
@@ -226,9 +255,9 @@
   min-height: 40px;
   min-width: 40px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(30, 41, 59, 0.8);
-  color: var(--text-main, #f8fafc);
+  border: 1px solid var(--pirnav-border);
+  background: var(--pirnav-surface);
+  color: var(--pirnav-navy);
   cursor: pointer;
   align-items: center;
   justify-content: center;
@@ -238,8 +267,8 @@
 .saas-mobile-drawer {
   display: none;
   padding: 12px 20px 20px;
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid var(--pirnav-border);
+  background: var(--pirnav-surface);
   flex-direction: column;
   gap: 10px;
 }
@@ -252,8 +281,9 @@
 .saas-hero {
   padding: 58px 0 68px;
   background:
-    radial-gradient(circle at 18% 15%, rgba(245, 158, 11, 0.14), transparent 42%),
-    radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.12), transparent 40%);
+    radial-gradient(circle at 18% 15%, rgba(11, 114, 134, 0.1), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(109, 199, 211, 0.16), transparent 42%),
+    var(--pirnav-bg);
 }
 
 .saas-hero-grid {
@@ -276,15 +306,18 @@
   gap: 18px;
   margin-top: 24px;
   font-size: 13px;
-  color: var(--text-muted, #94a3b8);
+  font-weight: 600;
+  color: var(--pirnav-teal-deep);
 }
 
+/* Dark Navy Operations Console Preview (explicit light text on #102238) */
 .saas-hero-card {
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--pirnav-navy);
+  color: #f8fafc;
+  border: 1px solid rgba(109, 199, 211, 0.25);
   border-radius: 18px;
   padding: 20px;
-  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.55);
+  box-shadow: 0 24px 54px rgba(13, 40, 48, 0.16);
 }
 
 .saas-mock-topbar {
@@ -293,9 +326,9 @@
   justify-content: space-between;
   padding-bottom: 12px;
   margin-bottom: 16px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  border-bottom: 1px solid rgba(109, 199, 211, 0.2);
   font-size: 12px;
-  color: var(--text-muted, #94a3b8);
+  color: #cbd5e1;
 }
 
 .saas-kpi-row {
@@ -308,20 +341,20 @@
 .saas-kpi-box {
   padding: 12px;
   border-radius: 12px;
-  background: rgba(30, 41, 59, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(109, 199, 211, 0.2);
 }
 
 .saas-kpi-label {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: #cbd5e1;
   margin-bottom: 4px;
 }
 
 .saas-kpi-val {
   font-size: 18px;
   font-weight: 800;
-  color: var(--text-main, #f8fafc);
+  color: #ffffff;
 }
 
 /* Grids & Cards */
@@ -344,18 +377,27 @@
 }
 
 .saas-card {
-  background: rgba(15, 23, 42, 0.78);
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: var(--pirnav-surface);
+  color: var(--pirnav-ink);
+  border: 1px solid var(--pirnav-border);
   border-radius: 16px;
   padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: 0 10px 28px rgba(13, 40, 48, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.saas-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(11, 114, 134, 0.35);
+  box-shadow: 0 16px 36px rgba(13, 40, 48, 0.1);
 }
 
 .saas-card-highlight {
-  border-color: rgba(245, 158, 11, 0.55);
-  box-shadow: 0 18px 40px rgba(245, 158, 11, 0.12);
+  border-color: var(--pirnav-teal);
+  box-shadow: 0 18px 40px rgba(11, 114, 134, 0.14);
 }
 
 .saas-icon-badge {
@@ -365,8 +407,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(245, 158, 11, 0.14);
-  color: var(--accent-amber, #f59e0b);
+  background: var(--pirnav-teal-soft);
+  color: var(--pirnav-teal-deep);
   font-size: 18px;
   font-weight: 700;
 }
@@ -375,14 +417,14 @@
   margin: 0;
   font-size: 17px;
   font-weight: 700;
-  color: var(--text-main, #f8fafc);
+  color: var(--pirnav-navy);
 }
 
 .saas-card-text {
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-muted, #94a3b8);
+  color: var(--pirnav-ink-muted);
 }
 
 /* Product Showcase */
@@ -398,38 +440,52 @@
   min-height: 40px;
   padding: 8px 16px;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(15, 23, 42, 0.7);
-  color: var(--text-muted, #cbd5e1);
+  border: 1px solid var(--pirnav-border);
+  background: var(--pirnav-surface);
+  color: var(--pirnav-ink-muted);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.saas-tab-btn.active {
-  background: rgba(245, 158, 11, 0.16);
-  border-color: var(--accent-amber, #f59e0b);
-  color: var(--accent-amber, #f59e0b);
+.saas-tab-btn.active,
+.saas-tab-btn[aria-selected="true"] {
+  background: var(--pirnav-teal);
+  border-color: var(--pirnav-teal);
+  color: #ffffff;
 }
 
 .saas-showcase-frame {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--pirnav-surface);
+  border: 1px solid var(--pirnav-border);
   border-radius: 18px;
   padding: 24px;
+  box-shadow: 0 18px 38px rgba(13, 40, 48, 0.08);
+}
+
+.saas-showcase-preview {
+  background: var(--pirnav-navy);
+  color: #f8fafc;
+  border: 1px solid rgba(109, 199, 211, 0.25);
+  border-radius: 16px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* Pricing */
 .saas-price {
   font-size: 32px;
   font-weight: 800;
-  color: var(--text-main, #f8fafc);
+  color: var(--pirnav-navy);
 }
 
 .saas-price-period {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-muted, #94a3b8);
+  color: var(--pirnav-ink-muted);
 }
 
 .saas-feature-list {
@@ -440,15 +496,17 @@
   flex-direction: column;
   gap: 8px;
   font-size: 13.5px;
-  color: #cbd5e1;
+  color: #334155;
 }
 
 /* Forms */
 .saas-form-card {
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--pirnav-surface);
+  color: var(--pirnav-ink);
+  border: 1px solid var(--pirnav-border);
   border-radius: 18px;
   padding: 28px;
+  box-shadow: 0 18px 38px rgba(13, 40, 48, 0.08);
 }
 
 .saas-form-grid {
@@ -470,21 +528,26 @@
 .saas-label {
   font-size: 13px;
   font-weight: 600;
-  color: #e2e8f0;
+  color: var(--pirnav-navy);
 }
 
-.saas-input,
-.saas-textarea {
+.saas-page .saas-input,
+.saas-page .saas-textarea {
   width: 100%;
   box-sizing: border-box;
   min-height: 42px;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.26);
-  background: rgba(2, 6, 23, 0.65);
-  color: var(--text-main, #f8fafc);
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #111827 !important;
   font-size: 14px;
   font-family: inherit;
+}
+
+.saas-page .saas-input::placeholder,
+.saas-page .saas-textarea::placeholder {
+  color: #64748b !important;
 }
 
 .saas-textarea {
@@ -494,7 +557,8 @@
 
 .saas-field-error {
   font-size: 12px;
-  color: #fca5a5;
+  color: #b42318;
+  font-weight: 600;
 }
 
 .saas-alert {
@@ -506,28 +570,29 @@
 }
 
 .saas-alert-warning {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #fde68a;
+  background: var(--pirnav-teal-soft);
+  border: 1px solid rgba(11, 114, 134, 0.35);
+  color: var(--pirnav-teal-deep);
 }
 
 .saas-alert-error {
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fecaca;
+  background: #fef2f2;
+  border: 1px solid rgba(180, 35, 24, 0.35);
+  color: #991b1b;
 }
 
 .saas-alert-success {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  color: #bbf7d0;
+  background: #ecfdf5;
+  border: 1px solid rgba(21, 128, 61, 0.35);
+  color: #166534;
 }
 
-/* Footer */
+/* Footer (Deep PIRNAV Navy with explicit light ink) */
 .saas-footer {
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-top: 1px solid rgba(109, 199, 211, 0.25);
   padding: 44px 0 28px;
-  background: rgba(2, 6, 23, 0.72);
+  background: var(--pirnav-navy);
+  color: #f8fafc;
 }
 
 .saas-footer-grid {
@@ -542,7 +607,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #e2e8f0;
+  color: #ffffff;
   margin: 0 0 12px;
 }
 
@@ -553,6 +618,33 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.saas-footer-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.saas-footer-link {
+  color: #6dc7d3;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.saas-footer-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.saas-footer .saas-nav-link {
+  color: #cbd5e1;
+}
+
+.saas-footer .saas-nav-link:hover {
+  color: #6dc7d3;
 }
 
 /* Responsive Breakpoints */

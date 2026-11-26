@@ -3,7 +3,7 @@ import { apiGetPlatformSettings, apiSavePlatformSettings } from "../../api/super
 import { SaModuleHeader, SaStateBanner } from "../../components/superadmin/SuperAdminUI";
 
 const DEFAULT_FORM = {
-  platformName: "RestroFlow OS",
+  platformName: "PIRNAV",
   requireManualApproval: true,
   defaultCurrency: "INR",
   defaultTaxRate: "5",

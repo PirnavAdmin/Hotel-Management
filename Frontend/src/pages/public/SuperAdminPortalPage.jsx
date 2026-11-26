@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/superAdmin.css";
 import { ErrorBoundary } from "../../common/ErrorBoundary";
+import PirnavBrandMark, { PIRNAV_BRAND } from "../../components/public/PirnavBrandMark";
 
 const DashboardModule = lazy(() => import("../superadmin/DashboardModule"));
 const TenantsModule = lazy(() => import("../superadmin/TenantsModule"));
@@ -103,8 +104,8 @@ export default function SuperAdminPortalPage({ session, onLogout }) {
       )}
       <aside className={`sa-sidebar ${sidebarOpen ? "open" : ""}`} aria-label="Super Admin sidebar">
         <div className="sa-brand">
-          <span className="sa-brand-badge" aria-hidden="true">SA</span>
-          <span>RestroFlow Super Admin</span>
+          <PirnavBrandMark badgeClassName="sa-brand-badge" />
+          <span>{PIRNAV_BRAND.name} Super Admin</span>
         </div>
 
         <nav className="sa-nav" aria-label="Super Admin modules">
@@ -146,7 +147,7 @@ export default function SuperAdminPortalPage({ session, onLogout }) {
               {sidebarOpen ? "✕" : "☰"}
             </button>
             <span style={{ fontWeight: 700, fontSize: 14, color: "#cbd5e1" }}>
-              Platform Control Panel
+              {PIRNAV_BRAND.company} · Platform Control Panel
             </span>
           </div>
 

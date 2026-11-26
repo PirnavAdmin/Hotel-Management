@@ -51,8 +51,8 @@ export default function HeroSection() {
 
         <div className="saas-hero-card" aria-label="Platform live operations preview">
           <div className="saas-mock-topbar">
-            <span>Operations Console · Preview Layout</span>
-            <span style={{ color: "#34d399", fontWeight: 700 }}>● POS + KOT Sync</span>
+            <span>PIRNAV Operations Console · Preview Layout</span>
+            <span style={{ color: "#6dc7d3", fontWeight: 700 }}>● POS + KOT Sync</span>
           </div>
 
           <div className="saas-kpi-row">
@@ -85,14 +85,14 @@ export default function HeroSection() {
                   alignItems: "center",
                   padding: "10px 12px",
                   borderRadius: 10,
-                  background: "rgba(30, 41, 59, 0.55)",
-                  border: "1px solid rgba(148, 163, 184, 0.14)",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(109, 199, 211, 0.22)",
                   fontSize: 13,
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700, color: "#f8fafc" }}>{item.title}</div>
-                  <div style={{ fontSize: 11.5, color: "#94a3b8" }}>{item.tag}</div>
+                  <div style={{ fontWeight: 700, color: "#ffffff" }}>{item.title}</div>
+                  <div style={{ fontSize: 11.5, color: "#cbd5e1" }}>{item.tag}</div>
                 </div>
                 <span
                   style={{
@@ -100,8 +100,8 @@ export default function HeroSection() {
                     fontWeight: 700,
                     padding: "4px 10px",
                     borderRadius: 999,
-                    background: "rgba(245, 158, 11, 0.14)",
-                    color: "#fbbf24",
+                    background: "rgba(109, 199, 211, 0.16)",
+                    color: "#6dc7d3",
                   }}
                 >
                   {item.status}

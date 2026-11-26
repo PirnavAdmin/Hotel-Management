@@ -50,7 +50,7 @@ export default function HowItWorksSection() {
                   fontSize: 13,
                   fontWeight: 800,
                   letterSpacing: "0.08em",
-                  color: "#f59e0b",
+                  color: "var(--pirnav-teal, #0b7286)",
                 }}
               >
                 STEP {item.step}

@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import PirnavBrandMark, { PIRNAV_BRAND } from "./PirnavBrandMark";
 
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -11,13 +12,13 @@ export default function PublicFooter() {
       <div className="saas-container">
         <div className="saas-footer-grid">
           <div>
-            <div className="saas-brand" style={{ marginBottom: 10 }}>
-              <span className="saas-brand-mark" aria-hidden="true">RF</span>
-              <span>RestroFlow OS</span>
+            <div className="saas-brand saas-brand-on-dark" style={{ marginBottom: 10 }}>
+              <PirnavBrandMark />
+              <span>{PIRNAV_BRAND.name}</span>
             </div>
-            <p className="saas-card-text">
-              Unified restaurant operations platform built for independent dining rooms and
-              multi-branch hospitality brands.
+            <p className="saas-footer-text">
+              Unified restaurant operations platform by {PIRNAV_BRAND.company}, built for
+              independent dining rooms and multi-branch hospitality brands.
             </p>
           </div>
 
@@ -72,13 +73,15 @@ export default function PublicFooter() {
             <h3 className="saas-footer-heading">Support</h3>
             <ul className="saas-footer-list">
               <li>
-                <span className="saas-card-text">sales@restroflow.local</span>
+                <a className="saas-footer-link" href={`mailto:${PIRNAV_BRAND.email}`}>
+                  {PIRNAV_BRAND.email}
+                </a>
               </li>
               <li>
-                <span className="saas-card-text">Mon–Sat · 9:00 AM – 8:00 PM IST</span>
+                <span className="saas-footer-text">Mon–Sat · 9:00 AM – 8:00 PM IST</span>
               </li>
               <li>
-                <span className="saas-card-text">GST-Ready Billing &amp; Audit Logs</span>
+                <span className="saas-footer-text">GST-Ready Billing &amp; Audit Logs</span>
               </li>
             </ul>
           </div>
@@ -86,18 +89,18 @@ export default function PublicFooter() {
 
         <div
           style={{
-            borderTop: "1px solid rgba(148, 163, 184, 0.14)",
+            borderTop: "1px solid rgba(109, 199, 211, 0.22)",
             paddingTop: 18,
             display: "flex",
             flexWrap: "wrap",
             justifyContent: "space-between",
             gap: 12,
             fontSize: 12.5,
-            color: "#94a3b8",
+            color: "#cbd5e1",
           }}
         >
-          <span>© {COPYRIGHT_YEAR} RestroFlow OS. All rights reserved.</span>
-          <span>Multi-Tenant Restaurant POS, KOT, QR Ordering &amp; Branch Analytics</span>
+          <span>© {COPYRIGHT_YEAR} {PIRNAV_BRAND.company}. All rights reserved.</span>
+          <span>{PIRNAV_BRAND.name} · Multi-Tenant Restaurant POS, KOT, QR Ordering &amp; Branch Analytics</span>
         </div>
       </div>
     </footer>

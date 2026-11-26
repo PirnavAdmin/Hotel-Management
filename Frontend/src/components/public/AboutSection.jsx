@@ -23,13 +23,14 @@ export default function AboutSection() {
     <section id="about" className="saas-section" aria-labelledby="about-heading">
       <div className="saas-container">
         <div className="saas-section-header">
-          <span className="saas-eyebrow">About RestroFlow OS</span>
+          <span className="saas-eyebrow">About PIRNAV</span>
           <h2 id="about-heading" className="saas-h2">
             Engineered For Real Hospitality Operations
           </h2>
           <p className="saas-lead">
-            RestroFlow OS unifies floor service, kitchen dispatch, guest QR ordering, and branch
-            accounting so teams spend less time reconciling systems and more time serving guests.
+            PIRNAV by PIRNAV Software Solutions unifies floor service, kitchen dispatch, guest QR
+            ordering, and branch accounting so teams spend less time reconciling systems and more
+            time serving guests.
           </p>
         </div>
 

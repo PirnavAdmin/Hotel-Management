@@ -1,19 +1,30 @@
-/* Super Admin Control Panel Styles (Phase 3.5) */
+/* PIRNAV Super Admin Control Panel Styles (Phase 3.5 + Phase 3.22 Rebrand)
+ * Scoped under .sa-shell using PIRNAV palette from pirnav.com so global light-bistro
+ * variables never cause dark-text-on-dark-background leakage.
+ */
 
 .sa-shell {
+  --pirnav-teal: #0b7286;
+  --pirnav-teal-deep: #074c59;
+  --pirnav-teal-light: #6dc7d3;
+  --pirnav-navy: #102238;
+  --bg-primary: #102238;
+  --text-main: #f8fafc;
+  --text-muted: #cbd5e1;
+
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   min-height: 100%;
   width: 100%;
   overflow-x: hidden;
-  background: var(--bg-primary, #0b1120);
-  color: var(--text-main, #f8fafc);
-  font-family: var(--font-sans, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
+  background: var(--pirnav-navy);
+  color: #f8fafc;
+  font-family: "Segoe UI", var(--font-sans, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
 }
 
 .sa-sidebar {
-  background: rgba(15, 23, 42, 0.96);
-  border-right: 1px solid rgba(148, 163, 184, 0.16);
+  background: #0d1b2e;
+  border-right: 1px solid rgba(109, 199, 211, 0.2);
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
@@ -34,13 +45,13 @@
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #f59e0b, #ea580c);
-  color: #0b1120;
+  background: linear-gradient(135deg, var(--pirnav-teal), var(--pirnav-teal-deep));
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 13px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
@@ -74,9 +85,9 @@
 }
 
 .sa-nav-btn.active {
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.45);
-  color: #fbbf24;
+  background: rgba(11, 114, 134, 0.25);
+  border-color: rgba(109, 199, 211, 0.55);
+  color: #6dc7d3;
 }
 
 .sa-nav-btn:focus-visible,
@@ -84,7 +95,7 @@
 .sa-input:focus-visible,
 .sa-select:focus-visible,
 .sa-textarea:focus-visible {
-  outline: 2px solid #f59e0b;
+  outline: 2px solid #6dc7d3;
   outline-offset: 2px;
 }
 
@@ -184,16 +195,16 @@
   margin-bottom: 14px;
 }
 
-.sa-input,
-.sa-select,
-.sa-textarea {
+.sa-shell .sa-input,
+.sa-shell .sa-select,
+.sa-shell .sa-textarea {
   box-sizing: border-box;
   min-height: 38px;
   padding: 8px 12px;
   border-radius: 9px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(2, 6, 23, 0.65);
-  color: #f8fafc;
+  border: 1px solid rgba(109, 199, 211, 0.28);
+  background: rgba(13, 27, 46, 0.85);
+  color: #f8fafc !important;
   font-size: 13.5px;
   font-family: inherit;
 }
@@ -225,8 +236,8 @@
 }
 
 .sa-btn-primary {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: #0b1120;
+  background: linear-gradient(135deg, var(--pirnav-teal), var(--pirnav-teal-deep));
+  color: #ffffff;
 }
 
 .sa-btn-secondary {

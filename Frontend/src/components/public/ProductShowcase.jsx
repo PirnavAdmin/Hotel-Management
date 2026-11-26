@@ -121,7 +121,7 @@ export default function ProductShowcase() {
               </div>
             </div>
 
-            <div className="saas-card" style={{ background: "rgba(2, 6, 23, 0.72)" }}>
+            <div className="saas-showcase-preview">
               <div className="saas-mock-topbar">
                 <span>Workspace Module: {activeTab.label}</span>
                 <span>Route: {activeTab.routeHint}</span>
@@ -133,13 +133,13 @@ export default function ProductShowcase() {
                     style={{
                       padding: "12px 14px",
                       borderRadius: 10,
-                      background: "rgba(30, 41, 59, 0.65)",
-                      border: "1px solid rgba(148, 163, 184, 0.14)",
+                      background: "rgba(255, 255, 255, 0.08)",
+                      border: "1px solid rgba(109, 199, 211, 0.22)",
                       fontSize: 13.5,
-                      color: "#e2e8f0",
+                      color: "#f8fafc",
                     }}
                   >
-                    <strong style={{ color: "#fbbf24", marginRight: 8 }}>0{idx + 1}.</strong>
+                    <strong style={{ color: "#6dc7d3", marginRight: 8 }}>0{idx + 1}.</strong>
                     {item}
                   </div>
                 ))}

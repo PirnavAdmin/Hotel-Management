@@ -85,8 +85,8 @@ export default function PricingSection() {
                       fontWeight: 800,
                       padding: "4px 10px",
                       borderRadius: 999,
-                      background: "rgba(245, 158, 11, 0.16)",
-                      color: "#fbbf24",
+                      background: "var(--pirnav-teal-soft, #dff4f6)",
+                      color: "var(--pirnav-teal-deep, #074c59)",
                     }}
                   >
                     POPULAR
