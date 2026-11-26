@@ -75,12 +75,12 @@ body[data-theme="royal-saffron"] {
 :root {
   --accent-rgb: 245, 158, 11;
   --app-scrollbar-size: 4px;
-  --app-scrollbar-track: transparent;
-  --app-scrollbar-thumb: #a33a36;
-  --app-scrollbar-thumb-hover: #842b28;
+  --app-scrollbar-track: var(--bg-tertiary);
+  --app-scrollbar-thumb: var(--accent-active, var(--accent-amber));
+  --app-scrollbar-thumb-hover: color-mix(in srgb, var(--app-scrollbar-thumb) 82%, var(--text-main));
 }
 
-/* Fixed-color scrollbars for every element that already scrolls. */
+/* Theme-aware scrollbars for every element that already scrolls. */
 * {
   scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
   scrollbar-width: thin;

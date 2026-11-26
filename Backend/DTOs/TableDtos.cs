@@ -177,7 +177,7 @@ public class UpdateTableDto : IValidatableObject
     public int Capacity { get; set; }
 
     [Range(0, 50, ErrorMessage = "Occupied chairs must be non-negative.")]
-    public int OccupiedChairs { get; set; } = 0;
+    public int? OccupiedChairs { get; set; }
 
     [Required(ErrorMessage = "Status is required.")]
     [MaxLength(20)]

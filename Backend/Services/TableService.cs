@@ -307,6 +307,13 @@ public class TableService
             throw new DuplicateTableException(result.Message);
         }
 
+        if (dto.OccupiedChairs.HasValue)
+        {
+            await _spService.ExecuteSqlNonQueryAsync(
+                "UPDATE restaurant_tables SET occupied_chairs = @occupied, updated_at = NOW() WHERE table_id = @tid;",
+                new Dictionary<string, object?> { { "occupied", Math.Max(0, dto.OccupiedChairs.Value) }, { "tid", id } });
+        }
+
         try
         {
             await _spService.ExecuteSqlNonQueryAsync(

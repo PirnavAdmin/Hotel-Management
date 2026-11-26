@@ -186,7 +186,11 @@ const mergeActiveDiningOrders = (tables, orders) => {
       return clearCachedTableOrder({ ...table, status: "vacant" });
     }
     const tableSeats = Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0 ? table.selectedSeats : [];
-    const guests = Number(order.guests ?? order.Guests) || (tableSeats.length > 0 ? tableSeats.length : (Number(table.guests) || 0));
+    const savedTableGuests = Number(table.guests ?? table.occupiedChairs) || 0;
+    const orderGuests = Number(order.guests ?? order.Guests) || 0;
+    const guests = savedTableGuests > 0
+      ? savedTableGuests
+      : (orderGuests > 0 ? orderGuests : tableSeats.length);
     const occupiedChairs = guests > 0 ? guests : tableSeats.length;
     const selectedSeats = tableSeats.length > 0
       ? tableSeats
@@ -424,7 +428,7 @@ const clearCachedTableOrder = (table) => {
 const mergeIncomingTables = (
   incomingTables,
   deletedTableIds,
-  { preserveCachedOrders = true, preserveCachedDefinitions = true } = {},
+  { preserveCachedOrders = true, preserveCachedDefinitions = true, cachedTables: cachedTablesOverride } = {},
 ) => {
   const deletedIds = Array.isArray(deletedTableIds)
     ? deletedTableIds.map(String)
@@ -434,11 +438,13 @@ const mergeIncomingTables = (
   // Read currently saved tables from localStorage to retain active in-memory cart/order state for existing tables
   const cachedTableMap = new Map();
   try {
-    const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
-    if (rawSaved) {
-      const parsedSaved = JSON.parse(rawSaved);
-      if (Array.isArray(parsedSaved)) {
-        parsedSaved.forEach((st) => {
+    let cachedTables = cachedTablesOverride;
+    if (!Array.isArray(cachedTables)) {
+      const rawSaved = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_TABLES) : null;
+      cachedTables = rawSaved ? JSON.parse(rawSaved) : [];
+    }
+    if (Array.isArray(cachedTables)) {
+      cachedTables.forEach((st) => {
           if (st && st.id != null) {
             cachedTableMap.set(String(st.id), st);
             const backendId = st.backendTableId ?? st.tableId ?? st.TableId;
@@ -450,8 +456,7 @@ const mergeIncomingTables = (
           if (cleanName) {
             cachedTableMap.set(cleanName, st);
           }
-        });
-      }
+      });
     }
   } catch {}
 
@@ -522,17 +527,36 @@ const mergeIncomingTables = (
           ? incomingActiveItems
           : cachedActiveItems);
 
-      const preservedSelectedSeats = Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
+      const incomingSelectedSeats = Array.isArray(table.selectedSeats) && table.selectedSeats.length > 0
         ? table.selectedSeats
-        : (Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0 ? existing.selectedSeats : []);
+        : null;
+      const savedGuestValue = table.occupiedChairs ?? table.OccupiedChairs ?? table.guests ?? table.Guests;
+      const hasSavedGuestCount = savedGuestValue !== undefined && savedGuestValue !== null &&
+        Number.isFinite(Number(savedGuestValue)) && Number(savedGuestValue) >= 0;
+      const savedGuestCount = hasSavedGuestCount ? Number(savedGuestValue) : null;
+      const cachedSelectedSeats = Array.isArray(existing.selectedSeats) && existing.selectedSeats.length > 0
+        ? existing.selectedSeats
+        : null;
+      const seatLabels = table.seatLabels || existing.seatLabels || {};
 
-      const incomingGuests =
-        (preservedSelectedSeats.length > 0 ? preservedSelectedSeats.length : null) ??
-        (Number(table.occupiedChairs) > 0 ? Number(table.occupiedChairs) : null) ??
-        (Number(table.guests) > 0 ? Number(table.guests) : null) ??
-        (Number(existing.occupiedChairs) > 0 ? Number(existing.occupiedChairs) : null) ??
-        (Number(existing.guests) > 0 ? Number(existing.guests) : null) ??
-        0;
+      // A fresh backend count supersedes cached seat IDs, which may belong to an older selection.
+      const incomingGuests = incomingSelectedSeats
+        ? incomingSelectedSeats.length
+        : (hasSavedGuestCount
+          ? savedGuestCount
+          : (cachedSelectedSeats?.length ?? (Number(existing.occupiedChairs) > 0
+            ? Number(existing.occupiedChairs)
+            : (Number(existing.guests) > 0 ? Number(existing.guests) : 0))));
+      const preservedSelectedSeats = incomingSelectedSeats || (hasSavedGuestCount
+        ? (savedGuestCount === 0
+          ? []
+          : (cachedSelectedSeats?.length === savedGuestCount
+            ? cachedSelectedSeats
+              : Array.from({ length: savedGuestCount }, (_, index) => {
+                  const seatId = `S${index + 1}`;
+                  return seatLabels[seatId] || seatId;
+                })))
+        : (cachedSelectedSeats || []));
 
       const hasOccupiedSeats = incomingGuests > 0 || preservedSelectedSeats.length > 0;
 
@@ -849,6 +873,8 @@ export function App() {
   const [tablesReadyForSync, setTablesReadyForSync] = useState(false);
   const replaceCachedTableOrdersRef = useRef(false);
   const tableRefreshGenerationRef = useRef(0);
+  const tableUpdateSequencesRef = useRef(new Map());
+  const tableUpdateQueuesRef = useRef(new Map());
   const settledOrderIdsRef = useRef((() => {
     try {
       const values = JSON.parse(localStorage.getItem(STORAGE_KEY_SETTLED_ORDER_IDS) || "[]");
@@ -1812,7 +1838,28 @@ export function App() {
             : payload.tables ?? payload.data?.tables ?? payload[STORAGE_KEY_TABLES];
           if (Array.isArray(incomingTables)) {
             const freshDel = getDeletedTableIds();
-
+            setTables((current) => {
+              const latestTables = incomingTables.map((incoming) => {
+                const incomingIds = [incoming?.tableId, incoming?.TableId, incoming?.backendTableId, incoming?.id, incoming?.Id]
+                  .filter((value) => value != null)
+                  .map(String);
+                if (!incomingIds.some((id) => tableUpdateQueuesRef.current.has(id))) return incoming;
+                return current.find((table) =>
+                  [table.id, table.backendTableId, table.tableId]
+                    .filter((value) => value != null)
+                    .some((value) => incomingIds.includes(String(value))),
+                ) || incoming;
+              });
+              const clean = mergeIncomingTables(latestTables, freshDel, {
+                preserveCachedOrders: true,
+                preserveCachedDefinitions: false,
+                cachedTables: current,
+              });
+              try {
+                localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(clean));
+              } catch {}
+              return clean;
+            });
           }
           const incomingOrders = (parsedMsg.type === "SYNC_ORDERS" || parsedMsg.type === "SYNC") && Array.isArray(payload)
             ? payload
@@ -1975,7 +2022,60 @@ export function App() {
     const unsubscribeSse = subscribeToSseMessages(handleSseMessage);
 
     const handleRealtimeEvent = ({ name, payload }) => {
-      if (name === "OrderUpdated") {
+      if (name === "TableStatusUpdated" || name === "table:updated") {
+        const incomingTable = payload?.data ?? payload?.Data ?? payload;
+        const incomingId = incomingTable?.tableId ?? incomingTable?.TableId ?? incomingTable?.backendTableId;
+        if (incomingId != null) {
+          if (tableUpdateQueuesRef.current.has(String(incomingId))) return;
+          const freshDel = getDeletedTableIds();
+          const hasSavedGuestCount = incomingTable?.occupiedChairs !== undefined ||
+            incomingTable?.OccupiedChairs !== undefined || incomingTable?.guests !== undefined || incomingTable?.Guests !== undefined;
+          if (!hasSavedGuestCount) {
+            const incomingStatus = String(incomingTable?.status ?? incomingTable?.Status ?? "").toLowerCase();
+            setTables((current) => {
+              const updated = current.map((table) => {
+                const matches = [table.id, table.backendTableId, table.tableId, table.tableNumber, table.tableNumberNumeric]
+                  .filter((value) => value != null)
+                  .some((value) => String(value) === String(incomingId));
+                if (!matches) return table;
+                if (["vacant", "available", "free"].includes(incomingStatus)) {
+                  return {
+                    ...clearCachedTableOrder(table),
+                    status: "vacant",
+                    guests: 0,
+                    occupiedChairs: 0,
+                    selectedSeats: [],
+                  };
+                }
+                return { ...table, status: incomingTable?.status ?? incomingTable?.Status ?? table.status };
+              });
+              try {
+                localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+              } catch {}
+              return updated;
+            });
+            return;
+          }
+          setTables((current) => {
+            const mergedTable = mergeIncomingTables([incomingTable], freshDel, {
+              preserveCachedOrders: true,
+              preserveCachedDefinitions: false,
+              cachedTables: current,
+            })[0];
+            if (!mergedTable) return current;
+            const updated = current.map((table) => {
+              const matches = [table.id, table.backendTableId, table.tableId]
+                .filter((value) => value != null)
+                .some((value) => String(value) === String(incomingId));
+              return matches ? { ...table, ...mergedTable } : table;
+            });
+            try {
+              localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+            } catch {}
+            return updated;
+          });
+        }
+      } else if (name === "OrderUpdated") {
         const eventOrderId = payload?.orderId ?? payload?.OrderId ?? payload?.id ?? payload?.Id;
         const eventTableId = payload?.tableId ?? payload?.TableId;
         const eventItems = payload?.items ?? payload?.Items;
@@ -1995,7 +2095,11 @@ export function App() {
             if (["settled", "cancelled", "canceled", "completed", "deleted"].includes(incomingStatus)) {
               return clearCachedTableOrder(table);
             }
-            const guests = Number(payload?.guests ?? payload?.Guests ?? table.guests) || table.guests || 1;
+            const savedTableGuests = Number(table.occupiedChairs ?? table.guests) || 0;
+            const eventGuests = Number(payload?.guests ?? payload?.Guests) || 0;
+            const guests = savedTableGuests > 0
+              ? savedTableGuests
+              : (eventGuests || Number(table.guests) || 1);
             return {
               ...table,
               status: incomingStatus === "billed" ? "billed" : "occupied",
@@ -2064,18 +2168,6 @@ export function App() {
             };
           }));
         }
-      } else if (name === "TableStatusUpdated" && payload?.tableId != null) {
-        const incomingStatus = String(payload.status || "").toLowerCase();
-        const isVacant = ["vacant", "available", "free"].includes(incomingStatus);
-        setTables((current) => current.map((table) => {
-          const tableIds = [table.id, table.backendTableId, table.tableId, table.tableNumber, table.tableNumberNumeric]
-            .filter((value) => value != null)
-            .map(String);
-          if (!tableIds.includes(String(payload.tableId))) return table;
-          return isVacant
-            ? clearCachedTableOrder({ ...table, status: "vacant", activeKOTCount: 0, grandTotal: 0 })
-            : { ...table, status: payload.status ?? table.status, activeKOTCount: payload.activeKOTCount ?? table.activeKOTCount, grandTotal: payload.orderTotal ?? table.grandTotal };
-        }));
       } else if (name === "KitchenStatusAlert" && payload && typeof payload === "object") {
         const alertTableId = payload.tableId ?? payload.TableId;
         // Resolve accurate table name from in-memory tables if payload tableName is empty or generic
@@ -2607,20 +2699,25 @@ export function App() {
       );
       const backendTableId = targetTable?.backendTableId ?? targetTable?.tableId;
       if (Number(backendTableId) > 0) {
+        const selectedTableKeys = new Set(
+          [rawId, targetTable?.id, targetTable?.backendTableId, targetTable?.tableId]
+            .filter((value) => value != null)
+            .map(String),
+        );
+        const updateLatestSelectedTable = (updateTable) => setTables((current) => current.map((table) => {
+          const matchesSelectedTable = [table.id, table.backendTableId, table.tableId]
+            .filter((value) => value != null)
+            .some((value) => selectedTableKeys.has(String(value)));
+          return matchesSelectedTable ? updateTable(table) : table;
+        }));
         try {
           const response = await apiGetOrderForTable(backendTableId);
           if (response && response.success) {
             const order = response.data?.data ?? response.data?.order ?? response.data;
             if (order && String(order.tableId ?? order.TableId) === String(backendTableId)) {
-              const refreshedTable = mergeActiveDiningOrders([targetTable], [order])[0];
-              setTables((current) => current.map((table) =>
-                String(table.id) === String(rawId) ? refreshedTable : table,
-              ));
+              updateLatestSelectedTable((table) => mergeActiveDiningOrders([table], [order])[0]);
             } else if (!order) {
-              const vacantTable = clearCachedTableOrder(targetTable);
-              setTables((current) => current.map((table) =>
-                String(table.id) === String(rawId) ? vacantTable : table,
-              ));
+              updateLatestSelectedTable((table) => clearCachedTableOrder(table));
             }
           }
         } catch (error) {
@@ -3527,8 +3624,12 @@ export function App() {
 
   // Clear / Void Table Order
   const handleClearOrder = async (tableId) => {
+    const selectedTable = tables.find((t) =>
+      [t.id, t.backendTableId, t.tableId].some((id) => id != null && String(id) === String(tableId)),
+    );
+    const tableName = selectedTable?.name || selectedTable?.tableName || selectedTable?.tableNumber || `Table ${tableId}`;
     const confirmed = await confirmDialog(
-      `Are you sure you want to clear the entire order for Table ${tableId}?`,
+      `Are you sure you want to clear the entire order for ${tableName}?`,
       {
         title: "Clear table order?",
         confirmText: "Yes, Clear Order",
@@ -3571,14 +3672,14 @@ export function App() {
       return nextTables;
     });
 
-    const tbl = tables.find((t) => String(t.id) === String(tableId));
+    const tbl = selectedTable;
     const targetApiId = tbl?.backendTableId || tableId;
     try {
       apiVacateTable(targetApiId).catch(() => {});
       apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
     } catch {}
 
-    showToast(`Table ${tableId} order cleared.`);
+    showToast(`${tableName} order cleared.`);
   };
 
   // Transfer Table Order
@@ -4545,9 +4646,102 @@ export function App() {
       } catch {}
       return updated;
     });
+    const restorePreviousGuestCount = () => {
+      if (!previousTable) return;
+      setTables((current) => {
+        const restored = current.map((table) => isSameTable(table, updatedTable)
+          ? {
+              ...table,
+              guests: Number(previousTable.guests ?? previousTable.occupiedChairs) || 0,
+              occupiedChairs: Number(previousTable.occupiedChairs ?? previousTable.guests) || 0,
+              selectedSeats: Array.isArray(previousTable.selectedSeats) ? previousTable.selectedSeats : [],
+              status: previousTable.status || "vacant",
+            }
+          : table);
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(restored));
+          pushGlobalSync({ [STORAGE_KEY_TABLES]: restored });
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: restored }));
+        } catch {}
+        return restored;
+      });
+    };
     const targetApiId = updatedTable.backendTableId || updatedTable.id;
-    return apiUpdateTable(targetApiId, normalized).then((result) => {
-      const savedRecord = result?.data?.data || result?.data?.table || result?.data;
+    const activeOrderId = updatedTable.backendOrderId ?? updatedTable.activeOrderId ?? previousTable?.backendOrderId ?? previousTable?.activeOrderId;
+    const tableKey = String(targetApiId);
+    const updateSequence = (tableUpdateSequencesRef.current.get(tableKey) || 0) + 1;
+    tableUpdateSequencesRef.current.set(tableKey, updateSequence);
+    const previousRequest = tableUpdateQueuesRef.current.get(tableKey) || Promise.resolve();
+    const saveRequest = previousRequest.catch(() => {}).then(async () => {
+      const tableResult = await apiUpdateTable(targetApiId, normalized);
+      if (!tableResult?.success || tableResult?.data?.success === false) {
+        return { tableResult, guestResult: null };
+      }
+      const savedRecord = tableResult.data?.data ?? tableResult.data?.table ?? tableResult.data;
+      const savedGuestsValue = savedRecord?.occupiedChairs ?? savedRecord?.OccupiedChairs ?? savedRecord?.guests ?? savedRecord?.Guests;
+      if (savedGuestsValue === undefined || savedGuestsValue === null || !Number.isFinite(Number(savedGuestsValue)) || Number(savedGuestsValue) < 0) {
+        return { tableResult, savedRecord, guestResult: null, savedGuests: null };
+      }
+      const savedGuests = Number(savedGuestsValue);
+      if (savedGuests !== occupiedSeatsCount || Number(activeOrderId) <= 0 || savedGuests <= 0) {
+        return { tableResult, savedRecord, guestResult: null, savedGuests };
+      }
+      const guestResult = await apiUpdateOrderGuests(activeOrderId, savedGuests);
+      return { tableResult, savedRecord, guestResult, savedGuests };
+    });
+    tableUpdateQueuesRef.current.set(tableKey, saveRequest);
+    return saveRequest.then(({ tableResult, savedRecord, guestResult, savedGuests }) => {
+      if (tableUpdateSequencesRef.current.get(tableKey) !== updateSequence) return true;
+      const result = tableResult;
+      if (!result?.success || result?.data?.success === false) {
+        restorePreviousGuestCount();
+        showToast(result?.error || result?.data?.message || "The table guest count could not be saved by the backend.");
+        return false;
+      }
+      if (savedGuests === null || savedGuests === undefined) {
+        restorePreviousGuestCount();
+        showToast("The table update returned no guest count, so the saved value could not be confirmed.");
+        return false;
+      }
+
+      const confirmedSeats = savedGuests === selectedSeats.length
+        ? selectedSeats
+        : (savedGuests < selectedSeats.length
+          ? selectedSeats.slice(0, savedGuests)
+          : Array.from({ length: savedGuests }, (_, index) => {
+              const seatId = `S${index + 1}`;
+              return normalized.seatLabels?.[seatId] || seatId;
+            }));
+      const confirmedTable = {
+        ...normalized,
+        backendTableId: savedRecord?.tableId ?? savedRecord?.TableId ?? normalized.backendTableId,
+        guests: savedGuests,
+        occupiedChairs: savedGuests,
+        selectedSeats: confirmedSeats,
+        status: String(savedRecord?.status ?? savedRecord?.Status ?? normalized.status).toLowerCase(),
+      };
+      setTables((current) => {
+        const updated = current.map((table) => isSameTable(table, updatedTable) ? { ...table, ...confirmedTable } : table);
+        try {
+          localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(updated));
+          pushGlobalSync({ [STORAGE_KEY_TABLES]: updated });
+          window.dispatchEvent(new CustomEvent("avsr-tables-updated", { detail: updated }));
+        } catch {}
+        return updated;
+      });
+
+      if (savedGuests !== occupiedSeatsCount) {
+        showToast(`Backend saved ${savedGuests} guests for ${normalized.name || "this table"}; ${occupiedSeatsCount} chairs were selected. The requested guest count was not confirmed.`);
+        return false;
+      }
+      if (Number(activeOrderId) > 0 && savedGuests > 0) {
+        const orderRecord = guestResult?.data?.data ?? guestResult?.data;
+        const orderGuests = Number(orderRecord?.guests ?? orderRecord?.Guests);
+        if (!guestResult?.success || guestResult?.data?.success === false || orderGuests !== savedGuests) {
+          showToast(guestResult?.error || guestResult?.data?.message || "The table count was saved, but the active order did not confirm the same guest count.");
+          return false;
+        }
+      }
       const assignmentClearRequested = !updatedTable.assignedServerId && !updatedTable.server && !updatedTable.assignedServerName;
       const assignmentClearUnsupported = Boolean(previousTable && assignmentClearRequested && (savedRecord?.assignedServerId || savedRecord?.assignedServerName));
       if (assignmentClearUnsupported) {
@@ -4563,18 +4757,19 @@ export function App() {
         });
         return false;
       }
-      if (!result?.success) {
-        // Backend offline or route unhandled - gracefully keep changes in local storage!
-        console.warn(`Table sync offline (${result?.error || "unreachable"}), saved in local storage.`);
-        showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${normalized.persons || cap} Persons)`);
-        return true;
-      }
-      showToast(`Updated ${normalized.name} (${cap} Chairs / ${normalized.persons || cap} Persons) in shared hotel tables.`);
+      showToast(`Updated ${normalized.name || "Table"} (${cap} Chairs / ${savedGuests} Guests) in shared hotel tables.`);
       return true;
     }).catch((error) => {
-      console.warn("Table update network error, preserved locally:", error?.message);
-      showToast(`✅ Saved ${normalized.name || `Table-${normalized.id}`} (${cap} Chairs / ${normalized.persons || cap} Persons)`);
-      return true;
+      if (tableUpdateSequencesRef.current.get(tableKey) === updateSequence) {
+        restorePreviousGuestCount();
+        console.warn("Table update could not be confirmed by the backend:", error?.message);
+        showToast(error?.message || "The table guest count could not be confirmed by the backend.");
+      }
+      return false;
+    }).finally(() => {
+      if (tableUpdateQueuesRef.current.get(tableKey) === saveRequest) {
+        tableUpdateQueuesRef.current.delete(tableKey);
+      }
     });
   };
 
