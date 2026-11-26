@@ -349,7 +349,7 @@ export function AdminSidebar({
             position: "absolute",
             right: "26px",
             top: "85px",
-            color: "#fde68a",
+            color: "var(--accent-amber-light)",
             animation: "sidebarSteamRise 4.5s ease-out infinite",
           }}
         >
@@ -426,7 +426,7 @@ export function AdminSidebar({
         </div>
 
         {/* Subtle Culinary Garnish Sparkles */}
-        <div style={{ position: "absolute", right: "45px", top: "180px", color: "#fde047", animation: "sidebarSparkle 3.8s ease-in-out infinite" }}>
+        <div style={{ position: "absolute", right: "45px", top: "180px", color: "var(--accent-amber-light)", animation: "sidebarSparkle 3.8s ease-in-out infinite" }}>
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
         <div style={{ position: "absolute", left: "28px", top: "460px", color: "var(--accent-amber-light)", animation: "sidebarSparkle 4.4s ease-in-out infinite 1.2s" }}>

@@ -47,6 +47,14 @@ export function updateAccentVariables(value, theme = typeof document !== "undefi
   const contrast = darkContrast >= lightContrast ? "#0f172a" : "#ffffff";
   if (typeof document !== "undefined") {
     const root = document.documentElement;
+    let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement("meta");
+      themeColorMeta.name = "theme-color";
+      document.head.appendChild(themeColorMeta);
+    }
+    themeColorMeta.content = hex;
+    updateThemeFavicon(hex);
     root.dataset.accent = hex;
     if (document.body) document.body.dataset.accent = hex;
     root.style.setProperty("--accent-primary", hex);
@@ -82,6 +90,17 @@ export function updateAccentVariables(value, theme = typeof document !== "undefi
     root.style.setProperty("--accent-border", `color-mix(in srgb, ${active} 55%, var(--border-card))`);
   }
   return hex;
+}
+
+function updateThemeFavicon(hex) {
+  const favicon = document.querySelector('link#app-favicon[rel~="icon"]');
+  if (!favicon) return;
+
+  // Keep the existing restaurant cutlery SVG and replace only its accent fill.
+  const href = favicon.getAttribute("href");
+  if (!href?.startsWith("data:image/svg+xml,")) return;
+  const themedHref = href.replace(/(fill=')%23[\da-f]{6}(')/i, `$1%23${hex.slice(1)}$2`);
+  if (themedHref !== href) favicon.setAttribute("href", themedHref);
 }
 
 function relativeLuminance(hex) {

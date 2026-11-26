@@ -320,7 +320,7 @@ export function AdminHeader({
             position: "absolute",
             left: "19%",
             top: "5px",
-            color: "#fde68a",
+            color: "var(--accent-amber-light)",
             animation: "steamWispRiseA 4.2s ease-out infinite",
           }}
         >
@@ -385,7 +385,7 @@ export function AdminHeader({
             position: "absolute",
             left: "65%",
             top: "7px",
-            color: "#fde68a",
+            color: "var(--accent-amber-light)",
             animation: "steamWispRiseB 4.8s ease-out infinite 1.8s",
           }}
         >
@@ -412,19 +412,19 @@ export function AdminHeader({
         </div>
 
         {/* Subtle Culinary Garnish Sparkles */}
-        <div style={{ position: "absolute", left: "10%", top: "32px", color: "#fde047", animation: "culinarySparkle 3.5s ease-in-out infinite" }}>
+        <div style={{ position: "absolute", left: "10%", top: "32px", color: "var(--accent-amber-light)", animation: "culinarySparkle 3.5s ease-in-out infinite" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
         <div style={{ position: "absolute", left: "26%", top: "16px", color: "var(--accent-amber-light)", animation: "culinarySparkle 4.2s ease-in-out infinite 1s" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
-        <div style={{ position: "absolute", left: "41%", top: "36px", color: "#fde047", animation: "culinarySparkle 3.8s ease-in-out infinite 1.7s" }}>
+        <div style={{ position: "absolute", left: "41%", top: "36px", color: "var(--accent-amber-light)", animation: "culinarySparkle 3.8s ease-in-out infinite 1.7s" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
         <div style={{ position: "absolute", left: "56%", top: "14px", color: "var(--accent-amber-light)", animation: "culinarySparkle 4.6s ease-in-out infinite 0.5s" }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
-        <div style={{ position: "absolute", left: "71%", top: "34px", color: "#fde047", animation: "culinarySparkle 3.9s ease-in-out infinite 2.2s" }}>
+        <div style={{ position: "absolute", left: "71%", top: "34px", color: "var(--accent-amber-light)", animation: "culinarySparkle 3.9s ease-in-out infinite 2.2s" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4L22 12l-7.6 2.6L12 22l-2.4-7.4L2 12l7.6-2.6z"/></svg>
         </div>
         <div style={{ position: "absolute", left: "85%", top: "18px", color: "var(--accent-amber-light)", animation: "culinarySparkle 4.1s ease-in-out infinite 1.2s" }}>
