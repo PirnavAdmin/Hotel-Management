@@ -1612,59 +1612,63 @@ export function SelfServiceView({
               {selectedPaymentMethod === "upi" && (
                 <div className="self-service-qr-wrapper">
                   {/* QR Display Area */}
-                  <div className="self-service-qr-card">
+                  <div className="self-service-qr-card" style={{ flexDirection: "column", gap: "0.45rem" }}>
                     {qrDataUrl ? (
                       <img src={qrDataUrl} alt={`Backend UPI QR for ${formatCurrency(activePayableAmount)}`} />
                     ) : (
-                      <div
-                        style={{
-                          width: "220px",
-                          height: "220px",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          textAlign: "center",
-                          padding: "1rem",
-                          boxSizing: "border-box",
-                          color: "#475569",
-                          background: "#f8fafc",
-                          borderRadius: "8px",
-                          border: "1px dashed #cbd5e1",
-                        }}
-                      >
-                        <QrCode size={42} color="#64748b" />
-                        <span style={{ fontSize: "0.8rem", fontWeight: 800, marginTop: "0.65rem", color: "#1e293b" }}>
-                          Payment gateway integration pending.
-                        </span>
-                        <span style={{ fontSize: "0.7rem", marginTop: "0.3rem", color: "#64748b", lineHeight: 1.35 }}>
-                          Awaiting authenticated backend QR payload for {activeOrderNumber}.
-                        </span>
-                      </div>
+                      <>
+                        <img
+                          src="/dummy-upi-qr.png"
+                          alt={`Demo UPI QR Code for ${activeOrderNumber} - Not a real payment`}
+                        />
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 900,
+                            color: "#dc2626",
+                            letterSpacing: "0.04em",
+                            textAlign: "center",
+                          }}
+                        >
+                          DEMO QR – NOT A REAL PAYMENT
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            color: "#334155",
+                            textAlign: "center",
+                          }}
+                        >
+                          Order: {activeOrderNumber} • Amount: {formatCurrency(activePayableAmount)}
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  {/* Pending Integration Notice */}
-                  <div
-                    style={{
-                      width: "100%",
-                      padding: "0.65rem 0.85rem",
-                      borderRadius: "8px",
-                      background: "rgba(245, 158, 11, 0.1)",
-                      border: "1px solid rgba(245, 158, 11, 0.3)",
-                      fontSize: "0.76rem",
-                      color: "var(--text-main)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <AlertCircle size={16} color="var(--accent-amber, #f59e0b)" style={{ flexShrink: 0 }} />
-                    <span>
-                      <strong>Payment gateway integration pending.</strong> Live UPI QR verification will be enabled once the backend payment API is connected.
-                    </span>
-                  </div>
+                  {/* Demo QR Notice (Payment stays Pending; never marks Paid) */}
+                  {!qrDataUrl && (
+                    <div
+                      style={{
+                        width: "100%",
+                        padding: "0.65rem 0.85rem",
+                        borderRadius: "8px",
+                        background: "rgba(245, 158, 11, 0.1)",
+                        border: "1px solid rgba(245, 158, 11, 0.3)",
+                        fontSize: "0.76rem",
+                        color: "var(--text-main)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <AlertCircle size={16} color="var(--accent-amber, #f59e0b)" style={{ flexShrink: 0 }} />
+                      <span>
+                        <strong>DEMO QR – NOT A REAL PAYMENT.</strong> Payment status remains <strong>{paymentOrder?.paymentStatus || "Pending"}</strong> for {activeOrderNumber}; scanning this demo QR does not confirm payment or issue an official invoice.
+                      </span>
+                    </div>
+                  )}
 
                   {/* UPI Apps Badges */}
                   <div className="self-service-qr-badges">

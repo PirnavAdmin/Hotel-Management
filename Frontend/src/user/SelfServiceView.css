@@ -678,6 +678,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 2px solid var(--border-subtle);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -689,8 +691,10 @@
 
 .self-service-qr-card img {
   display: block;
-  width: 220px;
-  height: 220px;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  aspect-ratio: 1 / 1;
   border-radius: 6px;
   object-fit: contain;
 }
