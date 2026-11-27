@@ -1631,6 +1631,22 @@ export const MENU_ITEMS = [
     "isAvailable": true
   },
   {
+    "id": "m-1124",
+    "menuItemId": 1124,
+    "name": "Ragi Mudda & Egg Curry",
+    "category": "Lunch Menu",
+    "price": 169,
+    "isVeg": false,
+    "dietaryType": "Non-Veg",
+    "spiceLevel": 2,
+    "prepTime": "15 min",
+    "prepTimeMinutes": 15,
+    "description": "Nutritious steamed ragi mudda served with spicy egg curry gravy.",
+    "image": "/assets/curries/kadai-chicken.jpg",
+    "isChefSpecial": false,
+    "isAvailable": true
+  },
+  {
     "id": "m-1115",
     "menuItemId": 1115,
     "name": "Egg Curry",

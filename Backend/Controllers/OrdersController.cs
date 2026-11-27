@@ -235,7 +235,7 @@ public class OrdersController : ControllerBase
                     order = await _context.Orders
                         .Include(o => o.Items)
                         .Where(o =>
-                            (o.TableId == restTable.TableId || o.TableName == restTable.TableName || o.TableName == restTable.TableNumber) &&
+                            o.TableId == restTable.TableId &&
                             o.IsActive &&
                             !o.IsDeleted &&
                             o.Status != "Settled" &&
@@ -1360,10 +1360,29 @@ public class OrdersController : ControllerBase
 
             if (!menuItemsMap.TryGetValue(itemInput.MenuItemId, out var menuItem))
             {
+                if (!string.IsNullOrWhiteSpace(itemInput.Name))
+                {
+                    var cleanName = itemInput.Name.Trim();
+                    menuItem = await _context.MenuItems.AsNoTracking()
+                        .FirstOrDefaultAsync(m => m.DeletedAt == null &&
+                            (!m.BranchId.HasValue || m.BranchId.Value == branch.BranchId) &&
+                            (m.DishName == cleanName || EF.Functions.Like(m.DishName, cleanName)));
+
+                    if (menuItem == null)
+                    {
+                        menuItem = await _context.MenuItems.AsNoTracking()
+                            .FirstOrDefaultAsync(m => m.DeletedAt == null &&
+                                (m.DishName == cleanName || EF.Functions.Like(m.DishName, cleanName)));
+                    }
+                }
+            }
+
+            if (menuItem == null)
+            {
                 return BadRequest(new
                 {
                     success = false,
-                    message = $"Menu item with ID {itemInput.MenuItemId} was not found or has been deleted."
+                    message = $"Menu item '{itemInput.Name ?? itemInput.MenuItemId.ToString()}' was not found or has been deleted."
                 });
             }
 

@@ -69,11 +69,17 @@ export async function apiCreateSelfServiceOrder(orderData, branchId = null) {
   const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
   const payload = {
     items: Array.isArray(orderData?.items)
-      ? orderData.items.map((i) => ({
-          menuItemId: Number(i.menuItemId || i.id || 0),
-          quantity: Number(i.quantity || 1),
-          notes: i.notes ? String(i.notes).trim() : "Self Service Order",
-        }))
+      ? orderData.items.map((i) => {
+          const rawId = i.menuItemId ?? i.id ?? 0;
+          const cleanId = typeof rawId === "string" ? rawId.replace(/^m-/, "") : rawId;
+          const numId = parseInt(cleanId, 10);
+          return {
+            menuItemId: !isNaN(numId) && numId > 0 ? numId : 0,
+            name: i.name || i.dishName || undefined,
+            quantity: Math.max(1, parseInt(i.quantity || 1, 10) || 1),
+            notes: i.notes ? String(i.notes).trim() : "Self Service Order",
+          };
+        })
       : [],
     customerName: orderData?.customerName ? String(orderData.customerName).trim() : undefined,
     customerPhone: orderData?.customerPhone ? String(orderData.customerPhone).trim() : undefined,
