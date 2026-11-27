@@ -16,6 +16,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/audit")]
+[Authorize(Roles = "Admin,PlatformSuperAdmin,RestaurantOwner,RestaurantAdmin,BranchManager")]
 public class AuditController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -32,7 +33,6 @@ public class AuditController : ControllerBase
     /// <summary>
     /// Retrieves paginated audit logs with search and category filters.
     /// </summary>
-    [AllowAnonymous]
     [HttpGet("logs")]
     public async Task<IActionResult> GetAuditLogs(
         [FromQuery] string? action,
@@ -153,7 +153,6 @@ public class AuditController : ControllerBase
     /// <summary>
     /// Writes a new audit log record.
     /// </summary>
-    [AllowAnonymous]
     [HttpPost("logs")]
     public async Task<IActionResult> CreateAuditLog([FromBody] CreateAuditLogRequestDto request)
     {
@@ -214,7 +213,6 @@ public class AuditController : ControllerBase
     /// <summary>
     /// Retrieves statistical summary of audit logs for CA and operational monitoring.
     /// </summary>
-    [AllowAnonymous]
     [HttpGet("summary")]
     public async Task<IActionResult> GetAuditSummary()
     {
@@ -263,7 +261,6 @@ public class AuditController : ControllerBase
     /// <summary>
     /// Exports audit log records into a statutory CSV file for CA and Auditor compliance.
     /// </summary>
-    [AllowAnonymous]
     [HttpGet("export")]
     public async Task<IActionResult> ExportAuditLogs([FromQuery] string? fromDate, [FromQuery] string? toDate)
     {

@@ -98,6 +98,11 @@ export default function SubscriptionsModule() {
       <SaModuleHeader
         title="Subscription Management"
         subtitle="SaaS plan tiers, branch & user limits, module entitlements, trial statuses, and expiry tracking."
+        actions={
+          <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+            {state.loading ? "Refreshing..." : "Refresh"}
+          </button>
+        }
       />
 
       <div className="sa-kpi-grid" style={{ marginBottom: 20 }}>

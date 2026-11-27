@@ -2303,6 +2303,21 @@ export default defineConfig(({ mode }) => {
   return {
     envDir: FRONTEND_ROOT,
     plugins: [react(), globalSyncPlugin(backendTarget)],
+    resolve: {
+      dedupe: ["react", "react-dom", "react-router-dom"],
+    },
+    optimizeDeps: {
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react/jsx-runtime",
+        "react-router-dom",
+        "lucide-react",
+        "@microsoft/signalr",
+        "qrcode",
+      ],
+    },
     server: {
       host: true, // Listens on 0.0.0.0 (Localhost & Local Network IP for all devices)
       port: 5173,

@@ -8,7 +8,7 @@ export default function ContactSection() {
     <section id="contact" className="saas-section saas-section-alt" aria-labelledby="contact-heading">
       <div className="saas-container">
         <div className="saas-grid-2" style={{ alignItems: "center" }}>
-          <div>
+          <div className="saas-reveal" data-reveal>
             <span className="saas-eyebrow">About &amp; Contact</span>
             <h2 id="contact-heading" className="saas-h2">
               Ready To Modernize Your Restaurant Operations?
@@ -35,7 +35,7 @@ export default function ContactSection() {
             </div>
           </div>
 
-          <div className="saas-card">
+          <div className="saas-card saas-reveal" data-reveal style={{ "--reveal-delay": "100ms" }}>
             <h3 className="saas-card-title">Direct Onboarding Desk</h3>
             <p className="saas-card-text">
               Reach our hospitality product specialists for multi-branch rollouts, hardware

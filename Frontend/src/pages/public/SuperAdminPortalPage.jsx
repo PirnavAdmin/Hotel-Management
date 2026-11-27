@@ -183,7 +183,9 @@ export default function SuperAdminPortalPage({ session, onLogout }) {
                 </div>
               }
             >
-              {renderModule()}
+              <div key={activeSection} className="sa-module-enter">
+                {renderModule()}
+              </div>
             </Suspense>
           </ErrorBoundary>
         </div>

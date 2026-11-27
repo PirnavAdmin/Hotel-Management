@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -22,18 +23,21 @@ public class AuthService
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly ILogger<AuthService> _logger;
+    private readonly AppDbContext? _dbContext;
     private static readonly ConcurrentDictionary<string, (string OtpHash, DateTime ExpiresAt)> MemoryOtpStore = new();
 
     public AuthService(
         SpService spService,
         IConfiguration configuration,
         IEmailService emailService,
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+        AppDbContext? dbContext = null)
     {
         _spService = spService;
         _configuration = configuration;
         _emailService = emailService;
         _logger = logger;
+        _dbContext = dbContext;
     }
 
     public async Task<RegisterResponseDto> RegisterAsync(RegisterRequestDto request)
@@ -186,51 +190,11 @@ public class AuthService
     {
         var loginValue = (request.UsernameOrEmail ?? "").Trim();
         var normUser = loginValue.ToLower();
-        var normPass = (request.Password ?? "").Trim();
+        var rawPassword = request.Password ?? "";
 
-        // 1. Guaranteed administrative authentication for 'pirnav' and primary admin credentials
-        if (normUser == "pirnav" || normUser == "pirnavadmin" || normUser.Contains("pirnav") || normUser == "admin" || normUser == "admins")
+        if (string.IsNullOrWhiteSpace(loginValue) || string.IsNullOrWhiteSpace(rawPassword))
         {
-            if (normPass == "Admin@123" || string.Equals(normPass, "admin@123", StringComparison.OrdinalIgnoreCase) ||
-                normPass == "pirnav" || string.Equals(normPass, "pirnav@123", StringComparison.OrdinalIgnoreCase) ||
-                normPass == "1234" || normPass == "admin")
-            {
-                var adminUser = new User
-                {
-                    UserId = normUser.Contains("pirnav") ? 26 : 7,
-                    UserName = normUser.Contains("pirnav") ? "pirnav" : "admin",
-                    FullName = "pirnav",
-                    Email = normUser.Contains("pirnav") ? "pasupuleti.bhanu7@gmail.com" : "admin@bhanupos.com",
-                    Phone = "9999999999",
-                    RoleId = 1,
-                    BranchId = normUser.Contains("pirnav") ? 1 : (long?)null,
-                    IsActive = true,
-                    Role = new Role
-                    {
-                        RoleId = 1,
-                        RoleName = "Admin",
-                        IsActive = true
-                    }
-                };
-                var tokenStr = GenerateJwtToken(adminUser);
-                return new LoginResponseDto
-                {
-                    Success = true,
-                    Message = "Login successful.",
-                    Token = tokenStr,
-                    User = new UserLoginDto
-                    {
-                        UserId = adminUser.UserId,
-                        FullName = "pirnav",
-                        UserName = adminUser.UserName,
-                        Email = adminUser.Email,
-                        Phone = adminUser.Phone,
-                        RoleId = adminUser.RoleId,
-                        RoleName = "Admin",
-                        BranchId = adminUser.BranchId
-                    }
-                };
-            }
+            return new LoginResponseDto { Success = false, Message = "Username/email and password are required." };
         }
 
         List<User> users = new();
@@ -240,44 +204,20 @@ public class AuthService
         }
         catch { }
 
-        // Resilient administrative authentication for 'pirnav' and primary admin
-        if (users.Count == 0 && (normUser == "pirnav" || normUser == "pirnavadmin" || normUser.Contains("pirnav") || normUser == "admin" || normUser == "admins"))
+        if (users.Count == 0 && _dbContext != null)
         {
-            var fallbackUser = new User
+            try
             {
-                UserId = normUser.Contains("pirnav") ? 26 : 7,
-                UserName = normUser.Contains("pirnav") ? "pirnav" : "admin",
-                FullName = "pirnav",
-                Email = normUser.Contains("pirnav") ? "pasupuleti.bhanu7@gmail.com" : "admin@bhanupos.com",
-                Phone = "9999999999",
-                RoleId = 1,
-                BranchId = normUser.Contains("pirnav") ? 1 : (long?)null,
-                IsActive = true,
-                Role = new Role
+                var dbUser = await _dbContext.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.DeletedAt == null &&
+                        (u.UserName.ToLower() == normUser || u.Email.ToLower() == normUser));
+                if (dbUser != null)
                 {
-                    RoleId = 1,
-                    RoleName = "Admin",
-                    IsActive = true
+                    users.Add(dbUser);
                 }
-            };
-            var tokenStr = GenerateJwtToken(fallbackUser);
-            return new LoginResponseDto
-            {
-                Success = true,
-                Message = "Login successful.",
-                Token = tokenStr,
-                User = new UserLoginDto
-                {
-                    UserId = fallbackUser.UserId,
-                    FullName = "pirnav",
-                    UserName = fallbackUser.UserName,
-                    Email = fallbackUser.Email,
-                    Phone = fallbackUser.Phone,
-                    RoleId = fallbackUser.RoleId,
-                    RoleName = "Admin",
-                    BranchId = fallbackUser.BranchId
-                }
-            };
+            }
+            catch { }
         }
 
         if (users.Count == 0)
@@ -287,7 +227,6 @@ public class AuthService
 
         var user = users[0];
 
-        // Ensure role is mapped if missing from stored procedure
         if (user.Role == null)
         {
             try
@@ -299,31 +238,21 @@ public class AuthService
                 }
             }
             catch { }
-        }
 
-        if (user.Role == null)
-        {
-            user.Role = new Role
+            if (user.Role == null && _dbContext != null)
             {
-                RoleId = user.RoleId > 0 ? user.RoleId : 1,
-                RoleName = (user.RoleId == 2 ? "Kitchen KOT" : (user.RoleId == 3 ? "User POS" : "Admin")),
-                IsActive = true
-            };
+                user.Role = await _dbContext.Roles.FirstOrDefaultAsync(r => r.RoleId == user.RoleId && r.DeletedAt == null);
+            }
         }
 
-        if (!user.IsActive)
+        if (!user.IsActive || user.DeletedAt != null)
         {
-            user.IsActive = true;
+            return new LoginResponseDto { Success = false, Message = "Account is inactive or pending approval." };
         }
 
         if (user.Role == null || !user.Role.IsActive)
         {
-            user.Role = new Role
-            {
-                RoleId = user.RoleId > 0 ? user.RoleId : 1,
-                RoleName = "Admin",
-                IsActive = true
-            };
+            return new LoginResponseDto { Success = false, Message = "Assigned user role is inactive." };
         }
 
         var passwordValid = false;
@@ -331,26 +260,48 @@ public class AuthService
         {
             if (!string.IsNullOrEmpty(user.PasswordHash))
             {
-                passwordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+                passwordValid = BCrypt.Net.BCrypt.Verify(rawPassword, user.PasswordHash);
+            }
+            else if (!string.IsNullOrEmpty(user.Password))
+            {
+                passwordValid = string.Equals(rawPassword, user.Password, StringComparison.Ordinal);
             }
         }
         catch { }
 
         if (!passwordValid)
         {
-            if (!string.IsNullOrEmpty(user.Password) && request.Password == user.Password)
-            {
-                passwordValid = true;
-            }
-            else if (normUser.Contains("pirnav") || request.Password == "pirnav" || request.Password == "Pirnav@123" || request.Password == "Admin@123" || request.Password == "Vicky$12" || request.Password == "Password123" || request.Password == "admin" || request.Password == "1234")
-            {
-                passwordValid = true;
-            }
+            return new LoginResponseDto { Success = false, Message = "Invalid username/email or password." };
         }
 
-        if (!passwordValid)
+        // Tenant status & branch context validation (non-SuperAdmin)
+        var isSuperAdmin = string.Equals(user.Role.RoleName, "PlatformSuperAdmin", StringComparison.OrdinalIgnoreCase);
+        if (!isSuperAdmin && _dbContext != null && user.BranchId.HasValue)
         {
-            return new LoginResponseDto { Success = false, Message = "Invalid username/email or password." };
+            try
+            {
+                var branch = await _dbContext.Branches
+                    .Include(b => b.Restaurant)
+                    .ThenInclude(r => r!.Organization)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(b => b.BranchId == user.BranchId.Value && b.DeletedAt == null);
+
+                if (branch == null || !branch.IsActive)
+                {
+                    return new LoginResponseDto { Success = false, Message = "Assigned branch is inactive or unavailable." };
+                }
+
+                if (branch.Restaurant != null && !string.Equals(branch.Restaurant.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new LoginResponseDto { Success = false, Message = "Restaurant workspace is not active." };
+                }
+
+                if (branch.Restaurant?.Organization != null && !string.Equals(branch.Restaurant.Organization.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new LoginResponseDto { Success = false, Message = "Organization account is suspended or pending approval." };
+                }
+            }
+            catch { }
         }
 
         try
@@ -628,7 +579,7 @@ public class AuthService
         return new { success = true, message = "Password reset successfully." };
     }
 
-    private string GenerateJwtToken(User user)
+    public string GenerateJwtToken(User user)
     {
         var jwtKey = _configuration["Jwt:Key"];
         var jwtIssuer = _configuration["Jwt:Issuer"];
@@ -636,6 +587,38 @@ public class AuthService
         var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var minutes) ? minutes : 60;
 
         if (string.IsNullOrWhiteSpace(jwtKey)) throw new InvalidOperationException("JWT key is missing.");
+
+        string organizationId = "";
+        string restaurantId = user.BranchId.HasValue ? $"restaurant_{user.BranchId.Value}" : "";
+        var permissions = new List<string>();
+
+        if (_dbContext != null)
+        {
+            try
+            {
+                if (user.BranchId.HasValue)
+                {
+                    var branch = _dbContext.Branches
+                        .Include(b => b.Restaurant)
+                        .AsNoTracking()
+                        .FirstOrDefault(b => b.BranchId == user.BranchId.Value);
+
+                    if (branch?.Restaurant != null)
+                    {
+                        restaurantId = branch.Restaurant.RestaurantId.ToString();
+                        organizationId = branch.Restaurant.OrganizationId.ToString();
+                    }
+                }
+
+                permissions = _dbContext.RolePermissions
+                    .AsNoTracking()
+                    .Where(rp => rp.RoleId == user.RoleId && rp.IsGranted)
+                    .Select(rp => rp.PermissionKey)
+                    .Distinct()
+                    .ToList();
+            }
+            catch { }
+        }
 
         var claims = new List<Claim>
         {
@@ -649,8 +632,14 @@ public class AuthService
             new Claim("roleId", user.RoleId.ToString()),
             new Claim("roleName", user.Role?.RoleName ?? string.Empty),
             new Claim("branchId", user.BranchId?.ToString() ?? ""),
-            new Claim("restaurantId", user.BranchId.HasValue ? $"restaurant_{user.BranchId.Value}" : "")
+            new Claim("restaurantId", restaurantId),
+            new Claim("organizationId", organizationId)
         };
+
+        foreach (var perm in permissions)
+        {
+            claims.Add(new Claim("permissions", perm));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

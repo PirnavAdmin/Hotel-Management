@@ -90,6 +90,7 @@ import {
   apiUpdateOrderDiscount,
   apiBillOrder,
   apiSettleOrder,
+  apiDeleteOrder,
 } from "./api/orderApi";
 import { apiGetInvoiceByOrder } from "./api/invoiceApi";
 import {
@@ -3742,8 +3743,17 @@ export function App() {
     const tbl = selectedTable;
     const targetApiId = tbl?.backendTableId || tableId;
     try {
-      apiVacateTable(targetApiId).catch(() => {});
-      apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
+      let orderIdToCancel = tbl?.activeOrderId || tbl?.backendOrderId || null;
+      if (!orderIdToCancel && targetApiId) {
+        const activeOrderRes = await apiGetOrderForTable(targetApiId).catch(() => null);
+        const existingOrder = activeOrderRes?.data?.data || activeOrderRes?.data;
+        orderIdToCancel = existingOrder?.id || existingOrder?.orderId || null;
+      }
+      if (orderIdToCancel) {
+        await apiDeleteOrder(orderIdToCancel).catch(() => {});
+      }
+      await apiVacateTable(targetApiId).catch(() => {});
+      await apiUpdateTableStatus(targetApiId, "vacant").catch(() => {});
     } catch {}
 
     showToast(`${tableName} order cleared.`);

@@ -13,9 +13,17 @@ export function RolesManagement({ isLight = false, showToast = alert }) {
     try {
       const res = await apiGetRoles();
       if (res?.success) {
-        setRoles(res.data || []);
+        const raw = res.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw?.roles)
+              ? raw.roles
+              : [];
+        setRoles(list);
       } else {
-        setError(res?.message || 'Failed to load roles.');
+        setError(res?.message || res?.error || 'Failed to load roles.');
       }
     } catch (err) {
       setError(err.message || 'Error connecting to database.');

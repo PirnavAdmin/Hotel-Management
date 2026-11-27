@@ -115,17 +115,22 @@ export default function UsersModule() {
         title="Admin & User Management"
         subtitle="Manage multiple Admin accounts, assign roles, and associate users with restaurants and branches (connected to /api/v1/users)."
         actions={
-          <button
-            type="button"
-            className="sa-btn sa-btn-primary"
-            onClick={() => {
-              setEditing(null);
-              setForm(EMPTY_USER);
-              setModalOpen(true);
-            }}
-          >
-            + Add Admin / User
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+              {state.loading ? "Refreshing..." : "Refresh"}
+            </button>
+            <button
+              type="button"
+              className="sa-btn sa-btn-primary"
+              onClick={() => {
+                setEditing(null);
+                setForm(EMPTY_USER);
+                setModalOpen(true);
+              }}
+            >
+              + Add Admin / User
+            </button>
+          </div>
         }
       />
 

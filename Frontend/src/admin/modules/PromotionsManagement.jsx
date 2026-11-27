@@ -22,9 +22,19 @@ export function PromotionsManagement({ isLight = false, showToast = alert }) {
     try {
       const res = await apiGetPromotions();
       if (res?.success) {
-        setPromotions(res.data || []);
+        const raw = res.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw?.promotions)
+              ? raw.promotions
+              : Array.isArray(raw?.items)
+                ? raw.items
+                : [];
+        setPromotions(list);
       } else {
-        setError(res?.message || 'Failed to load promotions.');
+        setError(res?.message || res?.error || 'Failed to load promotions.');
       }
     } catch (err) {
       setError(err.message || 'Error connecting to database.');

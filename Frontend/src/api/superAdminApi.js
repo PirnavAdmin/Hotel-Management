@@ -5,11 +5,16 @@ import { apiGetAuditLogs } from "./auditApi";
 
 function wrapSuperAdminResponse(res, endpoint, label) {
   if (res?.success) {
+    const raw = res.data;
+    const unwrapped =
+      raw && typeof raw === "object" && !Array.isArray(raw) && "success" in raw && "data" in raw
+        ? raw.data
+        : raw;
     return {
       success: true,
       integrationPending: false,
       status: res.status || 200,
-      data: res.data,
+      data: unwrapped,
       endpoint,
       error: "",
     };
@@ -158,6 +163,12 @@ export async function apiGetPlatformRoles() {
     };
   }
   return wrapSuperAdminResponse(res, "/api/v1/roles", "platform roles");
+}
+
+export async function apiGetRolePermissions(roleKey) {
+  const endpoint = `/api/v1/super-admin/roles/${encodeURIComponent(roleKey)}/permissions`;
+  const res = await apiClient(endpoint);
+  return wrapSuperAdminResponse(res, endpoint, "load role permissions");
 }
 
 export async function apiSaveRolePermissions(roleKey, permissionsPayload) {

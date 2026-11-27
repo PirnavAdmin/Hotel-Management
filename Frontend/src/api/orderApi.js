@@ -198,6 +198,12 @@ export async function apiRemoveOrderItem(orderId, itemId) {
   });
 }
 
+export async function apiDeleteOrder(orderId) {
+  return await apiClient(`/api/v1/orders/${encodeURIComponent(orderId)}`, {
+    method: "DELETE",
+  });
+}
+
 export async function apiBillOrder(orderId) {
   return apiClient(`/api/v1/orders/${orderId}/bill`, {
     method: "POST",

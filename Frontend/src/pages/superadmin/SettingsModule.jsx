@@ -51,6 +51,11 @@ export default function SettingsModule() {
       <SaModuleHeader
         title="Platform Settings"
         subtitle="Global SaaS branding, registration approval policy, currency/tax defaults, maintenance banner, and feature flags."
+        actions={
+          <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+            {state.loading ? "Refreshing..." : "Refresh"}
+          </button>
+        }
       />
 
       <SaStateBanner

@@ -11,7 +11,7 @@ namespace HMS.Controllers;
 
 [ApiController]
 [Route("api/v1/roles")]
-[AllowAnonymous]
+[Authorize]
 [Tags("Admin", "Roles")]
 public class RolesController : ControllerBase
 {

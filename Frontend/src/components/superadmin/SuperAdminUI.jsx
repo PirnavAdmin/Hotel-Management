@@ -30,11 +30,12 @@ export function SaStatusBadge({ status }) {
 export function SaStateBanner({ loading, integrationPending, error, endpoint, empty, emptyMessage, onRetry }) {
   if (loading) {
     return (
-      <div className="sa-card" aria-busy="true" aria-label="Loading module data">
+      <div className="sa-card" aria-busy="true" aria-label="Loading module data" style={{ marginBottom: 16 }}>
         <div style={{ display: "grid", gap: 10 }}>
-          <div className="sa-skeleton" style={{ width: "45%" }} />
+          <div className="sa-skeleton" style={{ width: "38%", height: 18 }} />
           <div className="sa-skeleton" style={{ width: "100%" }} />
-          <div className="sa-skeleton" style={{ width: "85%" }} />
+          <div className="sa-skeleton" style={{ width: "92%" }} />
+          <div className="sa-skeleton" style={{ width: "78%" }} />
         </div>
       </div>
     );
@@ -87,13 +88,14 @@ export const SaDataTable = React.memo(function SaDataTable({
   rowKey,
   searchPlaceholder = "Search...",
   filters,
-  pageSize = 8,
+  pageSize: initialPageSize = 8,
   emptyMessage = "No matching records.",
 }) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(initialPageSize);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -107,16 +109,24 @@ export const SaDataTable = React.memo(function SaDataTable({
 
     if (!sortKey) return list;
     return [...list].sort((a, b) => {
-      const av = String(a?.[sortKey] ?? "").toLowerCase();
-      const bv = String(b?.[sortKey] ?? "").toLowerCase();
+      const rawA = a?.[sortKey];
+      const rawB = b?.[sortKey];
+      const numA = typeof rawA === "number" ? rawA : Number(rawA);
+      const numB = typeof rawB === "number" ? rawB : Number(rawB);
+      if (rawA !== "" && rawB !== "" && !Number.isNaN(numA) && !Number.isNaN(numB)) {
+        if (numA === numB) return 0;
+        return sortDir === "asc" ? (numA > numB ? 1 : -1) : numA < numB ? 1 : -1;
+      }
+      const av = String(rawA ?? "").toLowerCase();
+      const bv = String(rawB ?? "").toLowerCase();
       if (av === bv) return 0;
       return sortDir === "asc" ? (av > bv ? 1 : -1) : av < bv ? 1 : -1;
     });
   }, [rows, columns, search, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
 
   const toggleSort = (key) => {
     if (!key) return;
@@ -141,8 +151,20 @@ export const SaDataTable = React.memo(function SaDataTable({
           }}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          style={{ minWidth: 220, flex: "1 1 220px", maxWidth: 340 }}
+          style={{ minWidth: 200, flex: "1 1 220px", maxWidth: 340 }}
         />
+        {search && (
+          <button
+            type="button"
+            className="sa-btn sa-btn-secondary"
+            onClick={() => {
+              setSearch("");
+              setPage(1);
+            }}
+          >
+            Clear
+          </button>
+        )}
         {filters}
       </div>
 
@@ -151,7 +173,16 @@ export const SaDataTable = React.memo(function SaDataTable({
           <thead>
             <tr>
               {columns.map((col) => (
-                <th key={col.key}>
+                <th
+                  key={col.key}
+                  aria-sort={
+                    col.sortable && sortKey === col.key
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                >
                   {col.sortable ? (
                     <button
                       type="button"
@@ -165,7 +196,7 @@ export const SaDataTable = React.memo(function SaDataTable({
                         padding: 0,
                       }}
                     >
-                      {col.label} {sortKey === col.key ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                      {col.label} {sortKey === col.key ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
                     </button>
                   ) : (
                     col.label
@@ -177,13 +208,17 @@ export const SaDataTable = React.memo(function SaDataTable({
           <tbody>
             {paged.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>
+                <td colSpan={columns.length} style={{ textAlign: "center", color: "#94a3b8", padding: 28 }}>
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
               paged.map((row, idx) => (
-                <tr key={rowKey ? rowKey(row) : row?.id || idx}>
+                <tr
+                  key={rowKey ? rowKey(row) : row?.id || idx}
+                  className="sa-row-enter"
+                  style={{ "--sa-row-idx": Math.min(idx, 12) }}
+                >
                   {columns.map((col) => (
                     <td key={col.key}>
                       {col.render ? col.render(row) : String(row?.[col.key] ?? "—")}
@@ -200,7 +235,23 @@ export const SaDataTable = React.memo(function SaDataTable({
         <span>
           Showing {paged.length} of {filtered.length} records (Page {safePage} of {totalPages})
         </span>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <select
+            className="sa-select"
+            aria-label="Rows per page"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(Number(e.target.value));
+              setPage(1);
+            }}
+            style={{ minHeight: 34, padding: "4px 8px", fontSize: 12.5 }}
+          >
+            {[8, 15, 25].map((n) => (
+              <option key={n} value={n}>
+                {n} / page
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             className="sa-btn sa-btn-secondary"

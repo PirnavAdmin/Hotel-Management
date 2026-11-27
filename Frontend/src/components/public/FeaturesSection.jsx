@@ -55,8 +55,13 @@ export default function FeaturesSection() {
         </div>
 
         <div className="saas-grid-3">
-          {CORE_FEATURES.map((feature) => (
-            <article key={feature.title} className="saas-card">
+          {CORE_FEATURES.map((feature, idx) => (
+            <article
+              key={feature.title}
+              className="saas-card saas-reveal"
+              data-reveal
+              style={{ "--reveal-delay": `${idx * 70}ms` }}
+            >
               <div className="saas-icon-badge" aria-hidden="true">
                 {feature.icon}
               </div>

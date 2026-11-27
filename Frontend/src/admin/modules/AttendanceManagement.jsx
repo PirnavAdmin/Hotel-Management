@@ -24,13 +24,24 @@ export function AttendanceManagement({ isLight = false, showToast = alert }) {
         apiGetAttendanceLogs(),
         apiGetStaff(),
       ]);
+      const extractList = (raw, extraKey) =>
+        Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : extraKey && Array.isArray(raw?.[extraKey])
+              ? raw[extraKey]
+              : Array.isArray(raw?.items)
+                ? raw.items
+                : [];
+
       if (attRes?.success) {
-        setLogs(attRes.data || []);
+        setLogs(extractList(attRes.data, 'logs'));
       } else {
-        setError(attRes?.message || 'Failed to load attendance logs.');
+        setError(attRes?.message || attRes?.error || 'Failed to load attendance logs.');
       }
       if (staffRes?.success) {
-        const staffList = staffRes.data || [];
+        const staffList = extractList(staffRes.data, 'staff');
         setStaff(staffList);
         if (staffList.length > 0 && !form.staffId) {
           setForm((prev) => ({ ...prev, staffId: staffList[0].staffId || staffList[0].id }));

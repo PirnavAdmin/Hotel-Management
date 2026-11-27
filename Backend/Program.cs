@@ -34,6 +34,20 @@ if (args.Length > 0 && args.Contains("--run-phase2b14-tests"))
     return;
 }
 
+if (args.Length > 0 && args.Contains("--run-phase331a-tests"))
+{
+    var exitCode = await Phase331ASaaSAuthTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
+
+if (args.Length > 0 && args.Contains("--run-phase331b-tests"))
+{
+    var exitCode = await Phase331BSaaSTests.RunAsync(args);
+    Environment.Exit(exitCode);
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Respect URLs configured via launchSettings.json, ASPNETCORE_URLS (e.g. Docker), or --urls;

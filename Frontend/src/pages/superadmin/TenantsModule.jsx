@@ -134,18 +134,23 @@ export default function TenantsModule() {
         title="Tenant Management"
         subtitle="Manage customer organizations, restaurants, branches, and tenant activation status."
         actions={
-          <button
-            type="button"
-            className="sa-btn saas-btn-primary sa-btn-primary"
-            onClick={() => {
-              setEditingTenant(null);
-              setWizardForm(EMPTY_WIZARD);
-              setWizardStep(1);
-              setWizardOpen(true);
-            }}
-          >
-            + Create Tenant Wizard
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+              {state.loading ? "Refreshing..." : "Refresh"}
+            </button>
+            <button
+              type="button"
+              className="sa-btn saas-btn-primary sa-btn-primary"
+              onClick={() => {
+                setEditingTenant(null);
+                setWizardForm(EMPTY_WIZARD);
+                setWizardStep(1);
+                setWizardOpen(true);
+              }}
+            >
+              + Create Tenant Wizard
+            </button>
+          </div>
         }
       />
 

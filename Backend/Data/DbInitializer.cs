@@ -64,6 +64,38 @@ public static class DbInitializer
             context.SaveChanges();
         }
 
+        var superAdminRole = context.Roles.FirstOrDefault(r => r.RoleName == "PlatformSuperAdmin" && r.DeletedAt == null);
+        if (superAdminRole == null)
+        {
+            superAdminRole = new Role
+            {
+                RoleName = "PlatformSuperAdmin",
+                Description = "PIRNAV SaaS platform super administrator",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            context.Roles.Add(superAdminRole);
+            context.SaveChanges();
+        }
+
+        var ownerRole = context.Roles.FirstOrDefault(r => r.RoleName == "RestaurantOwner" && r.DeletedAt == null);
+        if (ownerRole == null)
+        {
+            ownerRole = new Role
+            {
+                RoleName = "RestaurantOwner",
+                Description = "Primary owner of a registered restaurant organization",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            context.Roles.Add(ownerRole);
+            context.SaveChanges();
+        }
+
+        EnsureSaasSeeds(context, superAdminRole, adminRole, posRole, kotRole);
+
         // ============================================================
         // SEED/ENSURE PIRNAV & ADMIN USERS
         // ============================================================
@@ -1730,6 +1762,149 @@ public static class DbInitializer
                 UNIQUE KEY `uk_daily_reg_date` (`business_date`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
+        // PIRNAV SaaS Multi-Tenant Tables (Phase 3.31A - Idempotent)
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `organizations` (
+                `organization_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `name` VARCHAR(160) NOT NULL,
+                `slug` VARCHAR(120) NOT NULL,
+                `gstin` VARCHAR(20) NULL,
+                `owner_email` VARCHAR(150) NULL,
+                `status` VARCHAR(30) NOT NULL DEFAULT 'Active',
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `deleted_at` DATETIME(6) NULL,
+                PRIMARY KEY (`organization_id`),
+                UNIQUE KEY `ux_organizations_slug` (`slug`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `restaurants` (
+                `restaurant_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `organization_id` BIGINT NOT NULL,
+                `name` VARCHAR(160) NOT NULL,
+                `code` VARCHAR(60) NOT NULL,
+                `brand_tagline` VARCHAR(200) NULL,
+                `status` VARCHAR(30) NOT NULL DEFAULT 'Active',
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `deleted_at` DATETIME(6) NULL,
+                PRIMARY KEY (`restaurant_id`),
+                UNIQUE KEY `ux_restaurants_code` (`code`),
+                KEY `ix_restaurants_organization_id` (`organization_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, "ALTER TABLE `branches` ADD COLUMN `restaurant_id` BIGINT NULL;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `user_workspace_access` (
+                `user_workspace_access_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `user_id` BIGINT NOT NULL,
+                `organization_id` BIGINT NOT NULL,
+                `restaurant_id` BIGINT NOT NULL,
+                `branch_id` BIGINT NULL,
+                `scope_role` VARCHAR(50) NOT NULL DEFAULT 'Admin',
+                `is_default` TINYINT(1) NOT NULL DEFAULT 0,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (`user_workspace_access_id`),
+                UNIQUE KEY `ux_user_workspace_scope` (`user_id`, `organization_id`, `restaurant_id`, `branch_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `restaurant_registrations` (
+                `restaurant_registration_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `organization_name` VARCHAR(160) NOT NULL,
+                `restaurant_name` VARCHAR(160) NOT NULL,
+                `branch_name` VARCHAR(160) NOT NULL,
+                `owner_name` VARCHAR(120) NOT NULL,
+                `email` VARCHAR(150) NOT NULL,
+                `phone` VARCHAR(25) NOT NULL,
+                `password_hash` VARCHAR(255) NOT NULL,
+                `city` VARCHAR(100) NOT NULL,
+                `address` VARCHAR(500) NOT NULL,
+                `gstin` VARCHAR(20) NULL,
+                `status` VARCHAR(32) NOT NULL DEFAULT 'PendingApproval',
+                `rejection_reason` VARCHAR(500) NULL,
+                `reviewed_by_user_id` BIGINT NULL,
+                `reviewed_at` DATETIME(6) NULL,
+                `provisioned_organization_id` BIGINT NULL,
+                `provisioned_restaurant_id` BIGINT NULL,
+                `provisioned_branch_id` BIGINT NULL,
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (`restaurant_registration_id`),
+                KEY `ix_reg_email_status` (`email`, `status`),
+                KEY `ix_reg_gstin` (`gstin`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `demo_requests` (
+                `demo_request_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `name` VARCHAR(120) NOT NULL,
+                `restaurant_or_org` VARCHAR(160) NOT NULL,
+                `email` VARCHAR(150) NOT NULL,
+                `phone` VARCHAR(25) NOT NULL,
+                `branch_count` INT NOT NULL DEFAULT 1,
+                `message` VARCHAR(1000) NULL,
+                `status` VARCHAR(30) NOT NULL DEFAULT 'New',
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (`demo_request_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `tenant_subscriptions` (
+                `tenant_subscription_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `organization_id` BIGINT NOT NULL,
+                `plan_key` VARCHAR(60) NOT NULL DEFAULT 'single-outlet',
+                `plan_name` VARCHAR(100) NOT NULL DEFAULT 'Single Outlet',
+                `status` VARCHAR(30) NOT NULL DEFAULT 'Trial',
+                `trial_status` VARCHAR(40) NOT NULL DEFAULT 'ActiveTrial',
+                `branch_limit` INT NOT NULL DEFAULT 1,
+                `user_limit` INT NOT NULL DEFAULT 15,
+                `enabled_modules_json` TEXT NULL,
+                `monthly_price_inr` DECIMAL(12,2) NOT NULL DEFAULT 2499.00,
+                `current_period_start` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `current_period_end` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (`tenant_subscription_id`),
+                KEY `ix_tsub_org_status` (`organization_id`, `status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `role_permissions` (
+                `role_permission_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `role_id` BIGINT NOT NULL,
+                `role_key` VARCHAR(60) NOT NULL,
+                `permission_key` VARCHAR(80) NOT NULL,
+                `is_granted` TINYINT(1) NOT NULL DEFAULT 1,
+                `updated_by_user_id` BIGINT NULL,
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (`role_permission_id`),
+                UNIQUE KEY `ux_role_permission` (`role_id`, `permission_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `platform_settings` (
+                `platform_setting_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `setting_key` VARCHAR(100) NOT NULL,
+                `platform_name` VARCHAR(120) NOT NULL DEFAULT 'PIRNAV',
+                `require_manual_approval` TINYINT(1) NOT NULL DEFAULT 1,
+                `default_currency` VARCHAR(10) NOT NULL DEFAULT 'INR',
+                `default_tax_rate` DECIMAL(5,2) NOT NULL DEFAULT 5.00,
+                `notify_on_registration` TINYINT(1) NOT NULL DEFAULT 1,
+                `settings_json` TEXT NULL,
+                `updated_by_user_id` BIGINT NULL,
+                `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (`platform_setting_id`),
+                UNIQUE KEY `ux_platform_settings_key` (`setting_key`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
         // ============================================================
         // ALTER TABLE COLUMN SAFEGUARDS (For Pre-existing Databases)
         // ============================================================
@@ -2093,6 +2268,50 @@ public static class DbInitializer
         SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_table_date_status` ON `reservations` (`table_id`, `reservation_date`, `status`);");
         SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_phone` ON `reservations` (`phone`);");
         SafeExecuteSql(conn, "CREATE INDEX `idx_reservations_idempotency` ON `reservations` (`idempotency_key`);");
+
+        // Phase 3.31B SaaS extensions (non-destructive, idempotent)
+        EnsureColumnExists(conn, "branches", "branch_code", "VARCHAR(80) NULL AFTER `branch_name`");
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `saas_billing_invoices` (
+                `saas_billing_invoice_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `organization_id` BIGINT NOT NULL,
+                `invoice_number` VARCHAR(60) NOT NULL,
+                `plan_name` VARCHAR(100) NOT NULL,
+                `amount` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+                `due_date` DATETIME NOT NULL,
+                `status` VARCHAR(30) NOT NULL DEFAULT 'Pending',
+                `payment_reference` VARCHAR(120) NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`saas_billing_invoice_id`),
+                UNIQUE KEY `uq_saas_billing_invoice_number` (`invoice_number`),
+                KEY `ix_saas_billing_org_status` (`organization_id`, `status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `support_tickets` (
+                `support_ticket_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `organization_id` BIGINT NOT NULL,
+                `ticket_number` VARCHAR(50) NOT NULL,
+                `subject` VARCHAR(200) NOT NULL,
+                `priority` VARCHAR(20) NOT NULL DEFAULT 'Medium',
+                `status` VARCHAR(30) NOT NULL DEFAULT 'Open',
+                `description` TEXT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`support_ticket_id`),
+                UNIQUE KEY `uq_support_ticket_number` (`ticket_number`),
+                KEY `ix_support_ticket_org_prio_status` (`organization_id`, `priority`, `status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `support_ticket_notes` (
+                `support_ticket_note_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `support_ticket_id` BIGINT NOT NULL,
+                `author_user_id` BIGINT NULL,
+                `note` TEXT NOT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`support_ticket_note_id`),
+                KEY `ix_support_ticket_notes_ticket` (`support_ticket_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
     }
 
     private static void SafeExecuteSql(DbConnection conn, string sql)
@@ -2198,6 +2417,95 @@ public static class DbInitializer
                     }
                 }
             }
+        }
+        catch { }
+    }
+
+    private static void EnsureSaasSeeds(
+        AppDbContext context,
+        Role superAdminRole,
+        Role adminRole,
+        Role posRole,
+        Role kotRole)
+    {
+        try
+        {
+            if (!context.Organizations.Any(o => o.Slug == "pirnav-default-org"))
+            {
+                var defaultOrg = new Organization
+                {
+                    Name = "PIRNAV Default Organization",
+                    Slug = "pirnav-default-org",
+                    Status = "Active",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                context.Organizations.Add(defaultOrg);
+                context.SaveChanges();
+
+                var defaultRestaurant = new Restaurant
+                {
+                    OrganizationId = defaultOrg.OrganizationId,
+                    Name = "Default Restaurant",
+                    Code = "default-restaurant",
+                    Status = "Active",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                context.Restaurants.Add(defaultRestaurant);
+                context.SaveChanges();
+
+                var unlinkedBranches = context.Branches.Where(b => b.RestaurantId == null).ToList();
+                foreach (var b in unlinkedBranches)
+                {
+                    b.RestaurantId = defaultRestaurant.RestaurantId;
+                }
+                if (unlinkedBranches.Count > 0) context.SaveChanges();
+            }
+
+            if (!context.PlatformSettings.Any(p => p.SettingKey == "default"))
+            {
+                context.PlatformSettings.Add(new PlatformSetting
+                {
+                    SettingKey = "default",
+                    PlatformName = "PIRNAV",
+                    RequireManualApproval = true,
+                    DefaultCurrency = "INR",
+                    DefaultTaxRate = 5.00m,
+                    NotifyOnRegistration = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+                context.SaveChanges();
+            }
+
+            var rolePerms = new (Role Role, string Key, string[] Perms)[]
+            {
+                (superAdminRole, "PlatformSuperAdmin", new[] { "orders.view", "orders.create", "orders.settle", "invoices.view", "invoices.void", "reports.view", "staff.manage", "branches.manage", "inventory.manage", "settings.edit", "roles.manage" }),
+                (adminRole, "Admin", new[] { "orders.view", "orders.create", "orders.settle", "invoices.view", "invoices.void", "reports.view", "staff.manage", "branches.manage", "inventory.manage", "settings.edit", "roles.manage" }),
+                (posRole, "User POS", new[] { "orders.view", "orders.create", "orders.settle", "invoices.view" }),
+                (kotRole, "Kitchen KOT", new[] { "orders.view" }),
+            };
+
+            foreach (var (role, key, perms) in rolePerms)
+            {
+                foreach (var p in perms)
+                {
+                    if (!context.RolePermissions.Any(rp => rp.RoleId == role.RoleId && rp.PermissionKey == p))
+                    {
+                        context.RolePermissions.Add(new RolePermission
+                        {
+                            RoleId = role.RoleId,
+                            RoleKey = key,
+                            PermissionKey = p,
+                            IsGranted = true,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+            context.SaveChanges();
         }
         catch { }
     }

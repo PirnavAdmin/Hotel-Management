@@ -103,17 +103,22 @@ export default function BranchesModule() {
         title="Branch Management"
         subtitle="Directory of restaurant branches, QR menu branch codes (/r/:branchCode/menu), and activation state."
         actions={
-          <button
-            type="button"
-            className="sa-btn sa-btn-primary"
-            onClick={() => {
-              setEditing(null);
-              setForm(EMPTY_BRANCH);
-              setModalOpen(true);
-            }}
-          >
-            + Add Branch
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+              {state.loading ? "Refreshing..." : "Refresh"}
+            </button>
+            <button
+              type="button"
+              className="sa-btn sa-btn-primary"
+              onClick={() => {
+                setEditing(null);
+                setForm(EMPTY_BRANCH);
+                setModalOpen(true);
+              }}
+            >
+              + Add Branch
+            </button>
+          </div>
         }
       />
 

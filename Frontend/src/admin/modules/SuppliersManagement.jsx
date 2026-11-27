@@ -24,14 +24,26 @@ export function SuppliersManagement({ isLight = false, showToast = alert }) {
         apiGetSuppliers(),
         apiGetPurchaseOrders(),
       ]);
+      const extractList = (raw, extraKey) =>
+        Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : extraKey && Array.isArray(raw?.[extraKey])
+              ? raw[extraKey]
+              : Array.isArray(raw?.items)
+                ? raw.items
+                : [];
+
       if (supRes?.success) {
-        setSuppliers(supRes.data || []);
-        if (supRes.data?.length > 0 && poForm.supplierId === 1) {
-          setPoForm((prev) => ({ ...prev, supplierId: supRes.data[0].supplierId || supRes.data[0].id }));
+        const supList = extractList(supRes.data, 'suppliers');
+        setSuppliers(supList);
+        if (supList.length > 0 && poForm.supplierId === 1) {
+          setPoForm((prev) => ({ ...prev, supplierId: supList[0].supplierId || supList[0].id }));
         }
       }
       if (poRes?.success) {
-        setPurchaseOrders(poRes.data || []);
+        setPurchaseOrders(extractList(poRes.data, 'purchaseOrders'));
       }
     } catch (err) {
       setError(err.message || 'Error connecting to database.');

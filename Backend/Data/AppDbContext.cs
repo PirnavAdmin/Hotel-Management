@@ -88,6 +88,19 @@ public class AppDbContext : DbContext
     public DbSet<JournalVoucherLine> JournalVoucherLines { get; set; }
     public DbSet<DailyCashBankRegister> DailyCashBankRegisters { get; set; }
 
+    // PIRNAV SaaS Multi-Tenant Entities (Phase 3.31A / 3.31B)
+    public DbSet<Organization> Organizations { get; set; }
+    public DbSet<Restaurant> Restaurants { get; set; }
+    public DbSet<UserWorkspaceAccess> UserWorkspaceAccesses { get; set; }
+    public DbSet<RestaurantRegistration> RestaurantRegistrations { get; set; }
+    public DbSet<DemoRequest> DemoRequests { get; set; }
+    public DbSet<TenantSubscription> TenantSubscriptions { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<PlatformSetting> PlatformSettings { get; set; }
+    public DbSet<SaasBillingInvoice> SaasBillingInvoices { get; set; }
+    public DbSet<SupportTicket> SupportTickets { get; set; }
+    public DbSet<SupportTicketNote> SupportTicketNotes { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -858,6 +871,143 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Customer)
                   .WithMany()
                   .HasForeignKey(e => e.CustomerId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================================
+        // PIRNAV SAAS MULTI-TENANT ENTITIES (Phase 3.31A)
+        // ============================================================
+
+        modelBuilder.Entity<Organization>(entity =>
+        {
+            entity.ToTable("organizations");
+            entity.HasKey(e => e.OrganizationId);
+            entity.HasIndex(e => e.Slug).IsUnique();
+            entity.HasIndex(e => e.Gstin);
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<Restaurant>(entity =>
+        {
+            entity.ToTable("restaurants");
+            entity.HasKey(e => e.RestaurantId);
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasOne(e => e.Organization)
+                  .WithMany(o => o.Restaurants)
+                  .HasForeignKey(e => e.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Branch>(entity =>
+        {
+            entity.HasOne(b => b.Restaurant)
+                  .WithMany(r => r.Branches)
+                  .HasForeignKey(b => b.RestaurantId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<UserWorkspaceAccess>(entity =>
+        {
+            entity.ToTable("user_workspace_access");
+            entity.HasKey(e => e.UserWorkspaceAccessId);
+            entity.HasIndex(e => new { e.UserId, e.OrganizationId, e.RestaurantId, e.BranchId }).IsUnique();
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Organization)
+                  .WithMany()
+                  .HasForeignKey(e => e.OrganizationId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Restaurant)
+                  .WithMany()
+                  .HasForeignKey(e => e.RestaurantId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RestaurantRegistration>(entity =>
+        {
+            entity.ToTable("restaurant_registrations");
+            entity.HasKey(e => e.RestaurantRegistrationId);
+            entity.HasIndex(e => new { e.Email, e.Status });
+            entity.HasIndex(e => e.Gstin);
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<DemoRequest>(entity =>
+        {
+            entity.ToTable("demo_requests");
+            entity.HasKey(e => e.DemoRequestId);
+            entity.HasIndex(e => e.Email);
+            entity.HasIndex(e => e.Status);
+        });
+
+        modelBuilder.Entity<TenantSubscription>(entity =>
+        {
+            entity.ToTable("tenant_subscriptions");
+            entity.HasKey(e => e.TenantSubscriptionId);
+            entity.HasIndex(e => new { e.OrganizationId, e.Status });
+            entity.HasOne(e => e.Organization)
+                  .WithMany(o => o.Subscriptions)
+                  .HasForeignKey(e => e.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.ToTable("role_permissions");
+            entity.HasKey(e => e.RolePermissionId);
+            entity.HasIndex(e => new { e.RoleId, e.PermissionKey }).IsUnique();
+            entity.HasIndex(e => e.RoleKey);
+            entity.HasOne(e => e.Role)
+                  .WithMany()
+                  .HasForeignKey(e => e.RoleId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PlatformSetting>(entity =>
+        {
+            entity.ToTable("platform_settings");
+            entity.HasKey(e => e.PlatformSettingId);
+            entity.HasIndex(e => e.SettingKey).IsUnique();
+        });
+
+        modelBuilder.Entity<SaasBillingInvoice>(entity =>
+        {
+            entity.ToTable("saas_billing_invoices");
+            entity.HasKey(e => e.SaasBillingInvoiceId);
+            entity.HasIndex(e => e.InvoiceNumber).IsUnique();
+            entity.HasIndex(e => new { e.OrganizationId, e.Status });
+            entity.HasOne(e => e.Organization)
+                  .WithMany()
+                  .HasForeignKey(e => e.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupportTicket>(entity =>
+        {
+            entity.ToTable("support_tickets");
+            entity.HasKey(e => e.SupportTicketId);
+            entity.HasIndex(e => e.TicketNumber).IsUnique();
+            entity.HasIndex(e => new { e.OrganizationId, e.Priority, e.Status });
+            entity.HasOne(e => e.Organization)
+                  .WithMany()
+                  .HasForeignKey(e => e.OrganizationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SupportTicketNote>(entity =>
+        {
+            entity.ToTable("support_ticket_notes");
+            entity.HasKey(e => e.SupportTicketNoteId);
+            entity.HasOne(e => e.Ticket)
+                  .WithMany(t => t.Notes)
+                  .HasForeignKey(e => e.SupportTicketId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

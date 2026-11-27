@@ -71,6 +71,11 @@ export default function SupportModule() {
       <SaModuleHeader
         title="Support Management"
         subtitle="Track tenant onboarding tickets, priority queues, and internal support notes."
+        actions={
+          <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+            {state.loading ? "Refreshing..." : "Refresh"}
+          </button>
+        }
       />
 
       <SaStateBanner

@@ -6,19 +6,23 @@ export default function HeroSection() {
 
   return (
     <section className="saas-hero" aria-labelledby="hero-heading">
+      <div className="saas-hero-orb saas-hero-orb-1" aria-hidden="true" />
+      <div className="saas-hero-orb saas-hero-orb-2" aria-hidden="true" />
       <div className="saas-container saas-hero-grid">
-        <div>
-          <span className="saas-eyebrow">Multi-Branch Restaurant SaaS Platform</span>
-          <h1 id="hero-heading" className="saas-h1">
+        <div className="saas-hero-copy">
+          <span className="saas-eyebrow saas-hero-stagger" style={{ "--stagger": "0ms" }}>
+            Multi-Branch Restaurant SaaS Platform
+          </span>
+          <h1 id="hero-heading" className="saas-h1 saas-hero-stagger" style={{ "--stagger": "80ms" }}>
             Run Dine-In, Kitchen KOT, Takeaway &amp; QR Ordering From One Cloud POS
           </h1>
-          <p className="saas-lead">
+          <p className="saas-lead saas-hero-stagger" style={{ "--stagger": "160ms" }}>
             Built for independent restaurants and growing hospitality chains. Manage live table
             floors, instant kitchen tickets, GST-compliant cashier billing, and self-service QR
             menus across every branch.
           </p>
 
-          <div className="saas-hero-actions">
+          <div className="saas-hero-actions saas-hero-stagger" style={{ "--stagger": "240ms" }}>
             <button
               type="button"
               className="saas-btn saas-btn-primary"

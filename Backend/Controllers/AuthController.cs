@@ -96,7 +96,7 @@ public class AuthController : ControllerBase
     // LOGIN MANAGEMENT
     // ============================================================
 
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin,PlatformSuperAdmin,RestaurantOwner,RestaurantAdmin")]
     [HttpGet("login-management")]
     public async Task<IActionResult> GetLoginManagementSummary()
     {
@@ -109,7 +109,7 @@ public class AuthController : ControllerBase
         });
     }
 
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin,PlatformSuperAdmin,RestaurantOwner,RestaurantAdmin")]
     [HttpPost("create-login")]
     public async Task<IActionResult> CreateLogin([FromBody] CreateLoginDto dto)
     {
@@ -173,6 +173,15 @@ public class AuthController : ControllerBase
         var branchId =
             User.FindFirstValue("branchId");
 
+        var restaurantId =
+            User.FindFirstValue("restaurantId");
+
+        var organizationId =
+            User.FindFirstValue("organizationId");
+
+        var permissions =
+            User.FindAll("permissions").Select(c => c.Value).ToList();
+
         return Ok(new
         {
             success = true,
@@ -188,7 +197,10 @@ public class AuthController : ControllerBase
                 email,
                 roleId,
                 roleName,
-                branchId
+                branchId,
+                restaurantId,
+                organizationId,
+                permissions
             }
         });
     }

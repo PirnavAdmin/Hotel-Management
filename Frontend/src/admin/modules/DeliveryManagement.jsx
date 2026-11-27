@@ -23,9 +23,19 @@ export function DeliveryManagement({ isLight = false, showToast = alert }) {
     try {
       const res = await apiGetDeliveryOrders();
       if (res?.success) {
-        setOrders(res.data || []);
+        const raw = res.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw?.orders)
+              ? raw.orders
+              : Array.isArray(raw?.items)
+                ? raw.items
+                : [];
+        setOrders(list);
       } else {
-        setError(res?.message || 'Failed to load delivery orders.');
+        setError(res?.message || res?.error || 'Failed to load delivery orders.');
       }
     } catch (err) {
       setError(err.message || 'Error connecting to database.');

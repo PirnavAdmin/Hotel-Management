@@ -35,8 +35,13 @@ export default function AboutSection() {
         </div>
 
         <div className="saas-grid-3">
-          {PILLARS.map((item) => (
-            <article key={item.title} className="saas-card">
+          {PILLARS.map((item, idx) => (
+            <article
+              key={item.title}
+              className="saas-card saas-reveal"
+              data-reveal
+              style={{ "--reveal-delay": `${idx * 80}ms` }}
+            >
               <h3 className="saas-card-title">{item.title}</h3>
               <p className="saas-card-text">{item.description}</p>
             </article>

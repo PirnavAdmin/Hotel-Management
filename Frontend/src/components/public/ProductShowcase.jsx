@@ -89,7 +89,7 @@ export default function ProductShowcase() {
           ))}
         </div>
 
-        <div className="saas-showcase-frame" role="tabpanel">
+        <div key={activeTab.id} className="saas-showcase-frame saas-panel-enter" role="tabpanel">
           <div className="saas-grid-2" style={{ alignItems: "center" }}>
             <div>
               <h3 className="saas-h2" style={{ fontSize: 26 }}>

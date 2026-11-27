@@ -97,12 +97,13 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.62; }
 
 .admin-header {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
   align-items: center !important;
   gap: 0.75rem !important;
-  padding-inline: clamp(0.85rem, 2vw, 1.75rem) !important;
+  padding-inline: clamp(0.85rem, 2vw, 1.5rem) !important;
   position: relative !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+  max-width: 100% !important;
 }
 
 .admin-header > .restaurant-header-bg-animation {
@@ -144,10 +145,22 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: 0.62; }
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 0.85rem !important;
+  gap: 0.55rem !important;
   min-width: 0 !important;
+  max-width: 100% !important;
   position: relative !important;
   z-index: 2 !important;
+}
+
+@media (max-width: 1280px) {
+  .admin-header {
+    height: auto !important;
+    min-height: 72px !important;
+    padding-block: 0.55rem !important;
+  }
+  .admin-header-right {
+    flex-wrap: wrap !important;
+  }
 }
 
 .admin-header > :first-child:not(.restaurant-header-bg-animation),

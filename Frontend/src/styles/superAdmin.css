@@ -63,6 +63,7 @@
 }
 
 .sa-nav-btn {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -76,18 +77,20 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
 .sa-nav-btn:hover {
-  background: rgba(30, 41, 59, 0.75);
+  background: rgba(30, 41, 59, 0.78);
   color: #f8fafc;
+  transform: translateX(2px);
 }
 
 .sa-nav-btn.active {
   background: rgba(11, 114, 134, 0.25);
   border-color: rgba(109, 199, 211, 0.55);
   color: #6dc7d3;
+  box-shadow: inset 3px 0 0 #6dc7d3;
 }
 
 .sa-nav-btn:focus-visible,
@@ -172,6 +175,116 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 14px;
   padding: 18px;
+  min-width: 0;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sa-kpi-card {
+  position: relative;
+  overflow: hidden;
+  animation: saKpiEnter 0.34s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--sa-stagger, 0) * 45ms);
+}
+
+.sa-kpi-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(109, 199, 211, 0.65), rgba(11, 114, 134, 0.15));
+  opacity: 0.7;
+}
+
+.sa-kpi-card:hover {
+  border-color: rgba(109, 199, 211, 0.38);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+}
+
+.sa-module-enter {
+  animation: saFadeSlideUp 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sa-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sa-chart-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+  align-items: end;
+  gap: 10px;
+  height: 150px;
+  padding-top: 12px;
+}
+
+.sa-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+
+.sa-chart-bar {
+  width: 100%;
+  max-width: 36px;
+  min-height: 6px;
+  border-radius: 7px 7px 3px 3px;
+  background: linear-gradient(180deg, #6dc7d3, #0b7286);
+  transform-origin: bottom;
+  animation: saBarGrow 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--sa-stagger, 0) * 55ms);
+}
+
+.sa-chart-bar-label {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sa-pipeline-row {
+  display: grid;
+  gap: 6px;
+}
+
+.sa-pipeline-track {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.9);
+  overflow: hidden;
+}
+
+.sa-pipeline-fill {
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: left;
+  animation: saProgressGrow 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sa-timeline {
+  display: grid;
+  gap: 10px;
+}
+
+.sa-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 13px;
 }
 
 .sa-kpi-label {
@@ -207,6 +320,13 @@
   color: #f8fafc !important;
   font-size: 13.5px;
   font-family: inherit;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.sa-shell .sa-input:hover,
+.sa-shell .sa-select:hover,
+.sa-shell .sa-textarea:hover {
+  border-color: rgba(109, 199, 211, 0.5);
 }
 
 .sa-textarea {
@@ -228,6 +348,16 @@
   cursor: pointer;
   border: 1px solid transparent;
   white-space: nowrap;
+  transition: transform 0.14s ease, filter 0.14s ease, background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.sa-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.sa-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }
 
 .sa-btn:disabled {
@@ -355,10 +485,12 @@
   inset: 0;
   z-index: 60;
   background: rgba(2, 6, 23, 0.78);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  animation: saBackdropFade 0.18s ease-out both;
 }
 
 .sa-modal {
@@ -370,6 +502,90 @@
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 16px;
   padding: 22px;
+  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.65);
+  animation: saModalEnter 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sa-table tbody tr {
+  transition: background-color 0.14s ease;
+}
+
+.sa-table tbody tr:hover {
+  background: rgba(30, 41, 59, 0.45);
+}
+
+.sa-row-enter {
+  animation: saRowFade 0.22s ease-out backwards;
+  animation-delay: calc(var(--sa-row-idx, 0) * 24ms);
+}
+
+@keyframes saFadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes saKpiEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes saRowFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes saBarGrow {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0.4;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes saProgressGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes saBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes saModalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .sa-form-grid {
@@ -441,5 +657,29 @@
 
   .sa-topbar {
     padding: 12px 14px;
+  }
+
+  .sa-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-module-enter,
+  .sa-kpi-card,
+  .sa-chart-bar,
+  .sa-pipeline-fill,
+  .sa-modal-backdrop,
+  .sa-modal,
+  .sa-row-enter,
+  .sa-skeleton {
+    animation: none !important;
+  }
+
+  .sa-nav-btn,
+  .sa-card,
+  .sa-btn,
+  .sa-table tbody tr {
+    transition: none !important;
   }
 }

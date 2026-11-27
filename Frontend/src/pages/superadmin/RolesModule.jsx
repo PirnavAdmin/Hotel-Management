@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { apiGetPlatformRoles, apiSaveRolePermissions } from "../../api/superAdminApi";
+import { apiGetPlatformRoles, apiGetRolePermissions, apiSaveRolePermissions } from "../../api/superAdminApi";
 import { SaModal, SaModuleHeader, SaStateBanner } from "../../components/superadmin/SuperAdminUI";
 
 const DEFAULT_ROLES = [
@@ -58,6 +58,21 @@ export default function RolesModule() {
     load();
   }, [load]);
 
+  const loadRolePermissions = useCallback(async (roleKey) => {
+    if (!roleKey) return;
+    const res = await apiGetRolePermissions(roleKey);
+    if (res.success && res.data?.permissions) {
+      setMatrix((prev) => ({
+        ...prev,
+        [roleKey]: res.data.permissions,
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRolePermissions(selectedRole);
+  }, [selectedRole, loadRolePermissions]);
+
   const togglePerm = (moduleName, action) => {
     setMatrix((prev) => {
       const rolePerms = prev[selectedRole] || {};
@@ -79,6 +94,9 @@ export default function RolesModule() {
     try {
       const res = await apiSaveRolePermissions(selectedRole, matrix[selectedRole] || {});
       setSaveBanner(res);
+      if (res.success) {
+        await loadRolePermissions(selectedRole);
+      }
     } finally {
       setBusy(false);
     }

@@ -69,10 +69,12 @@ export default function PricingSection() {
         </div>
 
         <div className="saas-grid-3">
-          {PLANS.map((plan) => (
+          {PLANS.map((plan, idx) => (
             <article
               key={plan.name}
-              className={`saas-card ${plan.highlighted ? "saas-card-highlight" : ""}`}
+              className={`saas-card saas-reveal ${plan.highlighted ? "saas-card-highlight" : ""}`}
+              data-reveal
+              style={{ "--reveal-delay": `${idx * 90}ms` }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 className="saas-card-title" style={{ fontSize: 20 }}>

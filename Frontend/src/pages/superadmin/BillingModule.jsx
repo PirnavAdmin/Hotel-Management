@@ -50,6 +50,11 @@ export default function BillingModule() {
       <SaModuleHeader
         title="SaaS Billing Management"
         subtitle="Platform subscription invoices and tenant payment history (separate from restaurant customer diner bills)."
+        actions={
+          <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+            {state.loading ? "Refreshing..." : "Refresh"}
+          </button>
+        }
       />
 
       <div className="sa-kpi-grid">

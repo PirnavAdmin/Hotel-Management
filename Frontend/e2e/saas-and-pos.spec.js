@@ -141,6 +141,33 @@ test.describe("Phase 3.14 – Restaurant SaaS & POS Frontend Browser QA", () => 
     await expect(wizardBtn).toBeFocused();
 
     await page.screenshot({ path: "e2e/screenshots/super-admin-tenants.png", fullPage: false });
+
+    // Dashboard analytics cards, refresh, and 7-viewport responsive overflow check
+    await page.goto("/super-admin/dashboard");
+    await expect(page.getByRole("region", { name: /Monthly recurring revenue and tenant growth analytics/i })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Approval pipeline visualization/i })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Recent platform activities/i })).toBeVisible();
+    await page.getByRole("button", { name: /Refresh/i }).click();
+
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 1440, height: 900 },
+      { width: 1366, height: 768 },
+      { width: 1024, height: 768 },
+      { width: 768, height: 1024 },
+      { width: 390, height: 844 },
+      { width: 360, height: 800 },
+    ]) {
+      await page.setViewportSize(vp);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+      expect(overflow, `Super Admin overflow at ${vp.width}x${vp.height}`).toBe(false);
+    }
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.screenshot({ path: "e2e/screenshots/super-admin-dashboard-desktop.png", fullPage: false });
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.screenshot({ path: "e2e/screenshots/super-admin-dashboard-mobile.png", fullPage: false });
+
     expect(pageErrors).toEqual([]);
   });
 

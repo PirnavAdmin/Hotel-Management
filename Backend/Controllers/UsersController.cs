@@ -6,6 +6,7 @@ using HMS.Data;
 using HMS.DTOs;
 using HMS.Models;
 using HMS.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ namespace HMS.Controllers;
 [ApiController]
 [Route("api/v1/users")]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin,PlatformSuperAdmin,RestaurantOwner,RestaurantAdmin,BranchManager")]
 [Tags("Admin", "Users")]
 public class UsersController : ControllerBase
 {

@@ -8,7 +8,7 @@ export default function PublicFooter() {
   const navigate = useNavigate();
 
   return (
-    <footer className="saas-footer">
+    <footer className="saas-footer saas-reveal" data-reveal>
       <div className="saas-container">
         <div className="saas-footer-grid">
           <div>

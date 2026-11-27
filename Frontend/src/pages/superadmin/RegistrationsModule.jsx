@@ -106,7 +106,10 @@ export default function RegistrationsModule() {
         title="Restaurant Registration Approvals"
         subtitle="Review incoming restaurant onboarding requests, verify GSTIN/details, and approve or reject with audit reason."
         actions={
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button type="button" className="sa-btn sa-btn-secondary" onClick={load} disabled={state.loading}>
+              {state.loading ? "Refreshing..." : "Refresh"}
+            </button>
             {["Pending", "Approved", "Rejected"].map((t) => (
               <button
                 key={t}

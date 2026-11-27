@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import PirnavBrandMark, { PIRNAV_BRAND } from "./PirnavBrandMark";
 
 export default function PublicNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const goToSection = (sectionId) => {
     setMobileOpen(false);
@@ -27,7 +35,7 @@ export default function PublicNavbar() {
   };
 
   return (
-    <header className="saas-navbar">
+    <header className={`saas-navbar ${scrolled ? "is-scrolled" : ""}`}>
       <div className="saas-container saas-navbar-inner">
         <button
           type="button"

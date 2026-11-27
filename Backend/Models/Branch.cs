@@ -11,10 +11,19 @@ public class Branch
     [Column("branch_id")]
     public long BranchId { get; set; }
 
+    [Column("restaurant_id")]
+    public long? RestaurantId { get; set; }
+
+    public Restaurant? Restaurant { get; set; }
+
     [Required]
     [MaxLength(150)]
     [Column("branch_name")]
     public string BranchName { get; set; } = string.Empty;
+
+    [MaxLength(80)]
+    [Column("branch_code")]
+    public string? BranchCode { get; set; }
 
     [Column("address")]
     public string? Address { get; set; }

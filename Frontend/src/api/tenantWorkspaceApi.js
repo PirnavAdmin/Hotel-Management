@@ -2,11 +2,16 @@ import { apiClient } from "./apiConfig";
 
 function wrapWorkspaceResult(res, endpoint, label) {
   if (res?.success) {
+    const raw = res.data;
+    const unwrapped =
+      raw && typeof raw === "object" && !Array.isArray(raw) && "success" in raw && "data" in raw
+        ? raw.data
+        : raw;
     return {
       success: true,
       integrationPending: false,
       status: res.status || 200,
-      data: res.data,
+      data: unwrapped,
       endpoint,
       error: "",
     };

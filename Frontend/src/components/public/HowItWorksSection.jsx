@@ -42,9 +42,14 @@ export default function HowItWorksSection() {
           </p>
         </div>
 
-        <div className="saas-grid-4">
-          {STEPS.map((item) => (
-            <article key={item.step} className="saas-card">
+        <div className="saas-grid-4 saas-steps-grid">
+          {STEPS.map((item, idx) => (
+            <article
+              key={item.step}
+              className="saas-card saas-step-card saas-reveal"
+              data-reveal
+              style={{ "--reveal-delay": `${idx * 90}ms` }}
+            >
               <div
                 style={{
                   fontSize: 13,
