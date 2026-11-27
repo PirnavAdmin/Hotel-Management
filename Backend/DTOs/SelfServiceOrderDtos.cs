@@ -15,6 +15,9 @@ public class SelfServiceOrderItemInput
     [MaxLength(255)]
     public string? Notes { get; set; }
 
+    [MaxLength(150)]
+    public string? Name { get; set; }
+
     // Client may attempt to send a price; backend MUST ignore and overwrite with database price
     public decimal? ClientSuppliedPrice { get; set; }
 }

@@ -98,6 +98,7 @@ VALUES
 (1112, 'Ragi Mudda with Chicken Fry', 'Lunch Menu', 299, 'Non-Veg', 2, 15, 'Nutritious ragi mudda accompanied by crispy Andhra chicken fry and rasam.', '/assets/starters/chicken-65.jpg', 1, 1, NOW(), NOW()),
 (1113, 'Ragi Mudda with Natukodi Curry', 'Lunch Menu', 349, 'Non-Veg', 3, 20, 'Authentic Rayalaseema ragi mudda with country chicken (natukodi) gravy.', '/assets/curries/kadai-chicken.jpg', 1, 1, NOW(), NOW()),
 (1114, 'Ragi Mudda with Natukodi Fry', 'Lunch Menu', 359, 'Non-Veg', 3, 20, 'Ragi mudda served with spicy slow-roasted country chicken fry.', '/assets/starters/chicken-65.jpg', 1, 1, NOW(), NOW()),
+(1124, 'Ragi Mudda & Egg Curry', 'Lunch Menu', 169, 'Non-Veg', 2, 15, 'Nutritious steamed ragi mudda served with spicy egg curry gravy.', '/assets/curries/kadai-chicken.jpg', 0, 1, NOW(), NOW()),
 (1115, 'Egg Curry', 'Lunch Menu', 199, 'Non-Veg', 2, 12, 'Boiled eggs simmered in rich spicy onion-tomato gravy with Andhra spices.', '/assets/biryani/egg-biryani.jpg', 0, 1, NOW(), NOW()),
 (1116, 'Paneer Butter Masala', 'Lunch Menu', 249, 'Veg', 1, 15, 'Soft paneer cubes simmered in a velvety buttery tomato-cashew makhani gravy.', '/assets/curries/paneer-butter-masala.jpg', 0, 1, NOW(), NOW()),
 (1117, 'Kaju Paneer Curry', 'Lunch Menu', 269, 'Veg', 1, 15, 'Crispy roasted cashews and paneer chunks cooked in rich royal gravy.', '/assets/curries/paneer-butter-masala.jpg', 1, 1, NOW(), NOW()),

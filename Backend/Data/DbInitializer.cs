@@ -858,6 +858,9 @@ public static class DbInitializer
                 CreateAllTables(conn);
             }
 
+            // Ensure restaurant_orders and order_items schema
+            EnsureOrderAndItemSchema(conn);
+
             // Verify kot_orders schema
             try { _ = context.KotOrders.AsNoTracking().Take(1).ToList(); }
             catch
@@ -867,11 +870,13 @@ public static class DbInitializer
             }
 
             // Verify restaurant_orders schema
+            EnsureOrderAndItemSchema(conn);
             try { _ = context.Orders.AsNoTracking().Take(1).ToList(); }
             catch
             {
                 SafeExecuteSql(conn, "SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS `order_items`; DROP TABLE IF EXISTS `restaurant_orders`; SET FOREIGN_KEY_CHECKS = 1;");
                 CreateAllTables(conn);
+                EnsureOrderAndItemSchema(conn);
             }
 
             // Fix legacy item_id column on order_items if present from older schema
@@ -1956,6 +1961,144 @@ public static class DbInitializer
         SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `reservation_time` TIME NOT NULL DEFAULT '12:00:00';");
         SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `status` VARCHAR(40) NOT NULL DEFAULT 'PENDING_PAYMENT';");
         SafeExecuteSql(conn, "ALTER TABLE `reservations` MODIFY COLUMN `notes` VARCHAR(500) NULL;");
+    }
+
+    private static void EnsureOrderAndItemSchema(DbConnection conn)
+    {
+        // 1. Ensure restaurant_orders table exists
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `restaurant_orders` (
+                `order_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `order_number` VARCHAR(30) NOT NULL,
+                `outlet_id` BIGINT NOT NULL DEFAULT 1,
+                `order_type` VARCHAR(30) NOT NULL DEFAULT 'DineIn',
+                `dining_table_id` BIGINT NULL,
+                `booking_id` BIGINT NULL,
+                `waiter_id` BIGINT NULL,
+                `guests_count` INT NOT NULL DEFAULT 1,
+                `order_status` VARCHAR(20) NOT NULL DEFAULT 'Active',
+                `special_instructions` TEXT NULL,
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NULL,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
+                `branch_id` BIGINT NULL DEFAULT 1,
+                `customer_id` BIGINT NULL,
+                `customer_name` VARCHAR(120) NULL,
+                `customer_phone` VARCHAR(20) NULL,
+                `customer_email` VARCHAR(120) NULL,
+                `packaging_charge` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `fulfillment_status` VARCHAR(30) NULL,
+                `payment_status` VARCHAR(20) NULL,
+                `payment_method` VARCHAR(30) NULL,
+                `idempotency_key` VARCHAR(100) NULL,
+                `service_charge` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `cancellation_reason` VARCHAR(255) NULL,
+                `cancelled_at` DATETIME NULL,
+                `cancelled_by` BIGINT NULL,
+                `cancelled_by_name` VARCHAR(120) NULL,
+                PRIMARY KEY (`order_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        // 2. Ensure all columns exist on restaurant_orders
+        EnsureColumnExists(conn, "restaurant_orders", "order_number", "VARCHAR(30) NOT NULL DEFAULT 'ORD-1001'");
+        EnsureColumnExists(conn, "restaurant_orders", "outlet_id", "BIGINT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "restaurant_orders", "order_type", "VARCHAR(30) NOT NULL DEFAULT 'DineIn'");
+        EnsureColumnExists(conn, "restaurant_orders", "dining_table_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "booking_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "waiter_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "guests_count", "INT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "restaurant_orders", "order_status", "VARCHAR(20) NOT NULL DEFAULT 'Active'");
+        EnsureColumnExists(conn, "restaurant_orders", "special_instructions", "TEXT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "restaurant_orders", "is_deleted", "TINYINT(1) NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "restaurant_orders", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "restaurant_orders", "updated_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "created_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "updated_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "branch_id", "BIGINT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_name", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_phone", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "customer_email", "VARCHAR(120) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "packaging_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "restaurant_orders", "fulfillment_status", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "payment_status", "VARCHAR(20) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "payment_method", "VARCHAR(30) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "idempotency_key", "VARCHAR(100) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "service_charge", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "restaurant_orders", "cancellation_reason", "VARCHAR(255) NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "restaurant_orders", "cancelled_by_name", "VARCHAR(120) NULL");
+
+        // 3. Ensure order_items table exists
+        SafeExecuteSql(conn, @"
+            CREATE TABLE IF NOT EXISTS `order_items` (
+                `order_item_id` BIGINT NOT NULL AUTO_INCREMENT,
+                `order_id` BIGINT NOT NULL,
+                `kot_id` BIGINT NULL,
+                `bot_id` BIGINT NULL,
+                `menu_item_id` BIGINT NOT NULL DEFAULT 1,
+                `item_id` BIGINT NULL,
+                `variant_id` BIGINT NULL,
+                `item_name` VARCHAR(150) NOT NULL,
+                `unit_price` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `quantity` INT NOT NULL DEFAULT 1,
+                `total_price` DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+                `preparation_notes` TEXT NULL,
+                `item_status` VARCHAR(30) NOT NULL DEFAULT 'Queued',
+                `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                `is_deleted` TINYINT(1) NOT NULL DEFAULT 0,
+                `branch_id` BIGINT NULL,
+                `outlet_id` BIGINT NULL DEFAULT 1,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` DATETIME NULL,
+                `created_by` BIGINT NULL,
+                `updated_by` BIGINT NULL,
+                PRIMARY KEY (`order_item_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        // 4. Ensure all columns exist on order_items
+        EnsureColumnExists(conn, "order_items", "menu_item_id", "BIGINT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "order_items", "item_id", "BIGINT NULL DEFAULT NULL");
+        EnsureColumnExists(conn, "order_items", "variant_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "order_items", "kot_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "order_items", "bot_id", "BIGINT NULL");
+        EnsureColumnExists(conn, "order_items", "item_name", "VARCHAR(150) NOT NULL DEFAULT ''");
+        EnsureColumnExists(conn, "order_items", "unit_price", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "order_items", "quantity", "INT NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "order_items", "total_price", "DECIMAL(18,2) NOT NULL DEFAULT 0.00");
+        EnsureColumnExists(conn, "order_items", "preparation_notes", "TEXT NULL");
+        EnsureColumnExists(conn, "order_items", "item_status", "VARCHAR(30) NOT NULL DEFAULT 'Queued'");
+        EnsureColumnExists(conn, "order_items", "is_active", "TINYINT(1) NOT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "order_items", "is_deleted", "TINYINT(1) NOT NULL DEFAULT 0");
+        EnsureColumnExists(conn, "order_items", "branch_id", "BIGINT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "order_items", "outlet_id", "BIGINT NULL DEFAULT 1");
+        EnsureColumnExists(conn, "order_items", "created_at", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP");
+        EnsureColumnExists(conn, "order_items", "updated_at", "DATETIME NULL");
+        EnsureColumnExists(conn, "order_items", "created_by", "BIGINT NULL");
+        EnsureColumnExists(conn, "order_items", "updated_by", "BIGINT NULL");
+
+        // 5. Ensure legacy column modifications (e.g. item_id can be NULL so inserts without item_id won't throw 1364)
+        SafeExecuteSql(conn, "ALTER TABLE `order_items` MODIFY COLUMN `item_id` BIGINT NULL DEFAULT NULL;");
+        SafeExecuteSql(conn, "ALTER TABLE `order_items` MODIFY COLUMN `kot_id` BIGINT NULL DEFAULT NULL;");
+        SafeExecuteSql(conn, "ALTER TABLE `order_items` MODIFY COLUMN `item_status` VARCHAR(50) NOT NULL DEFAULT 'Queued';");
+
+        // 6. Drop legacy FK constraints that locked order_items to old orders table instead of restaurant_orders
+        SafeExecuteSql(conn, "ALTER TABLE `order_items` DROP FOREIGN KEY `fk_oi_order`;");
+        SafeExecuteSql(conn, "ALTER TABLE `order_items` DROP FOREIGN KEY `fk_oi_item`;");
+
+        // 7. Sync menu_item_id from item_id if legacy items had item_id but menu_item_id = 0/1
+        SafeExecuteSql(conn, "UPDATE `order_items` SET `menu_item_id` = `item_id` WHERE `item_id` IS NOT NULL AND (`menu_item_id` IS NULL OR `menu_item_id` <= 0);");
+
+        // 8. Ensure essential menu item 'Ragi Mudda & Egg Curry' exists at price 169.00
+        SafeExecuteSql(conn, @"
+            INSERT INTO `menu_items` (`dish_name`, `category`, `price`, `dietary_type`, `spice_level`, `prep_time_minutes`, `short_description`, `image_url`, `is_chefs_special`, `is_available`, `branch_id`, `outlet_id`)
+            SELECT 'Ragi Mudda & Egg Curry', 'Lunch Menu', 169.00, 'Non-Veg', 2, 15, 'Nutritious steamed ragi mudda served with spicy egg curry gravy.', '/assets/curries/kadai-chicken.jpg', 0, 1, 1, 1
+            WHERE NOT EXISTS (SELECT 1 FROM `menu_items` WHERE `dish_name` = 'Ragi Mudda & Egg Curry');");
     }
 
     private static void EnsureInvoiceSchema(DbConnection conn)

@@ -416,11 +416,17 @@ export function SelfServiceView({
 
     try {
       const orderPayload = {
-        items: cart.map((item) => ({
-          menuItemId: Number(item.id || item.menuItemId || 0),
-          quantity: Number(item.quantity || 1),
-          notes: item.notes || "Self Service Order",
-        })),
+        items: cart.map((item) => {
+          const rawId = item.menuItemId ?? item.id ?? item.backendId ?? 0;
+          const cleanId = typeof rawId === "string" ? rawId.replace(/^m-/, "") : rawId;
+          const numId = parseInt(cleanId, 10);
+          return {
+            menuItemId: !isNaN(numId) && numId > 0 ? numId : 0,
+            name: item.name || item.dishName || undefined,
+            quantity: Math.max(1, parseInt(item.quantity || 1, 10) || 1),
+            notes: item.notes || "Self Service Order",
+          };
+        }),
         customerName: customerName.trim() || undefined,
         customerPhone: customerPhone.trim() || undefined,
         specialInstructions: specialInstructions.trim() || undefined,
